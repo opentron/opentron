@@ -5,6 +5,7 @@ extern crate futures_cpupool;
 
 
 pub mod api;
+#[allow(unused_variables)]
 pub mod api_grpc;
 
 pub mod Contract;
