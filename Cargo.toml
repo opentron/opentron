@@ -10,6 +10,8 @@ description = "Rust implementation of the Tron whitepaper"
 
 [dependencies]
 proto = { path = "./proto"}
+hex = "0.4.0"
+protobuf = "2.8.1"
 
 [profile.dev]
 debug = true
