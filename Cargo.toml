@@ -1,0 +1,35 @@
+[package]
+name = "rust-tron"
+version = "0.1.0"
+authors = ["Shuyu WANG <andelf@gmail.com>"]
+edition = "2018"
+license = "LGPL-3.0"
+description = "Rust implementation of the Tron whitepaper"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+proto = { path = "./proto"}
+
+[profile.dev]
+debug = true
+panic = 'abort'
+
+[profile.release]
+debug = false
+panic = 'abort'
+
+[profile.test]
+debug = true
+
+
+[[bin]]
+path = "tron/main.rs"
+name = "tron"
+
+[workspace]
+# This should only list projects that are not
+# in the dependency tree in any other way
+# (i.e. pretty much only standalone CLI tools)
+
+# members = ["proto"]

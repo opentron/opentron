@@ -1,0 +1,19 @@
+[package]
+name = "proto"
+version = "0.1.0"
+edition = "2018"
+publish = false
+
+[dependencies]
+bytes           = "0.5.3"
+protobuf        = "2"
+grpc = "0.6.1"
+futures         = "0.3"
+futures-cpupool = "0.1"
+
+[lib]
+test = false
+doctest = false
+
+[build-dependencies]
+protoc-rust-grpc = "0.6.1"
