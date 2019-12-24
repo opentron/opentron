@@ -1,0 +1,12 @@
+name: tron
+version: "0.1.0"
+author: Shuyu WANG <andelf@gmail.com>
+about: Tron Protocol implementation
+args:
+subcommands:
+    - hello:
+        about: dummy test run.
+        args:
+            - HASH:
+                required: true
+                help: Raw transaction hash.

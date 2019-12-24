@@ -9,9 +9,11 @@ description = "Rust implementation of the Tron whitepaper"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-proto = { path = "./proto"}
 hex = "0.4.0"
-protobuf = "2.8.1"
+protobuf = "2"
+clap = { version = "2", features = ["yaml"] }
+
+proto = { path = "./proto"}
 
 [profile.dev]
 debug = true
