@@ -11,6 +11,6 @@ insert_final_newline=true
 
 [*.{yml,sh}]
 indent_style=space
-indent_size=2
+indent_size=4
 tab_width=8
 end_of_line=lf
