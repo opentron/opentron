@@ -10,7 +10,6 @@ fn main() {
             "protocol/core/Tron.proto",
             "protocol/core/Contract.proto",
             "protocol/core/Discover.proto",
-            // "protocol/core/Contract.proto",
         ],
         rust_protobuf: true,
         ..Default::default()
