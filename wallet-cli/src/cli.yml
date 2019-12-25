@@ -20,4 +20,5 @@ subcommands:
                 args:
                     - BLOCK:
                         help: The number or ID of the block to retrieve
+                        required: true
                         index: 1

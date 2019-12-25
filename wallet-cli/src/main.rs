@@ -2,6 +2,7 @@
 extern crate clap;
 extern crate futures;
 extern crate grpc;
+extern crate hex;
 extern crate proto;
 extern crate serde_json;
 

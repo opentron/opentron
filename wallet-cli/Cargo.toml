@@ -13,5 +13,6 @@ protobuf = "2"
 futures = "0.1"
 futures-cpupool = "0.1"
 serde_json = "1.0"
+hex = "0.4"
 
 proto = { path = "../proto" }
