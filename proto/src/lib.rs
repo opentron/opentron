@@ -2,6 +2,9 @@ extern crate futures;
 extern crate futures_cpupool;
 extern crate grpc;
 extern crate protobuf;
+#[cfg(feature = "with-serde")]
+#[macro_use]
+extern crate serde;
 
 pub mod api;
 #[allow(unused_variables)]

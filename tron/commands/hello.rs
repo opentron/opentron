@@ -30,6 +30,8 @@ pub fn run(matches: &ArgMatches) -> Result<(), String> {
     let raw = Vec::from_hex(hash).expect("hex decode ok");
     let tx = parse_from_bytes::<TransactionRaw>(&raw).expect("parse ok");
 
+    // println!("json =>\n{:?}", print_to_string(tx).expect("json serilize"));
+
     for contr in &tx.contract {
         println!("got {:?}", contr.field_type);
         match contr.field_type {
