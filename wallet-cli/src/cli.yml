@@ -1,0 +1,23 @@
+name: wallet-cli
+version: "0.1.0"
+author: Shuyu WANG <andelf@gmail.com>
+about: Tron Protocol wallet command line util
+
+args:
+    - verbose:
+        help: Make the operation more talkative
+        short: v
+        long: verbose
+
+subcommands:
+    - get:
+        about: Retrieves various items and information from the blockchain
+        subcommands:
+            - info:
+                about: Get current blockchain state information
+            - block:
+                about: Retrieves a full block from the blockchain
+                args:
+                    - BLOCK:
+                        help: The number or ID of the block to retrieve
+                        index: 1

@@ -7,3 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = { version = "2", features = ["yaml"] }
+grpc = "0.6.1"
+protobuf = "2"
+futures = "0.1"
+futures-cpupool = "0.1"
+serde_json = "1.0"
+
+proto = { path = "../proto" }
