@@ -39,3 +39,6 @@ name = "tron"
 # (i.e. pretty much only standalone CLI tools)
 
 # members = ["proto"]
+members = [
+    "wallet-cli",
+]
