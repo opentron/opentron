@@ -6,6 +6,7 @@ extern crate hex;
 extern crate proto;
 extern crate protobuf;
 extern crate sha2;
+extern crate serde_json;
 
 mod commands;
 

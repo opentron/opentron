@@ -14,8 +14,9 @@ protobuf = { version = "2", features = ["with-serde"] }
 clap = { version = "2", features = ["yaml"] }
 base58 = "0.1"
 sha2 = "0.8"
+serde_json = "1.0"
 
-proto = { path = "./proto"}
+proto = { path = "./proto" }
 
 [profile.dev]
 debug = true
