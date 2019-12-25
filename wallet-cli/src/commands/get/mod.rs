@@ -1,9 +1,9 @@
 use clap::ArgMatches;
-use proto::api::{EmptyMessage, NumberMessage, BytesMessage};
+use hex::FromHex;
+use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
 use proto::api_grpc::{Wallet, WalletClient};
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
-use hex::FromHex;
 
 use grpc::ClientStub;
 
@@ -62,7 +62,20 @@ fn get_block(id_or_num: &str) {
             serde_json::to_string_pretty(&payload).expect("resp json parse ok")
         );
     }
+}
 
+fn get_transaction(id: &str) {
+    let client = new_grpc_client();
+
+    let mut req = BytesMessage::new();
+    req.value = Vec::from_hex(id).expect("hex bytes parse ok");
+    let resp = client.get_transaction_by_id(Default::default(), req);
+
+    let (_, payload, _) = resp.wait().expect("request ok");
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&payload).expect("resp json parse ok")
+    );
 }
 
 pub fn main(matches: &ArgMatches) -> Result<(), String> {
@@ -72,10 +85,19 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
             Ok(())
         }
         ("block", Some(block_matches)) => {
-            let block = block_matches.value_of("BLOCK").expect("block is required in cli.yml; qed");
+            let block = block_matches
+                .value_of("BLOCK")
+                .expect("block is required in cli.yml; qed");
             get_block(block);
             Ok(())
-        },
+        }
+        ("transaction", Some(tr_matches)) => {
+            let id = tr_matches
+                .value_of("ID")
+                .expect("transaction is required in cli.yml; qed");
+            get_transaction(id);
+            Ok(())
+        }
         _ => Err("error parsing command line".to_owned()),
     }
 }
