@@ -14,7 +14,7 @@ fn new_grpc_client() -> WalletClient {
         .to_socket_addrs()
         .expect("resolve host")
         .next()
-        .expect("non-empty resolve list");
+        .expect("host resolve result");
 
     let grpc_client = Arc::new(
         grpc::Client::new_plain(&host.ip().to_string(), host.port(), Default::default()).expect("grpc client"),
@@ -28,11 +28,11 @@ fn block_info() {
     let req = EmptyMessage::new();
     let resp = client.get_node_info(Default::default(), req);
 
-    let (_, payload, _) = resp.wait().expect("request ok");
+    let (_, payload, _) = resp.wait().expect("grpc request");
 
     println!(
         "{}",
-        serde_json::to_string_pretty(&payload).expect("resp json parse ok")
+        serde_json::to_string_pretty(&payload).expect("resp json parse")
     );
 }
 
@@ -41,25 +41,25 @@ fn get_block(id_or_num: &str) {
 
     if id_or_num.starts_with("0000") {
         let mut req = BytesMessage::new();
-        req.value = Vec::from_hex(id_or_num).expect("hex bytes parse ok");
+        req.value = Vec::from_hex(id_or_num).expect("hex bytes parse");
         let resp = client.get_block_by_id(Default::default(), req);
 
-        let (_, payload, _) = resp.wait().expect("request ok");
+        let (_, payload, _) = resp.wait().expect("grpc request");
         //println!("{:?}", payload);
         println!(
             "{}",
-            serde_json::to_string_pretty(&payload).expect("resp json parse ok")
+            serde_json::to_string_pretty(&payload).expect("resp json parse")
         );
     } else {
         let mut req = NumberMessage::new();
-        req.num = id_or_num.parse().expect("number format ok");
+        req.num = id_or_num.parse().expect("block number format");
         let resp = client.get_block_by_num2(Default::default(), req);
 
-        let (_, payload, _) = resp.wait().expect("request ok");
+        let (_, payload, _) = resp.wait().expect("grpc request");
         // println!("{:?}", payload);
         println!(
             "{}",
-            serde_json::to_string_pretty(&payload).expect("resp json parse ok")
+            serde_json::to_string_pretty(&payload).expect("resp json parse")
         );
     }
 }
@@ -68,13 +68,13 @@ fn get_transaction(id: &str) {
     let client = new_grpc_client();
 
     let mut req = BytesMessage::new();
-    req.value = Vec::from_hex(id).expect("hex bytes parse ok");
+    req.value = Vec::from_hex(id).expect("hex bytes parse");
     let resp = client.get_transaction_by_id(Default::default(), req);
 
-    let (_, payload, _) = resp.wait().expect("request ok");
+    let (_, payload, _) = resp.wait().expect("grpc request");
     println!(
         "{}",
-        serde_json::to_string_pretty(&payload).expect("resp json parse ok")
+        serde_json::to_string_pretty(&payload).expect("resp json parse")
     );
 }
 
