@@ -1,5 +1,6 @@
 use clap::ArgMatches;
 use hex::{FromHex, ToHex};
+use keys::Address;
 use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
 use proto::api_grpc::{Wallet, WalletClient};
 use proto::core::Account;
@@ -147,8 +148,8 @@ fn get_account(name: &str) {
         // hex address with 0x prefix
         req.set_address(Vec::from_hex(&name[2..]).expect("hex decode"));
     } else if name.len() == 34 && name.as_bytes()[0] == b'T' {
-        // base58 checked address
-        unimplemented!();
+        let addr = name.parse::<Address>().expect("addr format");
+        req.set_address(addr.to_bytes().to_owned())
     } else {
         // FIXME: account name not supported
         req.set_account_name(name.as_bytes().to_owned());

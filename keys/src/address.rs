@@ -80,6 +80,12 @@ impl FromStr for Address {
     }
 }
 
+impl Address {
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 fn b58encode_check<T: AsRef<[u8]>>(raw: T) -> String {
     let mut hasher = Sha256::new();
     hasher.input(raw.as_ref());
