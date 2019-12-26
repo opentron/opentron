@@ -34,6 +34,12 @@ subcommands:
                     - ID:
                         help: ID of the transaction to retrieve
                         required: true
+            - account:
+                about: Retrieves an account from the blockchain
+                args:
+                    - NAME:
+                        help: The name of the account to retrieve
+                        required: true
 
     - wallet:
         about: Subcommand used to interact with the local wallet

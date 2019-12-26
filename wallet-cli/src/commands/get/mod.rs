@@ -2,6 +2,7 @@ use clap::ArgMatches;
 use hex::{FromHex, ToHex};
 use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
 use proto::api_grpc::{Wallet, WalletClient};
+use proto::core::Account;
 use serde_json::json;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
@@ -9,6 +10,7 @@ use std::sync::Arc;
 use grpc::ClientStub;
 
 const RPC_HOST: &str = "grpc.trongrid.io:50051";
+// const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";
 
 fn new_grpc_client() -> WalletClient {
     let host = RPC_HOST
@@ -21,6 +23,23 @@ fn new_grpc_client() -> WalletClient {
         grpc::Client::new_plain(&host.ip().to_string(), host.port(), Default::default()).expect("grpc client"),
     );
     WalletClient::with_client(grpc_client)
+}
+
+fn json_bytes_to_hex_string(val: &serde_json::Value) -> String {
+    val.as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_i64().unwrap() as u8)
+        .collect::<Vec<_>>()
+        .encode_hex()
+}
+
+fn json_bytes_to_string(val: &serde_json::Value) -> String {
+    val.as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_i64().unwrap() as u8 as char)
+        .collect::<String>()
 }
 
 fn block_info() {
@@ -111,13 +130,46 @@ fn get_transaction_info(id: &str) {
     println!("{}", serde_json::to_string_pretty(&result).unwrap());
 }
 
-fn json_bytes_to_hex_string(val: &serde_json::Value) -> String {
-    val.as_array()
-        .unwrap()
-        .iter()
-        .map(|v| v.as_i64().unwrap() as u8)
-        .collect::<Vec<_>>()
-        .encode_hex()
+/// Get account infomation.
+fn get_account(name: &str) {
+    let client = new_grpc_client();
+
+    let mut req = Account::new();
+    if name.len() == 42 {
+        // hex address
+        if let Ok(addr) = Vec::from_hex(name) {
+            req.set_address(addr);
+        } else {
+            // fallback to account name
+            req.set_account_name(name.as_bytes().to_owned())
+        }
+    } else if name.len() == 44 && name.starts_with("0x") {
+        // hex address with 0x prefix
+        req.set_address(Vec::from_hex(&name[2..]).expect("hex decode"));
+    } else if name.len() == 34 && name.as_bytes()[0] == b'T' {
+        // base58 checked address
+        unimplemented!();
+    } else {
+        // FIXME: account name not supported
+        req.set_account_name(name.as_bytes().to_owned());
+    }
+
+    let resp = client.get_account(Default::default(), req);
+
+    let (_, payload, _) = resp.wait().expect("grpc request");
+    let mut account = serde_json::to_value(&payload).expect("resp json serilization");
+
+    // first byte of address
+    if account["address"][0].is_null() {
+        eprintln!("error: not found!");
+        println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+        return;
+    }
+
+    account["address"] = json!(json_bytes_to_hex_string(&account["address"]));
+    account["account_name"] = json!(json_bytes_to_string(&account["account_name"]));
+
+    println!("{}", serde_json::to_string_pretty(&account).expect("resp json parse"));
 }
 
 pub fn main(matches: &ArgMatches) -> Result<(), String> {
@@ -145,6 +197,13 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
                 .value_of("ID")
                 .expect("transaction is required in cli.yml; qed");
             get_transaction_info(id);
+            Ok(())
+        }
+        ("account", Some(arg_matches)) => {
+            let name = arg_matches
+                .value_of("NAME")
+                .expect("account name is required is cli.yml; qed");
+            get_account(name);
             Ok(())
         }
         _ => Err("error parsing command line".to_owned()),
