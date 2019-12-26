@@ -169,6 +169,32 @@ fn get_account(name: &str) {
 
     account["address"] = json!(json_bytes_to_hex_string(&account["address"]));
     account["account_name"] = json!(json_bytes_to_string(&account["account_name"]));
+    account["owner_permission"]["keys"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|key| {
+            key["address"] = json!(json_bytes_to_hex_string(&key["address"]));
+        })
+        .last();
+
+    account["active_permission"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|perm| {
+            perm["keys"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .map(|key| {
+                    key["address"] = json!(json_bytes_to_hex_string(&key["address"]));
+                })
+                .last();
+            perm["operations"] = json!(json_bytes_to_hex_string(&perm["operations"]));
+        })
+        .last();
+    // TODO: witness_permission
 
     println!("{}", serde_json::to_string_pretty(&account).expect("resp json parse"));
 }
