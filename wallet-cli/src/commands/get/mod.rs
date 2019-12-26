@@ -1,7 +1,8 @@
 use clap::ArgMatches;
-use hex::FromHex;
+use hex::{FromHex, ToHex};
 use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
 use proto::api_grpc::{Wallet, WalletClient};
+use serde_json::json;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
@@ -30,10 +31,7 @@ fn block_info() {
 
     let (_, payload, _) = resp.wait().expect("grpc request");
 
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&payload).expect("resp json parse")
-    );
+    println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
 }
 
 fn get_block(id_or_num: &str) {
@@ -46,10 +44,7 @@ fn get_block(id_or_num: &str) {
 
         let (_, payload, _) = resp.wait().expect("grpc request");
         //println!("{:?}", payload);
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&payload).expect("resp json parse")
-        );
+        println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
     } else {
         let mut req = NumberMessage::new();
         req.num = id_or_num.parse().expect("block number format");
@@ -57,10 +52,7 @@ fn get_block(id_or_num: &str) {
 
         let (_, payload, _) = resp.wait().expect("grpc request");
         // println!("{:?}", payload);
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&payload).expect("resp json parse")
-        );
+        println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
     }
 }
 
@@ -72,10 +64,48 @@ fn get_transaction(id: &str) {
     let resp = client.get_transaction_by_id(Default::default(), req);
 
     let (_, payload, _) = resp.wait().expect("grpc request");
+    println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+}
+
+fn get_transaction_info(id: &str) {
+    let client = new_grpc_client();
+
+    let mut req = BytesMessage::new();
+    req.value = Vec::from_hex(id).expect("hex bytes parse");
+    let resp = client.get_transaction_info_by_id(Default::default(), req);
+
+    let (_, payload, _) = resp.wait().expect("grpc request");
+    // serde_json::to_string_pretty(&payload).expect("resp json parse")
+    let json = serde_json::to_value(&payload).expect("resp json parse");
+    let result = json!({
+        "id": json!(json_bytes_to_hex_string(&json["id"])),
+        "fee": json["fee"],
+        "blockNumber": json["blockNumber"],
+        "blockTimeStamp": json["blockTimeStamp"],
+        "contractResult": json!(
+            json["contractResult"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(json_bytes_to_hex_string)
+                .collect::<Vec<_>>()
+        ),
+        "contract_address": json!(json_bytes_to_hex_string(&json["contract_address"])),
+        "receipt": json["receipt"],
+    });
     println!(
         "{}",
-        serde_json::to_string_pretty(&payload).expect("resp json parse")
+        serde_json::to_string_pretty(&result).unwrap()
     );
+}
+
+fn json_bytes_to_hex_string(val: &serde_json::Value) -> String {
+    val.as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_i64().unwrap() as u8)
+        .collect::<Vec<_>>()
+        .encode_hex()
 }
 
 pub fn main(matches: &ArgMatches) -> Result<(), String> {
@@ -96,6 +126,13 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
                 .value_of("ID")
                 .expect("transaction is required in cli.yml; qed");
             get_transaction(id);
+            Ok(())
+        }
+        ("transaction_info", Some(tr_matches)) => {
+            let id = tr_matches
+                .value_of("ID")
+                .expect("transaction is required in cli.yml; qed");
+            get_transaction_info(id);
             Ok(())
         }
         _ => Err("error parsing command line".to_owned()),

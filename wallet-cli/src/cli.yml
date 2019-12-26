@@ -28,3 +28,24 @@ subcommands:
                     - ID:
                         help: ID of the transaction to retrieve
                         required: true
+            - transaction_info:
+                about: Retrieves receipt of atransaction
+                args:
+                    - ID:
+                        help: ID of the transaction to retrieve
+                        required: true
+
+
+
+    - wallet:
+        about: Subcommand used to interact with the local wallet
+        args:
+            - name:
+                help: Name of the new wallet
+                short: n
+                long: name
+                takes_value: true
+                global: true
+        subcommands:
+            - create:
+                about: Create a new wallet locally
