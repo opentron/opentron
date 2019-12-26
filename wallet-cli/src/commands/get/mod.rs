@@ -10,8 +10,8 @@ use std::sync::Arc;
 
 use grpc::ClientStub;
 
-// const RPC_HOST: &str = "grpc.trongrid.io:50051";
-const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";
+const RPC_HOST: &str = "grpc.trongrid.io:50051";
+// const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";
 
 fn new_grpc_client() -> WalletClient {
     let host = RPC_HOST
@@ -136,24 +136,10 @@ fn get_account(name: &str) {
     let client = new_grpc_client();
 
     let mut req = Account::new();
-    if name.len() == 42 {
-        // hex address
-        if let Ok(addr) = Vec::from_hex(name) {
-            req.set_address(addr);
-        } else {
-            // fallback to account name
-            req.set_account_name(name.as_bytes().to_owned())
-        }
-    } else if name.len() == 44 && name.starts_with("0x") {
-        // hex address with 0x prefix
-        req.set_address(Vec::from_hex(&name[2..]).expect("hex decode"));
-    } else if name.len() == 34 && name.as_bytes()[0] == b'T' {
-        let addr = name.parse::<Address>().expect("addr format");
-        req.set_address(addr.to_bytes().to_owned())
-    } else {
-        // FIXME: account name not supported
-        req.set_account_name(name.as_bytes().to_owned());
-    }
+    let addr = name.parse::<Address>().expect("addr format");
+    req.set_address(addr.to_bytes().to_owned());
+    // FIXME: account name not supported
+    // req.set_account_name(name.as_bytes().to_owned());
 
     let resp = client.get_account(Default::default(), req);
 
