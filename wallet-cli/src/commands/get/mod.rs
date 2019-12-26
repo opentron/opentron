@@ -64,7 +64,22 @@ fn get_transaction(id: &str) {
     let resp = client.get_transaction_by_id(Default::default(), req);
 
     let (_, payload, _) = resp.wait().expect("grpc request");
-    println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+
+    let mut transaction = serde_json::to_value(&payload).expect("resp json serilization");
+    transaction["signature"] = json!(transaction["signature"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|sig| json!(json_bytes_to_hex_string(sig)))
+        .collect::<Vec<_>>());
+    // FIXME: assume 1 contract
+    transaction["raw_data"]["contract"][0]["parameter"]["value"] = json!(json_bytes_to_hex_string(
+        &transaction["raw_data"]["contract"][0]["parameter"]["value"]
+    ));
+    transaction["raw_data"]["ref_block_hash"] =
+        json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_hash"]));
+
+    println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
 }
 
 fn get_transaction_info(id: &str) {
@@ -76,7 +91,7 @@ fn get_transaction_info(id: &str) {
 
     let (_, payload, _) = resp.wait().expect("grpc request");
     // serde_json::to_string_pretty(&payload).expect("resp json parse")
-    let json = serde_json::to_value(&payload).expect("resp json parse");
+    let json = serde_json::to_value(&payload).expect("resp json serilization");
     let result = json!({
         "id": json!(json_bytes_to_hex_string(&json["id"])),
         "fee": json["fee"],
@@ -93,10 +108,7 @@ fn get_transaction_info(id: &str) {
         "contract_address": json!(json_bytes_to_hex_string(&json["contract_address"])),
         "receipt": json["receipt"],
     });
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&result).unwrap()
-    );
+    println!("{}", serde_json::to_string_pretty(&result).unwrap());
 }
 
 fn json_bytes_to_hex_string(val: &serde_json::Value) -> String {

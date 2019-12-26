@@ -35,8 +35,6 @@ subcommands:
                         help: ID of the transaction to retrieve
                         required: true
 
-
-
     - wallet:
         about: Subcommand used to interact with the local wallet
         args:
