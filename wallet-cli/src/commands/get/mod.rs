@@ -199,6 +199,31 @@ fn get_account(name: &str) {
     println!("{}", serde_json::to_string_pretty(&account).expect("resp json parse"));
 }
 
+fn get_asset_list() {
+    let client = new_grpc_client();
+
+    let req = EmptyMessage::new();
+    let resp = client.get_asset_issue_list(Default::default(), req);
+
+    let (_, payload, _) = resp.wait().expect("grpc request");
+
+    let mut assets = serde_json::to_value(&payload).expect("resp json parse");
+
+    assets["assetIssue"].as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|asset| {
+            asset["abbr"] = json!(json_bytes_to_string(&asset["abbr"]));
+            asset["description"] = json!(json_bytes_to_string(&asset["description"]));
+            asset["name"] = json!(json_bytes_to_string(&asset["name"]));
+            asset["url"] = json!(json_bytes_to_string(&asset["url"]));
+            asset["owner_address"] = json!(json_bytes_to_hex_string(&asset["owner_address"]));
+        })
+        .last();
+
+    println!("{}", serde_json::to_string_pretty(&assets["assetIssue"]).expect("resp json parse"));
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), String> {
     match matches.subcommand() {
         ("info", _) => {
@@ -231,6 +256,10 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
                 .value_of("NAME")
                 .expect("account name is required is cli.yml; qed");
             get_account(name);
+            Ok(())
+        }
+        ("asset", _) => {
+            get_asset_list();
             Ok(())
         }
         _ => Err("error parsing command line".to_owned()),

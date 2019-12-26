@@ -40,6 +40,8 @@ subcommands:
                     - NAME:
                         help: The name of the account to retrieve
                         required: true
+            - asset:
+                about: Retrieves list of all tokens
 
     - wallet:
         about: Subcommand used to interact with the local wallet
