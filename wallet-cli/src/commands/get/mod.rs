@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use grpc::ClientStub;
 
-const RPC_HOST: &str = "grpc.trongrid.io:50051";
-// const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";
+// const RPC_HOST: &str = "grpc.trongrid.io:50051";
+const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";
 
 fn new_grpc_client() -> WalletClient {
     let host = RPC_HOST
