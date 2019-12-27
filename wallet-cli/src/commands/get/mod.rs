@@ -1,4 +1,5 @@
 use clap::ArgMatches;
+use grpc::ClientStub;
 use hex::{FromHex, ToHex};
 use keys::Address;
 use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
@@ -7,8 +8,6 @@ use proto::core::Account;
 use serde_json::json;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
-
-use grpc::ClientStub;
 
 // const RPC_HOST: &str = "grpc.trongrid.io:50051";
 const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";

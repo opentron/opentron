@@ -49,6 +49,26 @@ subcommands:
             - asset:
                 about: Retrieves list of all tokens
 
+    - transfer:
+        about: Transfer a TRX token
+        args:
+            - SENDER:
+                help: The account sending tokens
+                required: true
+            - RECIPIENT:
+                help: The account receiving tokens
+                required: true
+            - AMOUNT:
+                help: The amount of tokens to send and the token symbol
+                required: true
+            - MEMO:
+                help: The memo for the transfer
+                required: false
+            - key:
+                help: The private key used for signing
+                short: K
+                long: key
+
     - wallet:
         about: Subcommand used to interact with the local wallet
         args:
