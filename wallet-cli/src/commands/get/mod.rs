@@ -43,6 +43,22 @@ fn json_bytes_to_string(val: &serde_json::Value) -> String {
         .collect::<String>()
 }
 
+fn fix_transaction_json(transaction: &mut serde_json::Value) {
+    transaction["raw_data"]["contract"][0]["parameter"]["value"] = json!(json_bytes_to_hex_string(
+        &transaction["raw_data"]["contract"][0]["parameter"]["value"]
+    ));
+    transaction["raw_data"]["ref_block_hash"] =
+        json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_hash"]));
+    transaction["raw_data"]["ref_block_bytes"] =
+        json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_bytes"]));
+    transaction["signature"] = json!(transaction["signature"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|sig| json!(json_bytes_to_hex_string(sig)))
+        .collect::<Vec<_>>());
+}
+
 fn block_info() {
     let client = new_grpc_client();
 
@@ -97,17 +113,7 @@ fn get_block(id_or_num: &str) {
                 transaction["txid"] = json!(json_bytes_to_hex_string(&transaction["txid"]));
                 transaction = &mut transaction["transaction"];
             }
-            transaction["raw_data"]["contract"][0]["parameter"]["value"] = json!(json_bytes_to_hex_string(
-                &transaction["raw_data"]["contract"][0]["parameter"]["value"]
-            ));
-            transaction["raw_data"]["ref_block_hash"] =
-                json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_hash"]));
-            transaction["signature"] = json!(transaction["signature"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|sig| json!(json_bytes_to_hex_string(sig)))
-                .collect::<Vec<_>>());
+            fix_transaction_json(transaction);
         })
         .last();
 
@@ -124,18 +130,8 @@ fn get_transaction(id: &str) {
     let (_, payload, _) = resp.wait().expect("grpc request");
 
     let mut transaction = serde_json::to_value(&payload).expect("resp json serilization");
-    transaction["signature"] = json!(transaction["signature"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|sig| json!(json_bytes_to_hex_string(sig)))
-        .collect::<Vec<_>>());
-    // FIXME: assume 1 contract
-    transaction["raw_data"]["contract"][0]["parameter"]["value"] = json!(json_bytes_to_hex_string(
-        &transaction["raw_data"]["contract"][0]["parameter"]["value"]
-    ));
-    transaction["raw_data"]["ref_block_hash"] =
-        json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_hash"]));
+
+    fix_transaction_json(&mut transaction);
 
     println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
 }
