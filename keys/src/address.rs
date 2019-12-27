@@ -1,15 +1,31 @@
 use base58::{FromBase58, ToBase58};
 use hex::{FromHex, ToHex};
 use sha2::{Digest, Sha256};
+use sha3::Keccak256;
 use std::convert::TryFrom;
 use std::fmt;
 use std::iter;
 use std::str::FromStr; // .parse
 
 use crate::error::Error;
+use crate::public::Public;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Address([u8; 21]);
+
+impl Address {
+    pub fn from_public(public: &Public) -> Address {
+        let mut raw = [0x41; 21];
+
+        let mut hasher = Keccak256::new();
+        hasher.input(public);
+        let digest = hasher.result();
+
+        raw[1..21].copy_from_slice(&digest[digest.len() - 20..]);
+
+        Address(raw)
+    }
+}
 
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -140,6 +156,17 @@ mod tests {
                 .expect("parse error")
         );
 
-        assert_eq!(addr.encode_hex::<String>(), "4196a3bace5adacf637eb7cc79d5787f4247da4bbe")
+        assert_eq!(
+            addr.encode_hex::<String>(),
+            "4196a3bace5adacf637eb7cc79d5787f4247da4bbe"
+        )
+    }
+
+    #[test]
+    fn test_address_from_public() {
+        let public = Public::from_hex("56f19ba7de92264d94f9b6600ec05c16c0b25a064e2ee1cf5bf0dd9661d04515c99c3a6b42b2c574232a5b951bf57cf706bbfd36377b406f9313772f65612cd0").unwrap();
+
+        let addr = Address::from_public(&public);
+        assert_eq!(addr.to_string(), "TQHAvs2ZFTbsd93ycTfw1Wuf1e4WsPZWCp");
     }
 }

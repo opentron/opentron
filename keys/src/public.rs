@@ -3,7 +3,6 @@ use secp256k1::key::PublicKey;
 use secp256k1::{Message, RecoverableSignature, RecoveryId, Secp256k1};
 use std::convert::TryFrom;
 use std::fmt;
-use std::iter;
 use std::str::FromStr;
 
 use crate::error::Error;
@@ -111,16 +110,6 @@ impl FromHex for Public {
     }
 }
 
-impl ToHex for Public {
-    fn encode_hex<T: iter::FromIterator<char>>(&self) -> T {
-        (&self.0[..]).encode_hex()
-    }
-
-    fn encode_hex_upper<T: iter::FromIterator<char>>(&self) -> T {
-        (&self.0[..]).encode_hex_upper()
-    }
-}
-
 impl FromStr for Public {
     type Err = Error;
 
@@ -139,6 +128,12 @@ impl FromStr for Public {
         } else {
             Err(Error::InvalidPublic)
         }
+    }
+}
+
+impl AsRef<[u8]> for Public {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
