@@ -35,7 +35,7 @@ impl Signature {
 
 impl PartialEq for Signature {
     fn eq(&self, other: &Self) -> bool {
-        &self.0[..] == &other.0[..]
+        self.0[..] == other.0[..]
     }
 }
 
