@@ -5,6 +5,7 @@ use std::convert::TryFrom;
 use std::fmt;
 
 use crate::address::Address;
+use crate::error::Error;
 use crate::private::Private;
 use crate::public::Public;
 
@@ -28,6 +29,11 @@ impl KeyPair {
     /// Returns public part of the keypair converted into Address
     pub fn address(&self) -> Address {
         Address::from_public(&self.public)
+    }
+
+    pub fn from_private(private: Private) -> Result<Self, Error> {
+        let public = Public::from_private(&private)?;
+        Ok(KeyPair { private, public })
     }
 
     fn from_keypair(sec: key::SecretKey, publ: key::PublicKey) -> Self {
