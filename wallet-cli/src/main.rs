@@ -8,6 +8,7 @@ extern crate proto;
 extern crate serde_json;
 
 mod commands;
+mod utils;
 
 fn main() -> Result<(), String> {
     let yaml = load_yaml!("cli.yml");

@@ -1,62 +1,13 @@
 use clap::ArgMatches;
-use grpc::ClientStub;
-use hex::{FromHex, ToHex};
+use hex::FromHex;
 use keys::Address;
 use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
-use proto::api_grpc::{Wallet, WalletClient};
+use proto::api_grpc::Wallet;
 use proto::core::Account;
 use serde_json::json;
-use std::net::ToSocketAddrs;
-use std::sync::Arc;
 
-// const RPC_HOST: &str = "grpc.trongrid.io:50051";
-const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";
-
-fn new_grpc_client() -> WalletClient {
-    let host = RPC_HOST
-        .to_socket_addrs()
-        .expect("resolve host")
-        .next()
-        .expect("host resolve result");
-
-    let grpc_client = Arc::new(
-        grpc::Client::new_plain(&host.ip().to_string(), host.port(), Default::default()).expect("grpc client"),
-    );
-    WalletClient::with_client(grpc_client)
-}
-
-fn json_bytes_to_hex_string(val: &serde_json::Value) -> String {
-    val.as_array()
-        .unwrap()
-        .iter()
-        .map(|v| v.as_i64().unwrap() as u8)
-        .collect::<Vec<_>>()
-        .encode_hex()
-}
-
-fn json_bytes_to_string(val: &serde_json::Value) -> String {
-    val.as_array()
-        .unwrap()
-        .iter()
-        .map(|v| v.as_i64().unwrap() as u8 as char)
-        .collect::<String>()
-}
-
-fn fix_transaction_json(transaction: &mut serde_json::Value) {
-    transaction["raw_data"]["contract"][0]["parameter"]["value"] = json!(json_bytes_to_hex_string(
-        &transaction["raw_data"]["contract"][0]["parameter"]["value"]
-    ));
-    transaction["raw_data"]["ref_block_hash"] =
-        json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_hash"]));
-    transaction["raw_data"]["ref_block_bytes"] =
-        json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_bytes"]));
-    transaction["signature"] = json!(transaction["signature"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|sig| json!(json_bytes_to_hex_string(sig)))
-        .collect::<Vec<_>>());
-}
+use crate::utils::client::new_grpc_client;
+use crate::utils::jsont;
 
 fn block_info() {
     let client = new_grpc_client();
@@ -92,15 +43,15 @@ fn get_block(id_or_num: &str) {
 
     // get_block_by_id won't return blockid
     if block["blockid"].is_array() {
-        block["blockid"] = json!(json_bytes_to_hex_string(&block["blockid"]));
+        block["blockid"] = json!(jsont::bytes_to_hex_string(&block["blockid"]));
     }
 
     for key in &["parentHash", "txTrieRoot", "witness_address"] {
         block["block_header"]["raw_data"][key] =
-            json!(json_bytes_to_hex_string(&block["block_header"]["raw_data"][key]));
+            json!(jsont::bytes_to_hex_string(&block["block_header"]["raw_data"][key]));
     }
     block["block_header"]["witness_signature"] =
-        json!(json_bytes_to_hex_string(&block["block_header"]["witness_signature"]));
+        json!(jsont::bytes_to_hex_string(&block["block_header"]["witness_signature"]));
 
     block["transactions"]
         .as_array_mut()
@@ -109,10 +60,10 @@ fn get_block(id_or_num: &str) {
         .map(|mut transaction| {
             // NOTE: structual difference of get_block requests
             if transaction["txid"].is_array() {
-                transaction["txid"] = json!(json_bytes_to_hex_string(&transaction["txid"]));
+                transaction["txid"] = json!(jsont::bytes_to_hex_string(&transaction["txid"]));
                 transaction = &mut transaction["transaction"];
             }
-            fix_transaction_json(transaction);
+            jsont::fix_transaction(transaction);
         })
         .last();
 
@@ -130,7 +81,7 @@ fn get_transaction(id: &str) {
 
     let mut transaction = serde_json::to_value(&payload).expect("resp json serilization");
 
-    fix_transaction_json(&mut transaction);
+    jsont::fix_transaction(&mut transaction);
 
     println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
 }
@@ -146,7 +97,7 @@ fn get_transaction_info(id: &str) {
     // serde_json::to_string_pretty(&payload).expect("resp json parse")
     let json = serde_json::to_value(&payload).expect("resp json serilization");
     let result = json!({
-        "id": json!(json_bytes_to_hex_string(&json["id"])),
+        "id": json!(jsont::bytes_to_hex_string(&json["id"])),
         "fee": json["fee"],
         "blockNumber": json["blockNumber"],
         "blockTimeStamp": json["blockTimeStamp"],
@@ -155,10 +106,10 @@ fn get_transaction_info(id: &str) {
                 .as_array()
                 .unwrap()
                 .iter()
-                .map(json_bytes_to_hex_string)
+                .map(jsont::bytes_to_hex_string)
                 .collect::<Vec<_>>()
         ),
-        "contract_address": json!(json_bytes_to_hex_string(&json["contract_address"])),
+        "contract_address": json!(jsont::bytes_to_hex_string(&json["contract_address"])),
         "receipt": json["receipt"],
     });
     println!("{}", serde_json::to_string_pretty(&result).unwrap());
@@ -186,14 +137,14 @@ fn get_account(name: &str) {
         return;
     }
 
-    account["address"] = json!(json_bytes_to_hex_string(&account["address"]));
-    account["account_name"] = json!(json_bytes_to_string(&account["account_name"]));
+    account["address"] = json!(jsont::bytes_to_hex_string(&account["address"]));
+    account["account_name"] = json!(jsont::bytes_to_string(&account["account_name"]));
     account["owner_permission"]["keys"]
         .as_array_mut()
         .unwrap()
         .iter_mut()
         .map(|key| {
-            key["address"] = json!(json_bytes_to_hex_string(&key["address"]));
+            key["address"] = json!(jsont::bytes_to_hex_string(&key["address"]));
         })
         .last();
 
@@ -207,10 +158,10 @@ fn get_account(name: &str) {
                 .unwrap()
                 .iter_mut()
                 .map(|key| {
-                    key["address"] = json!(json_bytes_to_hex_string(&key["address"]));
+                    key["address"] = json!(jsont::bytes_to_hex_string(&key["address"]));
                 })
                 .last();
-            perm["operations"] = json!(json_bytes_to_hex_string(&perm["operations"]));
+            perm["operations"] = json!(jsont::bytes_to_hex_string(&perm["operations"]));
         })
         .last();
     // TODO: witness_permission
@@ -233,11 +184,11 @@ fn get_asset_list() {
         .unwrap()
         .iter_mut()
         .map(|asset| {
-            asset["abbr"] = json!(json_bytes_to_string(&asset["abbr"]));
-            asset["description"] = json!(json_bytes_to_string(&asset["description"]));
-            asset["name"] = json!(json_bytes_to_string(&asset["name"]));
-            asset["url"] = json!(json_bytes_to_string(&asset["url"]));
-            asset["owner_address"] = json!(json_bytes_to_hex_string(&asset["owner_address"]));
+            asset["abbr"] = json!(jsont::bytes_to_string(&asset["abbr"]));
+            asset["description"] = json!(jsont::bytes_to_string(&asset["description"]));
+            asset["name"] = json!(jsont::bytes_to_string(&asset["name"]));
+            asset["url"] = json!(jsont::bytes_to_string(&asset["url"]));
+            asset["owner_address"] = json!(jsont::bytes_to_hex_string(&asset["owner_address"]));
         })
         .last();
 
@@ -259,10 +210,10 @@ fn get_contract(addr: &str) {
 
     let mut contract = serde_json::to_value(&payload).expect("pb json");
 
-    contract["contract_address"] = json!(json_bytes_to_hex_string(&contract["contract_address"]));
-    contract["origin_address"] = json!(json_bytes_to_hex_string(&contract["origin_address"]));
-    contract["bytecode"] = json!(json_bytes_to_hex_string(&contract["bytecode"]));
-    contract["code_hash"] = json!(json_bytes_to_hex_string(&contract["code_hash"]));
+    contract["contract_address"] = json!(jsont::bytes_to_hex_string(&contract["contract_address"]));
+    contract["origin_address"] = json!(jsont::bytes_to_hex_string(&contract["origin_address"]));
+    contract["bytecode"] = json!(jsont::bytes_to_hex_string(&contract["bytecode"]));
+    contract["code_hash"] = json!(jsont::bytes_to_hex_string(&contract["code_hash"]));
 
     println!("{}", serde_json::to_string_pretty(&contract).expect("pb json"));
 }
