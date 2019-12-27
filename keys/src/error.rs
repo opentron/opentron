@@ -1,3 +1,4 @@
+use secp256k1::Error as Secp256k1Error;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
@@ -26,5 +27,16 @@ impl fmt::Display for Error {
         };
 
         msg.fmt(f)
+    }
+}
+
+impl From<Secp256k1Error> for Error {
+    fn from(e: Secp256k1Error) -> Self {
+        match e {
+            Secp256k1Error::InvalidPublicKey => Error::InvalidPublic,
+            Secp256k1Error::InvalidSecretKey => Error::InvalidSecret,
+            Secp256k1Error::InvalidMessage => Error::InvalidMessage,
+            _ => Error::InvalidSignature,
+        }
     }
 }
