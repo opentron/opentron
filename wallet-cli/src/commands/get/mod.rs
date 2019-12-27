@@ -195,7 +195,8 @@ fn get_asset_list() {
 
     let mut assets = serde_json::to_value(&payload).expect("resp json parse");
 
-    assets["assetIssue"].as_array_mut()
+    assets["assetIssue"]
+        .as_array_mut()
         .unwrap()
         .iter_mut()
         .map(|asset| {
@@ -207,7 +208,30 @@ fn get_asset_list() {
         })
         .last();
 
-    println!("{}", serde_json::to_string_pretty(&assets["assetIssue"]).expect("resp json parse"));
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&assets["assetIssue"]).expect("resp json parse")
+    );
+}
+
+fn get_contract(addr: &str) {
+    let client = new_grpc_client();
+
+    let address: Address = addr.parse().expect("address format");
+    let mut req = BytesMessage::new();
+    req.set_value(address.to_bytes().to_owned());
+
+    let resp = client.get_contract(Default::default(), req);
+    let (_, payload, _) = resp.wait().expect("grpc request");
+
+    let mut contract = serde_json::to_value(&payload).expect("pb json");
+
+    contract["contract_address"] = json!(json_bytes_to_hex_string(&contract["contract_address"]));
+    contract["origin_address"] = json!(json_bytes_to_hex_string(&contract["origin_address"]));
+    contract["bytecode"] = json!(json_bytes_to_hex_string(&contract["bytecode"]));
+    contract["code_hash"] = json!(json_bytes_to_hex_string(&contract["code_hash"]));
+
+    println!("{}", serde_json::to_string_pretty(&contract).expect("pb json"));
 }
 
 pub fn main(matches: &ArgMatches) -> Result<(), String> {
@@ -242,6 +266,13 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
                 .value_of("NAME")
                 .expect("account name is required is cli.yml; qed");
             get_account(name);
+            Ok(())
+        }
+        ("contract", Some(arg_matches)) => {
+            let addr = arg_matches
+                .value_of("ADDR")
+                .expect("address is required is cli.yml; qed");
+            get_contract(addr);
             Ok(())
         }
         ("asset", _) => {
