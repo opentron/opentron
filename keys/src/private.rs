@@ -68,6 +68,13 @@ impl TryFrom<Vec<u8>> for Private {
     }
 }
 
+
+impl From<[u8; 32]> for Private {
+    fn from(v: [u8; 32]) -> Self {
+        Private(v)
+    }
+}
+
 impl FromHex for Private {
     type Error = Error;
 
