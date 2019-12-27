@@ -1,13 +1,14 @@
 use hex::{FromHex, ToHex};
-use secp256k1::key::PublicKey;
+use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{Message, RecoverableSignature, RecoveryId, Secp256k1};
+use sha2::{Digest, Sha256};
 use std::convert::TryFrom;
 use std::fmt;
 use std::str::FromStr;
 
 use crate::error::Error;
+use crate::private::Private;
 use crate::signature::Signature;
-use sha2::{Digest, Sha256};
 
 /// Raw public key
 pub struct Public([u8; 64]);
@@ -57,6 +58,18 @@ impl Public {
         let digest = hasher.result();
 
         Public::recover_digest(&digest, signature)
+    }
+
+    pub fn from_private(private: &Private) -> Result<Public, Error> {
+        let secp = Secp256k1::new();
+
+        let secret_key = SecretKey::from_slice(&secp, private.as_ref())?;
+        let pub_key = PublicKey::from_secret_key(&secp, &secret_key)?;
+
+        let mut key = [0u8; 64];
+        key[..].copy_from_slice(&pub_key.serialize_vec(&secp, /* compressed */ false)[1..]);
+
+        Ok(Public(key))
     }
 }
 
@@ -177,5 +190,7 @@ mod tests {
         let rec = Public::recover(&raw_data, &sig).unwrap();
         println!("recover => {:}", rec);
         assert_eq!(rec, pub_key);
+
+        assert_eq!(pub_key, Public::from_private(&priv_key).unwrap())
     }
 }

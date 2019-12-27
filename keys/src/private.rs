@@ -6,7 +6,6 @@ use secp256k1::{Message, Secp256k1};
 use sha2::{Digest, Sha256};
 use std::convert::TryFrom;
 use std::fmt;
-use std::iter;
 use std::str::FromStr;
 
 use crate::error::Error;
@@ -79,16 +78,6 @@ impl FromHex for Private {
     }
 }
 
-impl ToHex for Private {
-    fn encode_hex<T: iter::FromIterator<char>>(&self) -> T {
-        self.0.encode_hex()
-    }
-
-    fn encode_hex_upper<T: iter::FromIterator<char>>(&self) -> T {
-        self.0.encode_hex_upper()
-    }
-}
-
 impl FromStr for Private {
     type Err = Error;
 
@@ -107,6 +96,13 @@ impl FromStr for Private {
         } else {
             Err(Error::InvalidPrivate)
         }
+    }
+}
+
+// NOTE: AsRef<[u8]> implies ToHex
+impl AsRef<[u8]> for Private {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
