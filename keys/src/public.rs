@@ -28,7 +28,8 @@ impl Public {
             RecoverableSignature::from_compact(&secp, &signature[0..64], RecoveryId::from_i32(signature[64] as i32)?)?;
         let sig = rsig.to_standard(&secp);
 
-        secp.verify(&Message::from_slice(digest)?, &sig, &pub_key).map_err(Error::from)
+        secp.verify(&Message::from_slice(digest)?, &sig, &pub_key)
+            .map_err(Error::from)
     }
 
     pub fn verify(&self, data: &[u8], signature: &Signature) -> Result<(), Error> {
@@ -37,6 +38,26 @@ impl Public {
         let digest = hasher.result();
 
         self.verify_digest(&digest, signature)
+    }
+
+    pub fn recover_digest(digest: &[u8], signature: &Signature) -> Result<Public, Error> {
+        let secp = Secp256k1::new();
+        let rsig =
+            RecoverableSignature::from_compact(&secp, &signature[0..64], RecoveryId::from_i32(signature[64] as i32)?)?;
+        let pub_key = secp.recover(&Message::from_slice(digest)?, &rsig)?;
+
+        let mut key = [0u8; 64];
+        key[..].copy_from_slice(&pub_key.serialize_vec(&secp, /* compressed */ false)[1..]);
+
+        Ok(Public(key))
+    }
+
+    pub fn recover(data: &[u8], signature: &Signature) -> Result<Public, Error> {
+        let mut hasher = Sha256::new();
+        hasher.input(data);
+        let digest = hasher.result();
+
+        Public::recover_digest(&digest, signature)
     }
 }
 
@@ -47,6 +68,12 @@ impl PartialEq for Public {
 }
 
 impl fmt::Display for Public {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        (&self.0[..]).encode_hex::<String>().fmt(f)
+    }
+}
+
+impl fmt::Debug for Public {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (&self.0[..]).encode_hex::<String>().fmt(f)
     }
@@ -132,7 +159,8 @@ mod tests {
         let sig = Signature::from_hex(
             "27ca15976a62ae3677d85f90e20d69d313ada17dba2a869fab3e3a10794f0ed62a6\
             7a711c6106de265adca72c95138be04f40e55d1c2ee76d5fa730f18ed790c01",
-        ).unwrap();
+        )
+        .unwrap();
         let raw_data = Vec::from_hex(
             "0a0246742208f6a72da6712ec2a340d0fecbabf42d5a66080112620a2d747970652\
             e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436\
@@ -150,5 +178,9 @@ mod tests {
         println!("sign1 = {:}", sig);
 
         assert!(pub_key.verify(&raw_data, &sig).is_ok());
+
+        let rec = Public::recover(&raw_data, &sig).unwrap();
+        println!("recover => {:}", rec);
+        assert_eq!(rec, pub_key);
     }
 }
