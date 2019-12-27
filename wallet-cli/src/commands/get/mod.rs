@@ -57,23 +57,61 @@ fn block_info() {
 fn get_block(id_or_num: &str) {
     let client = new_grpc_client();
 
-    if id_or_num.starts_with("0000") {
-        let mut req = BytesMessage::new();
-        req.value = Vec::from_hex(id_or_num).expect("hex bytes parse");
-        let resp = client.get_block_by_id(Default::default(), req);
+    let mut block = {
+        if id_or_num.starts_with("0000") {
+            let mut req = BytesMessage::new();
+            req.value = Vec::from_hex(id_or_num).expect("hex bytes parse");
+            let resp = client.get_block_by_id(Default::default(), req);
 
-        let (_, payload, _) = resp.wait().expect("grpc request");
-        //println!("{:?}", payload);
-        println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
-    } else {
-        let mut req = NumberMessage::new();
-        req.num = id_or_num.parse().expect("block number format");
-        let resp = client.get_block_by_num2(Default::default(), req);
+            let (_, payload, _) = resp.wait().expect("grpc request");
+            serde_json::to_value(&payload).expect("pd json")
+        } else {
+            let mut req = NumberMessage::new();
+            req.num = id_or_num.parse().expect("block number format");
+            let resp = client.get_block_by_num2(Default::default(), req);
 
-        let (_, payload, _) = resp.wait().expect("grpc request");
-        // println!("{:?}", payload);
-        println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+            let (_, payload, _) = resp.wait().expect("grpc request");
+            serde_json::to_value(&payload).expect("pd json")
+        }
+    };
+
+    // get_block_by_id won't return blockid
+    if block["blockid"].is_array() {
+        block["blockid"] = json!(json_bytes_to_hex_string(&block["blockid"]));
     }
+
+    for key in &["parentHash", "txTrieRoot", "witness_address"] {
+        block["block_header"]["raw_data"][key] =
+            json!(json_bytes_to_hex_string(&block["block_header"]["raw_data"][key]));
+    }
+    block["block_header"]["witness_signature"] =
+        json!(json_bytes_to_hex_string(&block["block_header"]["witness_signature"]));
+
+    block["transactions"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|mut transaction| {
+            // NOTE: structual difference of get_block requests
+            if transaction["txid"].is_array() {
+                transaction["txid"] = json!(json_bytes_to_hex_string(&transaction["txid"]));
+                transaction = &mut transaction["transaction"];
+            }
+            transaction["raw_data"]["contract"][0]["parameter"]["value"] = json!(json_bytes_to_hex_string(
+                &transaction["raw_data"]["contract"][0]["parameter"]["value"]
+            ));
+            transaction["raw_data"]["ref_block_hash"] =
+                json!(json_bytes_to_hex_string(&transaction["raw_data"]["ref_block_hash"]));
+            transaction["signature"] = json!(transaction["signature"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|sig| json!(json_bytes_to_hex_string(sig)))
+                .collect::<Vec<_>>());
+        })
+        .last();
+
+    println!("{:}", serde_json::to_string_pretty(&block).expect("pb json"));
 }
 
 fn get_transaction(id: &str) {
