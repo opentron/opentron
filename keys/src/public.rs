@@ -129,10 +129,10 @@ mod tests {
         .unwrap();
         let pub_key = Public::try_from(pub_raw).unwrap();
 
-        let sig = Signature::from(
+        let sig = Signature::from_hex(
             "27ca15976a62ae3677d85f90e20d69d313ada17dba2a869fab3e3a10794f0ed62a6\
             7a711c6106de265adca72c95138be04f40e55d1c2ee76d5fa730f18ed790c01",
-        );
+        ).unwrap();
         let raw_data = Vec::from_hex(
             "0a0246742208f6a72da6712ec2a340d0fecbabf42d5a66080112620a2d747970652\
             e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436\

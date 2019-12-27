@@ -128,13 +128,11 @@ mod tests {
             .unwrap();
 
         let sign = priv_key.sign(&raw).unwrap();
-        let sign2 = Signature::from(
-            Vec::from_hex(
-                "27ca15976a62ae3677d85f90e20d69d313ada17dba2a869fab3e3a10794f0ed\
-                62a67a711c6106de265adca72c95138be04f40e55d1c2ee76d5fa730f18ed790c01",
-            )
-            .unwrap(),
-        );
+        let sign2 = Signature::from_hex(
+            "27ca15976a62ae3677d85f90e20d69d313ada17dba2a869fab3e3a10794f0ed62a6\
+            7a711c6106de265adca72c95138be04f40e55d1c2ee76d5fa730f18ed790c01",
+        )
+        .unwrap();
         assert_eq!(sign, sign2);
     }
 }

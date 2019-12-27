@@ -1,4 +1,6 @@
 use hex::{FromHex, ToHex};
+use std::convert::TryFrom;
+use std::iter;
 use std::{fmt, ops, str};
 
 use crate::error::Error;
@@ -68,33 +70,65 @@ impl str::FromStr for Signature {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Error> {
-        Vec::from_hex(s).map_err(|_| Error::InvalidSignature).map(Signature::from)
+        Vec::from_hex(s)
+            .map_err(|_| Error::InvalidSignature)
+            .and_then(Signature::try_from)
     }
 }
 
-impl From<&'static str> for Signature {
-    fn from(s: &'static str) -> Self {
-        s.parse().unwrap()
+impl TryFrom<&'static str> for Signature {
+    type Error = Error;
+
+    fn try_from(s: &'static str) -> Result<Self, Error> {
+        s.parse()
     }
 }
 
-impl<'a> From<&'a [u8]> for Signature {
-    fn from(v: &'a [u8]) -> Self {
-        let mut inner = [0u8; 65];
-        (&mut inner[..]).copy_from_slice(v);
-        Signature(inner)
+impl<'a> TryFrom<&'a [u8]> for Signature {
+    type Error = Error;
+
+    fn try_from(v: &'a [u8]) -> Result<Self, Error> {
+        if v.len() == 65 {
+            let mut inner = [0u8; 65];
+            (&mut inner[..]).copy_from_slice(v);
+            Ok(Signature(inner))
+        } else {
+            Err(Error::InvalidSignature)
+        }
     }
 }
 
-impl From<Vec<u8>> for Signature {
-    fn from(v: Vec<u8>) -> Self {
-        Signature::from(&v[..])
+impl TryFrom<Vec<u8>> for Signature {
+    type Error = Error;
+
+    fn try_from(v: Vec<u8>) -> Result<Self, Error> {
+        Signature::try_from(&v[..])
     }
 }
 
 impl From<[u8; 65]> for Signature {
     fn from(v: [u8; 65]) -> Self {
         Signature(v)
+    }
+}
+
+impl FromHex for Signature {
+    type Error = Error;
+
+    fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
+        Vec::from_hex(hex.as_ref())
+            .map_err(|_| Error::InvalidSignature)
+            .and_then(Self::try_from)
+    }
+}
+
+impl ToHex for Signature {
+    fn encode_hex<T: iter::FromIterator<char>>(&self) -> T {
+        (&self.0[..]).encode_hex()
+    }
+
+    fn encode_hex_upper<T: iter::FromIterator<char>>(&self) -> T {
+        (&self.0[..]).encode_hex_upper()
     }
 }
 
