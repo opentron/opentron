@@ -18,6 +18,7 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - [ ] multisig
   - [ ] raw transaction handling(create, sign)
 - [ ] full Tron Protocol implementation (joking)
+  - [ ] network
   - [ ] p2p
   - [ ] rpc
   - [ ] consensus
