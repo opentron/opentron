@@ -11,10 +11,11 @@ pub fn new_grpc_client() -> WalletClient {
         .to_socket_addrs()
         .expect("resolve host")
         .next()
-        .expect("host resolve result");
+        .expect("at least one host resolve result");
 
     let grpc_client = Arc::new(
         grpc::Client::new_plain(&host.ip().to_string(), host.port(), Default::default()).expect("grpc client"),
     );
     WalletClient::with_client(grpc_client)
 }
+
