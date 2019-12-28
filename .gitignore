@@ -1,11 +1,4 @@
 /target
 
-# proto gen
-proto/src/Contract.rs
-proto/src/Discover.rs
-proto/src/Tron.rs
-proto/src/api.rs
-proto/src/api_grpc.rs
-
 # ignore for now
 Cargo.lock
