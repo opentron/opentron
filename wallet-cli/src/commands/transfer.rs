@@ -48,16 +48,16 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         .and_then(|k| k.parse::<Private>().ok())
         .ok_or(Error::Runtime("private key(--priv-key) required"))?;
 
-    let client = new_grpc_client();
+    let client = new_grpc_client()?;
 
     let mut trx_contract = TransferContract::new();
     trx_contract.set_owner_address(sender.to_bytes().to_owned());
     trx_contract.set_to_address(recipient.to_bytes().to_owned());
-    trx_contract.set_amount(amount.parse().expect("transfer amount"));
+    trx_contract.set_amount(amount.parse()?);
 
     let mut any = Any::new();
     any.set_type_url("type.googleapis.com/protocol.TransferContract".to_owned());
-    any.set_value(trx_contract.write_to_bytes().unwrap());
+    any.set_value(trx_contract.write_to_bytes()?);
 
     let mut contract = Contract::new();
     contract.set_field_type(ContractType::TransferContract);
@@ -79,11 +79,8 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     raw.set_timestamp(timestamp_millis());
 
     // signature
-    println!(
-        "TX: {:}",
-        crypto::sha256(&raw.write_to_bytes().unwrap()).encode_hex::<String>()
-    );
-    let sign = priv_key.sign(&raw.write_to_bytes().unwrap())?;
+    println!("TX: {:}", crypto::sha256(&raw.write_to_bytes()?).encode_hex::<String>());
+    let sign = priv_key.sign(&raw.write_to_bytes()?)?;
 
     let mut req = Transaction::new();
     req.set_raw_data(raw);
@@ -93,7 +90,6 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     println!("recipient: {:}", recipient);
 
     let resp = client.broadcast_transaction(Default::default(), req);
-
     let (_, payload, _) = resp.wait()?;
 
     let mut result = serde_json::to_value(&payload)?;

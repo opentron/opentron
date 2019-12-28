@@ -6,11 +6,12 @@ use proto::api_grpc::Wallet;
 use proto::core::Account;
 use serde_json::json;
 
+use crate::error::Error;
 use crate::utils::client::new_grpc_client;
 use crate::utils::jsont;
 
-fn block_info() {
-    let client = new_grpc_client();
+fn block_info() -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let req = EmptyMessage::new();
     let resp = client.get_node_info(Default::default(), req);
@@ -18,10 +19,12 @@ fn block_info() {
     let (_, payload, _) = resp.wait().expect("grpc request");
 
     println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+
+    Ok(())
 }
 
-fn get_block(id_or_num: &str) {
-    let client = new_grpc_client();
+fn get_block(id_or_num: &str) -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let mut block = {
         if id_or_num.starts_with("0000") {
@@ -68,10 +71,11 @@ fn get_block(id_or_num: &str) {
         .last();
 
     println!("{:}", serde_json::to_string_pretty(&block).expect("pb json"));
+    Ok(())
 }
 
-fn get_transaction(id: &str) {
-    let client = new_grpc_client();
+fn get_transaction(id: &str) -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let mut req = BytesMessage::new();
     req.value = Vec::from_hex(id).expect("hex bytes parse");
@@ -84,10 +88,11 @@ fn get_transaction(id: &str) {
     jsont::fix_transaction(&mut transaction);
 
     println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
+    Ok(())
 }
 
-fn get_transaction_info(id: &str) {
-    let client = new_grpc_client();
+fn get_transaction_info(id: &str) -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let mut req = BytesMessage::new();
     req.value = Vec::from_hex(id).expect("hex bytes parse");
@@ -113,11 +118,12 @@ fn get_transaction_info(id: &str) {
         "receipt": json["receipt"],
     });
     println!("{}", serde_json::to_string_pretty(&result).unwrap());
+    Ok(())
 }
 
 /// Get account infomation.
-fn get_account(name: &str) {
-    let client = new_grpc_client();
+fn get_account(name: &str) -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let mut req = Account::new();
     let addr = name.parse::<Address>().expect("addr format");
@@ -134,7 +140,7 @@ fn get_account(name: &str) {
     if account["address"][0].is_null() {
         eprintln!("error: not found!");
         println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
-        return;
+        return Err(Error::Runtime("address not found"));
     }
 
     account["address"] = json!(jsont::bytes_to_hex_string(&account["address"]));
@@ -170,11 +176,12 @@ fn get_account(name: &str) {
     // TODO: witness_permission
 
     println!("{}", serde_json::to_string_pretty(&account).expect("resp json parse"));
+    Ok(())
 }
 
 /// Get account energy and bandwidth infomation.
-fn get_account_resource(name: &str) {
-    let client = new_grpc_client();
+fn get_account_resource(name: &str) -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let mut req = Account::new();
     let addr = name.parse::<Address>().expect("addr format");
@@ -186,10 +193,11 @@ fn get_account_resource(name: &str) {
         .expect("grpc request");
 
     println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+    Ok(())
 }
 
-fn get_asset_list() {
-    let client = new_grpc_client();
+fn get_asset_list() -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let req = EmptyMessage::new();
     let resp = client.get_asset_issue_list(Default::default(), req);
@@ -215,10 +223,11 @@ fn get_asset_list() {
         "{}",
         serde_json::to_string_pretty(&assets["assetIssue"]).expect("resp json parse")
     );
+    Ok(())
 }
 
-fn get_contract(addr: &str) {
-    let client = new_grpc_client();
+fn get_contract(addr: &str) -> Result<(), Error> {
+    let client = new_grpc_client()?;
 
     let address: Address = addr.parse().expect("address format");
     let mut req = BytesMessage::new();
@@ -235,60 +244,49 @@ fn get_contract(addr: &str) {
     contract["code_hash"] = json!(jsont::bytes_to_hex_string(&contract["code_hash"]));
 
     println!("{}", serde_json::to_string_pretty(&contract).expect("pb json"));
+    Ok(())
 }
 
-pub fn main(matches: &ArgMatches) -> Result<(), String> {
+pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
-        ("info", _) => {
-            block_info();
-            Ok(())
-        }
+        ("info", _) => block_info(),
         ("block", Some(block_matches)) => {
             let block = block_matches
                 .value_of("BLOCK")
                 .expect("block is required in cli.yml; qed");
-            get_block(block);
-            Ok(())
+            get_block(block)
         }
         ("transaction", Some(tr_matches)) => {
             let id = tr_matches
                 .value_of("ID")
                 .expect("transaction is required in cli.yml; qed");
-            get_transaction(id);
-            Ok(())
+            get_transaction(id)
         }
         ("transaction_info", Some(tr_matches)) => {
             let id = tr_matches
                 .value_of("ID")
                 .expect("transaction is required in cli.yml; qed");
-            get_transaction_info(id);
-            Ok(())
+            get_transaction_info(id)
         }
         ("account", Some(arg_matches)) => {
             let name = arg_matches
                 .value_of("NAME")
                 .expect("account name is required is cli.yml; qed");
-            get_account(name);
-            Ok(())
+            get_account(name)
         }
         ("account_resource", Some(arg_matches)) => {
             let name = arg_matches
                 .value_of("NAME")
                 .expect("account name is required is cli.yml; qed");
-            get_account_resource(name);
-            Ok(())
+            get_account_resource(name)
         }
         ("contract", Some(arg_matches)) => {
             let addr = arg_matches
                 .value_of("ADDR")
                 .expect("address is required is cli.yml; qed");
-            get_contract(addr);
-            Ok(())
+            get_contract(addr)
         }
-        ("asset", _) => {
-            get_asset_list();
-            Ok(())
-        }
-        _ => Err("error parsing command line".to_owned()),
+        ("asset", _) => get_asset_list(),
+        _ => Err(Error::Runtime("error parsing command line")),
     }
 }
