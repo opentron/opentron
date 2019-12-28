@@ -1,18 +1,34 @@
+use chrono::Utc;
 use clap::ArgMatches;
+use hex::ToHex;
 use keys::{Address, Private};
-use proto::api_grpc::Wallet;
+use proto::api::{BlockExtention, NumberMessage};
+use proto::api_grpc::{Wallet, WalletClient};
 use proto::core::{
     Transaction, Transaction_Contract as Contract, Transaction_Contract_ContractType as ContractType,
-    Transaction_raw as TransactionRaw,
-    TransferContract,
+    Transaction_raw as TransactionRaw, TransferContract,
 };
-use serde_json::json;
 use protobuf::well_known_types::Any;
 use protobuf::Message;
-use hex::ToHex;
+use serde_json::json;
 
 use crate::utils::client::new_grpc_client;
 use crate::utils::jsont;
+use crate::utils::crypto;
+
+fn timestamp_millis() -> i64 {
+    Utc::now().timestamp_millis()
+}
+
+fn get_latest_block(client: &WalletClient) -> Result<BlockExtention, String> {
+    let mut req = NumberMessage::new();
+    req.set_num(1);
+    let (_, resp, _) = client
+        .get_block_by_latest_num2(Default::default(), req)
+        .wait()
+        .map_err(|_| "grpc request error".to_owned())?;
+    resp.block.into_iter().next().ok_or("block not found".to_owned())
+}
 
 pub fn main(matches: &ArgMatches) -> Result<(), String> {
     let sender = matches
@@ -26,14 +42,17 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
     let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
     let memo = matches.value_of("MEMO").unwrap_or("");
 
+    let priv_key = matches
+        .value_of("priv-key")
+        .ok_or("private key(-K) required".to_owned())
+        .and_then(|k| k.parse::<Private>().map_err(|e| e.to_string()))?;
+
     let client = new_grpc_client();
 
     let mut trx_contract = TransferContract::new();
     trx_contract.set_owner_address(sender.to_bytes().to_owned());
     trx_contract.set_to_address(recipient.to_bytes().to_owned());
     trx_contract.set_amount(amount.parse().expect("transfer amount"));
-
-    println!("pb inner => {:?}", &trx_contract);
 
     let mut any = Any::new();
     any.set_type_url("type.googleapis.com/protocol.TransferContract".to_owned());
@@ -46,20 +65,27 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
     let mut raw = TransactionRaw::new();
     raw.set_contract(vec![contract].into());
     raw.set_data(memo.into());
-    // raw.set_expiration(v: i64)
+    raw.set_expiration(timestamp_millis() + 1000 * 60); // 1min
 
-    let priv_key = "d705fc17c82942f85848ab522e42d986279028d09d12ad881bdc0e1327031976"
-            .parse::<Private>()
-            .unwrap();
-    let sign = priv_key.sign(&raw.write_to_bytes().unwrap()).map_err(|e| e.to_string())?;
+    // fill ref_block info
+    let ref_block = get_latest_block(&client)?;
+    let ref_block_number = ref_block.get_block_header().get_raw_data().number;
+    raw.set_ref_block_bytes(vec![
+        ((ref_block_number & 0xff00) >> 8) as u8,
+        (ref_block_number & 0xff) as u8,
+    ]);
+    raw.set_ref_block_hash(ref_block.blockid[8..16].to_owned());
+    raw.set_timestamp(timestamp_millis());
+
+    // signature
+    println!("TX: {:}", crypto::sha256(&raw.write_to_bytes().unwrap()).encode_hex::<String>());
+    let sign = priv_key
+        .sign(&raw.write_to_bytes().unwrap())
+        .map_err(|e| e.to_string())?;
 
     let mut req = Transaction::new();
     req.set_raw_data(raw);
     req.set_signature(vec![(&sign[..]).to_owned()].into());
-
-    let test = req.write_to_bytes().unwrap();
-    println!("send hex => {:}", test.encode_hex::<String>());
-    println!("send pb => {:?}", &req);
 
     println!("sender:    {:}", sender);
     println!("recipient: {:}", recipient);

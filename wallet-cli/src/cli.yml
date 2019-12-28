@@ -64,10 +64,11 @@ subcommands:
             - MEMO:
                 help: The memo for the transfer
                 required: false
-            - key:
+            - priv-key:
                 help: The private key used for signing
                 short: K
-                long: key
+                long: priv-key
+                takes_value: true
 
     - wallet:
         about: Subcommand used to interact with the local wallet

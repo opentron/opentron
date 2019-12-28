@@ -6,6 +6,8 @@ extern crate hex;
 extern crate keys;
 extern crate proto;
 extern crate serde_json;
+extern crate chrono;
+extern crate sha2;
 
 mod commands;
 mod utils;
