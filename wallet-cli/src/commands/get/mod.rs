@@ -172,6 +172,22 @@ fn get_account(name: &str) {
     println!("{}", serde_json::to_string_pretty(&account).expect("resp json parse"));
 }
 
+/// Get account energy and bandwidth infomation.
+fn get_account_resource(name: &str) {
+    let client = new_grpc_client();
+
+    let mut req = Account::new();
+    let addr = name.parse::<Address>().expect("addr format");
+    req.set_address(addr.to_bytes().to_owned());
+
+    let (_, payload, _) = client
+        .get_account_resource(Default::default(), req)
+        .wait()
+        .expect("grpc request");
+
+    println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+}
+
 fn get_asset_list() {
     let client = new_grpc_client();
 
@@ -253,6 +269,13 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
                 .value_of("NAME")
                 .expect("account name is required is cli.yml; qed");
             get_account(name);
+            Ok(())
+        }
+        ("account_resource", Some(arg_matches)) => {
+            let name = arg_matches
+                .value_of("NAME")
+                .expect("account name is required is cli.yml; qed");
+            get_account_resource(name);
             Ok(())
         }
         ("contract", Some(arg_matches)) => {

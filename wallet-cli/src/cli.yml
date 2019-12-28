@@ -40,6 +40,12 @@ subcommands:
                     - NAME:
                         help: The name of the account to retrieve
                         required: true
+            - account_resource:
+                about: Retrieves energy and bandwidth usage of an account
+                args:
+                    - NAME:
+                        help: The name of the account to retrieve
+                        required: true
             - contract:
                 about: Get details of a smart contract
                 args:
