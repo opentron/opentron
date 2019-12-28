@@ -55,6 +55,12 @@ subcommands:
             - asset:
                 about: Retrieves list of all tokens
 
+    - set:
+        about: Sets or updates the blockchain state
+        subcommands:
+            - account_permission:
+                help: Creates or updates an account's permission
+
     - transfer:
         about: Transfer a TRX token
         args:
