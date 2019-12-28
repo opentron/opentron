@@ -12,40 +12,41 @@ use protobuf::well_known_types::Any;
 use protobuf::Message;
 use serde_json::json;
 
+use crate::error::Error;
 use crate::utils::client::new_grpc_client;
-use crate::utils::jsont;
 use crate::utils::crypto;
+use crate::utils::jsont;
 
 fn timestamp_millis() -> i64 {
     Utc::now().timestamp_millis()
 }
 
-fn get_latest_block(client: &WalletClient) -> Result<BlockExtention, String> {
+fn get_latest_block(client: &WalletClient) -> Result<BlockExtention, Error> {
     let mut req = NumberMessage::new();
     req.set_num(1);
-    let (_, resp, _) = client
-        .get_block_by_latest_num2(Default::default(), req)
-        .wait()
-        .map_err(|_| "grpc request error".to_owned())?;
-    resp.block.into_iter().next().ok_or("block not found".to_owned())
+    let (_, resp, _) = client.get_block_by_latest_num2(Default::default(), req).wait()?;
+    resp.block
+        .into_iter()
+        .next()
+        .ok_or(Error::Runtime("no latest block retrieved"))
 }
 
-pub fn main(matches: &ArgMatches) -> Result<(), String> {
+pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
         .value_of("SENDER")
-        .ok_or("required in cli.yml; qed".to_owned())
-        .and_then(|s| s.parse::<Address>().map_err(|e| e.to_string()))?;
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong sender address format"))?;
     let recipient = matches
         .value_of("RECIPIENT")
-        .ok_or("required in cli.yml; qed".to_owned())
-        .and_then(|s| s.parse::<Address>().map_err(|e| e.to_string()))?;
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong recipient address format"))?;
     let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
     let memo = matches.value_of("MEMO").unwrap_or("");
 
     let priv_key = matches
         .value_of("priv-key")
-        .ok_or("private key(-K) required".to_owned())
-        .and_then(|k| k.parse::<Private>().map_err(|e| e.to_string()))?;
+        .and_then(|k| k.parse::<Private>().ok())
+        .ok_or(Error::Runtime("private key(--priv-key) required"))?;
 
     let client = new_grpc_client();
 
@@ -78,10 +79,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
     raw.set_timestamp(timestamp_millis());
 
     // signature
-    println!("TX: {:}", crypto::sha256(&raw.write_to_bytes().unwrap()).encode_hex::<String>());
-    let sign = priv_key
-        .sign(&raw.write_to_bytes().unwrap())
-        .map_err(|e| e.to_string())?;
+    println!(
+        "TX: {:}",
+        crypto::sha256(&raw.write_to_bytes().unwrap()).encode_hex::<String>()
+    );
+    let sign = priv_key.sign(&raw.write_to_bytes().unwrap())?;
 
     let mut req = Transaction::new();
     req.set_raw_data(raw);
@@ -92,14 +94,14 @@ pub fn main(matches: &ArgMatches) -> Result<(), String> {
 
     let resp = client.broadcast_transaction(Default::default(), req);
 
-    let (_, payload, _) = resp.wait().expect("grpc request");
+    let (_, payload, _) = resp.wait()?;
 
-    let mut result = serde_json::to_value(&payload).expect("resp json serilization");
+    let mut result = serde_json::to_value(&payload)?;
 
     if !result["message"].is_null() {
         result["message"] = json!(jsont::bytes_to_string(&result["message"]));
     }
 
-    println!("got => {:}", serde_json::to_string_pretty(&result).unwrap());
+    println!("got => {:}", serde_json::to_string_pretty(&result)?);
     Ok(())
 }

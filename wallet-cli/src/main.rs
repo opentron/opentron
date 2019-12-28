@@ -1,6 +1,7 @@
 use clap::load_yaml;
 
 mod commands;
+mod error;
 mod utils;
 
 fn main() -> Result<(), String> {
@@ -9,7 +10,7 @@ fn main() -> Result<(), String> {
 
     match matches.subcommand() {
         ("get", Some(import_matches)) => commands::get::main(import_matches),
-        ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
+        ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches).map_err(|e| e.to_string()),
         _ => {
             println!("{}", matches.usage());
             Err("error parsing command line".to_owned())

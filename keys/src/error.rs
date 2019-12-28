@@ -30,6 +30,8 @@ impl fmt::Display for Error {
     }
 }
 
+impl std::error::Error for Error {}
+
 impl From<Secp256k1Error> for Error {
     fn from(e: Secp256k1Error) -> Self {
         match e {
