@@ -139,14 +139,17 @@ fn get_account(name: &str) {
 
     account["address"] = json!(jsont::bytes_to_hex_string(&account["address"]));
     account["account_name"] = json!(jsont::bytes_to_string(&account["account_name"]));
-    account["owner_permission"]["keys"]
-        .as_array_mut()
-        .unwrap()
-        .iter_mut()
-        .map(|key| {
-            key["address"] = json!(jsont::bytes_to_hex_string(&key["address"]));
-        })
-        .last();
+    // NOTE: one can remove owner_permission by setting null
+    if !account["owner_permission"].is_null() {
+        account["owner_permission"]["keys"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .map(|key| {
+                key["address"] = json!(jsont::bytes_to_hex_string(&key["address"]));
+            })
+            .last();
+    }
 
     account["active_permission"]
         .as_array_mut()
