@@ -1,6 +1,3 @@
-extern crate protoc_rust;
-extern crate protoc_rust_grpc;
-
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/lib.rs");

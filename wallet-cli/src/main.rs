@@ -1,13 +1,4 @@
-#[macro_use]
-extern crate clap;
-extern crate futures;
-extern crate grpc;
-extern crate hex;
-extern crate keys;
-extern crate proto;
-extern crate serde_json;
-extern crate chrono;
-extern crate sha2;
+use clap::load_yaml;
 
 mod commands;
 mod utils;
