@@ -85,7 +85,6 @@ impl Wallet {
     }
 
     pub fn unlock(&mut self, password: &str) -> Result<(), Error> {
-        // unimplemented!()
         self.check_password(password).and_then(|verified| {
             if verified {
                 Ok(())
