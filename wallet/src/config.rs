@@ -2,8 +2,8 @@ use std::env;
 use std::path::{Path, PathBuf};
 
 pub const APP_NAME: &'static str = "TronProtocol";
+#[allow(dead_code)]
 pub const VENDOR_NAME: &'static str = "Tron Foundation";
-pub const WALLET_FILE_VERSION_STR: &'static str = "v1";
 
 // FIXME: should macOS use `/Users/$USER/Library/Application Support/TronProtocol`?
 
@@ -36,7 +36,6 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let dir = determine_config_directory();
-        println!("config dir => {:?}", dir);
+        let _ = determine_config_directory();
     }
 }

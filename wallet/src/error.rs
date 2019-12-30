@@ -9,6 +9,8 @@ pub enum Error {
     #[error("error: {0:?}")]
     Keys(#[from] ::keys::Error),
     #[error("{0:}")]
+    FromHex(#[from] ::hex::FromHexError),
+    #[error("{0:}")]
     Runtime(&'static str),
 }
 

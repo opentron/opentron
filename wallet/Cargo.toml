@@ -12,5 +12,7 @@ thiserror = "1.0"
 aes = "0.3"
 cfb-mode = "0.3"
 sha2 = "0.8"
+rand = "0.7"
+hex = "0.4"
 
 keys = { path = "../keys" }
