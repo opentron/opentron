@@ -5,6 +5,7 @@ use std::{fmt, ops, str};
 
 use crate::error::Error;
 
+#[derive(Clone)]
 pub struct Signature([u8; 65]);
 
 impl Signature {

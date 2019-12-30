@@ -9,7 +9,7 @@ use crate::error::Error;
 use crate::private::Private;
 use crate::public::Public;
 
-#[derive(Debug, Hash)]
+#[derive(Debug, Hash, Clone)]
 pub struct KeyPair {
     private: Private,
     public: Public,

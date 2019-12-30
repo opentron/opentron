@@ -12,7 +12,7 @@ use crate::error::Error;
 use crate::signature::Signature;
 
 /// Private key of Secp256k1
-#[derive(PartialEq, Debug, Hash)]
+#[derive(PartialEq, Hash, Clone)]
 pub struct Private([u8; 32]);
 
 impl Private {
@@ -41,6 +41,12 @@ impl Private {
 }
 
 impl fmt::Display for Private {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.encode_hex::<String>().fmt(f)
+    }
+}
+
+impl fmt::Debug for Private {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.encode_hex::<String>().fmt(f)
     }
