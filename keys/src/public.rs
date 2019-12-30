@@ -12,6 +12,7 @@ use crate::private::Private;
 use crate::signature::Signature;
 
 /// Raw public key
+#[derive(Clone)]
 pub struct Public([u8; 64]);
 
 impl Public {
@@ -80,6 +81,8 @@ impl PartialEq for Public {
     }
 }
 
+impl Eq for Public {}
+
 impl fmt::Display for Public {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         (&self.0[..]).encode_hex::<String>().fmt(f)
@@ -144,11 +147,11 @@ impl FromStr for Public {
     where
         Self: Sized,
     {
-        if s.len() == 64 {
+        if s.len() == 128 {
             Vec::from_hex(s)
                 .map_err(|_| Error::InvalidPublic)
                 .and_then(Self::try_from)
-        } else if s.len() == 66 && (s.starts_with("0x") || s.starts_with("0X")) {
+        } else if s.len() == 128 + 2 && (s.starts_with("0x") || s.starts_with("0X")) {
             Vec::from_hex(&s.as_bytes()[2..])
                 .map_err(|_| Error::InvalidPublic)
                 .and_then(Self::try_from)
