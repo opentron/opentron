@@ -44,4 +44,5 @@ name = "tron"
 members = [
     "wallet-cli",
     "wallet",
+    "walletd",
 ]
