@@ -197,24 +197,25 @@ impl Wallet {
     }
 
     pub fn sign_digest(&self, digest: &[u8], public: &Public) -> Result<Signature, Error> {
+        self.get_private_key(public)
+            .and_then(|private| private.sign_digest(digest).map_err(Error::from))
+    }
+
+    pub fn get_private_key(&self, public: &Public) -> Result<&Private, Error> {
         if self.is_locked() {
             return Err(Error::Runtime("unable to sign on a locked wallet"));
         }
         if !self.keys.contains(public) {
             return Err(Error::Runtime("key not in wallet"));
         }
-
-        if let Some(private) = self
+        Ok(self
             .keypairs
             .as_ref()
             .unwrap()
             .iter()
             .find(|kp| kp.public() == public)
             .map(|kp| kp.private())
-        {
-            return Ok(private.sign_digest(digest)?)
-        }
-        unreachable!()
+            .unwrap())
     }
 
     fn sync_keypairs_to_wallet_file(&self) -> Result<(), Error> {
@@ -253,7 +254,6 @@ impl Wallet {
     /*
     list_keys()
     list_public_keys()
-    get_private_key(pubkey)
     */
 }
 
@@ -315,7 +315,7 @@ fn random_salt() -> String {
 fn test_hello() {
     let mut w = Wallet::new("default").unwrap();
 
-    // w.set_password("123456").expect("set password");
+    w.set_password("123456").expect("set password");
 
     assert!(w.check_password("123456").unwrap());
     assert!(!w.check_password("654321").unwrap());
