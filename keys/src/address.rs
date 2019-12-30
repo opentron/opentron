@@ -10,7 +10,7 @@ use std::str::FromStr; // .parse
 use crate::error::Error;
 use crate::public::Public;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Address([u8; 21]);
 
 impl Address {

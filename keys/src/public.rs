@@ -4,6 +4,7 @@ use secp256k1::{Message, RecoverableSignature, RecoveryId, Secp256k1};
 use sha2::{Digest, Sha256};
 use std::convert::TryFrom;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 use crate::error::Error;
@@ -91,6 +92,13 @@ impl fmt::Debug for Public {
     }
 }
 
+// since std::array::LengthAtMost32 is required for derive Hash
+impl Hash for Public {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (&self.0[..]).hash(state);
+    }
+}
+
 impl TryFrom<&[u8]> for Public {
     type Error = Error;
 
@@ -165,21 +173,21 @@ mod tests {
     fn test_public_verify() {
         let pub_raw = Vec::from_hex(
             "56f19ba7de92264d94f9b6600ec05c16c0b25a064e2ee1cf5bf0dd9661d04515c99\
-            c3a6b42b2c574232a5b951bf57cf706bbfd36377b406f9313772f65612cd0",
+             c3a6b42b2c574232a5b951bf57cf706bbfd36377b406f9313772f65612cd0",
         )
         .unwrap();
         let pub_key = Public::try_from(pub_raw).unwrap();
 
         let sig = Signature::from_hex(
             "27ca15976a62ae3677d85f90e20d69d313ada17dba2a869fab3e3a10794f0ed62a6\
-            7a711c6106de265adca72c95138be04f40e55d1c2ee76d5fa730f18ed790c01",
+             7a711c6106de265adca72c95138be04f40e55d1c2ee76d5fa730f18ed790c01",
         )
         .unwrap();
         let raw_data = Vec::from_hex(
             "0a0246742208f6a72da6712ec2a340d0fecbabf42d5a66080112620a2d747970652\
-            e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436\
-            f6e747261637412310a15419cf784b4cc7531f1598c4c322de9afdc597fe76012154\
-            1340967e825557559dc46bbf0eabe5ccf99fd134e18e80770cab0c8abf42d",
+             e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436\
+             f6e747261637412310a15419cf784b4cc7531f1598c4c322de9afdc597fe76012154\
+             1340967e825557559dc46bbf0eabe5ccf99fd134e18e80770cab0c8abf42d",
         )
         .unwrap();
         let priv_key = "d705fc17c82942f85848ab522e42d986279028d09d12ad881bdc0e1327031976"

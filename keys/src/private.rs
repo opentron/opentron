@@ -12,7 +12,7 @@ use crate::error::Error;
 use crate::signature::Signature;
 
 /// Private key of Secp256k1
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Hash)]
 pub struct Private([u8; 32]);
 
 impl Private {
