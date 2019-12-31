@@ -22,7 +22,6 @@ fn main() -> Result<(), String> {
             Some("testnet") => "47.252.87.110:50051",
             Some("dappchain") => "47.90.245.159:50051",
             Some("dappchain-testnet") => "47.252.85.90:50051",
-            None => "grpc.trongrid.io:50051",
             _ => unreachable!(),
         }
     }
