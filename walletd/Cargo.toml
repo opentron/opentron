@@ -11,6 +11,7 @@ tonic = "0.1.0-beta.1"
 # NOTE: prost 0.5 requires bytes = 0.4
 bytes = "0.4"
 prost = "0.5"
+daemonize = "0.4"
 
 tokio = { version = "0.2", features = ["rt-threaded", "time", "stream", "fs", "macros", "uds"] }
 futures = { version = "0.3", default-features = false, features = ["alloc"]}

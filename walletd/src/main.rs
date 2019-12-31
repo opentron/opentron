@@ -1,8 +1,10 @@
-use tonic::{transport::Server, Request, Response, Status};
+use daemonize::Daemonize;
+use std::fs::File;
 use std::sync::{Arc, RwLock};
-use wallet::Wallet as LocalWallet;
+use tonic::{transport::Server, Request, Response, Status};
+use wallet::Wallet;
 
-use api::wallet_server::{Wallet, WalletServer};
+use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::{OpenRequest, StatusResponse};
 
 pub mod api {
@@ -11,11 +13,11 @@ pub mod api {
 
 #[derive(Default)]
 pub struct LocalWalletService {
-    wallet: Arc<RwLock<Option<LocalWallet>>>,
+    wallet: Arc<RwLock<Option<Wallet>>>,
 }
 
 #[tonic::async_trait]
-impl Wallet for LocalWalletService {
+impl LocalWallet for LocalWalletService {
     async fn open(&self, request: Request<OpenRequest>) -> Result<Response<StatusResponse>, Status> {
         println!("Got a request from {:?}", request.remote_addr());
 
@@ -29,13 +31,24 @@ impl Wallet for LocalWalletService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse().unwrap();
+    let stdout = File::create("/tmp/walletd.out").unwrap();
+    let stderr = File::create("/tmp/walletd.err").unwrap();
+
+    let addr = "[::1]:12020".parse().unwrap();
     let service = LocalWalletService::default();
 
-    println!("LocalWalletService listening on {}", addr);
+    let daemonize = Daemonize::new()
+        .pid_file("/tmp/walletd.pid")
+        .stdout(stdout)
+        .stderr(stderr);
+    match daemonize.start() {
+        Ok(_) => println!("Success, daemonized"),
+        Err(e) => eprintln!("Error, {}", e),
+    }
 
+    println!("LocalWalletService listening on {}", addr);
     Server::builder()
-        .add_service(WalletServer::new(service))
+        .add_service(LocalWalletServer::new(service))
         .serve(addr)
         .await?;
 
