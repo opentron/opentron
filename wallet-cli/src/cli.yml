@@ -5,99 +5,144 @@ about: Tron Protocol wallet command line util
 
 args:
     - verbose:
-        help: Make the operation more talkative
-        short: v
-        long: verbose
+          help: Make the operation more talkative
+          short: v
+          long: verbose
     - network:
-        help: Connect to which Tron network
-        long: network
-        takes_value: true
-        global: true
-        possible_values: [ mainnet, shasta, nile, testnet, dappchain, dappchain-testnet ]
-        default_value: mainnet
+          help: Connect to which Tron network
+          long: network
+          takes_value: true
+          global: true
+          possible_values:
+              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          default_value: mainnet
 
 subcommands:
     - get:
-        about: Retrieves various items and information from the blockchain
-        subcommands:
-            - node:
-                about: Get current connected node state information
-            - block:
-                about: Retrieves a full block from the blockchain
-                args:
-                    - BLOCK:
-                        help: The number or ID of the block to retrieve
-                        required: true
-                        index: 1
-            - transaction:
-                about: Retrieves a transaction from the blockchain
-                args:
-                    - ID:
-                        help: ID of the transaction to retrieve
-                        required: true
-            - transaction_info:
-                about: Retrieves receipt of atransaction
-                args:
-                    - ID:
-                        help: ID of the transaction to retrieve
-                        required: true
-            - account:
-                about: Retrieves an account from the blockchain
-                args:
-                    - NAME:
-                        help: The name of the account to retrieve
-                        required: true
-            - account_resource:
-                about: Retrieves energy and bandwidth usage of an account
-                args:
-                    - NAME:
-                        help: The name of the account to retrieve
-                        required: true
-            - contract:
-                about: Get details of a smart contract
-                args:
-                    - ADDR:
-                        help: The address of the smart contract
-                        required: true
-            - asset:
-                about: Retrieves list of all tokens
+          about: Retrieves various items and information from the blockchain
+          subcommands:
+              - node:
+                    about: Get current connected node state information
+              - block:
+                    about: Retrieves a full block from the blockchain
+                    args:
+                        - BLOCK:
+                              help: The number or ID of the block to retrieve
+                              required: true
+                              index: 1
+              - transaction:
+                    about: Retrieves a transaction from the blockchain
+                    args:
+                        - ID:
+                              help: ID of the transaction to retrieve
+                              required: true
+              - transaction_info:
+                    about: Retrieves receipt of atransaction
+                    args:
+                        - ID:
+                              help: ID of the transaction to retrieve
+                              required: true
+              - account:
+                    about: Retrieves an account from the blockchain
+                    args:
+                        - NAME:
+                              help: The name of the account to retrieve
+                              required: true
+              - account_resource:
+                    about: Retrieves energy and bandwidth usage of an account
+                    args:
+                        - NAME:
+                              help: The name of the account to retrieve
+                              required: true
+              - contract:
+                    about: Get details of a smart contract
+                    args:
+                        - ADDR:
+                              help: The address of the smart contract
+                              required: true
+              - asset:
+                    about: Retrieves list of all tokens
 
     - set:
-        about: Sets or updates the blockchain state
-        subcommands:
-            - account_permission:
-                help: Creates or updates an account's permission
+          about: Sets or updates the blockchain state
+          subcommands:
+              - account_permission:
+                    help: Creates or updates an account's permission
 
     - transfer:
-        about: Transfer a TRX token
-        args:
-            - SENDER:
-                help: The account sending tokens
-                required: true
-            - RECIPIENT:
-                help: The account receiving tokens
-                required: true
-            - AMOUNT:
-                help: The amount of tokens to send and the token symbol
-                required: true
-            - MEMO:
-                help: The memo for the transfer
-                required: false
-            - priv-key:
-                help: The private key used for signing
-                short: K
-                long: priv-key
-                takes_value: true
+          about: Transfer a TRX token
+          args:
+              - SENDER:
+                    help: The account sending tokens
+                    required: true
+              - RECIPIENT:
+                    help: The account receiving tokens
+                    required: true
+              - AMOUNT:
+                    help: The amount of tokens to send and the token symbol
+                    required: true
+              - MEMO:
+                    help: The memo for the transfer
+                    required: false
+              - priv-key:
+                    help: The private key used for signing
+                    short: K
+                    long: priv-key
+                    takes_value: true
 
     - wallet:
-        about: Subcommand used to interact with the local wallet
-        args:
-            - name:
-                help: Name of the new wallet
-                short: n
-                long: name
-                takes_value: true
-                global: true
-        subcommands:
-            - create:
-                about: Create a new wallet locally
+          about: Subcommand used to interact with the local wallet
+          args:
+              - name:
+                    help: Name of the new wallet
+                    short: n
+                    long: name
+                    takes_value: true
+                    global: true
+                    default_value: default
+          subcommands:
+              - create:
+                    about: Creates a new wallet locally
+                    args:
+                        - password:
+                              help: The password of the wallet
+                              long: password
+                              takes_value: true
+                              required: true
+              - open:
+                    about: Opens an existing wallet
+              - lock:
+                    about: Locks a wallet
+              - unlock:
+                    about: Unlocks a wallet
+                    args:
+                        - password:
+                              help: The password of the wallet
+                              long: password
+                              takes_value: true
+                              required: true
+              - import:
+                    about: Imports private key into wallet
+                    args:
+                        - private-key:
+                              help: Private key to import
+                              long: private-key
+                              takes_value: true
+                              required: true
+              - keys:
+                    about: >
+                        List of public keys from all unlocked wallets.
+                        These are the keys that could be used to sign transactions.
+              - create_key:
+                    about: >
+                        Creates a key pair within the wallet so that you don't need to manually import it.
+              - private_keys:
+                    about: >
+                        Query for the public and private key pairs of an individual wallet.
+                        The wallet must already be unlocked and you must give the password again.
+                    args:
+                        - password:
+                              help: The password of the wallet
+                              long: password
+                              takes_value: true
+                              required: true
