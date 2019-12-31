@@ -105,7 +105,9 @@ impl Wallet {
 
     pub fn set_password(&mut self, password: &str) -> Result<(), Error> {
         if self.is_locked() && !self.is_new() {
-            Err(Error::Runtime("Wallet is locked"))
+            Err(Error::Runtime("wallet is locked"))
+        } else if password.len() < 8 {
+            Err(Error::Runtime("password should be at least 8 chars"))
         } else {
             let mut wallet_json: serde_json::Value = serde_json::from_str(&fs::read_to_string(&self.wallet_path)?)?;
             let salt = random_salt();
