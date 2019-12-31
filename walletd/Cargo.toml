@@ -14,7 +14,7 @@ prost = "0.5"
 daemonize = "0.4"
 
 tokio = { version = "0.2", features = ["rt-threaded", "time", "stream", "fs", "macros", "uds"] }
-futures = { version = "0.3", default-features = false, features = ["alloc"]}
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
 
 keys = { path = "../keys" }
 wallet = { path = "../wallet" }
