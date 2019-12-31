@@ -20,8 +20,8 @@ subcommands:
     - get:
         about: Retrieves various items and information from the blockchain
         subcommands:
-            - info:
-                about: Get current blockchain state information
+            - node:
+                about: Get current connected node state information
             - block:
                 about: Retrieves a full block from the blockchain
                 args:

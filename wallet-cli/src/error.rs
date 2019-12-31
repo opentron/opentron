@@ -4,6 +4,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("error: {0:}")]
     Io(#[from] ::std::io::Error),
+    #[error("{0:}")]
+    Fmt(#[from] ::std::fmt::Error),
     #[error("serde error: {0:?}")]
     Serde(#[from] ::serde_json::error::Error),
     #[error("grpc error: {0:?}")]
