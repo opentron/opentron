@@ -1,4 +1,6 @@
 use tonic::{transport::Server, Request, Response, Status};
+use std::sync::{Arc, RwLock};
+use wallet::Wallet as LocalWallet;
 
 use api::wallet_server::{Wallet, WalletServer};
 use api::{OpenRequest, StatusResponse};
@@ -8,7 +10,9 @@ pub mod api {
 }
 
 #[derive(Default)]
-pub struct LocalWalletService;
+pub struct LocalWalletService {
+    wallet: Arc<RwLock<Option<LocalWallet>>>,
+}
 
 #[tonic::async_trait]
 impl Wallet for LocalWalletService {
