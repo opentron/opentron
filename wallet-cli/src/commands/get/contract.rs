@@ -18,7 +18,6 @@ pub fn run(addr: &str) -> Result<(), Error> {
     req.set_value(address.to_bytes().to_owned());
 
     let (_, payload, _) = client.get_contract(Default::default(), req).wait()?;
-
     let mut contract = serde_json::to_value(&payload)?;
 
     contract["contract_address"] = json!(jsont::bytes_to_hex_string(&contract["contract_address"]));
@@ -27,7 +26,6 @@ pub fn run(addr: &str) -> Result<(), Error> {
     contract["code_hash"] = json!(jsont::bytes_to_hex_string(&contract["code_hash"]));
 
     println!("{}", serde_json::to_string_pretty(&contract)?);
-
     pprint_abi_entries(payload.get_abi())?;
     Ok(())
 }
