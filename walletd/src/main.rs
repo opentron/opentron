@@ -20,7 +20,6 @@ pub struct LocalWalletService {
 impl LocalWallet for LocalWalletService {
     async fn open(&self, request: Request<OpenRequest>) -> Result<Response<StatusResponse>, Status> {
         println!("Got a request from {:?} {:?}", request.remote_addr(), request.get_ref());
-        println!("Current Wallet {:?}", &self.wallet);
         let name = &request.get_ref().name;
 
         let reply = match Wallet::open(name) {
@@ -34,10 +33,11 @@ impl LocalWallet for LocalWalletService {
             }
             Err(e) => StatusResponse {
                 code: 500,
-                message: format!("Can not create wallet: {:}", e),
+                message: format!("Can not open wallet: {:}", e),
             },
         };
 
+        println!("DEBUG: Current Wallet {:?}", &self.wallet);
         Ok(Response::new(reply))
     }
 }
