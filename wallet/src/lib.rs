@@ -10,12 +10,12 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
 
+use config::determine_config_directory;
+pub use error::Error;
+
 mod config;
 mod crypto;
 mod error;
-
-use config::determine_config_directory;
-use error::Error;
 
 const WALLET_FILENAME_EXTENSION: &'static str = ".wallet";
 const WALLET_FILE_VERSION_STR: &'static str = "v1";
