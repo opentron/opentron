@@ -23,22 +23,23 @@ impl LocalWallet for LocalWalletService {
         println!("Current Wallet {:?}", &self.wallet);
         let name = &request.get_ref().name;
 
-        {
-            let mut w = (*self.wallet).write().unwrap();
-            let wallet = Wallet::new(name).map_err(error_to_status)?;
-            *w = Some(wallet);
-        }
-
-        let reply = StatusResponse {
-            code: 200,
-            message: "OK".to_owned(),
+        let reply = match Wallet::open(name) {
+            Ok(wallet) => {
+                let mut w = (*self.wallet).write().unwrap();
+                *w = Some(wallet);
+                StatusResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                }
+            }
+            Err(e) => StatusResponse {
+                code: 500,
+                message: format!("Can not create wallet: {:}", e),
+            },
         };
+
         Ok(Response::new(reply))
     }
-}
-
-fn error_to_status(err: wallet::Error) -> Status {
-    Status::unknown(format!("{:?}", err))
 }
 
 #[tokio::main]

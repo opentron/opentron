@@ -19,13 +19,10 @@ async fn open_wallet(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn main(matches: &ArgMatches) -> Result<(), Error> {
+pub fn main(wallet_name: &str, matches: &ArgMatches) -> Result<(), Error> {
     let fut = match matches.subcommand() {
         ("create", _) => unimplemented!(),
-        ("open", Some(arg_matches)) => {
-            let name = arg_matches.value_of("name").unwrap_or("default");
-            open_wallet(name)
-        }
+        ("open", _) => open_wallet(wallet_name),
         _ => unimplemented!(),
     };
 

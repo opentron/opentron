@@ -26,10 +26,12 @@ fn main() -> Result<(), String> {
         }
     }
 
+    let wallet_name = matches.value_of("name").unwrap_or("default");
+
     let ret = match matches.subcommand() {
         ("get", Some(import_matches)) => commands::get::main(import_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
-        ("wallet", Some(arg_matches)) => commands::wallet::main(arg_matches),
+        ("wallet", Some(arg_matches)) => commands::wallet::main(wallet_name, arg_matches),
         _ => {
             println!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))

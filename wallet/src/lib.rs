@@ -65,6 +65,20 @@ impl Wallet {
         }
     }
 
+    pub fn open(name: &str) -> Result<Self, Error> {
+        let config_dir = determine_config_directory();
+        let wallet_file = config_dir.join(format!("{:}{:}", name, WALLET_FILENAME_EXTENSION));
+        let value: serde_json::Value = serde_json::from_str(&fs::read_to_string(&wallet_file)?)?;
+        Ok(Wallet {
+            name: name.to_owned(),
+            wallet_path: wallet_file,
+            locked: true,
+            keys: json_to_keys(&value)?,
+            crypto_key: None,
+            keypairs: None,
+        })
+    }
+
     pub fn is_locked(&self) -> bool {
         self.locked
     }
@@ -316,13 +330,13 @@ fn random_salt() -> String {
 fn test_hello() {
     let mut w = Wallet::new("default").unwrap();
 
-    w.set_password("123456").expect("set password");
+    w.set_password("12345678").expect("set password");
 
-    assert!(w.check_password("123456").unwrap());
-    assert!(!w.check_password("654321").unwrap());
+    assert!(w.check_password("12345678").unwrap());
+    assert!(!w.check_password("68754321").unwrap());
 
     assert!(w.is_locked());
-    assert!(w.unlock("123456").is_ok());
+    assert!(w.unlock("12345678").is_ok());
 
     w.import_key("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
         .expect("import key");

@@ -12,10 +12,14 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          global: true
-          possible_values:
-              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
+    - name:
+          help: Name of the new wallet
+          short: n
+          long: name
+          takes_value: true
+          default_value: default
 
 subcommands:
     - get:
@@ -92,14 +96,6 @@ subcommands:
 
     - wallet:
           about: Subcommand used to interact with the local wallet
-          args:
-              - name:
-                    help: Name of the new wallet
-                    short: n
-                    long: name
-                    takes_value: true
-                    global: true
-                    default_value: default
           subcommands:
               - create:
                     about: Creates a new wallet locally
