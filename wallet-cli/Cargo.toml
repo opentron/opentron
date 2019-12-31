@@ -18,6 +18,9 @@ chrono = "0.4"
 sha2 = "0.8"
 sha3 = "0.8"
 thiserror = "1.0"
+tokio = "0.2"
+tonic = "0.1.0-beta.1"
 
 proto = { path = "../proto" }
 keys = { path = "../keys" }
+walletd = { path = "../walletd" }

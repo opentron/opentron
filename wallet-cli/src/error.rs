@@ -10,6 +10,10 @@ pub enum Error {
     Serde(#[from] ::serde_json::error::Error),
     #[error("grpc error: {0:?}")]
     Grpc(#[from] ::grpc::Error),
+    #[error("grpc: {0:}")]
+    TonicTransport(#[from] ::tonic::transport::Error),
+    #[error("grpc: {0:}")]
+    TonicStatus(#[from] ::tonic::Status),
     #[error("protobuf error: {0:}")]
     Protobuf(#[from] ::protobuf::error::ProtobufError),
     #[error("runtime error: {0:}")]
