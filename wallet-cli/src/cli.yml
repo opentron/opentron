@@ -8,6 +8,13 @@ args:
         help: Make the operation more talkative
         short: v
         long: verbose
+    - network:
+        help: Connect to which Tron network
+        long: network
+        takes_value: true
+        global: true
+        possible_values: [ mainnet, shasta, nile, testnet, dappchain, dappchain-testnet ]
+        default_value: mainnet
 
 subcommands:
     - get:

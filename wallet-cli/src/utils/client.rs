@@ -4,12 +4,10 @@ use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
 use crate::error::Error;
-
-// const RPC_HOST: &str = "grpc.trongrid.io:50051";
-const RPC_HOST: &str = "grpc.shasta.trongrid.io:50051";
+use crate::RPC_HOST;
 
 pub fn new_grpc_client() -> Result<WalletClient, Error> {
-    let host = RPC_HOST
+    let host = unsafe { RPC_HOST }
         .to_socket_addrs()
         .map_err(Error::from)?
         .next()
