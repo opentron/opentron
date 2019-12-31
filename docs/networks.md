@@ -47,8 +47,6 @@ Public Fullnode
 
 ## Testnet
 
-Note: this network use develop branch of java-tron.
-
 Home page: http://testnet.tronex.io/
 
 Faucet: http://testnet.tronex.io/join/getJoinPage
