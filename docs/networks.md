@@ -16,7 +16,9 @@ gRPC
 ## Shasta Testnet
 
 Home page: https://www.trongrid.io/shasta
+
 Faucet: https://www.trongrid.io/faucet
+
 Explorer: https://shasta.tronscan.org/
 
 API: https://api.shasta.trongrid.io
@@ -28,11 +30,15 @@ gRPC
 ## Nile Testnet
 
 Home page: http://nileex.io/
+
 Faucet: http://nileex.io/join/getJoinPage
+
 Explorer: https://nile.tronscan.org/
+
 Status: http://nileex.io/status/getStatusPage
 
 Full Node / Solidity Node HTTP API: https://api.nileex.io/
+
 Evenv API: https://event.nileex.io/
 
 Public Fullnode
@@ -44,8 +50,11 @@ Public Fullnode
 Note: this network use develop branch of java-tron.
 
 Home page: http://testnet.tronex.io/
+
 Faucet: http://testnet.tronex.io/join/getJoinPage
+
 Explorer: http://3.14.14.175:9000/
+
 Status: http://testnet.tronex.io/status/getStatusPage
 
 Event API: https://testapi.tronex.io
@@ -105,6 +114,7 @@ gRPC:
 ## DAppChain Testnet (SUN Network Testnet)
 
 Home page: https://tron.network/sunnetwork/doc/
+
 Faucet: Use http://testnet.tronex.io/join/getJoinPage to get main-chain coin.
 
 Evenv Server:
