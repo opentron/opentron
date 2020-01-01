@@ -124,6 +124,10 @@ impl Wallet {
         &self.name
     }
 
+    pub fn keys(&self) -> impl Iterator<Item = &Public> {
+        self.keys.iter()
+    }
+
     fn is_new(&self) -> bool {
         self.keys.len() == 0
     }

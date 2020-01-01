@@ -7,7 +7,8 @@ use wallet::Wallet;
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::KeyPair;
 use api::{
-    CreateKeyRequest, CreateKeyResponse, CreateRequest, LockRequest, OpenRequest, StatusResponse, UnlockRequest,
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, ListKeysRequest, ListKeysResponse, LockRequest, OpenRequest,
+    StatusResponse, UnlockRequest,
 };
 
 pub mod api {
@@ -144,6 +145,27 @@ impl LocalWallet for LocalWalletService {
             },
         };
 
+        Ok(Response::new(reply))
+    }
+
+    async fn list_keys(&self, request: Request<ListKeysRequest>) -> Result<Response<ListKeysResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+        let w = (*self.wallet).read().unwrap();
+        let reply = match w.as_ref() {
+            Some(wallet) => {
+                let pub_keys = wallet.keys().map(|k| k.as_ref().to_owned()).collect::<Vec<_>>();
+                ListKeysResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                    public_keys: pub_keys,
+                }
+            }
+            None => ListKeysResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
+                ..Default::default()
+            },
+        };
         Ok(Response::new(reply))
     }
 }
