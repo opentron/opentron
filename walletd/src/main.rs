@@ -135,7 +135,7 @@ impl LocalWallet for LocalWalletService {
                 })
                 .map_err(|e| CreateKeyResponse {
                     code: 500,
-                    message: format!("Can not unlock wallet: {:}", e),
+                    message: format!("Can create key for wallet: {:}", e),
                     key_pair: None,
                 })
                 .unwrap_or_else(|e| e),
@@ -163,7 +163,7 @@ impl LocalWallet for LocalWalletService {
                 })
                 .map_err(|e| StatusResponse {
                     code: 500,
-                    message: format!("Can not unlock wallet: {:}", e),
+                    message: format!("Can not import key to wallet: {:}", e),
                 })
                 .unwrap_or_else(|e| e),
             None => StatusResponse {
