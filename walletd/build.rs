@@ -1,3 +1,3 @@
 fn main() {
-    tonic_build::compile_protos("proto/api.proto").unwrap();
+    tonic_build::compile_protos("proto/api.proto").expect("protobuf compile");
 }
