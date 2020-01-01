@@ -9,7 +9,7 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
 - wallet-cli
   - [x] fetch chain status, node, transaction, block, account, contract, asset etc.
   - [x] transfer TRX
-  - [ ] local wallet management
+  - [x] local wallet management
   - [ ] contract setup
   - [ ] contract calling (including TRC20)
   - [ ] accout permission handling
@@ -17,6 +17,7 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - [ ] vote and witness
   - [ ] multisig
   - [ ] raw transaction handling(create, sign)
+  - [ ] anonymous transaction
 - [ ] full Tron Protocol implementation (joking)
   - [ ] network
   - [ ] p2p
