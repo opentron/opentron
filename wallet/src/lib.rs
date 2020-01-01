@@ -283,7 +283,7 @@ impl Wallet {
         self.keys
             .iter()
             .find(|x| &Address::from_public(x) == address)
-            .ok_or(Error::Runtime("matching public key nout found"))
+            .ok_or(Error::Runtime("matching public key not found"))
     }
 
     fn sync_keypairs_to_wallet_file(&self) -> Result<(), Error> {
