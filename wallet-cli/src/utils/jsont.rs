@@ -35,3 +35,46 @@ pub fn fix_transaction(transaction: &mut serde_json::Value) {
         .map(|sig| json!(bytes_to_hex_string(sig)))
         .collect::<Vec<_>>());
 }
+
+pub fn fix_account(account: &mut serde_json::Value) {
+    account["address"] = json!(bytes_to_hex_string(&account["address"]));
+    account["account_name"] = json!(bytes_to_string(&account["account_name"]));
+    // NOTE: one can remove owner_permission by setting null
+    if !account["owner_permission"].is_null() {
+        account["owner_permission"]["keys"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .map(|key| {
+                key["address"] = json!(bytes_to_hex_string(&key["address"]));
+            })
+            .last();
+    }
+
+    account["active_permission"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|perm| {
+            perm["keys"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .map(|key| {
+                    key["address"] = json!(bytes_to_hex_string(&key["address"]));
+                })
+                .last();
+            perm["operations"] = json!(bytes_to_hex_string(&perm["operations"]));
+        })
+        .last();
+    if !account["witness_permission"].is_null() {
+        account["witness_permission"]["keys"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .map(|key| {
+                key["address"] = json!(bytes_to_hex_string(&key["address"]));
+            })
+            .last();
+    }
+}

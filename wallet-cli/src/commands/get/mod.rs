@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use hex::{FromHex};
+use hex::FromHex;
 use keys::Address;
 use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
 use proto::api_grpc::Wallet;
@@ -129,51 +129,43 @@ fn get_account(name: &str) -> Result<(), Error> {
     // FIXME: account name not supported
     // req.set_account_name(name.as_bytes().to_owned());
 
-    let resp = client.get_account(Default::default(), req);
+    let (_, payload, _) = client.get_account(Default::default(), req).wait()?;
 
-    let (_, payload, _) = resp.wait().expect("grpc request");
-    let mut account = serde_json::to_value(&payload).expect("resp json serilization");
+    let mut account = serde_json::to_value(&payload)?;
 
     // first byte of address
     if account["address"][0].is_null() {
         eprintln!("error: not found!");
-        println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+        println!("{}", serde_json::to_string_pretty(&payload)?);
         return Err(Error::Runtime("address not found"));
     }
 
-    account["address"] = json!(jsont::bytes_to_hex_string(&account["address"]));
-    account["account_name"] = json!(jsont::bytes_to_string(&account["account_name"]));
-    // NOTE: one can remove owner_permission by setting null
-    if !account["owner_permission"].is_null() {
-        account["owner_permission"]["keys"]
-            .as_array_mut()
-            .unwrap()
-            .iter_mut()
-            .map(|key| {
-                key["address"] = json!(jsont::bytes_to_hex_string(&key["address"]));
-            })
-            .last();
-    }
+    jsont::fix_account(&mut account);
 
-    account["active_permission"]
-        .as_array_mut()
-        .unwrap()
-        .iter_mut()
-        .map(|perm| {
-            perm["keys"]
-                .as_array_mut()
-                .unwrap()
-                .iter_mut()
-                .map(|key| {
-                    key["address"] = json!(jsont::bytes_to_hex_string(&key["address"]));
-                })
-                .last();
-            perm["operations"] = json!(jsont::bytes_to_hex_string(&perm["operations"]));
-        })
-        .last();
-    // TODO: witness_permission
+    println!("{}", serde_json::to_string_pretty(&account)?);
+    Ok(())
+}
 
-    println!("{}", serde_json::to_string_pretty(&account).expect("resp json parse"));
+// get account permission info
+fn get_account_permission(name: &str) -> Result<(), Error> {
+    let client = new_grpc_client()?;
+
+    let mut req = Account::new();
+    let addr = name.parse::<Address>().expect("addr format");
+    req.set_address(addr.to_bytes().to_owned());
+
+    let (_, payload, _) = client.get_account(Default::default(), req).wait()?;
+
+    let mut account = serde_json::to_value(&payload)?;
+    jsont::fix_account(&mut account);
+
+    let permission_info = json!({
+        "owner": account["owner_permission"],
+        "witness": account["witness_permission"],
+        "actives": account["active_permission"],
+    });
+
+    println!("{}", serde_json::to_string_pretty(&permission_info)?);
     Ok(())
 }
 
@@ -224,7 +216,6 @@ fn get_asset_list() -> Result<(), Error> {
     Ok(())
 }
 
-
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => node_info(),
@@ -251,6 +242,12 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .value_of("NAME")
                 .expect("account name is required is cli.yml; qed");
             get_account(name)
+        }
+        ("account_permission", Some(arg_matches)) => {
+            let name = arg_matches
+                .value_of("NAME")
+                .expect("account name is required is cli.yml; qed");
+            get_account_permission(name)
         }
         ("account_resource", Some(arg_matches)) => {
             let name = arg_matches
