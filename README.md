@@ -12,7 +12,7 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - [x] local wallet management
   - [ ] contract setup
   - [ ] contract calling (including TRC20)
-  - [ ] accout permission handling
+  - [x] accout permission handling
   - [ ] accout resource handling
   - [ ] vote and witness
   - [ ] multisig
