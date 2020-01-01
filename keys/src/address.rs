@@ -55,6 +55,14 @@ impl TryFrom<Vec<u8>> for Address {
     }
 }
 
+impl TryFrom<&Vec<u8>> for Address {
+    type Error = Error;
+
+    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
+        Self::try_from(&value[..])
+    }
+}
+
 impl FromHex for Address {
     type Error = Error;
 

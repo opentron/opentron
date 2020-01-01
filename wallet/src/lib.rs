@@ -279,6 +279,13 @@ impl Wallet {
             .unwrap())
     }
 
+    pub fn get_public_key(&self, address: &Address) -> Result<&Public, Error> {
+        self.keys
+            .iter()
+            .find(|x| &Address::from_public(x) == address)
+            .ok_or(Error::Runtime("matching public key nout found"))
+    }
+
     fn sync_keypairs_to_wallet_file(&self) -> Result<(), Error> {
         assert!(!self.is_locked(), "unreachable condition");
 
