@@ -1,10 +1,9 @@
 use base58::{FromBase58, ToBase58};
-use hex::{FromHex, ToHex};
+use hex::FromHex;
 use sha2::{Digest, Sha256};
 use sha3::Keccak256;
 use std::convert::TryFrom;
 use std::fmt;
-use std::iter;
 use std::str::FromStr; // .parse
 
 use crate::error::Error;
@@ -24,6 +23,10 @@ impl Address {
         raw[1..21].copy_from_slice(&digest[digest.len() - 20..]);
 
         Address(raw)
+    }
+
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -71,16 +74,6 @@ impl FromHex for Address {
     }
 }
 
-impl ToHex for Address {
-    fn encode_hex<T: iter::FromIterator<char>>(&self) -> T {
-        self.0.encode_hex()
-    }
-
-    fn encode_hex_upper<T: iter::FromIterator<char>>(&self) -> T {
-        self.0.encode_hex_upper()
-    }
-}
-
 impl FromStr for Address {
     type Err = Error;
 
@@ -104,8 +97,9 @@ impl FromStr for Address {
     }
 }
 
-impl Address {
-    pub fn to_bytes(&self) -> &[u8] {
+// NOTE: AsRef<[u8]> implies ToHex
+impl AsRef<[u8]> for Address {
+    fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
@@ -165,7 +159,7 @@ mod tests {
         );
 
         assert_eq!(
-            addr.encode_hex::<String>(),
+            addr.as_ref().encode_hex::<String>(),
             "4196a3bace5adacf637eb7cc79d5787f4247da4bbe"
         )
     }
