@@ -5,7 +5,7 @@ use tonic::{transport::Server, Request, Response, Status};
 use wallet::Wallet;
 
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
-use api::{OpenRequest, StatusResponse};
+use api::{OpenRequest, StatusResponse, UnlockRequest};
 
 pub mod api {
     tonic::include_proto!("network.tron.walletd");
@@ -38,6 +38,31 @@ impl LocalWallet for LocalWalletService {
         };
 
         println!("DEBUG: Current Wallet {:?}", &self.wallet);
+        Ok(Response::new(reply))
+    }
+
+    async fn unlock(&self, request: Request<UnlockRequest>) -> Result<Response<StatusResponse>, Status> {
+        // let name = &request.get_ref().name;
+        let password = &request.get_ref().password;
+
+        let mut w = (*self.wallet).write().unwrap();
+        let reply = match w.as_mut() {
+            Some(wallet) => wallet
+                .unlock(password)
+                .map(|_| StatusResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                })
+                .map_err(|e| StatusResponse {
+                    code: 500,
+                    message: format!("Can not unlock wallet: {:}", e),
+                })
+                .unwrap_or_else(|e| e),
+            None => StatusResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
+            },
+        };
         Ok(Response::new(reply))
     }
 }

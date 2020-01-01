@@ -83,6 +83,10 @@ impl Wallet {
         self.locked
     }
 
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
     fn is_new(&self) -> bool {
         self.keys.len() == 0
     }
