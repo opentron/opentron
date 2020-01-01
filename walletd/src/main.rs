@@ -43,7 +43,6 @@ impl LocalWallet for LocalWalletService {
             },
         };
 
-        println!("DEBUG: Current Wallet {:?}", &self.wallet);
         Ok(Response::new(reply))
     }
     async fn open(&self, request: Request<OpenRequest>) -> Result<Response<StatusResponse>, Status> {
