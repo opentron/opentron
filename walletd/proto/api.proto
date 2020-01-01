@@ -4,7 +4,7 @@ syntax = "proto3";
 package network.tron.walletd;
 
 service LocalWallet {
-  rpc Create(CreateKeyRequest) returns (StatusResponse) {}
+  rpc Create(CreateRequest) returns (StatusResponse) {}
   rpc Open(OpenRequest) returns (StatusResponse) {}
   rpc Lock(LockRequest) returns (StatusResponse) {}
   rpc Unlock(UnlockRequest) returns (StatusResponse) {}
