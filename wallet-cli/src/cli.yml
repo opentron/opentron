@@ -77,7 +77,14 @@ subcommands:
           about: Sets or updates the blockchain state
           subcommands:
               - account_permission:
-                    help: Creates or updates an account's permission
+                    about: Creates or updates an account's permission
+                    args:
+                        - NAME:
+                              help: The name of the account to set permisiion
+                              required: true
+                        - PERMISSION:
+                              help: Permission JSON returned from `get account_permission`, `-` for STDIN
+                              required: true
 
     - transfer:
           about: Transfer a TRX token

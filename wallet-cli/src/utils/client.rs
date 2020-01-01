@@ -1,5 +1,6 @@
 use grpc::ClientStub;
-use proto::api_grpc::WalletClient;
+use proto::api::{BlockExtention, NumberMessage};
+use proto::api_grpc::{Wallet, WalletClient};
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
@@ -19,4 +20,16 @@ pub fn new_grpc_client() -> Result<WalletClient, Error> {
         Default::default(),
     )?);
     Ok(WalletClient::with_client(grpc_client))
+}
+
+pub fn get_latest_block(client: &WalletClient) -> Result<BlockExtention, Error> {
+    let req = NumberMessage {
+        num: 1,
+        ..Default::default()
+    };
+    let (_, resp, _) = client.get_block_by_latest_num2(Default::default(), req).wait()?;
+    resp.block
+        .into_iter()
+        .next()
+        .ok_or(Error::Runtime("no latest block retrieved"))
 }

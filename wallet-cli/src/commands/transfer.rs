@@ -1,9 +1,7 @@
-use chrono::Utc;
 use clap::ArgMatches;
 use hex::ToHex;
 use keys::{Address, Private};
-use proto::api::{BlockExtention, NumberMessage};
-use proto::api_grpc::{Wallet, WalletClient};
+use proto::api_grpc::Wallet;
 use proto::core::{
     Transaction, Transaction_Contract as Contract, Transaction_Contract_ContractType as ContractType,
     Transaction_raw as TransactionRaw, TransferContract,
@@ -14,23 +12,10 @@ use serde_json::json;
 
 use crate::commands::wallet::sign_digest;
 use crate::error::Error;
-use crate::utils::client::new_grpc_client;
+use crate::utils::client;
 use crate::utils::crypto;
 use crate::utils::jsont;
-
-fn timestamp_millis() -> i64 {
-    Utc::now().timestamp_millis()
-}
-
-fn get_latest_block(client: &WalletClient) -> Result<BlockExtention, Error> {
-    let mut req = NumberMessage::new();
-    req.set_num(1);
-    let (_, resp, _) = client.get_block_by_latest_num2(Default::default(), req).wait()?;
-    resp.block
-        .into_iter()
-        .next()
-        .ok_or(Error::Runtime("no latest block retrieved"))
-}
+use crate::utils::trx;
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
@@ -44,13 +29,14 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
     let memo = matches.value_of("MEMO").unwrap_or("");
 
-    let client = new_grpc_client()?;
+    let client = client::new_grpc_client()?;
 
     let mut trx_contract = TransferContract::new();
     trx_contract.set_owner_address(sender.to_bytes().to_owned());
     trx_contract.set_to_address(recipient.to_bytes().to_owned());
     trx_contract.set_amount(amount.parse()?);
 
+    // packing contract
     let mut any = Any::new();
     any.set_type_url("type.googleapis.com/protocol.TransferContract".to_owned());
     any.set_value(trx_contract.write_to_bytes()?);
@@ -62,17 +48,17 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let mut raw = TransactionRaw::new();
     raw.set_contract(vec![contract].into());
     raw.set_data(memo.into());
-    raw.set_expiration(timestamp_millis() + 1000 * 60); // 1min
+    raw.set_expiration(trx::timestamp_millis() + 1000 * 60); // 1min
 
     // fill ref_block info
-    let ref_block = get_latest_block(&client)?;
+    let ref_block = client::get_latest_block(&client)?;
     let ref_block_number = ref_block.get_block_header().get_raw_data().number;
     raw.set_ref_block_bytes(vec![
         ((ref_block_number & 0xff00) >> 8) as u8,
         (ref_block_number & 0xff) as u8,
     ]);
     raw.set_ref_block_hash(ref_block.blockid[8..16].to_owned());
-    raw.set_timestamp(timestamp_millis());
+    raw.set_timestamp(trx::timestamp_millis());
 
     // signature
     let txid = crypto::sha256(&raw.write_to_bytes()?);
@@ -94,8 +80,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     println!("sender:    {:}", sender);
     println!("recipient: {:}", recipient);
 
-    let resp = client.broadcast_transaction(Default::default(), req);
-    let (_, payload, _) = resp.wait()?;
+    let (_, payload, _) = client.broadcast_transaction(Default::default(), req).wait()?;
 
     let mut result = serde_json::to_value(&payload)?;
 

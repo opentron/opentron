@@ -29,7 +29,8 @@ fn main() -> Result<(), String> {
     let wallet_name = matches.value_of("name").unwrap_or("default");
 
     let ret = match matches.subcommand() {
-        ("get", Some(import_matches)) => commands::get::main(import_matches),
+        ("get", Some(arg_matches)) => commands::get::main(arg_matches),
+        ("set", Some(arg_matches)) => commands::set::main(arg_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(wallet_name, arg_matches),
         _ => {

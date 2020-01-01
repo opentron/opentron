@@ -1,6 +1,6 @@
 //! JSON transformations
 
-use hex::ToHex;
+use hex::{FromHex, ToHex};
 use serde_json::json;
 
 pub fn bytes_to_hex_string(val: &serde_json::Value) -> String {
@@ -50,7 +50,6 @@ pub fn fix_account(account: &mut serde_json::Value) {
             })
             .last();
     }
-
     account["active_permission"]
         .as_array_mut()
         .unwrap()
@@ -77,4 +76,32 @@ pub fn fix_account(account: &mut serde_json::Value) {
             })
             .last();
     }
+}
+
+// revert for serializing to pb
+pub fn revert_permission_info(permission: &mut serde_json::Value) {
+    if !permission["owner"].is_null() {
+        permission["owner"]["keys"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .map(|key| key["address"] = json!(Vec::from_hex(key["address"].as_str().unwrap()).unwrap()))
+            .last();
+    }
+    permission["actives"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|perm| {
+            perm["keys"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .map(|key| {
+                    key["address"] = json!(Vec::from_hex(key["address"].as_str().unwrap()).unwrap());
+                })
+                .last();
+            perm["operations"] = json!(Vec::from_hex(perm["operations"].as_str().unwrap()).unwrap());
+        })
+        .last();
 }

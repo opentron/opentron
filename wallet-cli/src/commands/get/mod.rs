@@ -146,12 +146,12 @@ fn get_account(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-// get account permission info
+/// Get account permission info.
 fn get_account_permission(name: &str) -> Result<(), Error> {
     let client = new_grpc_client()?;
 
     let mut req = Account::new();
-    let addr = name.parse::<Address>().expect("addr format");
+    let addr = name.parse::<Address>()?;
     req.set_address(addr.to_bytes().to_owned());
 
     let (_, payload, _) = client.get_account(Default::default(), req).wait()?;
