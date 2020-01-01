@@ -4,9 +4,10 @@ use std::convert::TryFrom;
 use tokio::runtime::Builder;
 use tonic::Request;
 use walletd::api::local_wallet_client::LocalWalletClient;
+use walletd::api::sign_digest_request::PrivateKeyOf;
 use walletd::api::{
     CreateKeyRequest, CreateKeyResponse, CreateRequest, ListKeysRequest, ListKeysResponse, LockRequest, OpenRequest,
-    StatusResponse, UnlockRequest,
+    SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 use crate::error::Error;
@@ -101,6 +102,25 @@ async fn list_keys_in_wallet(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
+async fn sign_digest_via_address(digest: &[u8], address: &Address) -> Result<Vec<u8>, Error> {
+    let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
+
+    let request = Request::new(SignDigestRequest {
+        name: "default".to_owned(), // TODO: refine wallet name handling
+        digest: digest.to_owned(),
+        private_key_of: Some(PrivateKeyOf::RawAddress(address.as_ref().to_owned())),
+    });
+
+    let response = wallet_client.sign_digest(request).await?;
+    let reply: SignDigestResponse = response.into_inner();
+    if reply.code == 200 {
+        Ok(reply.signature)
+    } else {
+        println!("{:?}", &reply);
+        Err(Error::Runtime("fail to sign digest"))
+    }
+}
+
 // NOTE: each impl Trait is a different type, so, await is required
 async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     match matches.subcommand() {
@@ -122,6 +142,12 @@ async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), E
 
 pub fn main(wallet_name: &str, matches: &ArgMatches) -> Result<(), Error> {
     let fut = run(wallet_name, matches);
+    let mut rt = Builder::new().basic_scheduler().enable_all().build().unwrap();
+    rt.block_on(fut)
+}
+
+pub fn sign_digest(digest: &[u8], address: &Address) -> Result<Vec<u8>, Error> {
+    let fut = sign_digest_via_address(digest, address);
     let mut rt = Builder::new().basic_scheduler().enable_all().build().unwrap();
     rt.block_on(fut)
 }
