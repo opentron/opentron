@@ -5,7 +5,10 @@ use tonic::{transport::Server, Request, Response, Status};
 use wallet::Wallet;
 
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
-use api::{CreateRequest, LockRequest, OpenRequest, StatusResponse, UnlockRequest};
+use api::KeyPair;
+use api::{
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, LockRequest, OpenRequest, StatusResponse, UnlockRequest,
+};
 
 pub mod api {
     tonic::include_proto!("network.tron.walletd");
@@ -111,6 +114,36 @@ impl LocalWallet for LocalWalletService {
                 message: "No wallet opened".to_owned(),
             },
         };
+        Ok(Response::new(reply))
+    }
+
+    async fn create_key(&self, request: Request<CreateKeyRequest>) -> Result<Response<CreateKeyResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+        let mut w = (*self.wallet).write().unwrap();
+        let reply = match w.as_mut() {
+            Some(wallet) => wallet
+                .create_key()
+                .map(|kp| CreateKeyResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                    key_pair: Some(KeyPair {
+                        public: kp.public().as_ref().to_owned(),
+                        private: kp.private().as_ref().to_owned(),
+                    }),
+                })
+                .map_err(|e| CreateKeyResponse {
+                    code: 500,
+                    message: format!("Can not unlock wallet: {:}", e),
+                    key_pair: None,
+                })
+                .unwrap_or_else(|e| e),
+            None => CreateKeyResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
+                key_pair: None,
+            },
+        };
+
         Ok(Response::new(reply))
     }
 }

@@ -1,8 +1,12 @@
 use clap::ArgMatches;
+use keys::{KeyPair, Private};
+use std::convert::TryFrom;
 use tokio::runtime::Builder;
 use tonic::Request;
 use walletd::api::local_wallet_client::LocalWalletClient;
-use walletd::api::{CreateRequest, LockRequest, OpenRequest, StatusResponse, UnlockRequest};
+use walletd::api::{
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, LockRequest, OpenRequest, StatusResponse, UnlockRequest,
+};
 
 use crate::error::Error;
 
@@ -58,6 +62,26 @@ async fn unlock_wallet(name: &str, password: &str) -> Result<(), Error> {
     Ok(())
 }
 
+async fn create_key_in_wallet(name: &str) -> Result<(), Error> {
+    let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
+
+    let request = Request::new(CreateKeyRequest { name: name.into() });
+    let response = wallet_client.create_key(request).await?;
+
+    let reply: CreateKeyResponse = response.into_inner();
+    if reply.code == 200 {
+        let kp_pb = reply.key_pair.as_ref().expect("won't fail; qed");
+        let kp = KeyPair::from_private(Private::try_from(&kp_pb.private)?)?;
+
+        println!("Address: {:}", kp.address());
+        println!("Public:  {:}", kp.public());
+        println!("Private: {:}", kp.private());
+    } else {
+        println!("{:?}", &reply);
+    }
+    Ok(())
+}
+
 // NOTE: each impl Trait is a different type, so, await is required
 async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     match matches.subcommand() {
@@ -71,6 +95,7 @@ async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), E
             let password = arg_matches.value_of("password").expect("required in cli.yml; qed");
             unlock_wallet(wallet_name, password).await
         }
+        ("create_key", _) => create_key_in_wallet(wallet_name).await,
         _ => unimplemented!(),
     }
 }

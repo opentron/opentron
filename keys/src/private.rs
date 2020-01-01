@@ -74,6 +74,14 @@ impl TryFrom<Vec<u8>> for Private {
     }
 }
 
+impl TryFrom<&Vec<u8>> for Private {
+    type Error = Error;
+
+    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
+        Self::try_from(&value[..])
+    }
+}
+
 impl From<[u8; 32]> for Private {
     fn from(v: [u8; 32]) -> Self {
         Private(v)

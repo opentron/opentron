@@ -202,7 +202,7 @@ impl Wallet {
 
     pub fn import_key(&mut self, private_key: &str) -> Result<(), Error> {
         if self.is_locked() {
-            Err(Error::Runtime("unable to import key on a locked wallet"))
+            Err(Error::Runtime("unable to import key to a locked wallet"))
         } else {
             let private: Private = private_key.parse()?;
             let kp = KeyPair::from_private(private)?;
@@ -247,9 +247,10 @@ impl Wallet {
         Err(Error::Runtime("key not in wallet"))
     }
 
-    pub fn create_key(&mut self) -> Result<(), Error> {
+    pub fn create_key(&mut self) -> Result<KeyPair, Error> {
         let kp = KeyPair::generate();
-        self.import_key(&kp.private().encode_hex::<String>())
+        self.import_key(&kp.private().encode_hex::<String>())?;
+        Ok(kp)
     }
 
     pub fn sign_digest(&self, digest: &[u8], public: &Public) -> Result<Signature, Error> {
