@@ -88,10 +88,10 @@ subcommands:
               - MEMO:
                     help: The memo for the transfer
                     required: false
-              - priv-key:
+              - private-key:
                     help: The private key used for signing
                     short: K
-                    long: priv-key
+                    long: private-key
                     takes_value: true
 
     - wallet:

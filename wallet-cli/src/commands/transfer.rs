@@ -12,6 +12,7 @@ use protobuf::well_known_types::Any;
 use protobuf::Message;
 use serde_json::json;
 
+use crate::commands::wallet::sign_digest;
 use crate::error::Error;
 use crate::utils::client::new_grpc_client;
 use crate::utils::crypto;
@@ -42,11 +43,6 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         .ok_or(Error::Runtime("wrong recipient address format"))?;
     let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
     let memo = matches.value_of("MEMO").unwrap_or("");
-
-    let priv_key = matches
-        .value_of("priv-key")
-        .and_then(|k| k.parse::<Private>().ok())
-        .ok_or(Error::Runtime("private key(--priv-key) required"))?;
 
     let client = new_grpc_client()?;
 
@@ -79,12 +75,21 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     raw.set_timestamp(timestamp_millis());
 
     // signature
-    println!("TX: {:}", crypto::sha256(&raw.write_to_bytes()?).encode_hex::<String>());
-    let sign = priv_key.sign(&raw.write_to_bytes()?)?;
+    let txid = crypto::sha256(&raw.write_to_bytes()?);
+    println!("TX: {:}", txid.encode_hex::<String>());
+
+    let signature: Vec<u8> = if let Some(raw_key) = matches.value_of("private-key") {
+        println!("... Signing with command line arguments --private-key");
+        let priv_key = raw_key.parse::<Private>()?;
+        priv_key.sign_digest(&txid)?[..].to_owned()
+    } else {
+        println!("... Signing using wallet {:}", sender);
+        sign_digest(&txid, &sender)?
+    };
 
     let mut req = Transaction::new();
     req.set_raw_data(raw);
-    req.set_signature(vec![(&sign[..]).to_owned()].into());
+    req.set_signature(vec![signature].into());
 
     println!("sender:    {:}", sender);
     println!("recipient: {:}", recipient);
