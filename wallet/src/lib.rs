@@ -93,7 +93,7 @@ impl Wallet {
 
     pub fn lock(&mut self) -> Result<(), Error> {
         if self.locked {
-            Err(Error::Runtime("nable to lock a locked wallet"))
+            Err(Error::Runtime("unable to lock a locked wallet"))
         } else {
             self.keypairs = None;
             self.crypto_key = None;
