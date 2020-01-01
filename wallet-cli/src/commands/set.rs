@@ -39,8 +39,6 @@ fn set_account_permission(name: &str, permission: &str) -> Result<(), Error> {
 
     let perm_contract: AccountPermissionUpdateContract = serde_json::from_value(permission_info)?;
 
-    println!("debug => {:?}", perm_contract);
-
     // packing contract
     let mut any = Any::new();
     any.set_type_url("type.googleapis.com/protocol.AccountPermissionUpdateContract".to_owned());
