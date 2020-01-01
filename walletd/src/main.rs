@@ -8,8 +8,8 @@ use wallet::Wallet;
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::{sign_digest_request::PrivateKeyOf, KeyPair};
 use api::{
-    CreateKeyRequest, CreateKeyResponse, CreateRequest, ListKeysRequest, ListKeysResponse, LockRequest, OpenRequest,
-    SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, ImportKeyRequest, ListKeysRequest, ListKeysResponse,
+    LockRequest, OpenRequest, SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 pub mod api {
@@ -143,6 +143,32 @@ impl LocalWallet for LocalWalletService {
                 code: 500,
                 message: "No wallet opened".to_owned(),
                 ..Default::default()
+            },
+        };
+
+        Ok(Response::new(reply))
+    }
+
+    async fn import_key(&self, request: Request<ImportKeyRequest>) -> Result<Response<StatusResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+        let raw_key = &request.get_ref().private_key;
+        let mut w = (*self.wallet).write().unwrap();
+        let reply = match w.as_mut() {
+            Some(wallet) => keys::Private::try_from(raw_key)
+                .map_err(From::from)
+                .and_then(|priv_key| wallet.import_key(priv_key))
+                .map(|_| StatusResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                })
+                .map_err(|e| StatusResponse {
+                    code: 500,
+                    message: format!("Can not unlock wallet: {:}", e),
+                })
+                .unwrap_or_else(|e| e),
+            None => StatusResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
             },
         };
 

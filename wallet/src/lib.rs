@@ -204,11 +204,10 @@ impl Wallet {
         Ok(&calculated_checksum[..] == &checksum[..])
     }
 
-    pub fn import_key(&mut self, private_key: &str) -> Result<(), Error> {
+    pub fn import_key(&mut self, private: Private) -> Result<(), Error> {
         if self.is_locked() {
             Err(Error::Runtime("unable to import key to a locked wallet"))
         } else {
-            let private: Private = private_key.parse()?;
             let kp = KeyPair::from_private(private)?;
 
             if self.keys.contains(kp.public()) {
@@ -253,7 +252,7 @@ impl Wallet {
 
     pub fn create_key(&mut self) -> Result<KeyPair, Error> {
         let kp = KeyPair::generate();
-        self.import_key(&kp.private().encode_hex::<String>())?;
+        self.import_key(kp.private().clone())?;
         Ok(kp)
     }
 
