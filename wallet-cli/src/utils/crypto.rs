@@ -8,7 +8,6 @@ pub fn sha256(input: &[u8]) -> [u8; 32] {
     hasher.result().into()
 }
 
-
 #[inline]
 pub fn keccak256(input: &[u8]) -> [u8; 32] {
     let mut hasher = Keccak256::new();

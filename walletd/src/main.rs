@@ -5,7 +5,7 @@ use tonic::{transport::Server, Request, Response, Status};
 use wallet::Wallet;
 
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
-use api::{LockRequest, OpenRequest, StatusResponse, UnlockRequest};
+use api::{CreateRequest, LockRequest, OpenRequest, StatusResponse, UnlockRequest};
 
 pub mod api {
     tonic::include_proto!("network.tron.walletd");
@@ -18,8 +18,31 @@ pub struct LocalWalletService {
 
 #[tonic::async_trait]
 impl LocalWallet for LocalWalletService {
+    async fn create(&self, request: Request<CreateRequest>) -> Result<Response<StatusResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+        let name = &request.get_ref().name;
+        let password = &request.get_ref().password;
+
+        let reply = match Wallet::create(name, password) {
+            Ok(wallet) => {
+                let mut w = (*self.wallet).write().unwrap();
+                *w = Some(wallet);
+                StatusResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                }
+            }
+            Err(e) => StatusResponse {
+                code: 500,
+                message: format!("Can not create wallet: {:}", e),
+            },
+        };
+
+        println!("DEBUG: Current Wallet {:?}", &self.wallet);
+        Ok(Response::new(reply))
+    }
     async fn open(&self, request: Request<OpenRequest>) -> Result<Response<StatusResponse>, Status> {
-        println!("Got a request from {:?} {:?}", request.remote_addr(), request.get_ref());
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
         let name = &request.get_ref().name;
 
         let reply = match Wallet::open(name) {
@@ -41,7 +64,8 @@ impl LocalWallet for LocalWalletService {
         Ok(Response::new(reply))
     }
 
-    async fn lock(&self, _request: Request<LockRequest>) -> Result<Response<StatusResponse>, Status> {
+    async fn lock(&self, request: Request<LockRequest>) -> Result<Response<StatusResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
         // let name = &request.get_ref().name;
         let mut w = (*self.wallet).write().unwrap();
         let reply = match w.as_mut() {
@@ -65,6 +89,7 @@ impl LocalWallet for LocalWalletService {
     }
 
     async fn unlock(&self, request: Request<UnlockRequest>) -> Result<Response<StatusResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
         // let name = &request.get_ref().name;
         let password = &request.get_ref().password;
 

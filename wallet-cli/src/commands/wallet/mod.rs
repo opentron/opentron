@@ -2,11 +2,25 @@ use clap::ArgMatches;
 use tokio::runtime::Builder;
 use tonic::Request;
 use walletd::api::local_wallet_client::LocalWalletClient;
-use walletd::api::{LockRequest, OpenRequest, StatusResponse, UnlockRequest};
+use walletd::api::{CreateRequest, LockRequest, OpenRequest, StatusResponse, UnlockRequest};
 
 use crate::error::Error;
 
 const WALLETD_RPC_URL: &str = "http://[::1]:8888";
+
+async fn create_wallet(name: &str, password: &str) -> Result<(), Error> {
+    let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
+
+    let request = Request::new(CreateRequest {
+        name: name.into(),
+        password: password.into(),
+    });
+    let response = wallet_client.create(request).await?;
+
+    let status: StatusResponse = response.into_inner();
+    println!("{:?}", &status);
+    Ok(())
+}
 
 async fn open_wallet(name: &str) -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
@@ -47,7 +61,10 @@ async fn unlock_wallet(name: &str, password: &str) -> Result<(), Error> {
 // NOTE: each impl Trait is a different type, so, await is required
 async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     match matches.subcommand() {
-        ("create", _) => unimplemented!(),
+        ("create", Some(arg_matches)) => {
+            let password = arg_matches.value_of("password").expect("required in cli.yml; qed");
+            create_wallet(wallet_name, password).await
+        }
         ("open", _) => open_wallet(wallet_name).await,
         ("lock", _) => lock_wallet(wallet_name).await,
         ("unlock", Some(arg_matches)) => {

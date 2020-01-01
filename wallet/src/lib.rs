@@ -65,6 +65,43 @@ impl Wallet {
         }
     }
 
+    pub fn create(name: &str, password: &str) -> Result<Self, Error> {
+        if name.is_empty() || !name.chars().all(|c| c.is_ascii() && c.is_alphanumeric()) {
+            return Err(Error::Runtime("invalid wallet name"));
+        }
+
+        let config_dir = determine_config_directory();
+        let wallet_file = config_dir.join(format!("{:}{:}", name, WALLET_FILENAME_EXTENSION));
+        if !config_dir.exists() {
+            fs::create_dir_all(&config_dir)?;
+        }
+        if wallet_file.exists() {
+            return Err(Error::Runtime("wallet already exists, use open"));
+        }
+
+        let mut file = File::create(&wallet_file)?;
+        let json = json!({
+            "version": json!(WALLET_FILE_VERSION_STR.to_owned()),
+            "salt": random_salt(),
+            "checksum": "",
+            "keys": {}
+        });
+        file.write_all(serde_json::to_string_pretty(&json)?.as_bytes())?;
+
+        let value: serde_json::Value = serde_json::from_str(&fs::read_to_string(&wallet_file)?)?;
+
+        let mut w = Wallet {
+            name: name.to_owned(),
+            wallet_path: wallet_file,
+            locked: true,
+            keys: json_to_keys(&value)?,
+            crypto_key: None,
+            keypairs: None,
+        };
+        w.set_password(password)?;
+        Ok(w)
+    }
+
     pub fn open(name: &str) -> Result<Self, Error> {
         let config_dir = determine_config_directory();
         let wallet_file = config_dir.join(format!("{:}{:}", name, WALLET_FILENAME_EXTENSION));
