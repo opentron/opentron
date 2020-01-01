@@ -117,7 +117,7 @@ subcommands:
                               long: password
                               takes_value: true
                               required: true
-              - import:
+              - import_key:
                     about: Imports private key into wallet
                     args:
                         - private-key:

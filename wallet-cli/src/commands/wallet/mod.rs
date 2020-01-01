@@ -6,8 +6,8 @@ use tonic::Request;
 use walletd::api::local_wallet_client::LocalWalletClient;
 use walletd::api::sign_digest_request::PrivateKeyOf;
 use walletd::api::{
-    CreateKeyRequest, CreateKeyResponse, CreateRequest, ListKeysRequest, ListKeysResponse, LockRequest, OpenRequest,
-    SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, ImportKeyRequest, ListKeysRequest, ListKeysResponse,
+    LockRequest, OpenRequest, SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 use crate::error::Error;
@@ -84,6 +84,22 @@ async fn create_key_in_wallet(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
+async fn import_key_to_wallet(name: &str, private_key: &str) -> Result<(), Error> {
+    let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
+
+    let private: Private = private_key.parse()?;
+    println!("Importing private key for {:} ...", Address::from_private(&private));
+    let request = Request::new(ImportKeyRequest {
+        name: name.into(),
+        private_key: private.as_ref().to_owned(),
+    });
+    let response = wallet_client.import_key(request).await?;
+
+    let status: StatusResponse = response.into_inner();
+    println!("{:?}", &status);
+    Ok(())
+}
+
 async fn list_keys_in_wallet(name: &str) -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
@@ -135,6 +151,10 @@ async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), E
             unlock_wallet(wallet_name, password).await
         }
         ("create_key", _) => create_key_in_wallet(wallet_name).await,
+        ("import_key", Some(arg_matches)) => {
+            let priv_key = arg_matches.value_of("private-key").expect("required in cli.yml; qed");
+            import_key_to_wallet(wallet_name, priv_key).await
+        }
         ("keys", _) => list_keys_in_wallet(wallet_name).await,
         _ => unimplemented!(),
     }

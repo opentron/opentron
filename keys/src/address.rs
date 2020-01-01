@@ -8,6 +8,7 @@ use std::str::FromStr; // .parse
 
 use crate::error::Error;
 use crate::public::Public;
+use crate::private::Private;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Address([u8; 21]);
@@ -23,6 +24,10 @@ impl Address {
         raw[1..21].copy_from_slice(&digest[digest.len() - 20..]);
 
         Address(raw)
+    }
+
+    pub fn from_private(private: &Private) -> Address {
+        Address::from_public(&Public::from_private(private).expect("public from private; qed"))
     }
 
     pub fn to_bytes(&self) -> &[u8] {
