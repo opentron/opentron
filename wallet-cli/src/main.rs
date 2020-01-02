@@ -9,7 +9,9 @@ use error::Error;
 // FIXME: should use AppConfig, for now, use static var
 static mut RPC_HOST: &str = "grpc.trongrid.io:50051";
 
-fn main() -> Result<(), String> {
+fn main() -> Result<(), Error> {
+    utils::walletd::assure_walletd()?;
+
     let yaml = load_yaml!("cli.yml");
     let matches = clap::App::from_yaml(yaml).get_matches();
 
@@ -28,7 +30,7 @@ fn main() -> Result<(), String> {
 
     let wallet_name = matches.value_of("name").unwrap_or("default");
 
-    let ret = match matches.subcommand() {
+    match matches.subcommand() {
         ("get", Some(arg_matches)) => commands::get::main(arg_matches),
         ("set", Some(arg_matches)) => commands::set::main(arg_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
@@ -37,6 +39,5 @@ fn main() -> Result<(), String> {
             println!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
         }
-    };
-    ret.map_err(|e| e.to_string())
+    }
 }
