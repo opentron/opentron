@@ -31,10 +31,12 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 
     let client = client::new_grpc_client()?;
 
-    let mut trx_contract = TransferContract::new();
-    trx_contract.set_owner_address(sender.to_bytes().to_owned());
-    trx_contract.set_to_address(recipient.to_bytes().to_owned());
-    trx_contract.set_amount(amount.parse()?);
+    let trx_contract = TransferContract {
+        owner_address: sender.to_bytes().to_owned(),
+        to_address: recipient.to_bytes().to_owned(),
+        amount: amount.parse()?,
+        ..Default::default()
+    };
 
     // packing contract
     let mut any = Any::new();
@@ -44,11 +46,14 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let mut contract = Contract::new();
     contract.set_field_type(ContractType::TransferContract);
     contract.set_parameter(any);
+    if let Some(val) = matches.value_of("permission-id") {
+        contract.set_Permission_id(val.parse()?);
+    }
 
     let mut raw = TransactionRaw::new();
     raw.set_contract(vec![contract].into());
     raw.set_data(memo.into());
-    raw.set_expiration(trx::timestamp_millis() + 1000 * 60); // 1min
+    raw.set_expiration(trx::timestamp_millis() + 1000 * 60 * 2); // 2min
 
     // fill ref_block info
     let ref_block = client::get_latest_block(&client)?;

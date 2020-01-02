@@ -12,7 +12,8 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values:
+              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
     - name:
           help: Name of the new wallet
@@ -86,6 +87,14 @@ subcommands:
                               help: Permission JSON returned from `get account_permission`, `-` for STDIN
                               required: true
 
+    - list:
+          about: Lists any items from blockchain
+          subcommands:
+              - witness:
+                    about: Query the list of Super Representatives
+              - node:
+                    about: List the nodes which is connecting on the network
+
     - transfer:
           about: Transfer a TRX token
           args:
@@ -106,6 +115,11 @@ subcommands:
                     short: K
                     long: private-key
                     takes_value: true
+              - permission-id:
+                    help: Permission id used by transaction
+                    long: permission-id
+                    takes_value: true
+                    possible_values: ["0", "2", "1"]
 
     - wallet:
           about: Subcommand used to interact with the local wallet
