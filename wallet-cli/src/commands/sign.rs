@@ -93,7 +93,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let ret = json!({
         "raw_data": trx_json,
         "raw_data_hex": json!(raw_data.encode_hex::<String>()),
-        "signatures": json!(signatures),
+        "signature": json!(signatures),
         "txID": json!(txid.encode_hex::<String>()),
     });
 
