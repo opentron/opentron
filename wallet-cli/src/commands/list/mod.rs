@@ -66,11 +66,38 @@ fn list_assets() -> Result<(), Error> {
     Ok(())
 }
 
+pub fn list_proposals() -> Result<(), Error> {
+    let (_, payload, _) = new_grpc_client()?
+        .list_proposals(Default::default(), EmptyMessage::new())
+        .wait()?;
+    let mut proposals = serde_json::to_value(&payload)?;
+
+    proposals["proposals"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|proposal| {
+            proposal["proposer_address"] = json!(jsont::bytes_to_hex_string(&proposal["proposer_address"]));
+            proposal["approvals"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .map(|val| {
+                    *val = json!(jsont::bytes_to_hex_string(val));
+                })
+                .last();
+        })
+        .last();
+    println!("{}", serde_json::to_string_pretty(&proposals["proposals"])?);
+    Ok(())
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => list_nodes(),
         ("witness", _) => list_witnesses(),
         ("asset", _) => list_assets(),
+        ("proposal", _) => list_proposals(),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))

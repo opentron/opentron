@@ -94,6 +94,8 @@ subcommands:
                     about: List the nodes which is connecting on the network
               - asset:
                     about: Retrieves list of all tokens
+              - proposal:
+                    about: Retrives list of all proposals
 
     - transfer:
           about: Transfer a TRX token
