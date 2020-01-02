@@ -1,11 +1,11 @@
 //! Interact with walletd daemon.
 
 use std::env;
-use std::ffi::CString;
 use std::fs;
 use std::os::raw::{c_char, c_int};
 use std::path::Path;
 use std::process::Command;
+use std::str;
 
 use crate::error::Error;
 
@@ -38,11 +38,11 @@ pub fn get_walletd_pid() -> Result<c_int, Error> {
             .expect("pid file format error");
 
         unsafe {
-            let c_string = CString::from_vec_unchecked(Vec::with_capacity(64));
-            let buffer = c_string.into_raw();
-            let n = proc_name(pid, buffer, 64);
-            let c_string = CString::from_raw(buffer);
-            if n != 0 && c_string.to_str().expect("utf8 error") == "walletd" {
+            let mut buffer = Vec::with_capacity(64);
+            buffer.set_len(64);
+            let n = proc_name(pid, &mut buffer[0] as *mut u8 as *mut c_char, 64);
+            let name = str::from_utf8(&buffer[..n as usize]).unwrap();
+            if n != 0 && name == "walletd" {
                 return Ok(pid);
             }
         }
