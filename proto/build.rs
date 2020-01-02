@@ -34,7 +34,6 @@ fn main() {
         includes: &["protocol", "include"],
         input: &["protocol/api/api.proto"],
         rust_protobuf: false,
-        ..Default::default()
     })
     .expect("protoc-rust-grpc");
 }
