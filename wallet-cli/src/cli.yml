@@ -112,11 +112,18 @@ subcommands:
               - MEMO:
                     help: The memo for the transfer
                     required: false
+              - account:
+                    help: The account address used for signing(look up key from unlocked wallet)
+                    short: k
+                    long: account
+                    takes_value: true
               - private-key:
                     help: The private key used for signing
                     short: K
                     long: private-key
                     takes_value: true
+                    conflicts_with:
+                        - account
               - permission-id:
                     help: Permission id used by transaction
                     long: permission-id
@@ -124,20 +131,27 @@ subcommands:
                     possible_values: ["0", "2", "1"]
 
     - sign:
-        about: Sign a transaction
-        args:
-            - TRANSACTION:
-                help: The JSON string or filename defining the transaction to sign
-                required: true
-            - private-key:
-                help: The private key used for signing
-                short: K
-                long: private-key
-                takes_value: true
-            - broadcast:
-                help: Broadcast transaction after signing
-                long: broadcast
-                short: b
+          about: Sign a transaction
+          args:
+              - TRANSACTION:
+                    help: The JSON string or filename defining the transaction to sign
+                    required: true
+              - account:
+                    help: The account address used for signing(look up key from unlocked wallet)
+                    short: k
+                    long: account
+                    takes_value: true
+              - private-key:
+                    help: The private key used for signing
+                    short: K
+                    long: private-key
+                    takes_value: true
+                    conflicts_with:
+                        - account
+              - broadcast:
+                    help: Broadcast transaction after signing
+                    long: broadcast
+                    short: b
 
     - wallet:
           about: Subcommand used to interact with the local wallet

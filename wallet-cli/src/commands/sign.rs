@@ -69,7 +69,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         }
     }
 
-    let signature: Vec<u8> = if let Some(raw_key) = matches.value_of("private-key") {
+    let signature: Vec<u8> = if let Some(raw_addr) = matches.value_of("account") {
+        let addr = raw_addr.parse::<Address>()?;
+        eprintln!("! Signing using wallet key from --account {:}", addr);
+        sign_digest(&txid, &addr)?
+    } else if let Some(raw_key) = matches.value_of("private-key") {
         let private = raw_key.parse::<Private>()?;
         eprintln!("! Signing with --private-key {:}", Address::from_private(&private));
         private.sign_digest(&txid)?[..].to_owned()

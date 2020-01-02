@@ -68,12 +68,16 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let txid = crypto::sha256(&raw.write_to_bytes()?);
     println!("TX: {:}", txid.encode_hex::<String>());
 
-    let signature: Vec<u8> = if let Some(raw_key) = matches.value_of("private-key") {
-        println!("... Signing with command line arguments --private-key");
+    let signature: Vec<u8> = if let Some(raw_addr) = matches.value_of("account") {
+        let addr = raw_addr.parse::<Address>()?;
+        println!("! Signing using wallet key from --account {:}", addr);
+        sign_digest(&txid, &addr)?
+    } else if let Some(raw_key) = matches.value_of("private-key") {
+        println!("! Signing using raw private key from --private-key");
         let priv_key = raw_key.parse::<Private>()?;
         priv_key.sign_digest(&txid)?[..].to_owned()
     } else {
-        println!("... Signing using wallet key {:}", sender);
+        println!("! Signing using wallet key {:}", sender);
         sign_digest(&txid, &sender)?
     };
 
