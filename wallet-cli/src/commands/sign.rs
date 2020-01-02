@@ -60,7 +60,6 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 
     // signature
     let txid = crypto::sha256(&raw.write_to_bytes()?);
-    eprintln!("TX Hash: {:}", txid.encode_hex::<String>());
 
     if !signatures.is_empty() {
         eprintln!("Already signed by:");
@@ -91,6 +90,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         "raw_data": trx_json,
         "raw_data_hex": json!(raw_data.encode_hex::<String>()),
         "signatures": json!(signatures),
+        "txID": json!(txid.encode_hex::<String>()),
     });
 
     println!("{:}", serde_json::to_string_pretty(&ret)?);
