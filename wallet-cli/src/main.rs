@@ -32,6 +32,7 @@ fn main() -> Result<(), Error> {
 
     match matches.subcommand() {
         ("get", Some(arg_matches)) => commands::get::main(arg_matches),
+        ("list", Some(arg_matches)) => commands::list::main(arg_matches),
         ("set", Some(arg_matches)) => commands::set::main(arg_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(wallet_name, arg_matches),
