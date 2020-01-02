@@ -96,6 +96,9 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             let permission = arg_matches.value_of("PERMISSION").expect("required in cli.yml; qed");
             set_account_permission(name, permission)
         }
-        _ => unimplemented!(),
+        _ => {
+            eprintln!("{}", matches.usage());
+            Err(Error::Runtime("error parsing command line"))
+        }
     }
 }

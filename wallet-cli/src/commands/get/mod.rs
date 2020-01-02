@@ -262,6 +262,9 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             contract::run(addr)
         }
         ("asset", _) => get_asset_list(),
-        _ => Err(Error::Runtime("error parsing command line")),
+        _ => {
+            eprintln!("{}", matches.usage());
+            Err(Error::Runtime("error parsing command line"))
+        }
     }
 }

@@ -159,7 +159,10 @@ async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), E
             import_key_to_wallet(wallet_name, priv_key).await
         }
         ("keys", _) => list_keys_in_wallet(wallet_name).await,
-        _ => unimplemented!(),
+        _ => {
+            eprintln!("{}", matches.usage());
+            Err(Error::Runtime("command line arguments parsing error"))
+        }
     }
 }
 
