@@ -37,14 +37,11 @@ pub fn get_walletd_pid() -> Result<c_int, Error> {
             .parse()
             .expect("pid file format error");
 
-        unsafe {
-            let mut buffer = Vec::with_capacity(64);
-            buffer.set_len(64);
-            let n = proc_name(pid, &mut buffer[0] as *mut u8 as *mut c_char, 64);
-            let name = str::from_utf8(&buffer[..n as usize]).unwrap();
-            if n != 0 && name == "walletd" {
-                return Ok(pid);
-            }
+        let mut buffer = [0u8; 64];
+        let n = unsafe { proc_name(pid, &mut buffer[0] as *mut u8 as *mut c_char, 64) };
+        let name = str::from_utf8(&buffer[..n as usize]).unwrap();
+        if n != 0 && name == "walletd" {
+            return Ok(pid);
         }
     }
 
