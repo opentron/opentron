@@ -78,10 +78,7 @@ fn set_account_permission(name: &str, permission: &str) -> Result<(), Error> {
     let (_, payload, _) = grpc_client.broadcast_transaction(Default::default(), req).wait()?;
 
     let mut result = serde_json::to_value(&payload)?;
-
-    if !result["message"].is_null() {
-        result["message"] = json!(jsont::bytes_to_string(&result["message"]));
-    }
+    jsont::fix_api_return(&mut result);
 
     println!("got => {:}", serde_json::to_string_pretty(&result)?);
     Ok(())

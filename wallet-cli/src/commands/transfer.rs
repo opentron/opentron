@@ -8,7 +8,6 @@ use proto::core::{
 };
 use protobuf::well_known_types::Any;
 use protobuf::Message;
-use serde_json::json;
 
 use crate::commands::wallet::sign_digest;
 use crate::error::Error;
@@ -74,7 +73,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         let priv_key = raw_key.parse::<Private>()?;
         priv_key.sign_digest(&txid)?[..].to_owned()
     } else {
-        println!("... Signing using wallet {:}", sender);
+        println!("... Signing using wallet key {:}", sender);
         sign_digest(&txid, &sender)?
     };
 
@@ -88,10 +87,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let (_, payload, _) = client.broadcast_transaction(Default::default(), req).wait()?;
 
     let mut result = serde_json::to_value(&payload)?;
-
-    if !result["message"].is_null() {
-        result["message"] = json!(jsont::bytes_to_string(&result["message"]));
-    }
+    jsont::fix_api_return(&mut result);
 
     println!("got => {:}", serde_json::to_string_pretty(&result)?);
     Ok(())

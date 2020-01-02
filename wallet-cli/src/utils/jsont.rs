@@ -78,6 +78,12 @@ pub fn fix_account(account: &mut serde_json::Value) {
     }
 }
 
+pub fn fix_api_return(ret: &mut serde_json::Value) {
+    if !ret["message"].is_null() {
+        ret["message"] = json!(bytes_to_string(&ret["message"]));
+    }
+}
+
 // revert for serializing to pb
 pub fn revert_permission_info(permission: &mut serde_json::Value) {
     if !permission["owner"].is_null() {
