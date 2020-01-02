@@ -64,7 +64,6 @@ impl LocalWallet for LocalWalletService {
             },
         };
 
-        println!("DEBUG: Current Wallet {:?}", &self.wallet);
         Ok(Response::new(reply))
     }
 
