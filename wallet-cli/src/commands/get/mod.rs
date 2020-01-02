@@ -13,11 +13,10 @@ use crate::utils::jsont;
 mod contract;
 
 fn node_info() -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
-    let req = EmptyMessage::new();
-    let (_, payload, _) = client.get_node_info(Default::default(), req).wait()?;
-    println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+    let (_, payload, _) = new_grpc_client()?
+        .get_node_info(Default::default(), EmptyMessage::new())
+        .wait()?;
+    println!("{}", serde_json::to_string_pretty(&payload)?);
     Ok(())
 }
 
@@ -27,17 +26,13 @@ fn get_block(id_or_num: &str) -> Result<(), Error> {
     let mut block = {
         if id_or_num.starts_with("0000") {
             let mut req = BytesMessage::new();
-            req.value = Vec::from_hex(id_or_num).expect("hex bytes parse");
-            let resp = client.get_block_by_id(Default::default(), req);
-
-            let (_, payload, _) = resp.wait().expect("grpc request");
+            req.value = Vec::from_hex(id_or_num)?;
+            let (_, payload, _) = client.get_block_by_id(Default::default(), req).wait()?;
             serde_json::to_value(&payload).expect("pd json")
         } else {
             let mut req = NumberMessage::new();
-            req.num = id_or_num.parse().expect("block number format");
-            let resp = client.get_block_by_num2(Default::default(), req);
-
-            let (_, payload, _) = resp.wait().expect("grpc request");
+            req.num = id_or_num.parse()?;
+            let (_, payload, _) = client.get_block_by_num2(Default::default(), req).wait()?;
             serde_json::to_value(&payload).expect("pd json")
         }
     };
@@ -68,21 +63,19 @@ fn get_block(id_or_num: &str) -> Result<(), Error> {
         })
         .last();
 
-    println!("{:}", serde_json::to_string_pretty(&block).expect("pb json"));
+    println!("{:}", serde_json::to_string_pretty(&block)?);
     Ok(())
 }
 
 fn get_transaction(id: &str) -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let mut req = BytesMessage::new();
-    req.value = Vec::from_hex(id).expect("hex bytes parse");
-    let resp = client.get_transaction_by_id(Default::default(), req);
+    req.value = Vec::from_hex(id)?;
 
-    let (_, payload, _) = resp.wait().expect("grpc request");
+    let (_, payload, _) = new_grpc_client()?
+        .get_transaction_by_id(Default::default(), req)
+        .wait()?;
 
-    let mut transaction = serde_json::to_value(&payload).expect("resp json serilization");
-
+    let mut transaction = serde_json::to_value(&payload)?;
     jsont::fix_transaction(&mut transaction);
 
     println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
@@ -90,15 +83,14 @@ fn get_transaction(id: &str) -> Result<(), Error> {
 }
 
 fn get_transaction_info(id: &str) -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let mut req = BytesMessage::new();
-    req.value = Vec::from_hex(id).expect("hex bytes parse");
-    let resp = client.get_transaction_info_by_id(Default::default(), req);
+    req.value = Vec::from_hex(id)?;
 
-    let (_, payload, _) = resp.wait().expect("grpc request");
-    // serde_json::to_string_pretty(&payload).expect("resp json parse")
-    let json = serde_json::to_value(&payload).expect("resp json serilization");
+    let (_, payload, _) = new_grpc_client()?
+        .get_transaction_info_by_id(Default::default(), req)
+        .wait()?;
+
+    let json = serde_json::to_value(&payload)?;
     let result = json!({
         "id": json!(jsont::bytes_to_hex_string(&json["id"])),
         "fee": json["fee"],
@@ -115,29 +107,26 @@ fn get_transaction_info(id: &str) -> Result<(), Error> {
         "contract_address": json!(jsont::bytes_to_hex_string(&json["contract_address"])),
         "receipt": json["receipt"],
     });
-    println!("{}", serde_json::to_string_pretty(&result).unwrap());
+    println!("{}", serde_json::to_string_pretty(&result)?);
     Ok(())
 }
 
 /// Get account infomation.
 fn get_account(name: &str) -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let mut req = Account::new();
-    let addr = name.parse::<Address>().expect("addr format");
+    let addr = name.parse::<Address>()?;
     req.set_address(addr.to_bytes().to_owned());
     // FIXME: account name not supported
     // req.set_account_name(name.as_bytes().to_owned());
 
-    let (_, payload, _) = client.get_account(Default::default(), req).wait()?;
+    let (_, payload, _) = new_grpc_client()?.get_account(Default::default(), req).wait()?;
 
     let mut account = serde_json::to_value(&payload)?;
 
     // first byte of address
     if account["address"][0].is_null() {
-        eprintln!("error: not found!");
         println!("{}", serde_json::to_string_pretty(&payload)?);
-        return Err(Error::Runtime("address not found"));
+        return Err(Error::Runtime("account not found on chain"));
     }
 
     jsont::fix_account(&mut account);
@@ -148,13 +137,11 @@ fn get_account(name: &str) -> Result<(), Error> {
 
 /// Get account permission info.
 fn get_account_permission(name: &str) -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let mut req = Account::new();
     let addr = name.parse::<Address>()?;
     req.set_address(addr.to_bytes().to_owned());
 
-    let (_, payload, _) = client.get_account(Default::default(), req).wait()?;
+    let (_, payload, _) = new_grpc_client()?.get_account(Default::default(), req).wait()?;
 
     let mut account = serde_json::to_value(&payload)?;
     jsont::fix_account(&mut account);
@@ -171,13 +158,11 @@ fn get_account_permission(name: &str) -> Result<(), Error> {
 
 /// Get account energy and bandwidth infomation.
 fn get_account_resource(name: &str) -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let mut req = Account::new();
     let addr = name.parse::<Address>().expect("addr format");
     req.set_address(addr.to_bytes().to_owned());
 
-    let (_, payload, _) = client
+    let (_, payload, _) = new_grpc_client()?
         .get_account_resource(Default::default(), req)
         .wait()
         .expect("grpc request");

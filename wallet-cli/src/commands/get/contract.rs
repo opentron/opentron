@@ -11,13 +11,11 @@ use crate::utils::crypto;
 use crate::utils::jsont;
 
 pub fn run(addr: &str) -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let address: Address = addr.parse()?;
     let mut req = BytesMessage::new();
     req.set_value(address.to_bytes().to_owned());
 
-    let (_, payload, _) = client.get_contract(Default::default(), req).wait()?;
+    let (_, payload, _) = new_grpc_client()?.get_contract(Default::default(), req).wait()?;
     let mut contract = serde_json::to_value(&payload)?;
 
     contract["contract_address"] = json!(jsont::bytes_to_hex_string(&contract["contract_address"]));
@@ -81,7 +79,7 @@ fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Erro
         }
 
         let fhash = abi_function_name_to_hash(&raw);
-        println!("{:}\n    => {:}: {:}", pretty, (&fhash[..]).encode_hex::<String>(), raw);
+        eprintln!("{:}\n    => {:}: {:}", pretty, (&fhash[..]).encode_hex::<String>(), raw);
     }
     Ok(())
 }
