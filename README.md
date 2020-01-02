@@ -15,10 +15,13 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - [x] accout permission handling
   - [ ] accout resource handling
   - [ ] vote and witness
-  - [ ] multisig
-  - [ ] raw transaction handling(create, sign)
-  - [ ] anonymous transaction
-- [ ] full Tron Protocol implementation (joking)
+  - [x] multisig (via raw transaction sign)
+  - [ ] raw transaction handling
+    - [ ] create
+    - [x] sign
+  - [ ] shielded transaction
+- [ ] full Tron Protocol implementation
+  - [x] joking
   - [ ] network
   - [ ] p2p
   - [ ] rpc
