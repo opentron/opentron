@@ -35,6 +35,7 @@ fn main() -> Result<(), Error> {
         ("list", Some(arg_matches)) => commands::list::main(arg_matches),
         ("set", Some(arg_matches)) => commands::set::main(arg_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
+        ("sign", Some(arg_matches)) => commands::sign::main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(wallet_name, arg_matches),
         _ => {
             eprintln!("{}", matches.usage());

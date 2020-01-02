@@ -20,14 +20,20 @@ pub fn bytes_to_string(val: &serde_json::Value) -> String {
         .collect::<String>()
 }
 
-pub fn fix_transaction(transaction: &mut serde_json::Value) {
-    transaction["raw_data"]["contract"][0]["parameter"]["value"] = json!(bytes_to_hex_string(
-        &transaction["raw_data"]["contract"][0]["parameter"]["value"]
+// pb: Transaction.raw
+pub fn fix_transaction_raw(transaction: &mut serde_json::Value) {
+    transaction["contract"][0]["parameter"]["value"] = json!(bytes_to_hex_string(
+        &transaction["contract"][0]["parameter"]["value"]
     ));
-    transaction["raw_data"]["ref_block_hash"] = json!(bytes_to_hex_string(&transaction["raw_data"]["ref_block_hash"]));
-    transaction["raw_data"]["ref_block_bytes"] =
-        json!(bytes_to_hex_string(&transaction["raw_data"]["ref_block_bytes"]));
-    transaction["raw_data"]["data"] = json!(bytes_to_string(&transaction["raw_data"]["data"]));
+    transaction["ref_block_hash"] = json!(bytes_to_hex_string(&transaction["ref_block_hash"]));
+    transaction["ref_block_bytes"] =
+        json!(bytes_to_hex_string(&transaction["ref_block_bytes"]));
+    transaction["data"] = json!(bytes_to_string(&transaction["data"]));
+}
+
+// pb: Transaction
+pub fn fix_transaction(transaction: &mut serde_json::Value) {
+    fix_transaction_raw(&mut transaction["raw_data"]);
     transaction["signature"] = json!(transaction["signature"]
         .as_array()
         .unwrap()
@@ -36,6 +42,7 @@ pub fn fix_transaction(transaction: &mut serde_json::Value) {
         .collect::<Vec<_>>());
 }
 
+// pb: Account
 pub fn fix_account(account: &mut serde_json::Value) {
     account["address"] = json!(bytes_to_hex_string(&account["address"]));
     account["account_name"] = json!(bytes_to_string(&account["account_name"]));
@@ -78,6 +85,7 @@ pub fn fix_account(account: &mut serde_json::Value) {
     }
 }
 
+// pb: Return
 pub fn fix_api_return(ret: &mut serde_json::Value) {
     if !ret["message"].is_null() {
         ret["message"] = json!(bytes_to_string(&ret["message"]));

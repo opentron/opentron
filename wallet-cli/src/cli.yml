@@ -121,6 +121,22 @@ subcommands:
                     takes_value: true
                     possible_values: ["0", "2", "1"]
 
+    - sign:
+        about: Sign a transaction
+        args:
+            - TRANSACTION:
+                help: The JSON string or filename defining the transaction to sign
+                required: true
+            - private-key:
+                help: The private key used for signing
+                short: K
+                long: private-key
+                takes_value: true
+            - broadcast:
+                help: Broadcast transaction after signing
+                long: broadcast
+                short: b
+
     - wallet:
           about: Subcommand used to interact with the local wallet
           subcommands:

@@ -20,6 +20,8 @@ pub enum Error {
     Runtime(&'static str),
     #[error("error: {0:?}")]
     Keys(#[from] ::keys::Error),
+    #[error("{0:}")]
+    FromHex(#[from] ::hex::FromHexError),
     #[error("parsing error: {0:}")]
     ParseInt(#[from] ::std::num::ParseIntError),
 }
