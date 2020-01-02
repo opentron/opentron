@@ -37,6 +37,7 @@ fn main() -> Result<(), Error> {
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
         ("sign", Some(arg_matches)) => commands::sign::main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(wallet_name, arg_matches),
+        ("shielded", Some(arg_matches)) => commands::shielded::main(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))

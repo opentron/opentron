@@ -153,6 +153,12 @@ subcommands:
                     long: broadcast
                     short: b
 
+    - shielded:
+        about: Shielded transaction related commands
+        subcommands:
+            - new_address:
+                about: Creates a new shielded address
+
     - wallet:
           about: Subcommand used to interact with the local wallet
           subcommands:
