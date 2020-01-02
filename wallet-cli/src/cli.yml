@@ -71,8 +71,6 @@ subcommands:
                         - ADDR:
                               help: The address of the smart contract
                               required: true
-              - asset:
-                    about: Retrieves list of all tokens
 
     - set:
           about: Sets or updates the blockchain state
@@ -94,6 +92,8 @@ subcommands:
                     about: Query the list of Super Representatives
               - node:
                     about: List the nodes which is connecting on the network
+              - asset:
+                    about: Retrieves list of all tokens
 
     - transfer:
           about: Transfer a TRX token
