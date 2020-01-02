@@ -2,6 +2,7 @@ use daemonize::Daemonize;
 use std::convert::TryFrom;
 use std::fs::File;
 use std::sync::{Arc, RwLock};
+use tokio::runtime::Builder;
 use tonic::{transport::Server, Request, Response, Status};
 use wallet::Wallet;
 
@@ -251,22 +252,8 @@ fn sign_digest_via_public_or_address(
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let stdout = File::create("/tmp/walletd.out").unwrap();
-    let stderr = File::create("/tmp/walletd.err").unwrap();
-
-    let daemonize = Daemonize::new()
-        .pid_file("/tmp/walletd.pid")
-        .stdout(stdout)
-        .stderr(stderr);
-    /*
-    match daemonize.start() {
-        Ok(_) => println!("Success, daemonized"),
-        Err(e) => eprintln!("Error, {}", e),
-    }
-    */
-
+// NOTE: #[tokio:main] conflicts with daemonize
+async fn tokio_main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:8888".parse().unwrap();
     let service = LocalWalletService::default();
 
@@ -277,4 +264,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     Ok(())
+}
+
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let stdout = File::create("/tmp/walletd.out").unwrap();
+    let stderr = File::create("/tmp/walletd.err").unwrap();
+
+    let daemonize = Daemonize::new()
+        .pid_file("/tmp/walletd.pid")
+        .stdout(stdout)
+        .stderr(stderr);
+    match daemonize.start() {
+        Ok(_) => println!("Success, daemonized"),
+        Err(e) => eprintln!("Error, {}", e),
+    }
+
+    let fut = tokio_main();
+    let mut rt = Builder::new().basic_scheduler().enable_all().build()?;
+    rt.block_on(fut)
 }
