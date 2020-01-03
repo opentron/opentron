@@ -10,7 +10,7 @@ use error::Error;
 static mut RPC_HOST: &str = "grpc.trongrid.io:50051";
 
 fn main() -> Result<(), Error> {
-    utils::walletd::assure_walletd()?;
+    utils::walletd::ensure_walletd()?;
 
     let yaml = load_yaml!("cli.yml");
     let matches = clap::App::from_yaml(yaml).get_matches();

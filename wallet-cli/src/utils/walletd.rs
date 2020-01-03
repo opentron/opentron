@@ -15,7 +15,7 @@ extern "C" {
     fn proc_name(pid: c_int, buffer: *mut c_char, buffersize: u32) -> c_int;
 }
 
-pub fn assure_walletd() -> Result<(), Error> {
+pub fn ensure_walletd() -> Result<(), Error> {
     match get_walletd_pid() {
         Ok(_pid) => {
             // eprintln!("walletd: running at pid={:}", pid);
