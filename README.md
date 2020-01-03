@@ -17,9 +17,7 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 > ./nile-wallet-cli.sh
 ```
 
-## wallet-cli
-
-A command-line tool which let developers interact Tron Protocol as well as deploy, test smart contracts.
+## TODOs
 
 - wallet-cli
   - [x] fetch chain status, node, transaction, block, account, contract, asset etc.
@@ -48,3 +46,7 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - [ ] script
     - [ ] solidity
     - [ ] wasm
+
+## wallet-cli
+
+A command-line tool which let developers interact Tron Protocol as well as deploy, test smart contracts.
