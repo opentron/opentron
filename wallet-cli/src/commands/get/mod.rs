@@ -76,10 +76,13 @@ fn get_transaction(id: &str) -> Result<(), Error> {
         .wait()?;
 
     let mut transaction = serde_json::to_value(&payload)?;
-    jsont::fix_transaction(&mut transaction);
-
-    println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
-    Ok(())
+    if transaction["raw_data"].is_null() {
+        Err(Error::Runtime("transaction not found"))
+    } else {
+        jsont::fix_transaction(&mut transaction);
+        println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
+        Ok(())
+    }
 }
 
 fn get_transaction_info(id: &str) -> Result<(), Error> {
