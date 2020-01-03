@@ -20,6 +20,7 @@ use crate::utils::trx;
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let broadcast_after_signing = matches.is_present("broadcast");
+    let skip_signing = matches.is_present("skip");
 
     let trx = matches.value_of("TRANSACTION").expect("required in cli.yml; qed");
 
@@ -31,7 +32,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             io::stdin().read_to_string(&mut buffer)?;
             buffer
         }
-        _ => trx.to_owned(),
+        _ => trx.to_owned()
     };
 
     let mut signatures = Vec::new();
@@ -56,8 +57,6 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     jsont::fix_transaction_raw(&mut trx_json);
     eprintln!("{:}", serde_json::to_string_pretty(&trx_json)?);
 
-    let owner_address = trx::extract_owner_address_from_parameter(raw.contract[0].get_parameter());
-
     // signature
     let txid = crypto::sha256(&raw.write_to_bytes()?);
 
@@ -69,25 +68,28 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         }
     }
 
-    let signature: Vec<u8> = if let Some(raw_addr) = matches.value_of("account") {
-        let addr = raw_addr.parse::<Address>()?;
-        eprintln!("! Signing using wallet key from --account {:}", addr);
-        sign_digest(&txid, &addr)?
-    } else if let Some(raw_key) = matches.value_of("private-key") {
-        let private = raw_key.parse::<Private>()?;
-        eprintln!("! Signing with --private-key {:}", Address::from_private(&private));
-        private.sign_digest(&txid)?[..].to_owned()
-    } else {
-        eprintln!("! Signing using wallet key {:}", owner_address);
-        sign_digest(&txid, &owner_address)?
-    };
+    if !skip_signing {
+        let signature: Vec<u8> = if let Some(raw_addr) = matches.value_of("account") {
+            let addr = raw_addr.parse::<Address>()?;
+            eprintln!("! Signing using wallet key from --account {:}", addr);
+            sign_digest(&txid, &addr)?
+        } else if let Some(raw_key) = matches.value_of("private-key") {
+            let private = raw_key.parse::<Private>()?;
+            eprintln!("! Signing with --private-key {:}", Address::from_private(&private));
+            private.sign_digest(&txid)?[..].to_owned()
+        } else {
+            let owner_address = trx::extract_owner_address_from_parameter(raw.contract[0].get_parameter())?;
+            eprintln!("! Signing using wallet key {:}", owner_address);
+            sign_digest(&txid, &owner_address)?
+        };
 
-    let sig_hex = signature.encode_hex::<String>();
+        let sig_hex = signature.encode_hex::<String>();
 
-    if signatures.contains(&sig_hex) {
-        return Err(Error::Runtime("already signed by this key"));
-    } else {
-        signatures.push(sig_hex);
+        if signatures.contains(&sig_hex) {
+            return Err(Error::Runtime("already signed by this key"));
+        } else {
+            signatures.push(sig_hex);
+        }
     }
 
     let ret = json!({
@@ -108,7 +110,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .into_iter()
                 .map(|sig| Vec::from_hex(sig).unwrap())
                 .collect::<Vec<_>>()
-                .into(),
+                .into()
         );
 
         let (_, payload, _) = new_grpc_client()?

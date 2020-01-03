@@ -152,6 +152,12 @@ subcommands:
                     help: Broadcast transaction after signing
                     long: broadcast
                     short: b
+              - skip:
+                    help: Skip actual sign process, may be used with -broadcast
+                    long: skip
+                    conflicts_with:
+                        - account
+                        - private-key
 
     - shielded:
         about: Shielded transaction related commands
