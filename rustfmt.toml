@@ -1,1 +1,10 @@
 max_width = 120
+comment_width=120
+fn_call_width=100
+reorder_imports = true
+binop_separator = "Back"
+edition = "2018"
+newline_style = "Unix"
+normalize_comments = true
+trailing_comma = "Never"
+tab_spaces = 4
