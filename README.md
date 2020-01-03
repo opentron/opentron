@@ -2,6 +2,21 @@
 
 Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 
+## quickstart
+
+```console
+# install rust-nightly
+> curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
+> rustup component add rustfmt
+# compile
+> cargo build -p walletd
+> cargo build -p wallet-cli
+# time to rock !!!
+> ./target/debug/wallet-cli help
+# or use testnet toolset
+> ./nile-wallet-cli.sh
+```
+
 ## wallet-cli
 
 A command-line tool which let developers interact Tron Protocol as well as deploy, test smart contracts.
