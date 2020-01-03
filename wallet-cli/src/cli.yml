@@ -160,12 +160,33 @@ subcommands:
                         - private-key
 
     - shielded:
-        about: Shielded transaction related commands
-        subcommands:
-            - new_address:
-                about: Creates a new shielded address
-            - debug:
-                about: debug rocks
+          about: Shielded transaction related commands
+          subcommands:
+              - new_address:
+                    about: Creates a new shielded address
+              - debug:
+                    about: debug rocks
+              - transfer:
+                    about: Initiates a shielded transaction, amount can be 'auto'
+                    args:
+                        - from:
+                              help: The address or note for sending TRZ coins
+                              short: f
+                              long: from
+                              multiple: true
+                              required: true
+                              value_names:
+                                  - ADDRESS
+                                  - AMOUNT
+                        - to:
+                              help: The address for receiving TRZ coins
+                              short: t
+                              long: to
+                              multiple: true
+                              required: true
+                              value_names:
+                                  - ADDRESS
+                                  - AMOUNT
 
     - wallet:
           about: Subcommand used to interact with the local wallet

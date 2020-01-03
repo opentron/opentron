@@ -140,10 +140,9 @@ pub fn debug_taddr_to_zaddr() -> Result<(), Error> {
     note.set_value(190_000_000);
     note.set_memo(memo.as_bytes().to_owned());
 
-    let (_, rcm_msg, _) = grpc_client.get_rcm(Default::default(), EmptyMessage::new()).wait()?;
-    eprintln!("rcm = {:?}", rcm_msg.value.encode_hex::<String>());
-
-    note.set_rcm(rcm_msg.value); // random 32-bytes value
+    let rcm = get_rcm(&grpc_client)?;
+    eprintln!("rcm = {:?}", rcm.encode_hex::<String>());
+    note.set_rcm(rcm);
 
     let recv_note = ReceiveNote {
         note: Some(note).into(),
