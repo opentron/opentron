@@ -101,6 +101,38 @@ pub fn fix_api_return(ret: &mut serde_json::Value) {
     }
 }
 
+// pb: IncrementalMerkleVoucherInfo
+pub fn fix_voucher_info(voucher_info: &mut serde_json::Value) {
+    voucher_info["paths"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|path| *path = json!(bytes_to_hex_string(path)))
+        .last();
+    voucher_info["vouchers"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|voucher| {
+            voucher["rt"] = json!(bytes_to_hex_string(&voucher["rt"]));
+            // right or left may be null
+            voucher["tree"]["left"]
+                .as_object_mut()
+                .map(|obj| obj["content"] = json!(bytes_to_hex_string(&obj["content"])));
+            voucher["tree"]["right"]
+                .as_object_mut()
+                .map(|obj| obj["content"] = json!(bytes_to_hex_string(&obj["content"])));
+
+            voucher["tree"]["parents"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .map(|p| p["content"] = json!(bytes_to_hex_string(&p["content"])))
+                .last();
+        })
+        .last();
+}
+
 // revert for serializing to pb
 pub fn revert_permission_info(permission: &mut serde_json::Value) {
     if !permission["owner"].is_null() {

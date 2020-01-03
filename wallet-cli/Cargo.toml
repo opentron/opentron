@@ -20,6 +20,7 @@ sha3 = "0.8"
 thiserror = "1.0"
 tokio = "0.2"
 tonic = "0.1.0-beta.1"
+rand = "0.7"
 
 proto = { path = "../proto" }
 keys = { path = "../keys" }
