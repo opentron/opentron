@@ -22,12 +22,10 @@ pub fn bytes_to_string(val: &serde_json::Value) -> String {
 
 // pb: Transaction.raw
 pub fn fix_transaction_raw(transaction: &mut serde_json::Value) {
-    transaction["contract"][0]["parameter"]["value"] = json!(bytes_to_hex_string(
-        &transaction["contract"][0]["parameter"]["value"]
-    ));
+    transaction["contract"][0]["parameter"]["value"] =
+        json!(bytes_to_hex_string(&transaction["contract"][0]["parameter"]["value"]));
     transaction["ref_block_hash"] = json!(bytes_to_hex_string(&transaction["ref_block_hash"]));
-    transaction["ref_block_bytes"] =
-        json!(bytes_to_hex_string(&transaction["ref_block_bytes"]));
+    transaction["ref_block_bytes"] = json!(bytes_to_hex_string(&transaction["ref_block_bytes"]));
     transaction["data"] = json!(bytes_to_string(&transaction["data"]));
 }
 
@@ -40,6 +38,17 @@ pub fn fix_transaction(transaction: &mut serde_json::Value) {
         .iter()
         .map(|sig| json!(bytes_to_hex_string(sig)))
         .collect::<Vec<_>>());
+}
+
+// pb: TransactionExtention
+pub fn fix_transaction_ext(transaction_ext: &mut serde_json::Value) {
+    if transaction_ext["result"]["result"].as_bool().unwrap() == false {
+        transaction_ext["result"]["message"] = json!(bytes_to_string(&transaction_ext["result"]["message"]));
+    }
+    if !transaction_ext["transaction"].is_null() {
+        fix_transaction(&mut transaction_ext["transaction"]);
+    }
+    transaction_ext["txid"] = json!(bytes_to_hex_string(&mut transaction_ext["txid"]));
 }
 
 // pb: Account

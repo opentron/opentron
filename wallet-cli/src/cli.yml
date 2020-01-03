@@ -158,6 +158,8 @@ subcommands:
         subcommands:
             - new_address:
                 about: Creates a new shielded address
+            - debug:
+                about: debug rocks
 
     - wallet:
           about: Subcommand used to interact with the local wallet
