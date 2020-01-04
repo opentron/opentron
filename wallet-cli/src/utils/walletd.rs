@@ -2,18 +2,14 @@
 
 use std::env;
 use std::fs;
-use std::os::raw::{c_char, c_int};
-use std::path::Path;
+use std::os::raw::c_int;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
 
 use crate::error::Error;
 
 pub const WALLETD_PID_FILE: &str = "/tmp/walletd.pid";
-
-extern "C" {
-    fn proc_name(pid: c_int, buffer: *mut c_char, buffersize: u32) -> c_int;
-}
 
 pub fn ensure_walletd() -> Result<(), Error> {
     match get_walletd_pid() {
@@ -28,6 +24,11 @@ pub fn ensure_walletd() -> Result<(), Error> {
     }
 }
 
+#[cfg(target_os = "macos")]
+extern "C" {
+    fn proc_name(pid: c_int, buffer: *mut u8, buffersize: u32) -> c_int;
+}
+#[cfg(target_os = "macos")]
 pub fn get_walletd_pid() -> Result<c_int, Error> {
     let pid_file = Path::new(WALLETD_PID_FILE);
 
@@ -38,10 +39,32 @@ pub fn get_walletd_pid() -> Result<c_int, Error> {
             .expect("pid file format error");
 
         let mut buffer = [0u8; 64];
-        let n = unsafe { proc_name(pid, &mut buffer[0] as *mut u8 as *mut c_char, 64) };
+        let n = unsafe { proc_name(pid, &mut buffer[0] as *mut u8, 64) };
         let name = str::from_utf8(&buffer[..n as usize]).unwrap();
         if n != 0 && name == "walletd" {
             return Ok(pid);
+        }
+    }
+
+    Err(Error::Runtime("walletd process not found"))
+}
+
+#[cfg(target_os = "linux")]
+pub fn get_walletd_pid() -> Result<c_int, Error> {
+    let pid_file = Path::new(WALLETD_PID_FILE);
+
+    if pid_file.exists() {
+        let pid: c_int = fs::read_to_string(&pid_file)
+            .unwrap()
+            .parse()
+            .expect("pid file format error");
+
+        let proc_file = PathBuf::from(format!("/proc/{}/cmdline", pid));
+        if proc_file.exists() {
+            let cmdline = fs::read_to_string(&proc_file).unwrap();
+            if cmdline.ends_with("walletd\u{0}") {
+                return Ok(pid);
+            }
         }
     }
 
