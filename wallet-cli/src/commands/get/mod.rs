@@ -20,20 +20,25 @@ fn node_info() -> Result<(), Error> {
     Ok(())
 }
 
-fn get_block(id_or_num: &str) -> Result<(), Error> {
+fn get_block(matches: &ArgMatches) -> Result<(), Error> {
     let client = new_grpc_client()?;
 
-    let mut block = {
-        if id_or_num.starts_with("0000") {
+    let mut block = match matches.value_of("BLOCK") {
+        Some(id) if id.starts_with("0000") => {
             let mut req = BytesMessage::new();
-            req.value = Vec::from_hex(id_or_num)?;
+            req.value = Vec::from_hex(id)?;
             let (_, payload, _) = client.get_block_by_id(Default::default(), req).wait()?;
-            serde_json::to_value(&payload).expect("pd json")
-        } else {
+            serde_json::to_value(&payload)?
+        }
+        Some(num) => {
             let mut req = NumberMessage::new();
-            req.num = id_or_num.parse()?;
+            req.num = num.parse()?;
             let (_, payload, _) = client.get_block_by_num2(Default::default(), req).wait()?;
-            serde_json::to_value(&payload).expect("pd json")
+            serde_json::to_value(&payload)?
+        }
+        None => {
+            let (_, payload, _) = client.get_now_block(Default::default(), EmptyMessage::new()).wait()?;
+            serde_json::to_value(&payload)?
         }
     };
 
@@ -178,12 +183,7 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => node_info(),
-        ("block", Some(block_matches)) => {
-            let block = block_matches
-                .value_of("BLOCK")
-                .expect("block is required in cli.yml; qed");
-            get_block(block)
-        }
+        ("block", Some(arg_matches)) => get_block(arg_matches),
         ("transaction", Some(tr_matches)) => {
             let id = tr_matches
                 .value_of("ID")
