@@ -1,7 +1,9 @@
 //! JSON transformations
 
 use hex::{FromHex, ToHex};
-use proto::core::{AccountPermissionUpdateContract, TransferAssetContract, TransferContract, TriggerSmartContract};
+use proto::core::{
+    AccountPermissionUpdateContract, CreateSmartContract, TransferAssetContract, TransferContract, TriggerSmartContract,
+};
 use serde_json::json;
 
 use crate::error::Error;
@@ -84,6 +86,14 @@ pub fn fix_account_permission_update_contract(val: &mut serde_json::Value) {
     }
 }
 
+// pb: CreateSmartContract
+pub fn fix_create_smart_contract(val: &mut serde_json::Value) {
+    val["owner_address"] = json!(bytes_to_hex_string(&val["owner_address"]));
+    let contract = &mut val["new_contract"];
+    contract["bytecode"] = json!(bytes_to_hex_string(&contract["bytecode"]));
+    contract["origin_address"] = json!(bytes_to_hex_string(&contract["origin_address"]));
+}
+
 // pb: Transaction.raw
 pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Error> {
     let raw_pb = transaction["contract"][0]["parameter"]["value"]
@@ -116,6 +126,12 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
             let pb: AccountPermissionUpdateContract = protobuf::parse_from_bytes(&raw_pb)?;
             let mut contract = serde_json::to_value(&pb)?;
             fix_account_permission_update_contract(&mut contract);
+            contract
+        }
+        Some("CreateSmartContract") => {
+            let pb: CreateSmartContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_create_smart_contract(&mut contract);
             contract
         }
         x => {
