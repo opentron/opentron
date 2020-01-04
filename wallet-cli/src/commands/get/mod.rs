@@ -59,9 +59,10 @@ fn get_block(id_or_num: &str) -> Result<(), Error> {
                 transaction["txid"] = json!(jsont::bytes_to_hex_string(&transaction["txid"]));
                 transaction = &mut transaction["transaction"];
             }
-            jsont::fix_transaction(transaction);
+            jsont::fix_transaction(transaction)?;
+            Ok(())
         })
-        .last();
+        .collect::<Result<Vec<_>, Error>>()?;
 
     println!("{:}", serde_json::to_string_pretty(&block)?);
     Ok(())
@@ -79,7 +80,7 @@ fn get_transaction(id: &str) -> Result<(), Error> {
     if transaction["raw_data"].is_null() {
         Err(Error::Runtime("transaction not found"))
     } else {
-        jsont::fix_transaction(&mut transaction);
+        jsont::fix_transaction(&mut transaction)?;
         println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
         Ok(())
     }

@@ -1,7 +1,10 @@
 //! JSON transformations
 
 use hex::{FromHex, ToHex};
+use proto::core::{AccountPermissionUpdateContract, TransferAssetContract, TransferContract, TriggerSmartContract};
 use serde_json::json;
+
+use crate::error::Error;
 
 pub fn bytes_to_hex_string(val: &serde_json::Value) -> String {
     val.as_array()
@@ -20,35 +23,136 @@ pub fn bytes_to_string(val: &serde_json::Value) -> String {
         .collect::<String>()
 }
 
+// pb: TransferContract
+pub fn fix_transfer_contract(val: &mut serde_json::Value) {
+    val["owner_address"] = json!(bytes_to_hex_string(&val["owner_address"]));
+    val["to_address"] = json!(bytes_to_hex_string(&val["to_address"]));
+}
+
+// pb: TransferAssetContract
+pub fn fix_transfer_asset_contract(val: &mut serde_json::Value) {
+    val["owner_address"] = json!(bytes_to_hex_string(&val["owner_address"]));
+    val["to_address"] = json!(bytes_to_hex_string(&val["to_address"]));
+    val["asset_name"] = json!(bytes_to_string(&val["asset_name"]));
+}
+
+// pb: TriggerSmartContract
+pub fn fix_trigger_smart_contract(val: &mut serde_json::Value) {
+    val["owner_address"] = json!(bytes_to_hex_string(&val["owner_address"]));
+    val["contract_address"] = json!(bytes_to_hex_string(&val["contract_address"]));
+    val["data"] = json!(bytes_to_hex_string(&val["data"]));
+}
+
+// pb: AccountPermissionUpdateContract
+pub fn fix_account_permission_update_contract(val: &mut serde_json::Value) {
+    val["owner_address"] = json!(bytes_to_hex_string(&val["owner_address"]));
+    val["actives"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|perm| {
+            perm["keys"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .map(|key| {
+                    key["address"] = json!(bytes_to_hex_string(&key["address"]));
+                })
+                .last();
+            perm["operations"] = json!(bytes_to_hex_string(&perm["operations"]));
+        })
+        .last();
+    if !val["owner"].is_null() {
+        val["owner"]["keys"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .map(|key| {
+                key["address"] = json!(bytes_to_hex_string(&key["address"]));
+            })
+            .last();
+    }
+    if !val["witness"].is_null() {
+        val["witness"]["keys"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .map(|key| {
+                key["address"] = json!(bytes_to_hex_string(&key["address"]));
+            })
+            .last();
+    }
+}
+
 // pb: Transaction.raw
-pub fn fix_transaction_raw(transaction: &mut serde_json::Value) {
-    transaction["contract"][0]["parameter"]["value"] =
-        json!(bytes_to_hex_string(&transaction["contract"][0]["parameter"]["value"]));
+pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Error> {
+    let raw_pb = transaction["contract"][0]["parameter"]["value"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_i64().unwrap() as u8)
+        .collect::<Vec<u8>>();
+
+    let parsed_value = match transaction["contract"][0]["field_type"].as_str() {
+        Some("TransferContract") => {
+            let pb: TransferContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_transfer_contract(&mut contract);
+            contract
+        }
+        Some("TransferAssetContract") => {
+            let pb: TransferAssetContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_transfer_asset_contract(&mut contract);
+            contract
+        }
+        Some("TriggerSmartContract") => {
+            let pb: TriggerSmartContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_trigger_smart_contract(&mut contract);
+            contract
+        }
+        Some("AccountPermissionUpdateContract") => {
+            let pb: AccountPermissionUpdateContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_account_permission_update_contract(&mut contract);
+            contract
+        }
+        x => {
+            eprintln!("unhandled contract type => {:?}", x);
+            json!(raw_pb.encode_hex::<String>())
+        }
+    };
+    transaction["contract"][0]["parameter"]["value"] = parsed_value;
+
     transaction["ref_block_hash"] = json!(bytes_to_hex_string(&transaction["ref_block_hash"]));
     transaction["ref_block_bytes"] = json!(bytes_to_hex_string(&transaction["ref_block_bytes"]));
     transaction["data"] = json!(bytes_to_string(&transaction["data"]));
+    Ok(())
 }
 
 // pb: Transaction
-pub fn fix_transaction(transaction: &mut serde_json::Value) {
-    fix_transaction_raw(&mut transaction["raw_data"]);
+pub fn fix_transaction(transaction: &mut serde_json::Value) -> Result<(), Error> {
+    fix_transaction_raw(&mut transaction["raw_data"])?;
     transaction["signature"] = json!(transaction["signature"]
         .as_array()
         .unwrap()
         .iter()
         .map(|sig| json!(bytes_to_hex_string(sig)))
         .collect::<Vec<_>>());
+    Ok(())
 }
 
 // pb: TransactionExtention
-pub fn fix_transaction_ext(transaction_ext: &mut serde_json::Value) {
+pub fn fix_transaction_ext(transaction_ext: &mut serde_json::Value) -> Result<(), Error> {
     if transaction_ext["result"]["result"].as_bool().unwrap() == false {
         transaction_ext["result"]["message"] = json!(bytes_to_string(&transaction_ext["result"]["message"]));
     }
     if !transaction_ext["transaction"].is_null() {
-        fix_transaction(&mut transaction_ext["transaction"]);
+        fix_transaction(&mut transaction_ext["transaction"])?;
     }
     transaction_ext["txid"] = json!(bytes_to_hex_string(&mut transaction_ext["txid"]));
+    Ok(())
 }
 
 // pb: Account

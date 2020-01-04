@@ -51,7 +51,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 
     let raw = protobuf::parse_from_bytes::<TransactionRaw>(&raw_data)?;
     let mut trx_json = serde_json::to_value(&raw)?;
-    jsont::fix_transaction_raw(&mut trx_json);
+    jsont::fix_transaction_raw(&mut trx_json)?;
     eprintln!("{:}", serde_json::to_string_pretty(&trx_json)?);
 
     // signature

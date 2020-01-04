@@ -101,7 +101,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     // skip-sign implies dont-broadcast
     if matches.is_present("skip-sign") || matches.is_present("dont-broadcast") {
         let mut json = serde_json::to_value(&req)?;
-        jsont::fix_transaction(&mut json);
+        jsont::fix_transaction(&mut json)?;
         json["raw_data_hex"] = json!(req.get_raw_data().write_to_bytes()?.encode_hex::<String>());
         json["txID"] = json!(txid.encode_hex::<String>());
         println!("{:}", serde_json::to_string_pretty(&json)?);
