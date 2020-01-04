@@ -53,7 +53,12 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let mut raw = TransactionRaw::new();
     raw.set_contract(vec![contract].into());
     raw.set_data(memo.into());
-    raw.set_expiration(trx::timestamp_millis() + 1000 * 60 * 1); // 1min
+
+    let expiration = matches
+        .value_of("expiration")
+        .expect("has default value in cli.yml; qed")
+        .parse::<i64>()?;
+    raw.set_expiration(trx::timestamp_millis() + 1000 * expiration);
 
     // fill ref_block info
     let ref_block = client::get_latest_block(&client)?;

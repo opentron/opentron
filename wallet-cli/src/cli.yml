@@ -144,6 +144,7 @@ subcommands:
                     short: x
                     long: expiration
                     takes_value: true
+                    default_value: "60"
               - permission-id:
                     help: Permission id used by transaction
                     long: permission-id
