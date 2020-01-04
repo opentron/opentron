@@ -33,7 +33,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let trx_contract = TransferContract {
         owner_address: sender.to_bytes().to_owned(),
         to_address: recipient.to_bytes().to_owned(),
-        amount: amount.parse()?,
+        amount: trx::parse_amount(amount, true)?,
         ..Default::default()
     };
 

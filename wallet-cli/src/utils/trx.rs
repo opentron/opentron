@@ -24,3 +24,29 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         _ => unimplemented!(),
     }
 }
+
+/// Parse command line amount to amount in pb.
+pub fn parse_amount(amount: &str, allow_unit: bool) -> Result<i64, Error> {
+    // NOTE: simple parse, buggy but works
+    if amount.is_empty() {
+        return Err(Error::Runtime("can not parse empty amount"));
+    }
+    if allow_unit {
+        let length = amount.as_bytes().len();
+        // FIXME: allow other unit
+        if amount.ends_with("TRX") || amount.ends_with("TRZ") {
+            Ok(String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
+                .replace("_", "")
+                .parse::<i64>()?
+                * 1_000_000)
+        } else if amount.ends_with("SUN") {
+            Ok(String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
+                .replace("_", "")
+                .parse()?)
+        } else {
+            Ok(amount.replace("_", "").parse()?)
+        }
+    } else {
+        Ok(amount.replace("_", "").parse()?)
+    }
+}
