@@ -84,6 +84,13 @@ subcommands:
                         - PERMISSION:
                               help: Permission JSON returned from `get account_permission`, `-` for STDIN
                               required: true
+              - contract:
+                    about: Creates or updates the contract on an account
+                    args:
+                        - consume-user-resource-percent:
+                            help: Percentage of user resource consumed, in the range [0, 100]
+                            takes_value: true
+                            default_value: "100"
 
     - list:
           about: Lists any items from blockchain
@@ -124,6 +131,19 @@ subcommands:
                     takes_value: true
                     conflicts_with:
                         - account
+              - skip-sign:
+                    help: Specify if unlocked keys should be used to sign transaction
+                    short: s
+                    long: skip-sign
+              - dont-broadcast:
+                    help: Don't broadcast transaction to the network (just print to stdout)
+                    short: d
+                    long: dont-broadcast
+              - expiration:
+                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    short: x
+                    long: expiration
+                    takes_value: true
               - permission-id:
                     help: Permission id used by transaction
                     long: permission-id
@@ -152,9 +172,10 @@ subcommands:
                     help: Broadcast transaction after signing
                     long: broadcast
                     short: b
-              - skip:
+              - skip-sign:
                     help: Skip actual sign process, may be used with -broadcast
-                    long: skip
+                    short: s
+                    long: skip-sign
                     conflicts_with:
                         - account
                         - private-key

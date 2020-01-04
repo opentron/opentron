@@ -8,6 +8,7 @@ use proto::core::{
 };
 use protobuf::well_known_types::Any;
 use protobuf::Message;
+use serde_json::json;
 
 use crate::commands::wallet::sign_digest;
 use crate::error::Error;
@@ -64,35 +65,49 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     raw.set_ref_block_hash(ref_block.blockid[8..16].to_owned());
     raw.set_timestamp(trx::timestamp_millis());
 
-    // signature
     let txid = crypto::sha256(&raw.write_to_bytes()?);
-    println!("TX: {:}", txid.encode_hex::<String>());
 
-    let signature: Vec<u8> = if let Some(raw_addr) = matches.value_of("account") {
-        let addr = raw_addr.parse::<Address>()?;
-        println!("! Signing using wallet key from --account {:}", addr);
-        sign_digest(&txid, &addr)?
-    } else if let Some(raw_key) = matches.value_of("private-key") {
-        println!("! Signing using raw private key from --private-key");
-        let priv_key = raw_key.parse::<Private>()?;
-        priv_key.sign_digest(&txid)?[..].to_owned()
-    } else {
-        println!("! Signing using wallet key {:}", sender);
-        sign_digest(&txid, &sender)?
-    };
+    // signature
+    let mut signatures: Vec<Vec<u8>> = Vec::new();
+    if !matches.is_present("skip-sign") {
+        let signature = if let Some(raw_addr) = matches.value_of("account") {
+            let addr = raw_addr.parse::<Address>()?;
+            eprintln!("! Signing using wallet key from --account {:}", addr);
+            sign_digest(&txid, &addr)?
+        } else if let Some(raw_key) = matches.value_of("private-key") {
+            eprintln!("! Signing using raw private key from --private-key");
+            let priv_key = raw_key.parse::<Private>()?;
+            priv_key.sign_digest(&txid)?[..].to_owned()
+        } else {
+            eprintln!("! Signing using wallet key {:}", sender);
+            sign_digest(&txid, &sender)?
+        };
+        signatures.push(signature);
+    }
 
     let mut req = Transaction::new();
     req.set_raw_data(raw);
-    req.set_signature(vec![signature].into());
+    req.set_signature(signatures.into());
 
-    println!("sender:    {:}", sender);
-    println!("recipient: {:}", recipient);
+    eprintln!("sender:    {:}", sender);
+    eprintln!("recipient: {:}", recipient);
+    eprintln!("TX: {:}", txid.encode_hex::<String>());
 
-    let (_, payload, _) = client.broadcast_transaction(Default::default(), req).wait()?;
+    // skip-sign implies dont-broadcast
+    if matches.is_present("skip-sign") || matches.is_present("dont-broadcast") {
+        let mut json = serde_json::to_value(&req)?;
+        jsont::fix_transaction(&mut json);
+        json["raw_data_hex"] = json!(req.get_raw_data().write_to_bytes()?.encode_hex::<String>());
+        json["txID"] = json!(txid.encode_hex::<String>());
+        println!("{:}", serde_json::to_string_pretty(&json)?);
+    } else {
+        let (_, payload, _) = client.broadcast_transaction(Default::default(), req).wait()?;
 
-    let mut result = serde_json::to_value(&payload)?;
-    jsont::fix_api_return(&mut result);
+        let mut result = serde_json::to_value(&payload)?;
+        jsont::fix_api_return(&mut result);
 
-    println!("got => {:}", serde_json::to_string_pretty(&result)?);
+        eprintln!("got => {:}", serde_json::to_string_pretty(&result)?);
+    }
+
     Ok(())
 }

@@ -19,9 +19,6 @@ use crate::utils::jsont;
 use crate::utils::trx;
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
-    let broadcast_after_signing = matches.is_present("broadcast");
-    let skip_signing = matches.is_present("skip");
-
     let trx = matches.value_of("TRANSACTION").expect("required in cli.yml; qed");
 
     let trx_raw: String = match trx {
@@ -61,14 +58,14 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let txid = crypto::sha256(&raw.write_to_bytes()?);
 
     if !signatures.is_empty() {
-        eprintln!("Already signed by:");
+        eprintln!("! Already signed by:");
         for sig in &signatures {
             let public = Public::recover_digest(&txid[..], &FromHex::from_hex(sig)?)?;
             eprintln!("  {}", Address::from_public(&public));
         }
     }
 
-    if !skip_signing {
+    if !matches.is_present("skip-sign") {
         let signature: Vec<u8> = if let Some(raw_addr) = matches.value_of("account") {
             let addr = raw_addr.parse::<Address>()?;
             eprintln!("! Signing using wallet key from --account {:}", addr);
@@ -101,8 +98,8 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 
     println!("{:}", serde_json::to_string_pretty(&ret)?);
 
-    if broadcast_after_signing {
-        eprintln!("Broadcasting transaction ...");
+    if matches.is_present("broadcast") {
+        eprintln!("! Broadcasting transaction ...");
         let mut req = Transaction::new();
         req.set_raw_data(raw);
         req.set_signature(
