@@ -12,15 +12,8 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values:
-              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
-    - name:
-          help: Name of the new wallet
-          short: n
-          long: name
-          takes_value: true
-          default_value: default
 
 subcommands:
     - get:
@@ -88,9 +81,9 @@ subcommands:
                     about: Creates or updates the contract on an account
                     args:
                         - consume-user-resource-percent:
-                            help: Percentage of user resource consumed, in the range [0, 100]
-                            takes_value: true
-                            default_value: "100"
+                              help: Percentage of user resource consumed, in the range [0, 100]
+                              takes_value: true
+                              default_value: "100"
 
     - list:
           about: Lists any items from blockchain
@@ -216,6 +209,13 @@ subcommands:
               - create:
                     about: Creates a new wallet locally
                     args:
+                        - name:
+                              help: Name of the new wallet
+                              short: n
+                              long: name
+                              takes_value: true
+                              default_value: default
+
                         - password:
                               help: The password of the wallet
                               long: password
@@ -223,6 +223,13 @@ subcommands:
                               required: true
               - open:
                     about: Opens an existing wallet
+                    args:
+                        - name:
+                              help: Name of the new wallet
+                              short: n
+                              long: name
+                              takes_value: true
+                              default_value: default
               - lock:
                     about: Locks a wallet
               - unlock:

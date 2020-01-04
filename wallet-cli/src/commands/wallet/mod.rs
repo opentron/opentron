@@ -40,10 +40,10 @@ async fn open_wallet(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-async fn lock_wallet(name: &str) -> Result<(), Error> {
+async fn lock_wallet() -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
-    let request = Request::new(LockRequest { name: name.into() });
+    let request = Request::new(LockRequest { name: "".into() });
     let response = wallet_client.lock(request).await?;
 
     let status: StatusResponse = response.into_inner();
@@ -51,11 +51,11 @@ async fn lock_wallet(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-async fn unlock_wallet(name: &str, password: &str) -> Result<(), Error> {
+async fn unlock_wallet(password: &str) -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
     let request = Request::new(UnlockRequest {
-        name: name.into(),
+        name: "".into(),
         password: password.into(),
     });
     let response = wallet_client.unlock(request).await?;
@@ -65,10 +65,10 @@ async fn unlock_wallet(name: &str, password: &str) -> Result<(), Error> {
     Ok(())
 }
 
-async fn create_key_in_wallet(name: &str) -> Result<(), Error> {
+async fn create_key_in_wallet() -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
-    let request = Request::new(CreateKeyRequest { name: name.into() });
+    let request = Request::new(CreateKeyRequest { name: "".into() });
     let response = wallet_client.create_key(request).await?;
 
     let reply: CreateKeyResponse = response.into_inner();
@@ -85,13 +85,13 @@ async fn create_key_in_wallet(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-async fn import_key_to_wallet(name: &str, private_key: &str) -> Result<(), Error> {
+async fn import_key_to_wallet(private_key: &str) -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
     let private: Private = private_key.parse()?;
     println!("Importing private key for {:} ...", Address::from_private(&private));
     let request = Request::new(ImportKeyRequest {
-        name: name.into(),
+        name: "".into(),
         private_key: private.as_ref().to_owned(),
     });
     let response = wallet_client.import_key(request).await?;
@@ -101,10 +101,10 @@ async fn import_key_to_wallet(name: &str, private_key: &str) -> Result<(), Error
     Ok(())
 }
 
-async fn list_keys_in_wallet(name: &str) -> Result<(), Error> {
+async fn list_keys_in_wallet() -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
-    let request = Request::new(ListKeysRequest { name: name.into() });
+    let request = Request::new(ListKeysRequest { name: "".into() });
     let response = wallet_client.list_keys(request).await?;
     let reply: ListKeysResponse = response.into_inner();
     if reply.code == 200 {
@@ -141,24 +141,28 @@ async fn sign_digest_via_address(digest: &[u8], address: &Address) -> Result<Vec
 }
 
 // NOTE: each impl Trait is a different type, so, await is required
-async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
+async fn run<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     match matches.subcommand() {
         ("create", Some(arg_matches)) => {
+            let wallet_name = arg_matches.value_of("name").expect("havs default in cli.yml; qed");
             let password = arg_matches.value_of("password").expect("required in cli.yml; qed");
             create_wallet(wallet_name, password).await
         }
-        ("open", _) => open_wallet(wallet_name).await,
-        ("lock", _) => lock_wallet(wallet_name).await,
+        ("open", Some(arg_matches)) => {
+            let wallet_name = arg_matches.value_of("name").expect("havs default in cli.yml; qed");
+            open_wallet(wallet_name).await
+        }
+        ("lock", _) => lock_wallet().await,
         ("unlock", Some(arg_matches)) => {
             let password = arg_matches.value_of("password").expect("required in cli.yml; qed");
-            unlock_wallet(wallet_name, password).await
+            unlock_wallet(password).await
         }
-        ("create_key", _) => create_key_in_wallet(wallet_name).await,
+        ("create_key", _) => create_key_in_wallet().await,
         ("import_key", Some(arg_matches)) => {
             let priv_key = arg_matches.value_of("private-key").expect("required in cli.yml; qed");
-            import_key_to_wallet(wallet_name, priv_key).await
+            import_key_to_wallet(priv_key).await
         }
-        ("keys", _) => list_keys_in_wallet(wallet_name).await,
+        ("keys", _) => list_keys_in_wallet().await,
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("command line arguments parsing error"))
@@ -166,8 +170,8 @@ async fn run<'a>(wallet_name: &str, matches: &'a ArgMatches<'a>) -> Result<(), E
     }
 }
 
-pub fn main(wallet_name: &str, matches: &ArgMatches) -> Result<(), Error> {
-    let fut = run(wallet_name, matches);
+pub fn main(matches: &ArgMatches) -> Result<(), Error> {
+    let fut = run(matches);
     let mut rt = Builder::new().basic_scheduler().enable_all().build().unwrap();
     rt.block_on(fut)
 }
