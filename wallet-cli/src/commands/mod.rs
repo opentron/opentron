@@ -5,3 +5,4 @@ pub mod shielded;
 pub mod sign;
 pub mod transfer;
 pub mod wallet;
+pub mod freeze;

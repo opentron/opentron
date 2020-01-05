@@ -34,6 +34,8 @@ fn main() -> Result<(), Error> {
         ("set", Some(arg_matches)) => commands::set::main(arg_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
         ("sign", Some(arg_matches)) => commands::sign::main(arg_matches),
+        ("freeze", Some(arg_matches)) => commands::freeze::freeze_main(arg_matches),
+        ("unfreeze", Some(arg_matches)) => commands::freeze::unfreeze_main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(arg_matches),
         ("shielded", Some(arg_matches)) => commands::shielded::main(arg_matches),
         _ => {

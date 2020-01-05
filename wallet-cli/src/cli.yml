@@ -222,6 +222,50 @@ subcommands:
                               value_names:
                                   - ADDRESS
                                   - AMOUNT
+    - freeze:
+          about: Freeze balance for bandwidth or energy
+          args:
+              - FROM:
+                    help: The account freezing balance for bandwidth or energy
+                    required: true
+              - RECEIVER:
+                    help: The account to delegate bandwidth or energy from
+                    required: true
+              - AMOUNT:
+                    help: The amount of tokens to send and the token symbol
+                    required: true
+              - duration:
+                    help: Frozen duration, default is 3 (days)
+                    long: duration
+                    short: d
+                    takes_value: true
+                    default_value: "3"
+              - bandwidth:
+                    help: Frozen balance for bandwidth (default)
+                    long: bandwidth
+              - energy:
+                    help: Frozen balance for energy
+                    long: energy
+                    conflicts_with:
+                        - bandwidth
+
+    - unfreeze:
+          about: Unfreeze balance from bandwidth or energy
+          args:
+              - FROM:
+                    help: The account freezing balance for bandwidth or energy
+                    required: true
+              - RECEIVER:
+                    help: The account to undelegate bandwidth or energy from
+                    required: true
+              - bandwidth:
+                    help: Unfreeze balance from bandwidth (default)
+                    long: bandwidth
+              - energy:
+                    help: Unfreeze balance from energy
+                    long: energy
+                    conflicts_with:
+                        - bandwidth
 
     - wallet:
           about: Subcommand used to interact with the local wallet

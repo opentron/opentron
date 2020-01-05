@@ -2,8 +2,8 @@
 
 use hex::{FromHex, ToHex};
 use proto::core::{
-    AccountPermissionUpdateContract, CreateSmartContract, ShieldedTransferContract, TransferAssetContract,
-    TransferContract, TriggerSmartContract, VoteWitnessContract,
+    AccountPermissionUpdateContract, CreateSmartContract, FreezeBalanceContract, ShieldedTransferContract,
+    TransferAssetContract, TransferContract, TriggerSmartContract, VoteWitnessContract,
 };
 use serde_json::json;
 
@@ -151,6 +151,12 @@ pub fn fix_vote_witness_contract(val: &mut serde_json::Value) {
         .last();
 }
 
+// pb: FreezeBalanceContract
+pub fn fix_freeze_balance_contract(val: &mut serde_json::Value) {
+    val["owner_address"] = json!(bytes_to_hex_string(&val["owner_address"]));
+    val["receiver_address"] = json!(bytes_to_hex_string(&val["receiver_address"]));
+}
+
 // pb: Transaction.raw
 pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Error> {
     let raw_pb = transaction["contract"][0]["parameter"]["value"]
@@ -201,6 +207,12 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
             let pb: VoteWitnessContract = protobuf::parse_from_bytes(&raw_pb)?;
             let mut contract = serde_json::to_value(&pb)?;
             fix_vote_witness_contract(&mut contract);
+            contract
+        }
+        Some("FreezeBalanceContract") => {
+            let pb: FreezeBalanceContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_freeze_balance_contract(&mut contract);
             contract
         }
         x => {

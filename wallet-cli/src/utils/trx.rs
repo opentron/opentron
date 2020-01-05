@@ -2,7 +2,7 @@
 
 use chrono::Utc;
 use keys::Address;
-use proto::core::{TransferContract, CreateSmartContract};
+use proto::core::{CreateSmartContract, FreezeBalanceContract, TransferContract, UnfreezeBalanceContract};
 use protobuf::parse_from_bytes;
 use protobuf::well_known_types::Any;
 use std::convert::TryFrom;
@@ -23,6 +23,12 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         )),
         "type.googleapis.com/protocol.CreateSmartContract" => Ok(Address::try_from(
             parse_from_bytes::<CreateSmartContract>(any.get_value())?.get_owner_address(),
+        )?),
+        "type.googleapis.com/protocol.FreezeBalanceContract" => Ok(Address::try_from(
+            parse_from_bytes::<FreezeBalanceContract>(any.get_value())?.get_owner_address(),
+        )?),
+        "type.googleapis.com/protocol.UnfreezeBalanceContract" => Ok(Address::try_from(
+            parse_from_bytes::<UnfreezeBalanceContract>(any.get_value())?.get_owner_address(),
         )?),
         _ => unimplemented!(),
     }
