@@ -145,18 +145,34 @@ async fn run<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     match matches.subcommand() {
         ("create", Some(arg_matches)) => {
             let wallet_name = arg_matches.value_of("name").expect("havs default in cli.yml; qed");
-            let password = arg_matches.value_of("password").expect("required in cli.yml; qed");
-            create_wallet(wallet_name, password).await
+            match arg_matches.value_of("password") {
+                Some(password) => create_wallet(wallet_name, password).await,
+                _ => {
+                    let password = rpassword::prompt_password_stderr("Wallet Password:")
+                        .map_err(|_| Error::Runtime("can not get password"))?;
+                    let password2 = rpassword::prompt_password_stderr("Retype Password:")
+                        .map_err(|_| Error::Runtime("can not get password"))?;
+                    if password == password2 {
+                        create_wallet(wallet_name, &password).await
+                    } else {
+                        Err(Error::Runtime("password mismatch"))
+                    }
+                }
+            }
         }
         ("open", Some(arg_matches)) => {
             let wallet_name = arg_matches.value_of("name").expect("havs default in cli.yml; qed");
             open_wallet(wallet_name).await
         }
         ("lock", _) => lock_wallet().await,
-        ("unlock", Some(arg_matches)) => {
-            let password = arg_matches.value_of("password").expect("required in cli.yml; qed");
-            unlock_wallet(password).await
-        }
+        ("unlock", Some(arg_matches)) => match arg_matches.value_of("password") {
+            Some(password) => unlock_wallet(password).await,
+            _ => {
+                let password = rpassword::prompt_password_stderr("Wallet Password:")
+                    .map_err(|_| Error::Runtime("can not get password"))?;
+                unlock_wallet(&password).await
+            }
+        },
         ("create_key", _) => create_key_in_wallet().await,
         ("import_key", Some(arg_matches)) => {
             let priv_key = arg_matches.value_of("private-key").expect("required in cli.yml; qed");

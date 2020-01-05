@@ -22,6 +22,7 @@ tokio = "0.2"
 tonic = "0.1.0-beta.1"
 rand = "0.7"
 itertools = "0.8"
+rpassword = "4"
 
 proto = { path = "../proto" }
 keys = { path = "../keys" }

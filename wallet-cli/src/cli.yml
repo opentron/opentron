@@ -284,12 +284,10 @@ subcommands:
                               long: name
                               takes_value: true
                               default_value: default
-
                         - password:
                               help: The password of the wallet
                               long: password
                               takes_value: true
-                              required: true
               - open:
                     about: Opens an existing wallet
                     args:
@@ -308,7 +306,6 @@ subcommands:
                               help: The password of the wallet
                               long: password
                               takes_value: true
-                              required: true
               - import_key:
                     about: Imports private key into wallet
                     args:
@@ -333,4 +330,3 @@ subcommands:
                               help: The password of the wallet
                               long: password
                               takes_value: true
-                              required: true
