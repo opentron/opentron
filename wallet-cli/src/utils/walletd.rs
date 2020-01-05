@@ -51,7 +51,7 @@ pub fn get_walletd_pid() -> Result<c_int, Error> {
 
 #[cfg(target_os = "linux")]
 pub fn get_walletd_pid() -> Result<c_int, Error> {
-    let pid_file = PathBuf::new(WALLETD_PID_FILE);
+    let pid_file = PathBuf::from(WALLETD_PID_FILE);
 
     if pid_file.exists() {
         let pid: c_int = fs::read_to_string(&pid_file)
