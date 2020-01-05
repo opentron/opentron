@@ -100,6 +100,11 @@ subcommands:
                               long: user-resource-percent
                               takes_value: true
                               default_value: "100"
+                        - libraries:
+                              help: |
+                                  Direct string or file containing library addresses
+                                  Syntax: <libraryName>:<address> [, or whitespace] ...
+                              takes_value: true
                         - ARG:
                               help: Contract constructor parameters
                               takes_value: true
@@ -185,7 +190,7 @@ subcommands:
               - broadcast:
                     help: Broadcast transaction after signing
                     long: broadcast
-                    short: b
+                    short: p
               - skip-sign:
                     help: Skip actual sign process, may be used with -broadcast
                     short: s
@@ -317,10 +322,10 @@ subcommands:
                         List of public keys from all unlocked wallets.
                         These are the keys that could be used to sign transactions.
               - create_key:
-                    about: >
+                    about: |
                         Creates a key pair within the wallet so that you don't need to manually import it.
               - private_keys:
-                    about: >
+                    about: |
                         Query for the public and private key pairs of an individual wallet.
                         The wallet must already be unlocked and you must give the password again.
                     args:
