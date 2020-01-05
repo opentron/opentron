@@ -2,7 +2,8 @@
 
 use hex::{FromHex, ToHex};
 use proto::core::{
-    AccountPermissionUpdateContract, CreateSmartContract, TransferAssetContract, TransferContract, TriggerSmartContract,
+    AccountPermissionUpdateContract, CreateSmartContract, ShieldedTransferContract, TransferAssetContract,
+    TransferContract, TriggerSmartContract,
 };
 use serde_json::json;
 
@@ -94,6 +95,49 @@ pub fn fix_create_smart_contract(val: &mut serde_json::Value) {
     contract["origin_address"] = json!(bytes_to_hex_string(&contract["origin_address"]));
 }
 
+// pb: ShieldedTransferContract
+pub fn fix_shielded_transfer_contract(val: &mut serde_json::Value) {
+    val["transparent_from_address"] = json!(bytes_to_hex_string(&val["transparent_from_address"]));
+    val["transparent_to_address"] = json!(bytes_to_hex_string(&val["transparent_to_address"]));
+    val["binding_signature"] = json!(bytes_to_hex_string(&val["binding_signature"]));
+
+    val["receive_description"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|v| {
+            for k in &[
+                "value_commitment",
+                "note_commitment",
+                "epk",
+                "c_enc",
+                "c_out",
+                "zkproof",
+            ] {
+                v[k] = json!(bytes_to_hex_string(&v[k]));
+            }
+        })
+        .last();
+
+    val["spend_description"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|v| {
+            for k in &[
+                "value_commitment",
+                "anchor",
+                "nullifier",
+                "rk",
+                "zkproof",
+                "spend_authority_signature",
+            ] {
+                v[k] = json!(bytes_to_hex_string(&v[k]));
+            }
+        })
+        .last();
+}
+
 // pb: Transaction.raw
 pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Error> {
     let raw_pb = transaction["contract"][0]["parameter"]["value"]
@@ -132,6 +176,12 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
             let pb: CreateSmartContract = protobuf::parse_from_bytes(&raw_pb)?;
             let mut contract = serde_json::to_value(&pb)?;
             fix_create_smart_contract(&mut contract);
+            contract
+        }
+        Some("ShieldedTransferContract") => {
+            let pb: ShieldedTransferContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_shielded_transfer_contract(&mut contract);
             contract
         }
         x => {
