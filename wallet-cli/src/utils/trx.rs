@@ -2,7 +2,7 @@
 
 use chrono::Utc;
 use keys::Address;
-use proto::core::TransferContract;
+use proto::core::{TransferContract, CreateSmartContract};
 use protobuf::parse_from_bytes;
 use protobuf::well_known_types::Any;
 use std::convert::TryFrom;
@@ -21,6 +21,9 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         "type.googleapis.com/protocol.ShieldedTransferContract" => Err(Error::Runtime(
             "can not extract sender address from ShieldedTransferContract. Use -k/-K instead.",
         )),
+        "type.googleapis.com/protocol.CreateSmartContract" => Ok(Address::try_from(
+            parse_from_bytes::<CreateSmartContract>(any.get_value())?.get_owner_address(),
+        )?),
         _ => unimplemented!(),
     }
 }
