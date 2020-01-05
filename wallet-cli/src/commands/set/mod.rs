@@ -19,6 +19,8 @@ use crate::utils::crypto;
 use crate::utils::jsont;
 use crate::utils::trx;
 
+mod contract;
+
 /// Set account permission info.
 fn set_account_permission(name: &str, permission: &str) -> Result<(), Error> {
     let grpc_client = client::new_grpc_client()?;
@@ -92,6 +94,9 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .expect("account name is required is cli.yml; qed");
             let permission = arg_matches.value_of("PERMISSION").expect("required in cli.yml; qed");
             set_account_permission(name, permission)
+        }
+        ("contract", Some(arg_matches)) => {
+            contract::run(arg_matches)
         }
         _ => {
             eprintln!("{}", matches.usage());
