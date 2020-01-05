@@ -115,7 +115,7 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
 
     let percent = matches
         .value_of("user-resource-percent")
-        .expect("required in cli.yml; qed")
+        .expect("has default in cli.yml; qed")
         .parse()?;
     new_contract.set_consume_user_resource_percent(percent);
 
@@ -124,9 +124,15 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
     req.set_new_contract(new_contract);
 
     // creating transaction
-    let (_, transaction_ext, _) = client::new_grpc_client()?
+    let (_, mut transaction_ext, _) = client::new_grpc_client()?
         .deploy_contract(Default::default(), req)
         .wait()?;
+
+    // MUST fix fee_limit, or OUT_OF_ENERGY
+    transaction_ext
+        .mut_transaction()
+        .mut_raw_data()
+        .set_fee_limit(1_000_000);
 
     let mut json = serde_json::to_value(&transaction_ext)?;
     jsont::fix_transaction_ext(&mut json)?;
