@@ -3,7 +3,7 @@
 use hex::{FromHex, ToHex};
 use proto::core::{
     AccountPermissionUpdateContract, CreateSmartContract, ShieldedTransferContract, TransferAssetContract,
-    TransferContract, TriggerSmartContract,
+    TransferContract, TriggerSmartContract, VoteWitnessContract,
 };
 use serde_json::json;
 
@@ -138,6 +138,19 @@ pub fn fix_shielded_transfer_contract(val: &mut serde_json::Value) {
         .last();
 }
 
+// pb: VoteWitnessContract
+pub fn fix_vote_witness_contract(val: &mut serde_json::Value) {
+    val["owner_address"] = json!(bytes_to_hex_string(&val["owner_address"]));
+    val["votes"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|vote| {
+            vote["vote_address"] = json!(bytes_to_hex_string(&vote["vote_address"]));
+        })
+        .last();
+}
+
 // pb: Transaction.raw
 pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Error> {
     let raw_pb = transaction["contract"][0]["parameter"]["value"]
@@ -182,6 +195,12 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
             let pb: ShieldedTransferContract = protobuf::parse_from_bytes(&raw_pb)?;
             let mut contract = serde_json::to_value(&pb)?;
             fix_shielded_transfer_contract(&mut contract);
+            contract
+        }
+        Some("VoteWitnessContract") => {
+            let pb: VoteWitnessContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            fix_vote_witness_contract(&mut contract);
             contract
         }
         x => {
