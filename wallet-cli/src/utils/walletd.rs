@@ -3,7 +3,7 @@
 use std::env;
 use std::fs;
 use std::os::raw::c_int;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use std::str;
 
@@ -30,7 +30,7 @@ extern "C" {
 }
 #[cfg(target_os = "macos")]
 pub fn get_walletd_pid() -> Result<c_int, Error> {
-    let pid_file = Path::new(WALLETD_PID_FILE);
+    let pid_file = PathBuf::from(WALLETD_PID_FILE);
 
     if pid_file.exists() {
         let pid: c_int = fs::read_to_string(&pid_file)
