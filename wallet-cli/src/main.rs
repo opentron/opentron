@@ -1,4 +1,4 @@
-use clap::load_yaml;
+use clap::{load_yaml, AppSettings};
 
 mod commands;
 mod error;
@@ -13,7 +13,9 @@ fn main() -> Result<(), Error> {
     utils::walletd::ensure_walletd()?;
 
     let yaml = load_yaml!("cli.yml");
-    let matches = clap::App::from_yaml(yaml).get_matches();
+    let matches = clap::App::from_yaml(yaml)
+        .setting(AppSettings::VersionlessSubcommands)
+        .get_matches();
 
     // FIXME: as above
     unsafe {
@@ -24,7 +26,7 @@ fn main() -> Result<(), Error> {
             Some("testnet") => "47.252.87.110:50051",
             Some("dappchain") => "47.90.245.159:50051",
             Some("dappchain-testnet") => "47.252.85.90:50051",
-            _ => unreachable!(),
+            _ => unreachable!()
         }
     }
 
@@ -36,6 +38,7 @@ fn main() -> Result<(), Error> {
         ("sign", Some(arg_matches)) => commands::sign::main(arg_matches),
         ("freeze", Some(arg_matches)) => commands::freeze::freeze_main(arg_matches),
         ("unfreeze", Some(arg_matches)) => commands::freeze::unfreeze_main(arg_matches),
+        ("call", Some(arg_matches)) => commands::call::main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(arg_matches),
         ("shielded", Some(arg_matches)) => commands::shielded::main(arg_matches),
         _ => {

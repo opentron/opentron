@@ -2,7 +2,9 @@
 
 use chrono::Utc;
 use keys::Address;
-use proto::core::{CreateSmartContract, FreezeBalanceContract, TransferContract, UnfreezeBalanceContract};
+use proto::core::{
+    CreateSmartContract, FreezeBalanceContract, TransferContract, TriggerSmartContract, UnfreezeBalanceContract
+};
 use protobuf::parse_from_bytes;
 use protobuf::well_known_types::Any;
 use std::convert::TryFrom;
@@ -16,21 +18,24 @@ pub fn timestamp_millis() -> i64 {
 pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error> {
     match any.get_type_url() {
         "type.googleapis.com/protocol.TransferContract" => Ok(Address::try_from(
-            parse_from_bytes::<TransferContract>(any.get_value())?.get_owner_address(),
+            parse_from_bytes::<TransferContract>(any.get_value())?.get_owner_address()
         )?),
         "type.googleapis.com/protocol.ShieldedTransferContract" => Err(Error::Runtime(
-            "can not extract sender address from ShieldedTransferContract. Use -k/-K instead.",
+            "can not extract sender address from ShieldedTransferContract. Use -k/-K instead."
         )),
         "type.googleapis.com/protocol.CreateSmartContract" => Ok(Address::try_from(
-            parse_from_bytes::<CreateSmartContract>(any.get_value())?.get_owner_address(),
+            parse_from_bytes::<CreateSmartContract>(any.get_value())?.get_owner_address()
+        )?),
+        "type.googleapis.com/protocol.TriggerSmartContract" => Ok(Address::try_from(
+            parse_from_bytes::<TriggerSmartContract>(any.get_value())?.get_owner_address()
         )?),
         "type.googleapis.com/protocol.FreezeBalanceContract" => Ok(Address::try_from(
-            parse_from_bytes::<FreezeBalanceContract>(any.get_value())?.get_owner_address(),
+            parse_from_bytes::<FreezeBalanceContract>(any.get_value())?.get_owner_address()
         )?),
         "type.googleapis.com/protocol.UnfreezeBalanceContract" => Ok(Address::try_from(
-            parse_from_bytes::<UnfreezeBalanceContract>(any.get_value())?.get_owner_address(),
+            parse_from_bytes::<UnfreezeBalanceContract>(any.get_value())?.get_owner_address()
         )?),
-        _ => unimplemented!(),
+        _ => unimplemented!()
     }
 }
 
@@ -46,8 +51,8 @@ pub fn parse_amount(amount: &str, allow_unit: bool) -> Result<i64, Error> {
         if amount.ends_with("TRX") || amount.ends_with("TRZ") {
             Ok(String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
                 .replace("_", "")
-                .parse::<i64>()?
-                * 1_000_000)
+                .parse::<i64>()? *
+                1_000_000)
         } else if amount.ends_with("SUN") {
             Ok(String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
                 .replace("_", "")

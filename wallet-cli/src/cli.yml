@@ -12,7 +12,8 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values:
+              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
 
 subcommands:
@@ -104,11 +105,13 @@ subcommands:
                               help: |
                                   Direct string or file containing library addresses
                                   Syntax: <libraryName>:<address> [, or whitespace] ...
+                              long: libraries
                               takes_value: true
-                        - ARG:
+                        - ARGS:
                               help: Contract constructor parameters
                               takes_value: true
                               multiple: true
+                              last: true
 
     - list:
           about: Lists any items from blockchain
@@ -169,64 +172,6 @@ subcommands:
                     takes_value: true
                     possible_values: ["0", "2", "1"]
 
-    - sign:
-          about: Sign a transaction
-          args:
-              - TRANSACTION:
-                    help: The JSON string or filename defining the transaction to sign
-                    required: true
-              - account:
-                    help: The account address used for signing(look up key from unlocked wallet)
-                    short: k
-                    long: account
-                    takes_value: true
-              - private-key:
-                    help: The private key used for signing
-                    short: K
-                    long: private-key
-                    takes_value: true
-                    conflicts_with:
-                        - account
-              - broadcast:
-                    help: Broadcast transaction after signing
-                    long: broadcast
-                    short: p
-              - skip-sign:
-                    help: Skip actual sign process, may be used with -broadcast
-                    short: s
-                    long: skip-sign
-                    conflicts_with:
-                        - account
-                        - private-key
-
-    - shielded:
-          about: Shielded transaction related commands
-          subcommands:
-              - create_address:
-                    about: Creates a new shielded address
-              - debug:
-                    about: debug rocks
-              - transfer:
-                    about: Initiates a shielded transaction, amount can be 'auto'
-                    args:
-                        - from:
-                              help: The address or note for sending TRZ coins
-                              short: f
-                              long: from
-                              multiple: true
-                              required: true
-                              value_names:
-                                  - ADDRESS
-                                  - AMOUNT
-                        - to:
-                              help: The address for receiving TRZ coins
-                              short: t
-                              long: to
-                              multiple: true
-                              required: true
-                              value_names:
-                                  - ADDRESS
-                                  - AMOUNT
     - freeze:
           about: Freeze balance for bandwidth or energy
           args:
@@ -271,6 +216,89 @@ subcommands:
                     long: energy
                     conflicts_with:
                         - bandwidth
+
+    - call:
+          about: Trigger a smart contract call
+          args:
+              - SENDER:
+                    help: The account calling contract
+                    required: true
+              - CONTRACT:
+                    help: Contract address
+                    required: true
+              - METHOD:
+                    help: The called method name, with args
+                    required: true
+              - ARGS:
+                    help: Contract constructor parameters
+                    takes_value: true
+                    multiple: true
+                    last: true
+              - data:
+                    help: raw data to call contract
+                    long: data
+                    takes_value: true
+                    conflicts_with:
+                        - ARGS
+
+    - sign:
+          about: Sign a transaction
+          args:
+              - TRANSACTION:
+                    help: The JSON string or filename defining the transaction to sign
+                    required: true
+              - account:
+                    help: The account address used for signing(look up key from unlocked wallet)
+                    short: k
+                    long: account
+                    takes_value: true
+              - private-key:
+                    help: The private key used for signing
+                    short: K
+                    long: private-key
+                    takes_value: true
+                    conflicts_with:
+                        - account
+              - broadcast:
+                    help: Broadcast transaction after signing
+                    long: broadcast
+                    short: b
+              - skip-sign:
+                    help: Skip actual sign process, may be used with -broadcast
+                    short: s
+                    long: skip-sign
+                    conflicts_with:
+                        - account
+                        - private-key
+
+    - shielded:
+          about: Shielded transaction related commands
+          subcommands:
+              - create_address:
+                    about: Creates a new shielded address
+              - debug:
+                    about: debug rocks
+              - transfer:
+                    about: Initiates a shielded transaction, amount can be 'auto'
+                    args:
+                        - from:
+                              help: The address or note for sending TRZ coins
+                              short: f
+                              long: from
+                              multiple: true
+                              required: true
+                              value_names:
+                                  - ADDRESS
+                                  - AMOUNT
+                        - to:
+                              help: The address for receiving TRZ coins
+                              short: t
+                              long: to
+                              multiple: true
+                              required: true
+                              value_names:
+                                  - ADDRESS
+                                  - AMOUNT
 
     - wallet:
           about: Subcommand used to interact with the local wallet

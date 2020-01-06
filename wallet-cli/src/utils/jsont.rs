@@ -3,7 +3,7 @@
 use hex::{FromHex, ToHex};
 use proto::core::{
     AccountPermissionUpdateContract, CreateSmartContract, FreezeBalanceContract, ShieldedTransferContract,
-    TransferAssetContract, TransferContract, TriggerSmartContract, VoteWitnessContract,
+    TransferAssetContract, TransferContract, TriggerSmartContract, VoteWitnessContract
 };
 use serde_json::json;
 
@@ -112,7 +112,7 @@ pub fn fix_shielded_transfer_contract(val: &mut serde_json::Value) {
                 "epk",
                 "c_enc",
                 "c_out",
-                "zkproof",
+                "zkproof"
             ] {
                 v[k] = json!(bytes_to_hex_string(&v[k]));
             }
@@ -130,7 +130,7 @@ pub fn fix_shielded_transfer_contract(val: &mut serde_json::Value) {
                 "nullifier",
                 "rk",
                 "zkproof",
-                "spend_authority_signature",
+                "spend_authority_signature"
             ] {
                 v[k] = json!(bytes_to_hex_string(&v[k]));
             }
@@ -159,6 +159,9 @@ pub fn fix_freeze_balance_contract(val: &mut serde_json::Value) {
 
 // pb: Transaction.raw
 pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Error> {
+    if transaction["contract"].as_array().unwrap().is_empty() {
+        return Ok(());
+    }
     let raw_pb = transaction["contract"][0]["parameter"]["value"]
         .as_array()
         .unwrap()
