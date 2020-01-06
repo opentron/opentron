@@ -1,27 +1,25 @@
 use clap::ArgMatches;
 use hex::{FromHex, ToHex};
 use keys::Address;
-use proto::api_grpc::Wallet;
 use proto::core::{
     CreateSmartContract, SmartContract, SmartContract_ABI as Abi, SmartContract_ABI_Entry as AbiEntry,
     SmartContract_ABI_Entry_EntryType as AbiEntryType, SmartContract_ABI_Entry_Param as AbiEntryParam,
-    SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType
+    SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType,
 };
-use protobuf::Message;
-use serde_json::json;
 use std::fs;
 use std::path::Path;
 
 use crate::error::Error;
 use crate::utils::abi;
-use crate::utils::client;
-use crate::utils::jsont;
+use crate::utils::trx;
 
 #[inline]
 fn translate_state_mutablility(val: &serde_json::Value) -> AbiEntryStateMutabilityType {
     match val.as_str().unwrap_or("") {
         "view" | "View" => AbiEntryStateMutabilityType::View,
         "nonpayable" | "Nonpayable" => AbiEntryStateMutabilityType::Nonpayable,
+        "payable" | "Payable" => AbiEntryStateMutabilityType::Payable,
+        "pure" | "Pure" => AbiEntryStateMutabilityType::Pure,
         x => {
             println!("unknown => {}", x);
             unimplemented!()
@@ -35,7 +33,7 @@ fn translate_abi_type(val: &serde_json::Value) -> AbiEntryType {
         "function" | "Function" => AbiEntryType::Function,
         "event" | "Event" => AbiEntryType::Event,
         "constructor" | "Constructor" => AbiEntryType::Constructor,
-        _ => unimplemented!()
+        _ => unimplemented!(),
     }
 }
 
@@ -91,7 +89,7 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
         Some(_) => {
             return Err(Error::Runtime("can not determine ABI format"));
         }
-        _ => unreachable!("required in cli.yml; qed")
+        _ => unreachable!("required in cli.yml; qed"),
     };
     let mut bytecode: Vec<u8> = match matches.value_of("code") {
         Some(fname) if Path::new(fname).exists() => {
@@ -101,7 +99,7 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
         Some(bytecode_hex) => {
             Vec::from_hex(bytecode_hex).map_err(|_| Error::Runtime("can not determine bytecode format"))?
         }
-        _ => unreachable!("required in cli.yml; qed")
+        _ => unreachable!("required in cli.yml; qed"),
     };
 
     let types = abi
@@ -135,7 +133,7 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
         }
         (None, Some(data_hex)) => Vec::from_hex(data_hex)?,
         (None, None) => vec![],
-        (_, _) => unreachable!("set conflicts in cli.yml; qed")
+        (_, _) => unreachable!("set conflicts in cli.yml; qed"),
     };
 
     bytecode.append(&mut data);
@@ -155,35 +153,11 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
         .parse()?;
     new_contract.set_consume_user_resource_percent(percent);
 
-    let mut req = CreateSmartContract::new();
-    req.set_owner_address(owner_address.as_ref().to_owned());
-    req.set_new_contract(new_contract);
+    let mut create_contract = CreateSmartContract::new();
+    create_contract.set_owner_address(owner_address.as_ref().to_owned());
+    create_contract.set_new_contract(new_contract);
 
-    // creating transaction
-    let (_, mut transaction_ext, _) = client::new_grpc_client()?
-        .deploy_contract(Default::default(), req)
-        .wait()?;
-
-    // MUST fix fee_limit, or OUT_OF_ENERGY
-    transaction_ext
-        .mut_transaction()
-        .mut_raw_data()
-        .set_fee_limit(1_000_000);
-
-    let mut json = serde_json::to_value(&transaction_ext)?;
-    jsont::fix_transaction_ext(&mut json)?;
-
-    if json["result"]["result"].as_bool().unwrap_or(false) {
-        json["transaction"]["raw_data_hex"] = json!(transaction_ext
-            .get_transaction()
-            .get_raw_data()
-            .write_to_bytes()?
-            .encode_hex::<String>());
-
-        println!("{}", serde_json::to_string_pretty(&json["transaction"])?);
-        Ok(())
-    } else {
-        eprintln!("{}", serde_json::to_string_pretty(&json)?);
-        Err(Error::Runtime("can not create transaction"))
-    }
+    trx::TransactionHandler::handle(create_contract, matches)
+        .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))
+        .run()
 }
