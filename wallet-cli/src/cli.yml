@@ -6,7 +6,7 @@ about: Tron Protocol wallet command line util
 # FIXME: YAML do not support merge array
 common_transaction_args: &common_transaction_args
     - account:
-          help: The account address used for signing(look up key from unlocked wallet)
+          help: The account address used for signing
           short: k
           long: account
           takes_value: true
@@ -29,7 +29,7 @@ common_transaction_args: &common_transaction_args
           short: d
           long: dont-broadcast
     - expiration:
-          help: Set the time in seconds before a transaction expires, defaults to 60s
+          help: Set the time in seconds before a transaction expires
           short: x
           long: expiration
           takes_value: true
@@ -122,7 +122,7 @@ subcommands:
                               help: Permission JSON returned from `get account_permission`, `-` for STDIN
                               required: true
                         - account:
-                              help: The account address used for signing(look up key from unlocked wallet)
+                              help: The account address used for signing
                               short: k
                               long: account
                               takes_value: true
@@ -145,7 +145,7 @@ subcommands:
                               short: d
                               long: dont-broadcast
                         - expiration:
-                              help: Set the time in seconds before a transaction expires, defaults to 60s
+                              help: Set the time in seconds before a transaction expires
                               short: x
                               long: expiration
                               takes_value: true
@@ -206,6 +206,49 @@ subcommands:
                               takes_value: true
                               conflicts_with:
                                   - ARGS
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              default_value: "60"
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
 
     - list:
           about: Lists any items from blockchain
@@ -235,7 +278,7 @@ subcommands:
                     help: The memo for the transfer
                     required: false
               - account:
-                    help: The account address used for signing(look up key from unlocked wallet)
+                    help: The account address used for signing
                     short: k
                     long: account
                     takes_value: true
@@ -258,7 +301,7 @@ subcommands:
                     short: d
                     long: dont-broadcast
               - expiration:
-                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    help: Set the time in seconds before a transaction expires
                     short: x
                     long: expiration
                     takes_value: true
@@ -291,7 +334,7 @@ subcommands:
                     help: The amount of tokens to send and the token symbol
                     required: true
               - duration:
-                    help: Frozen duration, default is 3 (days)
+                    help: Frozen duration, in days
                     long: duration
                     takes_value: true
                     default_value: "3"
@@ -305,7 +348,7 @@ subcommands:
                     conflicts_with:
                         - bandwidth
               - account:
-                    help: The account address used for signing(look up key from unlocked wallet)
+                    help: The account address used for signing
                     short: k
                     long: account
                     takes_value: true
@@ -328,7 +371,7 @@ subcommands:
                     short: d
                     long: dont-broadcast
               - expiration:
-                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    help: Set the time in seconds before a transaction expires
                     short: x
                     long: expiration
                     takes_value: true
@@ -366,7 +409,7 @@ subcommands:
                     conflicts_with:
                         - bandwidth
               - account:
-                    help: The account address used for signing(look up key from unlocked wallet)
+                    help: The account address used for signing
                     short: k
                     long: account
                     takes_value: true
@@ -389,7 +432,7 @@ subcommands:
                     short: d
                     long: dont-broadcast
               - expiration:
-                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    help: Set the time in seconds before a transaction expires
                     short: x
                     long: expiration
                     takes_value: true
@@ -433,7 +476,7 @@ subcommands:
                     conflicts_with:
                         - ARGS
               - account:
-                    help: The account address used for signing(look up key from unlocked wallet)
+                    help: The account address used for signing
                     short: k
                     long: account
                     takes_value: true
@@ -456,7 +499,7 @@ subcommands:
                     short: d
                     long: dont-broadcast
               - expiration:
-                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    help: Set the time in seconds before a transaction expires
                     short: x
                     long: expiration
                     takes_value: true
@@ -483,7 +526,7 @@ subcommands:
                     help: The JSON string or filename defining the transaction to sign
                     required: true
               - account:
-                    help: The account address used for signing(look up key from unlocked wallet)
+                    help: The account address used for signing
                     short: k
                     long: account
                     takes_value: true
