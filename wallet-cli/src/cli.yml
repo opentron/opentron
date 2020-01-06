@@ -3,6 +3,52 @@ version: "0.1.0"
 author: Shuyu WANG <andelf@gmail.com>
 about: Tron Protocol wallet command line util
 
+# FIXME: YAML do not support merge array
+common_transaction_args: &common_transaction_args
+    - account:
+          help: The account address used for signing(look up key from unlocked wallet)
+          short: k
+          long: account
+          takes_value: true
+    - private-key:
+          help: The private key used for signing
+          short: K
+          long: private-key
+          takes_value: true
+          conflicts_with:
+              - account
+    - skip-sign:
+          help: Skip actual sign process
+          short: s
+          long: skip-sign
+          conflicts_with:
+              - account
+              - private-key
+    - dont-broadcast:
+          help: Don't broadcast transaction to the network (just print to stdout)
+          short: d
+          long: dont-broadcast
+    - expiration:
+          help: Set the time in seconds before a transaction expires, defaults to 60s
+          short: x
+          long: expiration
+          takes_value: true
+          default_value: "60"
+    - fee-limit:
+          help: Maximum value of TRX allowed consumed
+          long: fee-limit
+          takes_value: true
+    - ref-block:
+          help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+          short: r
+          long: ref-block
+          takes_value: true
+    - permission-id:
+          help: Permission id used by transaction
+          long: permission-id
+          takes_value: true
+          possible_values: ["0", "2", "1"]
+
 args:
     - verbose:
           help: Make the operation more talkative
@@ -12,8 +58,7 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values:
-              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
 
 subcommands:
@@ -76,6 +121,49 @@ subcommands:
                         - PERMISSION:
                               help: Permission JSON returned from `get account_permission`, `-` for STDIN
                               required: true
+                        - account:
+                              help: The account address used for signing(look up key from unlocked wallet)
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires, defaults to 60s
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              default_value: "60"
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
               - contract:
                     about: Creates or updates the contract on an account
                     args:
@@ -159,9 +247,12 @@ subcommands:
                     conflicts_with:
                         - account
               - skip-sign:
-                    help: Specify if unlocked keys should be used to sign transaction
+                    help: Skip actual sign process
                     short: s
                     long: skip-sign
+                    conflicts_with:
+                        - account
+                        - private-key
               - dont-broadcast:
                     help: Don't broadcast transaction to the network (just print to stdout)
                     short: d
@@ -172,6 +263,15 @@ subcommands:
                     long: expiration
                     takes_value: true
                     default_value: "60"
+              - fee-limit:
+                    help: Maximum value of TRX allowed consumed
+                    long: fee-limit
+                    takes_value: true
+              - ref-block:
+                    help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                    short: r
+                    long: ref-block
+                    takes_value: true
               - permission-id:
                     help: Permission id used by transaction
                     long: permission-id
@@ -193,9 +293,9 @@ subcommands:
               - duration:
                     help: Frozen duration, default is 3 (days)
                     long: duration
-                    short: d
                     takes_value: true
                     default_value: "3"
+                    possible_values: ["3"]
               - bandwidth:
                     help: Frozen balance for bandwidth (default)
                     long: bandwidth
@@ -204,6 +304,49 @@ subcommands:
                     long: energy
                     conflicts_with:
                         - bandwidth
+              - account:
+                    help: The account address used for signing(look up key from unlocked wallet)
+                    short: k
+                    long: account
+                    takes_value: true
+              - private-key:
+                    help: The private key used for signing
+                    short: K
+                    long: private-key
+                    takes_value: true
+                    conflicts_with:
+                        - account
+              - skip-sign:
+                    help: Skip actual sign process
+                    short: s
+                    long: skip-sign
+                    conflicts_with:
+                        - account
+                        - private-key
+              - dont-broadcast:
+                    help: Don't broadcast transaction to the network (just print to stdout)
+                    short: d
+                    long: dont-broadcast
+              - expiration:
+                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    short: x
+                    long: expiration
+                    takes_value: true
+                    default_value: "60"
+              - fee-limit:
+                    help: Maximum value of TRX allowed consumed
+                    long: fee-limit
+                    takes_value: true
+              - ref-block:
+                    help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                    short: r
+                    long: ref-block
+                    takes_value: true
+              - permission-id:
+                    help: Permission id used by transaction
+                    long: permission-id
+                    takes_value: true
+                    possible_values: ["0", "2", "1"]
 
     - unfreeze:
           about: Unfreeze balance from bandwidth or energy
@@ -222,6 +365,49 @@ subcommands:
                     long: energy
                     conflicts_with:
                         - bandwidth
+              - account:
+                    help: The account address used for signing(look up key from unlocked wallet)
+                    short: k
+                    long: account
+                    takes_value: true
+              - private-key:
+                    help: The private key used for signing
+                    short: K
+                    long: private-key
+                    takes_value: true
+                    conflicts_with:
+                        - account
+              - skip-sign:
+                    help: Skip actual sign process
+                    short: s
+                    long: skip-sign
+                    conflicts_with:
+                        - account
+                        - private-key
+              - dont-broadcast:
+                    help: Don't broadcast transaction to the network (just print to stdout)
+                    short: d
+                    long: dont-broadcast
+              - expiration:
+                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    short: x
+                    long: expiration
+                    takes_value: true
+                    default_value: "60"
+              - fee-limit:
+                    help: Maximum value of TRX allowed consumed
+                    long: fee-limit
+                    takes_value: true
+              - ref-block:
+                    help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                    short: r
+                    long: ref-block
+                    takes_value: true
+              - permission-id:
+                    help: Permission id used by transaction
+                    long: permission-id
+                    takes_value: true
+                    possible_values: ["0", "2", "1"]
 
     - call:
           about: Trigger a smart contract call
@@ -246,9 +432,52 @@ subcommands:
                     takes_value: true
                     conflicts_with:
                         - ARGS
+              - account:
+                    help: The account address used for signing(look up key from unlocked wallet)
+                    short: k
+                    long: account
+                    takes_value: true
+              - private-key:
+                    help: The private key used for signing
+                    short: K
+                    long: private-key
+                    takes_value: true
+                    conflicts_with:
+                        - account
+              - skip-sign:
+                    help: Skip actual sign process
+                    short: s
+                    long: skip-sign
+                    conflicts_with:
+                        - account
+                        - private-key
+              - dont-broadcast:
+                    help: Don't broadcast transaction to the network (just print to stdout)
+                    short: d
+                    long: dont-broadcast
+              - expiration:
+                    help: Set the time in seconds before a transaction expires, defaults to 60s
+                    short: x
+                    long: expiration
+                    takes_value: true
+                    default_value: "60"
+              - fee-limit:
+                    help: Maximum value of TRX allowed consumed
+                    long: fee-limit
+                    takes_value: true
+              - ref-block:
+                    help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                    short: r
+                    long: ref-block
+                    takes_value: true
+              - permission-id:
+                    help: Permission id used by transaction
+                    long: permission-id
+                    takes_value: true
+                    possible_values: ["0", "2", "1"]
 
     - sign:
-          about: Sign a transaction
+          about: Sign and broadcast a transaction
           args:
               - TRANSACTION:
                     help: The JSON string or filename defining the transaction to sign

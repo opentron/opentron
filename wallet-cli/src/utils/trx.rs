@@ -4,6 +4,7 @@ use chrono::Utc;
 use clap::ArgMatches;
 use hex::ToHex;
 use keys::{Address, Private};
+use proto::api::NumberMessage;
 use proto::api_grpc::Wallet;
 use proto::core::{
     AccountCreateContract, AccountPermissionUpdateContract, AccountUpdateContract, AssetIssueContract,
@@ -52,6 +53,9 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         )?),
         "type.googleapis.com/protocol.UnfreezeBalanceContract" => Ok(Address::try_from(
             parse_from_bytes::<UnfreezeBalanceContract>(any.get_value())?.get_owner_address(),
+        )?),
+        "type.googleapis.com/protocol.AccountPermissionUpdateContract" => Ok(Address::try_from(
+            parse_from_bytes::<AccountPermissionUpdateContract>(any.get_value())?.get_owner_address(),
         )?),
         _ => unimplemented!(),
     }
@@ -126,27 +130,37 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             f(&mut raw);
         }
 
-        let expiration = matches
-            .value_of("expiration")
-            .expect("has default value in cli.yml; qed")
-            .parse::<i64>()?;
+        let expiration = matches.value_of("expiration").unwrap_or("60").parse::<i64>()?;
         raw.set_expiration(timestamp_millis() + 1000 * expiration);
 
         let grpc_client = client::new_grpc_client()?;
 
         // fill ref_block info
-        let ref_block = client::get_latest_block(&grpc_client)?;
+        let ref_block = match matches.value_of("ref-block") {
+            Some(num) => {
+                let mut req = NumberMessage::new();
+                req.set_num(num.parse()?);
+                let (_, block, _) = grpc_client.get_block_by_num2(Default::default(), req).wait()?;
+                block
+            }
+            None => {
+                let (_, block, _) = grpc_client
+                    .get_now_block2(Default::default(), Default::default())
+                    .wait()?;
+                block
+            }
+        };
         let ref_block_number = ref_block.get_block_header().get_raw_data().number;
         raw.set_ref_block_bytes(vec![
             ((ref_block_number & 0xff00) >> 8) as u8,
             (ref_block_number & 0xff) as u8,
         ]);
         raw.set_ref_block_hash(ref_block.blockid[8..16].to_owned());
+
         raw.set_timestamp(timestamp_millis());
 
-        let txid = crypto::sha256(&raw.write_to_bytes()?);
-
         // signature
+        let txid = crypto::sha256(&raw.write_to_bytes()?);
         let mut signatures: Vec<Vec<u8>> = Vec::new();
         if !matches.is_present("skip-sign") {
             let signature = if let Some(raw_addr) = matches.value_of("account") {
@@ -178,15 +192,20 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             json["raw_data_hex"] = json!(req.get_raw_data().write_to_bytes()?.encode_hex::<String>());
             json["txID"] = json!(txid.encode_hex::<String>());
             println!("{:}", serde_json::to_string_pretty(&json)?);
+
+            Ok(())
         } else {
             let (_, payload, _) = grpc_client.broadcast_transaction(Default::default(), req).wait()?;
-
             let mut result = serde_json::to_value(&payload)?;
             jsont::fix_api_return(&mut result);
             eprintln!("got => {:}", serde_json::to_string_pretty(&result)?);
-        }
 
-        Ok(())
+            if result["result"].as_bool().unwrap_or(false) {
+                Ok(())
+            } else {
+                Err(Error::Runtime("broadcast transaction failed!"))
+            }
+        }
     }
 }
 
