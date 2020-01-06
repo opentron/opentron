@@ -9,7 +9,8 @@ fn main() -> Result<(), String> {
     // println!("matches: {:?}", matches);
 
     match matches.subcommand() {
-        ("hello", Some(import_matches)) => commands::hello::run(import_matches),
+        ("hello", Some(arg_matches)) => commands::hello::run(arg_matches),
+        ("vanity", Some(arg_matches)) => commands::hello::run_vanity(arg_matches),
         _ => unreachable!("subcommand required"),
     }
 }

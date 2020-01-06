@@ -2,7 +2,6 @@ name: tron
 version: "0.1.0"
 author: Shuyu WANG <andelf@gmail.com>
 about: Tron Protocol implementation
-args:
 subcommands:
     - hello:
         about: dummy test run.
@@ -10,3 +9,14 @@ subcommands:
             - HASH:
                 required: true
                 help: Raw transaction hash.
+    - vanity:
+        about: generage vanity keys
+        args:
+            - start:
+                help: Address starts with
+                long: start
+                takes_value: true
+            - end:
+                help: Address ends with
+                long: end
+                takes_value: true
