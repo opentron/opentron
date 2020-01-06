@@ -112,6 +112,12 @@ subcommands:
                               takes_value: true
                               multiple: true
                               last: true
+                        - data:
+                              help: raw data to construct contract
+                              long: data
+                              takes_value: true
+                              conflicts_with:
+                                  - ARGS
 
     - list:
           about: Lists any items from blockchain

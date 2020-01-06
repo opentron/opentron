@@ -5,7 +5,7 @@ use proto::api_grpc::Wallet;
 use proto::core::{
     CreateSmartContract, SmartContract, SmartContract_ABI as Abi, SmartContract_ABI_Entry as AbiEntry,
     SmartContract_ABI_Entry_EntryType as AbiEntryType, SmartContract_ABI_Entry_Param as AbiEntryParam,
-    SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType,
+    SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType
 };
 use protobuf::Message;
 use serde_json::json;
@@ -13,6 +13,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::error::Error;
+use crate::utils::abi;
 use crate::utils::client;
 use crate::utils::jsont;
 
@@ -33,7 +34,8 @@ fn translate_abi_type(val: &serde_json::Value) -> AbiEntryType {
     match val.as_str().unwrap_or("") {
         "function" | "Function" => AbiEntryType::Function,
         "event" | "Event" => AbiEntryType::Event,
-        _ => unimplemented!(),
+        "constructor" | "Constructor" => AbiEntryType::Constructor,
+        _ => unimplemented!()
     }
 }
 
@@ -80,7 +82,6 @@ fn json_to_abi(json: &serde_json::Value) -> Abi {
 
 pub fn run(matches: &ArgMatches) -> Result<(), Error> {
     let owner_address: Address = matches.value_of("OWNER").expect("required in cli.yml; qed").parse()?;
-
     let abi = match matches.value_of("abi") {
         Some(fname) if Path::new(fname).exists() => {
             let raw_json = fs::read_to_string(Path::new(fname))?;
@@ -90,10 +91,9 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
         Some(_) => {
             return Err(Error::Runtime("can not determine ABI format"));
         }
-        _ => unreachable!("required in cli.yml; qed"),
+        _ => unreachable!("required in cli.yml; qed")
     };
-
-    let bytecode: Vec<u8> = match matches.value_of("code") {
+    let mut bytecode: Vec<u8> = match matches.value_of("code") {
         Some(fname) if Path::new(fname).exists() => {
             let bytecode_hex = fs::read_to_string(fname)?;
             Vec::from_hex(bytecode_hex)?
@@ -101,8 +101,44 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
         Some(bytecode_hex) => {
             Vec::from_hex(bytecode_hex).map_err(|_| Error::Runtime("can not determine bytecode format"))?
         }
-        _ => unreachable!("required in cli.yml; qed"),
+        _ => unreachable!("required in cli.yml; qed")
     };
+
+    let types = abi
+        .get_entrys()
+        .iter()
+        .find(|entry| entry.get_field_type() == AbiEntryType::Constructor)
+        .map(|entry| {
+            entry
+                .get_inputs()
+                .iter()
+                .map(|param| param.get_field_type())
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let mut data = match (matches.values_of("ARGS"), matches.value_of("data")) {
+        (Some(args), None) => {
+            // Fix tron base58checked addresses, remove 0x41
+            let values = args
+                .zip(types.iter())
+                .map(|(arg, ty)| {
+                    if ty == &"address" {
+                        arg.parse::<Address>()
+                            .map(|addr| addr.encode_hex::<String>()[2..].to_owned())
+                            .map_err(Error::from)
+                    } else {
+                        Ok(arg.to_owned())
+                    }
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
+            abi::encode_params(&types, &values)?
+        }
+        (None, Some(data_hex)) => Vec::from_hex(data_hex)?,
+        (None, None) => vec![],
+        (_, _) => unreachable!("set conflicts in cli.yml; qed")
+    };
+
+    bytecode.append(&mut data);
 
     let mut new_contract = SmartContract::new();
     new_contract.set_bytecode(bytecode);
