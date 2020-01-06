@@ -22,8 +22,10 @@ pub enum Error {
     Keys(#[from] ::keys::Error),
     #[error("{0:}")]
     FromHex(#[from] ::hex::FromHexError),
+    #[error("{0:}")]
+    Abi(#[from] ::ethabi::Error),
     #[error("parsing error: {0:}")]
-    ParseInt(#[from] ::std::num::ParseIntError),
+    ParseInt(#[from] ::std::num::ParseIntError)
 }
 
 impl From<&'static str> for Error {
