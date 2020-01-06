@@ -23,10 +23,10 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
   - [x] fetch chain status, node, transaction, block, account, contract, asset etc.
   - [x] transfer TRX
   - [x] local wallet management
-  - [ ] contract setup
-  - [ ] contract calling (including TRC20)
+  - [x] contract setup
+  - [x] contract calling (including TRC20)
   - [x] accout permission handling
-  - [ ] accout resource handling
+  - [x] accout resource handling
   - [ ] vote and witness
   - [x] multisig (via raw transaction sign)
   - [ ] raw transaction handling
