@@ -66,5 +66,5 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 fn extract_types(fnname: &str) -> Result<Vec<&str>, Error> {
     let start = fnname.find('(').ok_or(Error::Runtime("malformed method name"))?;
     let end = fnname.find(')').ok_or(Error::Runtime("malformed method name"))?;
-    Ok(fnname[start + 1..end].split(",").collect())
+    Ok(fnname[start + 1..end].split(",").filter(|ty| !ty.is_empty()).collect())
 }
