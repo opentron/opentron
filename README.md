@@ -28,11 +28,10 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
   - [x] accout permission handling
   - [x] accout resource handling
   - [x] vote
-  - [ ] witness
+  - [x] witness
   - [x] multisig (via raw transaction sign)
-  - [ ] raw transaction handling
-    - [ ] create
-    - [x] sign
+  - [ ] system contract handling
+  - [x] sign
   - [ ] shielded transaction
 - [ ] full Tron Protocol implementation
   - [x] joking
@@ -64,9 +63,9 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 - [ ] UnfreezeAssetContract
 - [ ] UpdateAssetContract
 - [x] VoteWitnessContract
-- [ ] WitnessCreateContract
-- [ ] WitnessUpdateContract
-- [ ] WithdrawBalanceContract - withdraw SR rewards
+- [x] WitnessCreateContract
+- [x] WitnessUpdateContract
+- [x] WithdrawBalanceContract - withdraw SR rewards
 - [x] CreateSmartContract
 - [x] TriggerSmartContract
 - [ ] UpdateSettingContract

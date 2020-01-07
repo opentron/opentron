@@ -36,7 +36,7 @@ common_transaction_args: &common_transaction_args
           short: x
           long: expiration
           takes_value: true
-          default_value: "60"
+          # default_value: "60"
     - fee-limit:
           help: Maximum value of TRX allowed consumed
           long: fee-limit
@@ -159,7 +159,7 @@ subcommands:
                               short: x
                               long: expiration
                               takes_value: true
-                              default_value: "60"
+                              # default_value: "60"
                         - fee-limit:
                               help: Maximum value of TRX allowed consumed
                               long: fee-limit
@@ -211,7 +211,7 @@ subcommands:
                               short: x
                               long: expiration
                               takes_value: true
-                              default_value: "60"
+                              # default_value: "60"
                         - fee-limit:
                               help: Maximum value of TRX allowed consumed
                               long: fee-limit
@@ -296,7 +296,7 @@ subcommands:
                               short: x
                               long: expiration
                               takes_value: true
-                              default_value: "60"
+                              # default_value: "60"
                         - fee-limit:
                               help: Maximum value of TRX allowed consumed
                               long: fee-limit
@@ -372,7 +372,115 @@ subcommands:
                               short: x
                               long: expiration
                               takes_value: true
-                              default_value: "60"
+                              # default_value: "60"
+                              required: false
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
+              - create_witness:
+                    about: Become a witness
+                    args: &witness_url_args
+                        - SENDER:
+                              help: The account to of the witness
+                              required: true
+                        - URL:
+                              help: The URL of the witness
+                              required: true
+                              takes_value: true
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                              required: false
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
+              - update_witness:
+                    about: Change URL of a witness
+                    args: *witness_url_args
+              - withdraw_reward:
+                    about: Withdraw SR rewards for a witness
+                    args:
+                        - SENDER:
+                              help: The account to of the witness
+                              required: true
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                              required: false
                         - fee-limit:
                               help: Maximum value of TRX allowed consumed
                               long: fee-limit
@@ -388,7 +496,7 @@ subcommands:
                               takes_value: true
                               possible_values: ["0", "2", "1"]
 
-    # asset
+    # asset (issue, transfer, vote, unfreeze, update, participate)
     # create
     # contract
     # exchange
@@ -436,7 +544,7 @@ subcommands:
                     short: x
                     long: expiration
                     takes_value: true
-                    default_value: "60"
+                    # default_value: "60"
               - fee-limit:
                     help: Maximum value of TRX allowed consumed
                     long: fee-limit
@@ -506,7 +614,7 @@ subcommands:
                     short: x
                     long: expiration
                     takes_value: true
-                    default_value: "60"
+                    # default_value: "60"
               - fee-limit:
                     help: Maximum value of TRX allowed consumed
                     long: fee-limit
@@ -567,7 +675,7 @@ subcommands:
                     short: x
                     long: expiration
                     takes_value: true
-                    default_value: "60"
+                    # default_value: "60"
               - fee-limit:
                     help: Maximum value of TRX allowed consumed
                     long: fee-limit
@@ -634,7 +742,7 @@ subcommands:
                     short: x
                     long: expiration
                     takes_value: true
-                    default_value: "60"
+                    # default_value: "60"
               - fee-limit:
                     help: Maximum value of TRX allowed consumed
                     long: fee-limit

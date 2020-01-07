@@ -40,9 +40,6 @@ fn main() -> Result<(), Error> {
         ("call", Some(arg_matches)) => commands::call::main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(arg_matches),
         ("shielded", Some(arg_matches)) => commands::shielded::main(arg_matches),
-        _ => {
-            eprintln!("{}", matches.usage());
-            Err(Error::Runtime("error parsing command line"))
-        }
+        _ => unreachable!("handled by cli.yml; qed"),
     }
 }

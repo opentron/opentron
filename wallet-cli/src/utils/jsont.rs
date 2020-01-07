@@ -4,6 +4,7 @@ use hex::{FromHex, ToHex};
 use proto::core::{
     AccountPermissionUpdateContract, AccountUpdateContract, CreateSmartContract, FreezeBalanceContract,
     ShieldedTransferContract, TransferAssetContract, TransferContract, TriggerSmartContract, VoteWitnessContract,
+    WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract,
 };
 use serde_json::json;
 
@@ -223,6 +224,26 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
             let mut contract = serde_json::to_value(&pb)?;
             contract["owner_address"] = json!(bytes_to_hex_string(&contract["owner_address"]));
             contract["account_name"] = json!(bytes_to_string(&contract["account_name"]));
+            contract
+        }
+        Some("WitnessCreateContract") => {
+            let pb: WitnessCreateContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            contract["owner_address"] = json!(bytes_to_hex_string(&contract["owner_address"]));
+            contract["url"] = json!(bytes_to_string(&contract["url"]));
+            contract
+        }
+        Some("WitnessUpdateContract") => {
+            let pb: WitnessUpdateContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            contract["owner_address"] = json!(bytes_to_hex_string(&contract["owner_address"]));
+            contract["update_url"] = json!(bytes_to_string(&contract["update_url"]));
+            contract
+        }
+        Some("WithdrawBalanceContract") => {
+            let pb: WithdrawBalanceContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            contract["owner_address"] = json!(bytes_to_hex_string(&contract["owner_address"]));
             contract
         }
         x => {

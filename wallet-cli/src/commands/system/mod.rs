@@ -3,7 +3,10 @@
 use clap::ArgMatches;
 use itertools::Itertools;
 use keys::Address;
-use proto::core::{VoteWitnessContract, VoteWitnessContract_Vote as Vote};
+use proto::core::{
+    VoteWitnessContract, VoteWitnessContract_Vote as Vote, WithdrawBalanceContract, WitnessCreateContract,
+    WitnessUpdateContract,
+};
 
 use crate::error::Error;
 use crate::utils::trx;
@@ -42,9 +45,55 @@ pub fn vote_witnesses(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(vote_contract, matches).run()
 }
 
+pub fn create_witness(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+    let url = matches.value_of("URL").expect("required in cli.yml; qed");
+
+    let create_contract = WitnessCreateContract {
+        owner_address: sender.as_ref().to_owned(),
+        url: url.as_bytes().to_owned(),
+        ..Default::default()
+    };
+    trx::TransactionHandler::handle(create_contract, matches).run()
+}
+
+pub fn update_witness(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+    let url = matches.value_of("URL").expect("required in cli.yml; qed");
+
+    let update_contract = WitnessUpdateContract {
+        owner_address: sender.as_ref().to_owned(),
+        update_url: url.as_bytes().to_owned(),
+        ..Default::default()
+    };
+    trx::TransactionHandler::handle(update_contract, matches).run()
+}
+
+pub fn withdraw_reward(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+
+    let withdraw_contract = WithdrawBalanceContract {
+        owner_address: sender.as_ref().to_owned(),
+        ..Default::default()
+    };
+    trx::TransactionHandler::handle(withdraw_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("vote_witness", Some(arg_matches)) => vote_witnesses(arg_matches),
+        ("create_witness", Some(arg_matches)) => create_witness(arg_matches),
+        ("update_witness", Some(arg_matches)) => update_witness(arg_matches),
+        ("withdraw_reward", Some(arg_matches)) => withdraw_reward(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
