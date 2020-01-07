@@ -3,7 +3,7 @@ version: "0.1.0"
 author: Shuyu WANG <andelf@gmail.com>
 about: Tron Protocol wallet command line util
 
-# FIXME: YAML do not support merge array
+# FIXME: YAML does not support merge array
 common_transaction_args: &common_transaction_args
     - account:
           help: The account address used for signing
