@@ -60,6 +60,9 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         "type.googleapis.com/protocol.VoteWitnessContract" => Ok(Address::try_from(
             parse_from_bytes::<VoteWitnessContract>(any.get_value())?.get_owner_address(),
         )?),
+        "type.googleapis.com/protocol.AccountUpdateContract" => Ok(Address::try_from(
+            parse_from_bytes::<AccountUpdateContract>(any.get_value())?.get_owner_address(),
+        )?),
         _ => unimplemented!(),
     }
 }

@@ -51,8 +51,8 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 ### All Contracts Support
 
 - [ ] AccountCreateContract
-- [ ] AccountUpdateContract
-- [ ] SetAccountIdContract
+- [x] AccountUpdateContract - set account name
+- [ ] ~~SetAccountIdContract~~
 - [x] TransferContract
 - [ ] TransferAssetContract
 - [ ] VoteAssetContract
