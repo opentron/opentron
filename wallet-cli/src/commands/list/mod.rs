@@ -92,12 +92,22 @@ pub fn list_proposals() -> Result<(), Error> {
     Ok(())
 }
 
+pub fn list_parameters() -> Result<(), Error> {
+    let (_, payload, _) = new_grpc_client()?
+        .get_chain_parameters(Default::default(), EmptyMessage::new())
+        .wait()?;
+    let parameters = serde_json::to_value(&payload)?;
+    println!("{}", serde_json::to_string_pretty(&parameters["chainParameter"])?);
+    Ok(())
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => list_nodes(),
         ("witness", _) => list_witnesses(),
         ("asset", _) => list_assets(),
         ("proposal", _) => list_proposals(),
+        ("parameter", _) => list_parameters(),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
