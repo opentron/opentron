@@ -1,6 +1,10 @@
 # Proposal
 
-## Id of proposal
+## Network Parameters
+
+<https://tronscan.org/#/sr/committee>
+
+## Id of Proposal
 
 ```java
 MAINTENANCE_TIME_INTERVAL(0), //ms  ,0
