@@ -6,8 +6,8 @@ use serde_json::json;
 use std::fmt::Write as FmtWrite;
 
 use crate::error::Error;
+use crate::utils::abi;
 use crate::utils::client::new_grpc_client;
-use crate::utils::crypto;
 use crate::utils::jsont;
 
 pub fn run(addr: &str) -> Result<(), Error> {
@@ -31,7 +31,7 @@ pub fn run(addr: &str) -> Result<(), Error> {
     Ok(())
 }
 
-// NOTE: is pb, it is abi.`entrys`
+// NOTE: there is a typo in pb: abi.`entrys`
 fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Error> {
     for entry in abi.entrys.iter() {
         let mut pretty = match entry.get_field_type() {
@@ -52,6 +52,7 @@ fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Erro
                 .collect::<Vec<_>>()
                 .join(",")
         )?;
+        let fnhash = abi::fnhash(&raw);
 
         write!(
             pretty,
@@ -81,15 +82,12 @@ fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Erro
             )?;
         }
 
-        let fhash = abi_function_name_to_hash(&raw);
-        eprintln!("{:}\n    => {:}: {:}", pretty, (&fhash[..]).encode_hex::<String>(), raw);
+        eprintln!(
+            "{:}\n    => {:}: {:}",
+            pretty,
+            (&fnhash[..]).encode_hex::<String>(),
+            raw
+        );
     }
     Ok(())
-}
-
-#[inline]
-fn abi_function_name_to_hash(fname: &str) -> [u8; 4] {
-    let mut hash_code = [0u8; 4];
-    (&mut hash_code[..]).copy_from_slice(&crypto::keccak256(fname.as_bytes())[..4]);
-    hash_code
 }
