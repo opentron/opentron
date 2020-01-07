@@ -6,5 +6,5 @@ binop_separator = "Back"
 edition = "2018"
 newline_style = "Unix"
 normalize_comments = true
-trailing_comma = "Never"
+# trailing_comma = "Never"
 tab_spaces = 4
