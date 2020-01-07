@@ -2,6 +2,9 @@ name: wallet-cli
 version: "0.1.0"
 author: Shuyu WANG <andelf@gmail.com>
 about: Tron Protocol wallet command line util
+settings:
+    - VersionlessSubcommands
+    - SubcommandRequiredElseHelp
 
 # FIXME: YAML does not support merge array
 common_transaction_args: &common_transaction_args
@@ -273,6 +276,9 @@ subcommands:
 
     - system:
           about: Calling system contracts
+          settings:
+              - DisableHelpSubcommand
+              - SubcommandRequiredElseHelp
           subcommands:
               - vote_witness:
                     about: Vote for witnesses

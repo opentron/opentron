@@ -1,4 +1,4 @@
-use clap::{load_yaml, AppSettings};
+use clap::load_yaml;
 
 mod commands;
 mod error;
@@ -13,9 +13,7 @@ fn main() -> Result<(), Error> {
     utils::walletd::ensure_walletd()?;
 
     let yaml = load_yaml!("cli.yml");
-    let matches = clap::App::from_yaml(yaml)
-        .setting(AppSettings::VersionlessSubcommands)
-        .get_matches();
+    let matches = clap::App::from_yaml(yaml).get_matches();
 
     // FIXME: as above
     unsafe {
