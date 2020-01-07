@@ -2,7 +2,8 @@ name: wallet-cli
 version: "0.1.0"
 author: Shuyu WANG <andelf@gmail.com>
 about: Tron Protocol wallet command line util
-settings:
+settings: &default_settings
+    - DisableHelpSubcommand
     - VersionlessSubcommands
     - SubcommandRequiredElseHelp
 
@@ -66,7 +67,8 @@ args:
 
 subcommands:
     - get:
-          about: Retrieves various items and information from the blockchain
+          about: Retrieve various items and information from the blockchain
+          settings: *default_settings
           subcommands:
               - node:
                     about: Get current connected node state information
@@ -119,10 +121,11 @@ subcommands:
                               required: true
 
     - set:
-          about: Sets or updates the blockchain state
+          about: Set or update the blockchain state
+          settings: *default_settings
           subcommands:
               - account_permission:
-                    about: Updates an account's permission
+                    about: Update an account's permission
                     args:
                         - ADDR:
                               help: The address of the account to set permisiion
@@ -226,7 +229,7 @@ subcommands:
                               takes_value: true
                               possible_values: ["0", "2", "1"]
               - contract:
-                    about: Creates a contract on an account
+                    about: Create a contract on an account
                     args:
                         - OWNER:
                               help: The owner creating contract
@@ -312,24 +315,23 @@ subcommands:
                               possible_values: ["0", "2", "1"]
 
     - list:
-          about: Lists any items from blockchain
+          about: List any items from blockchain
+          settings: *default_settings
           subcommands:
               - witness:
                     about: Query the list of Super Representatives
               - node:
-                    about: List the nodes which is connecting on the network
+                    about: List the nodes which is connecting to the network
               - asset:
-                    about: Retrieves list of all tokens
+                    about: Retrieve list of all tokens
               - proposal:
-                    about: Retrives list of all proposals
+                    about: Retrive list of all proposals
               - parameter:
                     about: List chain parameters
 
     - system:
-          about: Calling system contracts
-          settings:
-              - DisableHelpSubcommand
-              - SubcommandRequiredElseHelp
+          about: Call a system contract
+          settings: *default_settings
           subcommands:
               - vote_witness:
                     about: Vote for witnesses
@@ -610,8 +612,7 @@ subcommands:
                     about: Delete a proposal
                     args: *proposal_id_args
 
-                    # asset (issue, transfer, vote, unfreeze, update, participate)
-    # create
+    # asset (issue, transfer, vote, unfreeze, update, participate)
     # contract
     # exchange
 
@@ -903,7 +904,7 @@ subcommands:
                         - private-key
 
     - shielded:
-          about: Shielded transaction related commands
+          about: Manage shielded transactions and shielded notes
           subcommands:
               - create_address:
                     about: Creates a new shielded address
@@ -933,9 +934,10 @@ subcommands:
 
     - wallet:
           about: Subcommand used to interact with the local wallet
+          settings: *default_settings
           subcommands:
               - create:
-                    about: Creates a new wallet locally
+                    about: Create a new wallet locally
                     args:
                         - name:
                               help: Name of the new wallet
@@ -948,7 +950,7 @@ subcommands:
                               long: password
                               takes_value: true
               - open:
-                    about: Opens an existing wallet
+                    about: Open an existing wallet
                     args:
                         - name:
                               help: Name of the new wallet
@@ -957,16 +959,16 @@ subcommands:
                               takes_value: true
                               default_value: default
               - lock:
-                    about: Locks a wallet
+                    about: Lock a wallet
               - unlock:
-                    about: Unlocks a wallet
+                    about: Unlock a wallet
                     args:
                         - password:
                               help: The password of the wallet
                               long: password
                               takes_value: true
               - import_key:
-                    about: Imports private key into wallet
+                    about: Import private key into wallet
                     args:
                         - private-key:
                               help: Private key to import
@@ -979,7 +981,7 @@ subcommands:
                         These are the keys that could be used to sign transactions.
               - create_key:
                     about: |
-                        Creates a key pair within the wallet so that you don't need to manually import it.
+                        Create a key pair within the wallet so that you don't need to manually import it.
               - private_keys:
                     about: |
                         Query for the public and private key pairs of an individual wallet.
