@@ -72,6 +72,9 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         "type.googleapis.com/protocol.WithdrawBalanceContract" => Ok(Address::try_from(
             parse_from_bytes::<WithdrawBalanceContract>(any.get_value())?.get_owner_address(),
         )?),
+        "type.googleapis.com/protocol.ProposalCreateContract" => Ok(Address::try_from(
+            parse_from_bytes::<ProposalCreateContract>(any.get_value())?.get_owner_address(),
+        )?),
         _ => unimplemented!(),
     }
 }

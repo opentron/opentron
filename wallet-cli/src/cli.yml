@@ -495,7 +495,62 @@ subcommands:
                               long: permission-id
                               takes_value: true
                               possible_values: ["0", "2", "1"]
-
+              - create_proposal:
+                    about: Create a new proposal
+                    args:
+                        - SENDER:
+                              help: Account for creating the proposal
+                              required: true
+                        - PARAMS:
+                              help: Modified chain parameter of the proposal
+                              multiple: true
+                              required: true
+                              value_names:
+                                  - ID=VALUE
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                              required: false
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
     # asset (issue, transfer, vote, unfreeze, update, participate)
     # create
     # contract

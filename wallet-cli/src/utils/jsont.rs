@@ -3,8 +3,8 @@
 use hex::{FromHex, ToHex};
 use proto::core::{
     AccountPermissionUpdateContract, AccountUpdateContract, CreateSmartContract, FreezeBalanceContract,
-    ShieldedTransferContract, TransferAssetContract, TransferContract, TriggerSmartContract, VoteWitnessContract,
-    WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract,
+    ProposalCreateContract, ShieldedTransferContract, TransferAssetContract, TransferContract, TriggerSmartContract,
+    VoteWitnessContract, WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract,
 };
 use serde_json::json;
 
@@ -242,6 +242,12 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
         }
         Some("WithdrawBalanceContract") => {
             let pb: WithdrawBalanceContract = protobuf::parse_from_bytes(&raw_pb)?;
+            let mut contract = serde_json::to_value(&pb)?;
+            contract["owner_address"] = json!(bytes_to_hex_string(&contract["owner_address"]));
+            contract
+        }
+        Some("ProposalCreateContract") => {
+            let pb: ProposalCreateContract = protobuf::parse_from_bytes(&raw_pb)?;
             let mut contract = serde_json::to_value(&pb)?;
             contract["owner_address"] = json!(bytes_to_hex_string(&contract["owner_address"]));
             contract

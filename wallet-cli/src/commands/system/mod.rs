@@ -4,9 +4,10 @@ use clap::ArgMatches;
 use itertools::Itertools;
 use keys::Address;
 use proto::core::{
-    VoteWitnessContract, VoteWitnessContract_Vote as Vote, WithdrawBalanceContract, WitnessCreateContract,
-    WitnessUpdateContract,
+    ProposalCreateContract, VoteWitnessContract, VoteWitnessContract_Vote as Vote, WithdrawBalanceContract,
+    WitnessCreateContract, WitnessUpdateContract,
 };
+use std::collections::HashMap;
 
 use crate::error::Error;
 use crate::utils::trx;
@@ -88,12 +89,39 @@ pub fn withdraw_reward(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(withdraw_contract, matches).run()
 }
 
+pub fn create_proposal(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+
+    let params = matches
+        .values_of("PARAMS")
+        .expect("required in cli.yml; qed")
+        .map(|pair| {
+            if let [key, val] = &pair.split('=').collect::<Vec<_>>()[..] {
+                Ok((key.parse::<i64>()?, val.parse::<i64>()?))
+            } else {
+                Err(Error::Runtime("malformed key=value PARAMS"))
+            }
+        });
+
+    let create_contract = ProposalCreateContract {
+        owner_address: sender.as_ref().to_owned(),
+        parameters: params.collect::<Result<HashMap<i64, i64>, Error>>()?,
+        ..Default::default()
+    };
+
+    trx::TransactionHandler::handle(create_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("vote_witness", Some(arg_matches)) => vote_witnesses(arg_matches),
         ("create_witness", Some(arg_matches)) => create_witness(arg_matches),
         ("update_witness", Some(arg_matches)) => update_witness(arg_matches),
         ("withdraw_reward", Some(arg_matches)) => withdraw_reward(arg_matches),
+        ("create_proposal", Some(arg_matches)) => create_proposal(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
