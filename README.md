@@ -72,8 +72,8 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 - [ ] UpdateEnergyLimitContract
 - [ ] ClearABIContract
 - [x] ProposalCreateContract
-- [ ] ProposalApproveContract
-- [ ] ProposalDeleteContract
+- [x] ProposalApproveContract
+- [x] ProposalDeleteContract
 - [ ] ExchangeCreateContract
 - [ ] ExchangeInjectContract
 - [ ] ExchangeWithdrawContract
@@ -83,7 +83,6 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 - [ ] ~~BuyStorageBytesContract~~
 - [ ] ~~SellStorageContract~~
 - [ ] ~~UpdateBrokerageContract~~
-
 
 ## wallet-cli
 

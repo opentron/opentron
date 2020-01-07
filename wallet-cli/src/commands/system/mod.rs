@@ -4,8 +4,8 @@ use clap::ArgMatches;
 use itertools::Itertools;
 use keys::Address;
 use proto::core::{
-    ProposalCreateContract, VoteWitnessContract, VoteWitnessContract_Vote as Vote, WithdrawBalanceContract,
-    WitnessCreateContract, WitnessUpdateContract,
+    ProposalApproveContract, ProposalCreateContract, VoteWitnessContract, VoteWitnessContract_Vote as Vote,
+    WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract, ProposalDeleteContract
 };
 use std::collections::HashMap;
 
@@ -115,6 +115,37 @@ pub fn create_proposal(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(create_contract, matches).run()
 }
 
+pub fn approve_proposal(approve: bool, matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+    let id = matches.value_of("ID").expect("required in cli.yml; qed");
+
+    let approve_contract = ProposalApproveContract {
+        owner_address: sender.as_ref().to_owned(),
+        proposal_id: id.parse()?,
+        is_add_approval: approve,
+        ..Default::default()
+    };
+    trx::TransactionHandler::handle(approve_contract, matches).run()
+}
+
+pub fn delete_proposal(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+    let id = matches.value_of("ID").expect("required in cli.yml; qed");
+
+    let delete_contract = ProposalDeleteContract {
+        owner_address: sender.as_ref().to_owned(),
+        proposal_id: id.parse()?,
+        ..Default::default()
+    };
+    trx::TransactionHandler::handle(delete_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("vote_witness", Some(arg_matches)) => vote_witnesses(arg_matches),
@@ -122,6 +153,9 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("update_witness", Some(arg_matches)) => update_witness(arg_matches),
         ("withdraw_reward", Some(arg_matches)) => withdraw_reward(arg_matches),
         ("create_proposal", Some(arg_matches)) => create_proposal(arg_matches),
+        ("approve_proposal", Some(arg_matches)) => approve_proposal(true, arg_matches),
+        ("disapprove_proposal", Some(arg_matches)) => approve_proposal(false, arg_matches),
+        ("delete_proposal", Some(arg_matches)) => delete_proposal(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))

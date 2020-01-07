@@ -61,8 +61,7 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values:
-              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
 
 subcommands:
@@ -551,7 +550,67 @@ subcommands:
                               long: permission-id
                               takes_value: true
                               possible_values: ["0", "2", "1"]
-    # asset (issue, transfer, vote, unfreeze, update, participate)
+              - approve_proposal:
+                    about: Approve a proposal
+                    args: &proposal_id_args
+                        - SENDER:
+                              help: Account for approve the proposal
+                              required: true
+                        - ID:
+                              help: Proposal id
+                              required: true
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                              required: false
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
+              - disapprove_proposal:
+                    about: Disapprove a proposal
+                    args: *proposal_id_args
+              - delete_proposal:
+                    about: Delete a proposal
+                    args: *proposal_id_args
+
+                    # asset (issue, transfer, vote, unfreeze, update, participate)
     # create
     # contract
     # exchange

@@ -75,6 +75,12 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         "type.googleapis.com/protocol.ProposalCreateContract" => Ok(Address::try_from(
             parse_from_bytes::<ProposalCreateContract>(any.get_value())?.get_owner_address(),
         )?),
+        "type.googleapis.com/protocol.ProposalApproveContract" => Ok(Address::try_from(
+            parse_from_bytes::<ProposalApproveContract>(any.get_value())?.get_owner_address(),
+        )?),
+        "type.googleapis.com/protocol.ProposalDeleteContract" => Ok(Address::try_from(
+            parse_from_bytes::<ProposalDeleteContract>(any.get_value())?.get_owner_address(),
+        )?),
         _ => unimplemented!(),
     }
 }
