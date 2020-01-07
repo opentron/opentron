@@ -5,7 +5,7 @@ use proto::core::{FreezeBalanceContract, ResourceCode, UnfreezeBalanceContract};
 use crate::error::Error;
 use crate::utils::trx;
 
-pub fn freeze_main(matches: &ArgMatches) -> Result<(), Error> {
+pub fn freeze(matches: &ArgMatches) -> Result<(), Error> {
     let from = matches
         .value_of("FROM")
         .and_then(|s| s.parse::<Address>().ok())
@@ -38,7 +38,7 @@ pub fn freeze_main(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(freeze_contract, matches).run()
 }
 
-pub fn unfreeze_main(matches: &ArgMatches) -> Result<(), Error> {
+pub fn unfreeze(matches: &ArgMatches) -> Result<(), Error> {
     let from = matches
         .value_of("FROM")
         .and_then(|s| s.parse::<Address>().ok())

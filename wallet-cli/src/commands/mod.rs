@@ -1,5 +1,4 @@
 pub mod call;
-pub mod freeze;
 pub mod get;
 pub mod list;
 pub mod set;

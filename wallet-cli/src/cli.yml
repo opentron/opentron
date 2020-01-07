@@ -73,36 +73,36 @@ subcommands:
               - node:
                     about: Get current connected node state information
               - block:
-                    about: Retrieves a full block from the blockchain
+                    about: Retrieve a full block from the blockchain
                     args:
                         - BLOCK:
                               help: The number or ID of the block to retrieve
               - transaction:
-                    about: Retrieves a transaction from the blockchain
+                    about: Retrieve a transaction from the blockchain
                     args:
                         - ID:
                               help: ID of the transaction to retrieve
                               required: true
               - transaction_info:
-                    about: Retrieves receipt of atransaction
+                    about: Retrieve receipt of atransaction
                     args:
                         - ID:
                               help: ID of the transaction to retrieve
                               required: true
               - account:
-                    about: Retrieves an account from the blockchain
+                    about: Retrieve an account from the blockchain
                     args:
                         - NAME:
                               help: The name of the account to retrieve
                               required: true
               - account_permission:
-                    about: Retrieves account permision info from the blockchain
+                    about: Retrieve account permision info from the blockchain
                     args:
                         - NAME:
                               help: The name of the account to retrieve
                               required: true
               - account_resource:
-                    about: Retrieves energy and bandwidth usage of an account
+                    about: Retrieve energy and bandwidth usage of an account
                     args:
                         - NAME:
                               help: The name of the account to retrieve
@@ -611,7 +611,136 @@ subcommands:
               - delete_proposal:
                     about: Delete a proposal
                     args: *proposal_id_args
+              - freeze:
+                    about: Freeze balance for bandwidth or energy
+                    args:
+                        - FROM:
+                              help: The account freezing balance for bandwidth or energy
+                              required: true
+                        - RECEIVER:
+                              help: The account to delegate bandwidth or energy from
+                              required: true
+                        - AMOUNT:
+                              help: The amount of tokens to send and the token symbol
+                              required: true
+                        - duration:
+                              help: Frozen duration, in days
+                              long: duration
+                              takes_value: true
+                              default_value: "3"
+                              possible_values: ["3"]
+                        - bandwidth:
+                              help: Frozen balance for bandwidth (default)
+                              long: bandwidth
+                        - energy:
+                              help: Frozen balance for energy
+                              long: energy
+                              conflicts_with:
+                                  - bandwidth
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
 
+              - unfreeze:
+                    about: Unfreeze balance from bandwidth or energy
+                    args:
+                        - FROM:
+                              help: The account freezing balance for bandwidth or energy
+                              required: true
+                        - RECEIVER:
+                              help: The account to undelegate bandwidth or energy from
+                              required: true
+                        - bandwidth:
+                              help: Unfreeze balance from bandwidth (default)
+                              long: bandwidth
+                        - energy:
+                              help: Unfreeze balance from energy
+                              long: energy
+                              conflicts_with:
+                                  - bandwidth
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
     # asset (issue, transfer, vote, unfreeze, update, participate)
     # contract
     # exchange
@@ -631,137 +760,6 @@ subcommands:
               - MEMO:
                     help: The memo for the transfer
                     required: false
-              - account:
-                    help: The account address used for signing
-                    short: k
-                    long: account
-                    takes_value: true
-              - private-key:
-                    help: The private key used for signing
-                    short: K
-                    long: private-key
-                    takes_value: true
-                    conflicts_with:
-                        - account
-              - skip-sign:
-                    help: Skip actual sign process
-                    short: s
-                    long: skip-sign
-                    conflicts_with:
-                        - account
-                        - private-key
-              - dont-broadcast:
-                    help: Don't broadcast transaction to the network (just print to stdout)
-                    short: d
-                    long: dont-broadcast
-              - expiration:
-                    help: Set the time in seconds before a transaction expires
-                    short: x
-                    long: expiration
-                    takes_value: true
-                    # default_value: "60"
-              - fee-limit:
-                    help: Maximum value of TRX allowed consumed
-                    long: fee-limit
-                    takes_value: true
-              - ref-block:
-                    help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
-                    short: r
-                    long: ref-block
-                    takes_value: true
-              - permission-id:
-                    help: Permission id used by transaction
-                    long: permission-id
-                    takes_value: true
-                    possible_values: ["0", "2", "1"]
-
-    - freeze:
-          about: Freeze balance for bandwidth or energy
-          args:
-              - FROM:
-                    help: The account freezing balance for bandwidth or energy
-                    required: true
-              - RECEIVER:
-                    help: The account to delegate bandwidth or energy from
-                    required: true
-              - AMOUNT:
-                    help: The amount of tokens to send and the token symbol
-                    required: true
-              - duration:
-                    help: Frozen duration, in days
-                    long: duration
-                    takes_value: true
-                    default_value: "3"
-                    possible_values: ["3"]
-              - bandwidth:
-                    help: Frozen balance for bandwidth (default)
-                    long: bandwidth
-              - energy:
-                    help: Frozen balance for energy
-                    long: energy
-                    conflicts_with:
-                        - bandwidth
-              - account:
-                    help: The account address used for signing
-                    short: k
-                    long: account
-                    takes_value: true
-              - private-key:
-                    help: The private key used for signing
-                    short: K
-                    long: private-key
-                    takes_value: true
-                    conflicts_with:
-                        - account
-              - skip-sign:
-                    help: Skip actual sign process
-                    short: s
-                    long: skip-sign
-                    conflicts_with:
-                        - account
-                        - private-key
-              - dont-broadcast:
-                    help: Don't broadcast transaction to the network (just print to stdout)
-                    short: d
-                    long: dont-broadcast
-              - expiration:
-                    help: Set the time in seconds before a transaction expires
-                    short: x
-                    long: expiration
-                    takes_value: true
-                    # default_value: "60"
-              - fee-limit:
-                    help: Maximum value of TRX allowed consumed
-                    long: fee-limit
-                    takes_value: true
-              - ref-block:
-                    help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
-                    short: r
-                    long: ref-block
-                    takes_value: true
-              - permission-id:
-                    help: Permission id used by transaction
-                    long: permission-id
-                    takes_value: true
-                    possible_values: ["0", "2", "1"]
-
-    - unfreeze:
-          about: Unfreeze balance from bandwidth or energy
-          args:
-              - FROM:
-                    help: The account freezing balance for bandwidth or energy
-                    required: true
-              - RECEIVER:
-                    help: The account to undelegate bandwidth or energy from
-                    required: true
-              - bandwidth:
-                    help: Unfreeze balance from bandwidth (default)
-                    long: bandwidth
-              - energy:
-                    help: Unfreeze balance from energy
-                    long: energy
-                    conflicts_with:
-                        - bandwidth
               - account:
                     help: The account address used for signing
                     short: k

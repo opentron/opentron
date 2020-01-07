@@ -4,13 +4,15 @@ use clap::ArgMatches;
 use itertools::Itertools;
 use keys::Address;
 use proto::core::{
-    ProposalApproveContract, ProposalCreateContract, VoteWitnessContract, VoteWitnessContract_Vote as Vote,
-    WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract, ProposalDeleteContract
+    ProposalApproveContract, ProposalCreateContract, ProposalDeleteContract, VoteWitnessContract,
+    VoteWitnessContract_Vote as Vote, WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract,
 };
 use std::collections::HashMap;
 
 use crate::error::Error;
 use crate::utils::trx;
+
+mod freeze;
 
 pub fn vote_witnesses(matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
@@ -156,6 +158,9 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("approve_proposal", Some(arg_matches)) => approve_proposal(true, arg_matches),
         ("disapprove_proposal", Some(arg_matches)) => approve_proposal(false, arg_matches),
         ("delete_proposal", Some(arg_matches)) => delete_proposal(arg_matches),
+        ("freeze", Some(arg_matches)) => freeze::freeze(arg_matches),
+        ("unfreeze", Some(arg_matches)) => freeze::unfreeze(arg_matches),
+
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
