@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
             Some("testnet") => "47.252.87.110:50051",
             Some("dappchain") => "47.90.245.159:50051",
             Some("dappchain-testnet") => "47.252.85.90:50051",
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -34,6 +34,7 @@ fn main() -> Result<(), Error> {
         ("get", Some(arg_matches)) => commands::get::main(arg_matches),
         ("list", Some(arg_matches)) => commands::list::main(arg_matches),
         ("set", Some(arg_matches)) => commands::set::main(arg_matches),
+        ("system", Some(arg_matches)) => commands::system::main(arg_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
         ("sign", Some(arg_matches)) => commands::sign::main(arg_matches),
         ("freeze", Some(arg_matches)) => commands::freeze::freeze_main(arg_matches),
