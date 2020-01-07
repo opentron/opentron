@@ -180,6 +180,26 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
     Ok(())
 }
 
+fn get_proposal_by_id(id: &str) -> Result<(), Error> {
+    // NOTE: id should be encoded to 8 bytes as i64
+    let mut req = BytesMessage::new();
+    let id_hex = format!("{:016x}", id.parse::<i64>()?);
+    req.set_value(Vec::from_hex(id_hex)?);
+
+    let (_, payload, _) = new_grpc_client()?.get_proposal_by_id(Default::default(), req).wait()?;
+    let mut proposal = serde_json::to_value(&payload)?;
+    proposal["proposer_address"] = json!(jsont::bytes_to_hex_string(&proposal["proposer_address"]));
+    proposal["approvals"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|addr| *addr = json!(jsont::bytes_to_hex_string(addr)))
+        .last();
+
+    println!("{}", serde_json::to_string_pretty(&proposal)?);
+    Ok(())
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => node_info(),
@@ -219,6 +239,10 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .value_of("ADDR")
                 .expect("address is required is cli.yml; qed");
             contract::run(addr)
+        }
+        ("proposal", Some(arg_matches)) => {
+            let id = arg_matches.value_of("ID").expect("required in cli.yml; qed");
+            get_proposal_by_id(&id)
         }
         _ => {
             eprintln!("{}", matches.usage());

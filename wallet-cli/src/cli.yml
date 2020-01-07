@@ -108,6 +108,12 @@ subcommands:
                         - ADDR:
                               help: The address of the smart contract
                               required: true
+              - proposal:
+                    about: Get details of a proposal
+                    args:
+                        - ID:
+                            help: Proposal id
+                            required: true
 
     - set:
           about: Sets or updates the blockchain state
