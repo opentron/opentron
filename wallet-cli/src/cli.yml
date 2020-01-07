@@ -274,7 +274,7 @@ subcommands:
     - system:
           about: Calling system contracts
           subcommands:
-              - votewitness:
+              - vote_witness:
                     about: Vote for witnesses
                     args:
                         - SENDER:

@@ -44,7 +44,7 @@ pub fn vote_witnesses(matches: &ArgMatches) -> Result<(), Error> {
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
-        ("votewitness", Some(arg_matches)) => vote_witnesses(arg_matches),
+        ("vote_witness", Some(arg_matches)) => vote_witnesses(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
