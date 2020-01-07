@@ -27,7 +27,8 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
   - [x] contract calling (including TRC20)
   - [x] accout permission handling
   - [x] accout resource handling
-  - [ ] vote and witness
+  - [x] vote
+  - [ ] witness
   - [x] multisig (via raw transaction sign)
   - [ ] raw transaction handling
     - [ ] create
@@ -46,6 +47,44 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
   - [ ] script
     - [ ] solidity
     - [ ] wasm
+
+### All Contracts Support
+
+- [ ] AccountCreateContract
+- [ ] AccountUpdateContract
+- [ ] SetAccountIdContract
+- [x] TransferContract
+- [ ] TransferAssetContract
+- [ ] VoteAssetContract
+- [x] VoteWitnessContract
+- [ ] UpdateSettingContract
+- [ ] UpdateEnergyLimitContract
+- [ ] ClearABIContract
+- [ ] WitnessCreateContract
+- [ ] WitnessUpdateContract
+- [ ] AssetIssueContract
+- [ ] ParticipateAssetIssueContract
+- [x] FreezeBalanceContract
+- [x] UnfreezeBalanceContract
+- [ ] UnfreezeAssetContract
+- [ ] WithdrawBalanceContract
+- [ ] UpdateAssetContract
+- [ ] ProposalCreateContract
+- [ ] ProposalApproveContract
+- [ ] ProposalDeleteContract
+- [x] CreateSmartContract
+- [x] TriggerSmartContract
+- [ ] ~~BuyStorageContract~~
+- [ ] ~~BuyStorageBytesContract~~
+- [ ] ~~SellStorageContract~~
+- [ ] ExchangeCreateContract
+- [ ] ExchangeInjectContract
+- [ ] ExchangeWithdrawContract
+- [ ] ExchangeTransactionContract
+- [x] AccountPermissionUpdateContract
+- [ ] ShieldedTransferContract
+- [ ] ~~UpdateBrokerageContract~~
+
 
 ## wallet-cli
 
