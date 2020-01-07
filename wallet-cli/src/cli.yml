@@ -328,6 +328,8 @@ subcommands:
                     about: Retrive list of all proposals
               - parameter:
                     about: List chain parameters
+              - exchange:
+                    about: Retrive list of all exchanges
 
     - system:
           about: Call a system contract

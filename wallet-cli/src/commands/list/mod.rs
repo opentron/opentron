@@ -101,6 +101,25 @@ pub fn list_parameters() -> Result<(), Error> {
     Ok(())
 }
 
+pub fn list_exchanges() -> Result<(), Error> {
+    let (_, payload, _) = new_grpc_client()?
+        .list_exchanges(Default::default(), EmptyMessage::new())
+        .wait()?;
+    let mut exchanges = serde_json::to_value(&payload)?;
+    exchanges["exchanges"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|ex| {
+            ex["creator_address"] = json!(jsont::bytes_to_hex_string(&ex["creator_address"]));
+            ex["first_token_id"] = json!(jsont::bytes_to_string(&ex["first_token_id"]));
+            ex["second_token_id"] = json!(jsont::bytes_to_string(&ex["second_token_id"]));
+        })
+        .last();
+    println!("{}", serde_json::to_string_pretty(&exchanges["exchanges"])?);
+    Ok(())
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => list_nodes(),
@@ -108,6 +127,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("asset", _) => list_assets(),
         ("proposal", _) => list_proposals(),
         ("parameter", _) => list_parameters(),
+        ("exchange", _) => list_exchanges(),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
