@@ -56,7 +56,7 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 - [x] FreezeBalanceContract
 - [x] UnfreezeBalanceContract
 - [x] TransferContract
-- [ ] TransferAssetContract
+- [x] TransferAssetContract
 - [ ] VoteAssetContract
 - [x] AssetIssueContract
 - [ ] ParticipateAssetIssueContract

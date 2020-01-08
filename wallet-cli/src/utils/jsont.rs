@@ -2,10 +2,10 @@
 
 use hex::{FromHex, ToHex};
 use proto::core::{
-    AccountPermissionUpdateContract, AccountUpdateContract, CreateSmartContract, FreezeBalanceContract,
-    ProposalApproveContract, ProposalCreateContract, ProposalDeleteContract, ShieldedTransferContract,
-    TransferAssetContract, TransferContract, TriggerSmartContract, VoteWitnessContract, WithdrawBalanceContract,
-    WitnessCreateContract, WitnessUpdateContract, AssetIssueContract
+    AccountPermissionUpdateContract, AccountUpdateContract, AssetIssueContract, CreateSmartContract,
+    FreezeBalanceContract, ProposalApproveContract, ProposalCreateContract, ProposalDeleteContract,
+    ShieldedTransferContract, TransferAssetContract, TransferContract, TriggerSmartContract, VoteWitnessContract,
+    WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract,
 };
 use serde_json::json;
 

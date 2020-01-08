@@ -84,6 +84,9 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         "type.googleapis.com/protocol.AssetIssueContract" => Ok(Address::try_from(
             parse_from_bytes::<AssetIssueContract>(any.get_value())?.get_owner_address(),
         )?),
+        "type.googleapis.com/protocol.TransferAssetContract" => Ok(Address::try_from(
+            parse_from_bytes::<TransferAssetContract>(any.get_value())?.get_owner_address(),
+        )?),
         _ => unimplemented!(),
     }
 }

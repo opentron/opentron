@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use clap::ArgMatches;
 use keys::Address;
-use proto::core::{AssetIssueContract, AssetIssueContract_FrozenSupply as FrozenSupply};
+use proto::core::{AssetIssueContract, AssetIssueContract_FrozenSupply as FrozenSupply, TransferAssetContract};
 
 use crate::error::Error;
 use crate::utils::trx;
@@ -80,9 +80,39 @@ pub fn issue_asset(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(issue_contract, matches).run()
 }
 
+pub fn transfer_asset(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong sender address format"))?;
+    let recipient = matches
+        .value_of("RECIPIENT")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong recipient address format"))?;
+    let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
+    let memo = matches.value_of("MEMO").unwrap_or("").as_bytes().to_owned();
+    let assert_id = matches.value_of("token-id").expect("required in cli.yml; qed");
+
+    let transfer_contract = TransferAssetContract {
+        owner_address: sender.to_bytes().to_owned(),
+        to_address: recipient.to_bytes().to_owned(),
+        amount: trx::parse_amount_without_surfix(amount)?,
+        asset_name: assert_id.as_bytes().to_owned(),
+        ..Default::default()
+    };
+
+    eprintln!("sender:    {:}", sender);
+    eprintln!("recipient: {:}", recipient);
+
+    trx::TransactionHandler::handle(transfer_contract, matches)
+        .map_raw_transaction(move |raw| raw.set_data(memo.clone()))
+        .run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("issue", Some(arg_matches)) => issue_asset(arg_matches),
+        ("transfer", Some(arg_matches)) => transfer_asset(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
