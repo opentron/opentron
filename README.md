@@ -24,6 +24,7 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
     - [x] demo works
     - [ ] shielded notes management
     - [ ] real subcommand
+
 - [ ] full Tron Protocol implementation
   - [x] joking
   - [ ] network
@@ -44,8 +45,6 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
     - set account_name
 - [x] AccountPermissionUpdateContract
     - set account_permission
-- [ ] ~~SetAccountIdContract~~
-- [ ] ~~AccountCreateContract~~
 - [x] FreezeBalanceContract
     - system freeze
 - [x] UnfreezeBalanceContract
@@ -59,7 +58,6 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 - [ ] ParticipateAssetIssueContract
 - [ ] UnfreezeAssetContract
 - [ ] UpdateAssetContract
-- [ ] ~~VoteAssetContract~~
 - [x] VoteWitnessContract
     - system vote_witness
 - [x] WitnessCreateContract
@@ -94,6 +92,9 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 - [ ] ~~BuyStorageBytesContract~~
 - [ ] ~~SellStorageContract~~
 - [ ] ~~UpdateBrokerageContract~~
+- [ ] ~~SetAccountIdContract~~
+- [ ] ~~AccountCreateContract~~
+- [ ] ~~VoteAssetContract~~
 
 ## wallet-cli
 
