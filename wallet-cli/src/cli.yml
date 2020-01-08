@@ -1113,6 +1113,7 @@ subcommands:
                               long: permission-id
                               takes_value: true
                               possible_values: ["0", "2", "1"]
+
     # exchange
 
     - transfer:
