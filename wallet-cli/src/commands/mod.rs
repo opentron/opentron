@@ -1,3 +1,4 @@
+pub mod asset;
 pub mod call;
 pub mod get;
 pub mod list;

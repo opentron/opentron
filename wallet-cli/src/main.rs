@@ -33,6 +33,7 @@ fn main() -> Result<(), Error> {
         ("list", Some(arg_matches)) => commands::list::main(arg_matches),
         ("set", Some(arg_matches)) => commands::set::main(arg_matches),
         ("system", Some(arg_matches)) => commands::system::main(arg_matches),
+        ("asset", Some(arg_matches)) => commands::asset::main(arg_matches),
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
         ("sign", Some(arg_matches)) => commands::sign::main(arg_matches),
         ("call", Some(arg_matches)) => commands::call::main(arg_matches),
