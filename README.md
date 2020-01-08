@@ -20,19 +20,10 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 ## TODOs
 
 - wallet-cli
-  - [x] fetch chain status, node, transaction, block, account, contract, asset etc.
-  - [x] transfer TRX
-  - [x] local wallet management
-  - [x] contract setup
-  - [x] contract calling (including TRC20)
-  - [x] accout permission handling
-  - [x] accout resource handling
-  - [x] vote
-  - [x] witness
-  - [x] multisig (via raw transaction sign)
-  - [ ] system contract handling
-  - [x] sign
   - [ ] shielded transaction
+    - [x] demo works
+    - [ ] shielded notes management
+    - [ ] real subcommand
 - [ ] full Tron Protocol implementation
   - [x] joking
   - [ ] network
@@ -47,7 +38,7 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
     - [ ] solidity
     - [ ] wasm
 
-### All Contracts Support
+### All System Contracts Support
 
 - [x] AccountUpdateContract - set account name
 - [x] AccountPermissionUpdateContract
