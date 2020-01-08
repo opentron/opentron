@@ -200,6 +200,24 @@ fn get_proposal_by_id(id: &str) -> Result<(), Error> {
     Ok(())
 }
 
+fn get_asset_by_id(id: &str) -> Result<(), Error> {
+    // NOTE: id should be encoded to 8 bytes as i64
+    let mut req = BytesMessage::new();
+    req.set_value(id.as_bytes().to_owned());
+
+    let (_, payload, _) = new_grpc_client()?
+        .get_asset_issue_by_id(Default::default(), req)
+        .wait()?;
+    if payload.get_owner_address().is_empty() {
+        Err(Error::Runtime("asset not found"))
+    } else {
+        let mut asset = serde_json::to_value(&payload)?;
+        jsont::fix_asset_issue_contract(&mut asset);
+        println!("{}", serde_json::to_string_pretty(&asset)?);
+        Ok(())
+    }
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => node_info(),
@@ -243,6 +261,10 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("proposal", Some(arg_matches)) => {
             let id = arg_matches.value_of("ID").expect("required in cli.yml; qed");
             get_proposal_by_id(&id)
+        }
+        ("asset", Some(arg_matches)) => {
+            let id = arg_matches.value_of("ID").expect("required in cli.yml; qed");
+            get_asset_by_id(&id)
         }
         _ => {
             eprintln!("{}", matches.usage());

@@ -53,13 +53,7 @@ fn list_assets() -> Result<(), Error> {
         .as_array_mut()
         .unwrap()
         .iter_mut()
-        .map(|asset| {
-            asset["abbr"] = json!(jsont::bytes_to_string(&asset["abbr"]));
-            asset["description"] = json!(jsont::bytes_to_string(&asset["description"]));
-            asset["name"] = json!(jsont::bytes_to_string(&asset["name"]));
-            asset["url"] = json!(jsont::bytes_to_string(&asset["url"]));
-            asset["owner_address"] = json!(jsont::bytes_to_hex_string(&asset["owner_address"]));
-        })
+        .map(jsont::fix_asset_issue_contract)
         .last();
 
     println!("{}", serde_json::to_string_pretty(&assets["assetIssue"])?);

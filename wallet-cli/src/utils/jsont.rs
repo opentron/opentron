@@ -268,11 +268,7 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
         Some("AssetIssueContract") => {
             let pb: AssetIssueContract = protobuf::parse_from_bytes(&raw_pb)?;
             let mut contract = serde_json::to_value(&pb)?;
-            contract["owner_address"] = json!(bytes_to_hex_string(&contract["owner_address"]));
-            contract["abbr"] = json!(bytes_to_string(&contract["abbr"]));
-            contract["name"] = json!(bytes_to_string(&contract["name"]));
-            contract["url"] = json!(bytes_to_string(&contract["url"]));
-            contract["description"] = json!(bytes_to_string(&contract["description"]));
+            fix_asset_issue_contract(&mut contract);
             contract
         }
         Some("UpdateSettingContract") => {
@@ -389,6 +385,15 @@ pub fn fix_api_return(ret: &mut serde_json::Value) {
     if !ret["message"].is_null() {
         ret["message"] = json!(bytes_to_string(&ret["message"]));
     }
+}
+
+// pb: AssetIssueContract
+pub fn fix_asset_issue_contract(asset: &mut serde_json::Value) {
+    asset["abbr"] = json!(bytes_to_string(&asset["abbr"]));
+    asset["description"] = json!(bytes_to_string(&asset["description"]));
+    asset["name"] = json!(bytes_to_string(&asset["name"]));
+    asset["url"] = json!(bytes_to_string(&asset["url"]));
+    asset["owner_address"] = json!(bytes_to_hex_string(&asset["owner_address"]));
 }
 
 // pb: IncrementalMerkleVoucherInfo

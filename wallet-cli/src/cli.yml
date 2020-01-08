@@ -120,6 +120,12 @@ subcommands:
                         - ID:
                               help: Proposal id
                               required: true
+              - asset:
+                    about: Get details of a TRC10 token
+                    args:
+                        - ID:
+                            help: Token id
+                            required: true
 
     - set:
           about: Set or update the blockchain state
