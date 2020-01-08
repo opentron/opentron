@@ -2,8 +2,9 @@ use clap::ArgMatches;
 use hex::{FromHex, ToHex};
 use keys::Address;
 use proto::core::{
-    CreateSmartContract, SmartContract, SmartContract_ABI as Abi, SmartContract_ABI_Entry as AbiEntry,
-    SmartContract_ABI_Entry_EntryType as AbiEntryType, SmartContract_ABI_Entry_Param as AbiEntryParam,
+    ClearABIContract, CreateSmartContract, SmartContract, SmartContract_ABI as Abi,
+    SmartContract_ABI_Entry as AbiEntry, SmartContract_ABI_Entry_EntryType as AbiEntryType,
+    SmartContract_ABI_Entry_Param as AbiEntryParam,
     SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType, UpdateEnergyLimitContract,
     UpdateSettingContract,
 };
@@ -204,11 +205,27 @@ pub fn update_contract_settings(matches: &ArgMatches) -> Result<(), Error> {
     }
 }
 
+pub fn clear_contract_abi(matches: &ArgMatches) -> Result<(), Error> {
+    let owner_address: Address = matches.value_of("OWNER").expect("required in cli.yml; qed").parse()?;
+    let contract = matches
+        .value_of("CONTRACT")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong contract address format"))?;
+
+    let clear_contract = ClearABIContract {
+        owner_address: owner_address.to_bytes().to_owned(),
+        contract_address: contract.to_bytes().to_owned(),
+        ..Default::default()
+    };
+    trx::TransactionHandler::handle(clear_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("create", Some(arg_matches)) => create_contract(arg_matches),
         ("call", Some(arg_matches)) => call::main(arg_matches),
         ("update", Some(arg_matches)) => update_contract_settings(arg_matches),
+        ("clear_abi", Some(arg_matches)) => clear_contract_abi(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
