@@ -5,15 +5,21 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 ## quickstart
 
 ```console
-# install rust-nightly
+> # install rust-nightly
 > curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
 > rustup component add rustfmt
-# compile
+
+> # get code
+> git clone --recurse-submodules git clone --recurse-submodules https://github.com/andelf/rust-tron.git
+> # compile tools
+> cd ./rust-tron/
 > cargo build -p walletd
 > cargo build -p wallet-cli
-# time to rock !!!
-> ./target/debug/wallet-cli help
-# or use testnet toolset
+
+> # time to rock !!!
+> ./target/debug/wallet-cli --help
+
+> # or use testnet toolset
 > ./nile-wallet-cli.sh
 ```
 
