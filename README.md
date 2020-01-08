@@ -48,47 +48,48 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 ### All System Contracts Support and corresponding wallet-cli commands
 
 - [x] AccountUpdateContract - set account name
-    - set account_name
+  - set account_name
 - [x] AccountPermissionUpdateContract
-    - set account_permission
+  - set account_permission
 - [x] FreezeBalanceContract
-    - system freeze
+  - system freeze
 - [x] UnfreezeBalanceContract
-    - system unfreeze
+  - system unfreeze
 - [x] TransferContract
-    - transfer
+  - transfer
 - [x] TransferAssetContract
-    - asset transfer
+  - asset transfer
 - [x] AssetIssueContract
-    - asset issue
+  - asset issue
 - [ ] ParticipateAssetIssueContract
 - [ ] UnfreezeAssetContract
-- [ ] UpdateAssetContract
+- [x] UpdateAssetContract
+  - asset update
 - [x] VoteWitnessContract
-    - system vote_witness
+  - system vote_witness
 - [x] WitnessCreateContract
-    - system create_witness
+  - system create_witness
 - [x] WitnessUpdateContract
-    - system update_witness
+  - system update_witness
 - [x] WithdrawBalanceContract - withdraw SR rewards
-    - system withdraw_reward
+  - system withdraw_reward
 - [x] CreateSmartContract
-    - contract create
+  - contract create
 - [x] TriggerSmartContract
-    - contract call
+  - contract call
 - [x] UpdateSettingContract
-    - contract update
+  - contract update
 - [x] UpdateEnergyLimitContract
-    - contract update
+  - contract update
 - [x] ClearABIContract
-    - contract clear_abi
+  - contract clear_abi
 - [x] ProposalCreateContract
-    - system create_proposal
+  - system create_proposal
 - [x] ProposalApproveContract
-    - system approve_proposal
-    - system disapprove_proposal
+  - system approve_proposal
+  - system disapprove_proposal
 - [x] ProposalDeleteContract
-    - system delete_proposal
+  - system delete_proposal
 - [ ] ExchangeCreateContract
 - [ ] ExchangeInjectContract
 - [ ] ExchangeWithdrawContract
@@ -111,17 +112,17 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
 ### Local Wallet Management
 
 ```console
-$ ./target/debug/wallet-cli wallet create --password YOUR_PASSWORD
+> ./target/debug/wallet-cli wallet create --password YOUR_PASSWORD
 Wallet created!
-$ ./target/debug/wallet-cli wallet open
+> ./target/debug/wallet-cli wallet open
 Wallet opened!
-$ ./target/debug/wallet-cli wallet create_key  # create a random key
+> ./target/debug/wallet-cli wallet create_key  # create a random key
 Address: TMd3p......4JstUBsxen
 Public:  f19f2d5b2c4067a.......7f0d1faaa094a23704d9
 Private: 884f5218eb5da..............6809aa8da19d406
-$ ./target/debug/wallet-cli wallet keys  # list all keys
+> ./target/debug/wallet-cli wallet keys  # list all keys
 ......(omitted)......
-$ ./target/debug/wallet-cli wallet --help  # get help
+> ./target/debug/wallet-cli wallet --help  # get help
 ```
 
 ### Common Transaction Options
