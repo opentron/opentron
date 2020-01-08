@@ -862,7 +862,15 @@ subcommands:
                               help: Percentage of user resource consumed, in the range [0, 100]
                               long: user-resource-percent
                               takes_value: true
+                              value_name: PERCENT
                               default_value: "100"
+                        - energy-limit:
+                              help: Maximum energy consumed when triggering contract
+                              long: energy-limit
+                              takes_value: true
+                              value_name: VALUE
+                              conflicts_with:
+                                  - user-resource-percent
                         - libraries:
                               help: |
                                   Direct string or file containing library addresses
@@ -946,6 +954,70 @@ subcommands:
                               takes_value: true
                               conflicts_with:
                                   - ARGS
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
+              - update:
+                    about: Update contract settings
+                    args:
+                        - OWNER:
+                              help: Owner of the contract
+                              required: true
+                        - CONTRACT:
+                              help: Contract address
+                              required: true
+                        - user-resource-percent:
+                              help: Percentage of user resource consumed, in the range [0, 100]
+                              long: user-resource-percent
+                              takes_value: true
+                              value_name: PERCENT
+                        - energy-limit:
+                              help: Maximum energy consumed when triggering contract
+                              long: energy-limit
+                              takes_value: true
+                              value_name: VALUE
+                              conflicts_with:
+                                  - user-resource-percent
                         - account:
                               help: The account address used for signing
                               short: k

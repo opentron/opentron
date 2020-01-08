@@ -57,19 +57,19 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 - [x] UnfreezeBalanceContract
 - [x] TransferContract
 - [x] TransferAssetContract
-- [ ] VoteAssetContract
 - [x] AssetIssueContract
 - [ ] ParticipateAssetIssueContract
 - [ ] UnfreezeAssetContract
 - [ ] UpdateAssetContract
+- [ ] ~~VoteAssetContract~~
 - [x] VoteWitnessContract
 - [x] WitnessCreateContract
 - [x] WitnessUpdateContract
 - [x] WithdrawBalanceContract - withdraw SR rewards
 - [x] CreateSmartContract
 - [x] TriggerSmartContract
-- [ ] UpdateSettingContract
-- [ ] UpdateEnergyLimitContract
+- [x] UpdateSettingContract
+- [x] UpdateEnergyLimitContract
 - [ ] ClearABIContract
 - [x] ProposalCreateContract
 - [x] ProposalApproveContract

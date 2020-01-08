@@ -4,7 +4,8 @@ use keys::Address;
 use proto::core::{
     CreateSmartContract, SmartContract, SmartContract_ABI as Abi, SmartContract_ABI_Entry as AbiEntry,
     SmartContract_ABI_Entry_EntryType as AbiEntryType, SmartContract_ABI_Entry_Param as AbiEntryParam,
-    SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType,
+    SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType, UpdateEnergyLimitContract,
+    UpdateSettingContract,
 };
 use std::fs;
 use std::path::Path;
@@ -155,6 +156,10 @@ pub fn create_contract(matches: &ArgMatches) -> Result<(), Error> {
         .parse()?;
     new_contract.set_consume_user_resource_percent(percent);
 
+    if let Some(val) = matches.value_of("energy-limit") {
+        new_contract.set_origin_energy_limit(val.parse()?);
+    }
+
     let mut create_contract = CreateSmartContract::new();
     create_contract.set_owner_address(owner_address.as_ref().to_owned());
     create_contract.set_new_contract(new_contract);
@@ -164,10 +169,46 @@ pub fn create_contract(matches: &ArgMatches) -> Result<(), Error> {
         .run()
 }
 
+pub fn update_contract_settings(matches: &ArgMatches) -> Result<(), Error> {
+    let owner_address: Address = matches.value_of("OWNER").expect("required in cli.yml; qed").parse()?;
+    let contract = matches
+        .value_of("CONTRACT")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong contract address format"))?;
+
+    match (
+        matches.value_of("user-resource-percent"),
+        matches.value_of("energy-limit"),
+    ) {
+        (Some(res_percent), None) => {
+            let update_contract = UpdateSettingContract {
+                owner_address: owner_address.to_bytes().to_owned(),
+                contract_address: contract.to_bytes().to_owned(),
+                consume_user_resource_percent: res_percent.parse()?,
+                ..Default::default()
+            };
+            trx::TransactionHandler::handle(update_contract, matches).run()
+        }
+        (None, Some(limit)) => {
+            let update_contract = UpdateEnergyLimitContract {
+                owner_address: owner_address.to_bytes().to_owned(),
+                contract_address: contract.to_bytes().to_owned(),
+                origin_energy_limit: limit.parse()?,
+                ..Default::default()
+            };
+            trx::TransactionHandler::handle(update_contract, matches).run()
+        }
+        _ => Err(Error::Runtime(
+            "one of --user-resource-percent or --energy-limit required",
+        )),
+    }
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("create", Some(arg_matches)) => create_contract(arg_matches),
         ("call", Some(arg_matches)) => call::main(arg_matches),
+        ("update", Some(arg_matches)) => update_contract_settings(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
