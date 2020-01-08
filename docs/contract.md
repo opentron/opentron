@@ -1,5 +1,55 @@
 # Contract reference
 
+## Creating Smart Contract on Chain
+
+```console
+> # compile contract
+> solc -o . --bin Contract.sol
+> solc -o . --abi Contract.sol
+
+> # create contract
+> ./target/debug/wallet-cli contract create TGQgfK497YXmjdgvun9Bg5Zu3xE15v17cu \
+>     --abi ./Contract.abi --code ./Contract.bin \
+>     --name YourSuperCoolContractName
+.... (omitted)
+TX: d8228648cb275bb548da9a8b2d11beb956275413774015a63e390de85bc1fb57
+.... (omitted)
+
+> # get contract address
+> ./target/debug/wallet-cli get transaction_info d8228648cb275bb548da9a8b2d11beb956275413774015a63e390de85bc1fb57
+.... (omitted)
+"contract_address": "4123ff5e2eac2926b5ed72948eb9e69a07f24b49ba",
+.... (omitted)
+
+> # get contract ABI
+> ./target/debug/wallet-cli get contract 4123ff5e2eac2926b5ed72948eb9e69a07f24b49ba
+.... (omitted)
+function get() returns (uint256)
+    => 6d4ce63c: get()
+function set(uint256 x)
+    => 60fe47b1: set(uint256)
+
+> # call contract
+> ./target/debug/wallet-cli contract call TGQgfK497YXmjdgvun9Bg5Zu3xE15v17cu \
+>     4123ff5e2eac2926b5ed72948eb9e69a07f24b49ba \
+>     'set(uint256)' -- 20
+
+> # use `get transaction_info` to fetch calling result
+
+> ./target/debug/wallet-cli contract call TGQgfK497YXmjdgvun9Bg5Zu3xE15v17cu \
+>     4123ff5e2eac2926b5ed72948eb9e69a07f24b49ba \
+>     'get(uint256)'
+.... (omitted)
+TX: 26ff621bcb2c74da8a14c77c20d55cbad8cb0ea022e1174d9522c283c133355c
+.... (omitted)
+> ./target/debug/wallet-cli get transaction_info 26ff621bcb2c74da8a14c77c20d55cbad8cb0ea022e1174d9522c283c133355c
+.... (omitted)
+  "contractResult": [
+    "0000000000000000000000000000000000000000000000000000000000000014"
+  ],
+.... (omitted)
+```
+
 ## ContractType Code
 
 ```c
