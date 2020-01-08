@@ -3,7 +3,9 @@
 use chrono::{DateTime, Utc};
 use clap::ArgMatches;
 use keys::Address;
-use proto::core::{AssetIssueContract, AssetIssueContract_FrozenSupply as FrozenSupply, TransferAssetContract};
+use proto::core::{
+    AssetIssueContract, AssetIssueContract_FrozenSupply as FrozenSupply, TransferAssetContract, UpdateAssetContract,
+};
 
 use crate::error::Error;
 use crate::utils::trx;
@@ -77,6 +79,13 @@ pub fn issue_asset(matches: &ArgMatches) -> Result<(), Error> {
     issue_contract.set_trx_num(trx_num as i32);
     issue_contract.set_num(ico_num as i32);
 
+    if let Some(limit) = matches.value_of("bandwidth-limit-for-issuer") {
+        issue_contract.set_free_asset_net_limit(limit.parse()?);
+    }
+    if let Some(public_limit) = matches.value_of("bandwidth-limit-per-account") {
+        issue_contract.set_public_free_asset_net_limit(public_limit.parse()?);
+    }
+
     trx::TransactionHandler::handle(issue_contract, matches).run()
 }
 
@@ -109,10 +118,36 @@ pub fn transfer_asset(matches: &ArgMatches) -> Result<(), Error> {
         .run()
 }
 
+pub fn update_asset_settings(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+
+    let description = matches.value_of("description").expect("required in cli.yml; qed");
+    let url = matches.value_of("url").expect("required in cli.yml; qed");
+
+    let mut update_contract = UpdateAssetContract::new();
+    update_contract.set_owner_address(sender.as_ref().to_owned());
+
+    update_contract.set_description(description.as_bytes().to_owned());
+    update_contract.set_url(url.as_bytes().to_owned());
+
+    if let Some(limit) = matches.value_of("bandwidth-limit-for-issuer") {
+        update_contract.set_new_limit(limit.parse()?);
+    }
+    if let Some(public_limit) = matches.value_of("bandwidth-limit-per-account") {
+        update_contract.set_new_public_limit(public_limit.parse()?);
+    }
+
+    trx::TransactionHandler::handle(update_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("issue", Some(arg_matches)) => issue_asset(arg_matches),
         ("transfer", Some(arg_matches)) => transfer_asset(arg_matches),
+        ("update", Some(arg_matches)) => update_asset_settings(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
