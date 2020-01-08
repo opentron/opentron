@@ -223,39 +223,27 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("node", _) => node_info(),
         ("block", Some(arg_matches)) => get_block(arg_matches),
         ("transaction", Some(tr_matches)) => {
-            let id = tr_matches
-                .value_of("ID")
-                .expect("transaction is required in cli.yml; qed");
+            let id = tr_matches.value_of("ID").expect("required in cli.yml; qed");
             get_transaction(id)
         }
         ("transaction_info", Some(tr_matches)) => {
-            let id = tr_matches
-                .value_of("ID")
-                .expect("transaction is required in cli.yml; qed");
+            let id = tr_matches.value_of("ID").expect("required in cli.yml; qed");
             get_transaction_info(id)
         }
         ("account", Some(arg_matches)) => {
-            let name = arg_matches
-                .value_of("NAME")
-                .expect("account name is required is cli.yml; qed");
+            let name = arg_matches.value_of("NAME").expect("required is cli.yml; qed");
             get_account(name)
         }
         ("account_permission", Some(arg_matches)) => {
-            let name = arg_matches
-                .value_of("NAME")
-                .expect("account name is required is cli.yml; qed");
+            let name = arg_matches.value_of("NAME").expect("required is cli.yml; qed");
             get_account_permission(name)
         }
         ("account_resource", Some(arg_matches)) => {
-            let name = arg_matches
-                .value_of("NAME")
-                .expect("account name is required is cli.yml; qed");
+            let name = arg_matches.value_of("NAME").expect("required is cli.yml; qed");
             get_account_resource(name)
         }
         ("contract", Some(arg_matches)) => {
-            let addr = arg_matches
-                .value_of("ADDR")
-                .expect("address is required is cli.yml; qed");
+            let addr = arg_matches.value_of("ADDR").expect("required is cli.yml; qed");
             contract::run(addr)
         }
         ("proposal", Some(arg_matches)) => {
