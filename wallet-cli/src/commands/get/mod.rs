@@ -168,15 +168,14 @@ fn get_account_permission(name: &str) -> Result<(), Error> {
 /// Get account energy and bandwidth infomation.
 fn get_account_resource(name: &str) -> Result<(), Error> {
     let mut req = Account::new();
-    let addr = name.parse::<Address>().expect("addr format");
+    let addr = name.parse::<Address>()?;
     req.set_address(addr.to_bytes().to_owned());
 
     let (_, payload, _) = new_grpc_client()?
         .get_account_resource(Default::default(), req)
-        .wait()
-        .expect("grpc request");
+        .wait()?;
 
-    println!("{}", serde_json::to_string_pretty(&payload).expect("resp json parse"));
+    println!("{}", serde_json::to_string_pretty(&payload)?);
     Ok(())
 }
 
