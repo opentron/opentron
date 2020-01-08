@@ -365,7 +365,7 @@ subcommands:
                     about: Change URL of a witness
                     args: *witness_url_args
               - withdraw_reward:
-                    about: Withdraw SR rewards for a witness
+                    about: Withdraw SR rewards from allowance for a witness
                     args:
                         - SENDER:
                               help: The account to of the witness
