@@ -1,5 +1,5 @@
 pub mod asset;
-pub mod call;
+pub mod contract;
 pub mod get;
 pub mod list;
 pub mod set;

@@ -13,6 +13,8 @@ use crate::error::Error;
 use crate::utils::abi;
 use crate::utils::trx;
 
+mod call;
+
 #[inline]
 fn translate_state_mutablility(val: &serde_json::Value) -> AbiEntryStateMutabilityType {
     match val.as_str().unwrap_or("") {
@@ -78,7 +80,7 @@ fn json_to_abi(json: &serde_json::Value) -> Abi {
     }
 }
 
-pub fn run(matches: &ArgMatches) -> Result<(), Error> {
+pub fn create_contract(matches: &ArgMatches) -> Result<(), Error> {
     let owner_address: Address = matches.value_of("OWNER").expect("required in cli.yml; qed").parse()?;
     let abi = match matches.value_of("abi") {
         Some(fname) if Path::new(fname).exists() => {
@@ -160,4 +162,15 @@ pub fn run(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(create_contract, matches)
         .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))
         .run()
+}
+
+pub fn main(matches: &ArgMatches) -> Result<(), Error> {
+    match matches.subcommand() {
+        ("create", Some(arg_matches)) => create_contract(arg_matches),
+        ("call", Some(arg_matches)) => call::main(arg_matches),
+        _ => {
+            eprintln!("{}", matches.usage());
+            Err(Error::Runtime("error parsing command line"))
+        }
+    }
 }

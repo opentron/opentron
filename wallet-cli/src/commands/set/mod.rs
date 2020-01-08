@@ -9,8 +9,6 @@ use crate::error::Error;
 use crate::utils::jsont;
 use crate::utils::trx;
 
-mod contract;
-
 /// Set account permission info.
 fn set_account_permission(matches: &ArgMatches) -> Result<(), Error> {
     let addr = matches
@@ -57,7 +55,6 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("account_permission", Some(arg_matches)) => set_account_permission(arg_matches),
         ("account_name", Some(arg_matches)) => set_account_name(arg_matches),
-        ("contract", Some(arg_matches)) => contract::run(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
