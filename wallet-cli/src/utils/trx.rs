@@ -89,6 +89,15 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
 }
 
 /// Parse command line amount to amount in pb.
+#[inline]
+pub fn parse_amount_without_surfix(amount: &str) -> Result<i64, Error> {
+    if amount.is_empty() {
+        return Err(Error::Runtime("can not parse empty amount"));
+    }
+    Ok(amount.replace("_", "").parse()?)
+}
+
+/// Parse command line amount to amount in pb.
 pub fn parse_amount(amount: &str, allow_unit: bool) -> Result<i64, Error> {
     // NOTE: simple parse, buggy but works
     if amount.is_empty() {

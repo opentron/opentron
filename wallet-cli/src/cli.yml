@@ -62,7 +62,8 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values:
+              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
 
 subcommands:
@@ -745,71 +746,113 @@ subcommands:
 
     # asset (issue, transfer, vote, unfreeze, update, participate)
     - asset:
-        about: Manage TRC10 assets
-        settings: *default_settings
-        subcommands:
-            - issue:
-                about: Issue TRC10 tokens
-                args:
-                    - SENDER:
-                        help: The account issuing token
-                        required: true
-                    - NAME:
-                        help: Name of the issued TRC10 token
-                        required: true
-                    - SUPPLY:
-                        help: Total supply of TRC10 token
-                        required: true
-                    - abbr:
-                        help: Abbreviation of TRC10 token
-                        long: abbr
-                        takes_value: true
-                        value_name: ABBR
-                    - precision:
-                        help: Precision of TRC10 token
-                        long: precision
-                        default_value: "0"
-                    - freeze:
-                        help: Amount and time of token freeze
-                        long: freeze
-                        multiple: true
-                        takes_value: true
-                        value_name: "AMOUNT=DAYS"
-                    - exchange-rate:
-                        help: Exchange rate from TRX to current token
-                        long: exchange-rate
-                        takes_value: true
-                        default_value: "1_000_000:1"
-                        value_name: "TRX:ICO"
-                    - issuing-period:
-                        help: Period of token issuing, datetime in yyyyMMdd[HHmmss] format, must > NOW
-                        long: issuing-period
-                        required: true
-                        takes_value: true
-                        value_names:
-                            - START
-                            - END
-                    - description:
-                        help: Description of TRC10 token
-                        long: description
-                        takes_value: true
-                    - url:
-                        help: URL of TRC10 token
-                        long: url
-                        takes_value: true
-                        required: true
-                        value_name: URL
-                    - bandwidth-limit-per-account:
-                        help: Maximum amount of public bandwidth an account is allowed to use while transfering
-                        long: free-bandwidth-per-account
-                        takes_value: true
-                        value_name: LIMIT
-                    - bandwidth-limit-for-issuer:
-                        help: Maximum amount of public bandwidth issuer account is allowed to use while transfering
-                        long: bandwidth-limit-for-issuer
-                        takes_value: true
-                        value_name: LIMIT
-
+          about: Manage TRC10 assets
+          settings: *default_settings
+          subcommands:
+              - issue:
+                    about: Issue TRC10 tokens
+                    args:
+                        - SENDER:
+                              help: The account issuing token
+                              required: true
+                        - NAME:
+                              help: Name of the issued TRC10 token
+                              required: true
+                        - SUPPLY:
+                              help: Total supply of TRC10 token
+                              required: true
+                        - abbr:
+                              help: Abbreviation of TRC10 token
+                              long: abbr
+                              takes_value: true
+                              value_name: ABBR
+                        - precision:
+                              help: Precision of TRC10 token
+                              long: precision
+                              default_value: "0"
+                        - freeze:
+                              help: Amount and time of token freeze
+                              long: freeze
+                              multiple: true
+                              takes_value: true
+                              value_name: "AMOUNT=DAYS"
+                        - exchange-rate:
+                              help: Exchange rate from TRX to current token
+                              long: exchange-rate
+                              takes_value: true
+                              default_value: "1_000_000:1"
+                              value_name: "TRX:ICO"
+                        - issuing-period:
+                              help: Period of token issuing, datetime in RFC3339 format, must > HeadBlockTime
+                              long: issuing-period
+                              required: true
+                              takes_value: true
+                              value_names:
+                                  - START
+                                  - END
+                        - description:
+                              help: Description of TRC10 token
+                              long: description
+                              takes_value: true
+                        - url:
+                              help: URL of TRC10 token
+                              long: url
+                              takes_value: true
+                              required: true
+                              value_name: URL
+                        - bandwidth-limit-per-account:
+                              help: Maximum amount of public bandwidth an account is allowed to use while transfering
+                              long: free-bandwidth-per-account
+                              takes_value: true
+                              value_name: LIMIT
+                        - bandwidth-limit-for-issuer:
+                              help: Maximum amount of public bandwidth issuer account is allowed to use while transfering
+                              long: bandwidth-limit-for-issuer
+                              takes_value: true
+                              value_name: LIMIT
+                        - account:
+                              help: The account address used for signing
+                              short: k
+                              long: account
+                              takes_value: true
+                        - private-key:
+                              help: The private key used for signing
+                              short: K
+                              long: private-key
+                              takes_value: true
+                              conflicts_with:
+                                  - account
+                        - skip-sign:
+                              help: Skip actual sign process
+                              short: s
+                              long: skip-sign
+                              conflicts_with:
+                                  - account
+                                  - private-key
+                        - dont-broadcast:
+                              help: Don't broadcast transaction to the network (just print to stdout)
+                              short: d
+                              long: dont-broadcast
+                        - expiration:
+                              help: Set the time in seconds before a transaction expires
+                              short: x
+                              long: expiration
+                              takes_value: true
+                              # default_value: "60"
+                        - fee-limit:
+                              help: Maximum value of TRX allowed consumed
+                              long: fee-limit
+                              takes_value: true
+                        - ref-block:
+                              help: Set the reference block num or block id used for TAPOS (Transaction as Proof-of-Stake)
+                              short: r
+                              long: ref-block
+                              takes_value: true
+                        - permission-id:
+                              help: Permission id used by transaction
+                              long: permission-id
+                              takes_value: true
+                              possible_values: ["0", "2", "1"]
     # contract
     # exchange
 
