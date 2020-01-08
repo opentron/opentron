@@ -16,7 +16,8 @@ TX: d8228648cb275bb548da9a8b2d11beb956275413774015a63e390de85bc1fb57
 .... (omitted)
 
 > # get contract address
-> ./target/debug/wallet-cli get transaction_info d8228648cb275bb548da9a8b2d11beb956275413774015a63e390de85bc1fb57
+> ./target/debug/wallet-cli get transaction_info \
+>     d8228648cb275bb548da9a8b2d11beb956275413774015a63e390de85bc1fb57
 .... (omitted)
 "contract_address": "4123ff5e2eac2926b5ed72948eb9e69a07f24b49ba",
 .... (omitted)
@@ -42,7 +43,8 @@ function set(uint256 x)
 .... (omitted)
 TX: 26ff621bcb2c74da8a14c77c20d55cbad8cb0ea022e1174d9522c283c133355c
 .... (omitted)
-> ./target/debug/wallet-cli get transaction_info 26ff621bcb2c74da8a14c77c20d55cbad8cb0ea022e1174d9522c283c133355c
+> ./target/debug/wallet-cli get transaction_info \
+>     26ff621bcb2c74da8a14c77c20d55cbad8cb0ea022e1174d9522c283c133355c
 .... (omitted)
   "contractResult": [
     "0000000000000000000000000000000000000000000000000000000000000014"
