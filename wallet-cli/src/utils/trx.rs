@@ -39,9 +39,16 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         "type.googleapis.com/protocol.TransferContract" => Ok(Address::try_from(
             parse_from_bytes::<TransferContract>(any.get_value())?.get_owner_address(),
         )?),
-        "type.googleapis.com/protocol.ShieldedTransferContract" => Err(Error::Runtime(
-            "can not extract sender address from ShieldedTransferContract. Use -k/-K instead.",
-        )),
+        "type.googleapis.com/protocol.ShieldedTransferContract" => {
+            let pb = parse_from_bytes::<ShieldedTransferContract>(any.get_value())?;
+            if !pb.get_transparent_from_address().is_empty() {
+                Ok(Address::try_from(pb.get_transparent_from_address())?)
+            } else {
+                Err(Error::Runtime(
+                    "can not extract sender address from ShieldedTransferContract. Use -k/-K instead",
+                ))
+            }
+        }
         "type.googleapis.com/protocol.CreateSmartContract" => Ok(Address::try_from(
             parse_from_bytes::<CreateSmartContract>(any.get_value())?.get_owner_address(),
         )?),
