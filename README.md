@@ -45,7 +45,7 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
     - [ ] solidity
     - [ ] wasm
 
-### All System Contracts Support
+### All System Contracts Support and corresponding wallet-cli commands
 
 - [x] AccountUpdateContract - set account name
     - set account_name

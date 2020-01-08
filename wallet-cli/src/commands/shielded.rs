@@ -99,7 +99,7 @@ pub fn scan_outcoming_note() -> Result<(), Error> {
 
 pub fn scan_incoming_note() -> Result<(), Error> {
     let mut req = IvkDecryptParameters::new();
-    req.start_block_index = 1819100; // start
+    req.start_block_index = 1970000; // start
     req.end_block_index = req.start_block_index + 1000;
     req.set_ivk(Vec::from_hex(
         "b0456583f7a43c05ae2ec72905575ff5737fb2f652d4c0b4bc93849217481006",
@@ -212,7 +212,7 @@ pub fn debug_taddr_to_zaddr() -> Result<(), Error> {
 
     let mut params = PrivateParameters::new();
 
-    let taddr = "TRHYq81WbqoWLHLbsnkjpLmT4WMRDVaT5E".parse::<Address>()?;
+    let taddr = "TJRabPrwbZy45sbavfcjinPJC18kjpRTv8".parse::<Address>()?;
     params.set_transparent_from_address(taddr.as_ref().to_owned());
     // NOTE: current FEE = 10_000000, and amount > FEE
     params.set_from_amount(20_000_000);
