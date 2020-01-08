@@ -12,6 +12,7 @@
 ## Transfering TRC10 token
 
 ```shell
-./target/debug/wallet-cli asset transfer TXBUwpDrRYfSH3MNha5amQ1SkprDBgRhpd TNSrdRdKQa1gpEyJ18okFEcwGyiEN7rtcp \
+./target/debug/wallet-cli asset transfer \
+    TXBUwpDrRYfSH3MNha5amQ1SkprDBgRhpd TNSrdRdKQa1gpEyJ18okFEcwGyiEN7rtcp \
     10_000_000 "HI" --token-id 1000016
 ```
