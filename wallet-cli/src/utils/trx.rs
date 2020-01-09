@@ -172,7 +172,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
     pub fn run(&mut self) -> Result<(), Error> {
         let matches = self.arg_matches;
 
-        // packing contract
+        // packing contract to TransactionRaw
         let any = self.contract.as_google_any()?;
 
         let mut contract = Contract::new();
@@ -186,6 +186,11 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         raw.set_contract(vec![contract].into());
         if let Some(f) = self.raw_trx_fn.as_mut() {
             f(&mut raw);
+        }
+
+        if let Some(fee_limit_amount) = matches.value_of("fee-limit") {
+            let limit = parse_amount_with_surfix(fee_limit_amount, "TRX", 6)?;
+            raw.set_fee_limit(limit);
         }
 
         let expiration = matches.value_of("expiration").unwrap_or("60").parse::<i64>()?;
