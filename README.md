@@ -33,83 +33,83 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 
 - [ ] full Tron Protocol implementation
   - [x] joking
-  - [ ] network
-  - [ ] p2p
-  - [ ] rpc
-  - [ ] consensus
-  - [ ] chain
-  - [ ] chainbase
-  - [ ] governance
-  - [ ] sync
-  - [ ] script
-    - [ ] solidity
-    - [ ] wasm
-
-### All System Contracts Support and corresponding wallet-cli commands
-
-- [x] AccountUpdateContract - set account name
-  - set account_name
-- [x] AccountPermissionUpdateContract
-  - set account_permission
-- [x] FreezeBalanceContract
-  - system freeze
-- [x] UnfreezeBalanceContract
-  - system unfreeze
-- [x] TransferContract
-  - transfer
-- [x] TransferAssetContract
-  - asset transfer
-- [x] AssetIssueContract
-  - asset issue
-- [x] ParticipateAssetIssueContract
-  - asset participate
-- [x] UnfreezeAssetContract
-  - asset unfreeze
-- [x] UpdateAssetContract
-  - asset update
-- [x] VoteWitnessContract
-  - system vote_witness
-- [x] WitnessCreateContract
-  - system create_witness
-- [x] WitnessUpdateContract
-  - system update_witness
-- [x] WithdrawBalanceContract - withdraw SR rewards
-  - system withdraw_reward
-- [x] CreateSmartContract
-  - contract create
-- [x] TriggerSmartContract
-  - contract call
-- [x] UpdateSettingContract
-  - contract update
-- [x] UpdateEnergyLimitContract
-  - contract update
-- [x] ClearABIContract
-  - contract clear_abi
-- [x] ProposalCreateContract
-  - system create_proposal
-- [x] ProposalApproveContract
-  - system approve_proposal
-  - system disapprove_proposal
-- [x] ProposalDeleteContract
-  - system delete_proposal
-- [ ] ExchangeCreateContract
-- [ ] ExchangeInjectContract
-- [ ] ExchangeWithdrawContract
-- [ ] ExchangeTransactionContract
-- [ ] ShieldedTransferContract
-- [ ] ~~BuyStorageContract~~
-- [ ] ~~BuyStorageBytesContract~~
-- [ ] ~~SellStorageContract~~
-- [ ] ~~UpdateBrokerageContract~~
-- [ ] ~~SetAccountIdContract~~
-- [ ] ~~AccountCreateContract~~
-- [ ] ~~VoteAssetContract~~
 
 ## wallet-cli
 
 A command-line tool which let developers interact Tron Protocol as well as deploy, test smart contracts.
 
 > NOTE: Always use ``--help`` to get hint about how to use the command.
+
+### All System Contracts Support and corresponding wallet-cli commands
+
+- Account
+  - AccountUpdateContract: `set account_name`
+  - AccountPermissionUpdateContract: `set account_permission`
+  - FreezeBalanceContract: `system freeze`
+  - UnfreezeBalanceContract: `system unfreeze`
+- Transfer: `transfer`
+- TRC10 Asset
+  - TransferAssetContract: `asset transfer`
+  - AssetIssueContract: `asset issue`
+  - UpdateAssetContract: `asset update`
+  - ParticipateAssetIssueContract: `asset participate`
+  - UnfreezeAssetContract: `asset unfreeze`
+- SmartContract
+  - CreateSmartContract: `contract create`
+  - TriggerSmartContract: `contract call`
+  - UpdateSettingContract: `contract update`
+  - UpdateEnergyLimitContract: `contract update`
+  - ClearABIContract: `contract clear_abi`
+- Witness
+  - VoteWitnessContract: `system vote_witness`
+  - WitnessCreateContract: `system create_witness`
+  - WitnessUpdateContract: `system update_witness`
+  - WithdrawBalanceContract: `system withdraw_reward` - withdraw SR rewards
+- Proposal
+  - ProposalCreateContract: `system create_proposal`
+  - ProposalApproveContract: `system approve_proposal` `system disapprove_proposal`
+  - ProposalDeleteContract: `system delete_proposal`
+- Exchange
+  - [ ] ExchangeCreateContract
+  - [ ] ExchangeInjectContract
+  - [ ] ExchangeWithdrawContract
+  - [ ] ExchangeTransactionContract
+- ShieldedTransfer
+  - [ ] ShieldedTransferContract
+- ~~Deprecated~~
+  - Storage deprecated
+    - BuyStorageContract
+    - BuyStorageBytesContract
+    - SellStorageContract
+  - Deprecated account
+    - SetAccountIdContract - id useless?
+    - AccountCreateContract - transfering creates account
+  - UpdateBrokerageContract
+  - VoteAssetContract
+
+### Chain Lookup
+
+```text
+get subcommand
+    account               Retrieve an account from the blockchain
+    account_permission    Retrieve account permision info from the blockchain
+    account_resource      Retrieve energy and bandwidth usage of an account
+    asset                 Get details of a TRC10 token
+    block                 Retrieve a full block from the blockchain
+    contract              Get details of a smart contract
+    node                  Get current connected node state information
+    proposal              Get details of a proposal
+    transaction           Retrieve a transaction from the blockchain
+    transaction_info      Retrieve receipt of atransaction
+
+list subcommand
+    asset        Retrieve list of all tokens
+    exchange     Retrive list of all exchanges
+    node         List the nodes which is connecting to the network
+    parameter    List chain parameters
+    proposal     Retrive list of all proposals
+    witness      Query the list of Super Representatives
+```
 
 ### Local Wallet Management
 
