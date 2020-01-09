@@ -3,12 +3,12 @@
 extern crate pairing;
 extern crate rand_core;
 extern crate test;
-extern crate zcash_primitives;
+extern crate ztron_primitives;
 
 use pairing::bls12_381::Bls12;
 use rand_core::{OsRng, RngCore};
-use zcash_primitives::jubjub::JubjubBls12;
-use zcash_primitives::pedersen_hash::{pedersen_hash, Personalization};
+use ztron_primitives::jubjub::JubjubBls12;
+use ztron_primitives::pedersen_hash::{pedersen_hash, Personalization};
 
 #[bench]
 fn bench_pedersen_hash(b: &mut test::Bencher) {

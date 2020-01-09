@@ -1,6 +1,6 @@
 //! *General Zcash primitives.*
 //!
-//! `zcash_primitives` is a library that provides the core structs and functions necessary
+//! `ztron_primitives` is a library that provides the core structs and functions necessary
 //! for working with Zcash.
 
 // Catch documentation errors caused by code changes.

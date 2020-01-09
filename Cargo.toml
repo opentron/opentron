@@ -45,4 +45,5 @@ members = [
     "wallet-cli",
     "wallet",
     "walletd",
+    "ztron_primitives"
 ]

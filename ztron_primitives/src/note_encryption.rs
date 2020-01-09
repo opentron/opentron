@@ -215,12 +215,12 @@ fn prf_ock(
 /// extern crate ff;
 /// extern crate pairing;
 /// extern crate rand_core;
-/// extern crate zcash_primitives;
+/// extern crate ztron_primitives;
 ///
 /// use ff::Field;
 /// use pairing::bls12_381::Bls12;
 /// use rand_core::OsRng;
-/// use zcash_primitives::{
+/// use ztron_primitives::{
 ///     jubjub::fs::Fs,
 ///     keys::OutgoingViewingKey,
 ///     note_encryption::{Memo, SaplingNoteEncryption},

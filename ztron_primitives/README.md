@@ -1,4 +1,4 @@
-# zcash_primitives
+# ztron_primitives
 
 This library contains Rust implementations of the Zcash primitives.
 
