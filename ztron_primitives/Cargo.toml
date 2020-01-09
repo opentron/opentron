@@ -29,6 +29,7 @@ rand_core = "0.5.1"
 ripemd160 = { version = "0.8", optional = true }
 secp256k1 = { version = "=0.15.0", optional = true }
 sha2 = "0.8"
+bech32 = "0.7"
 
 [dev-dependencies]
 hex-literal = "0.2"

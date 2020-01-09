@@ -1,18 +1,19 @@
 //! Structs for core Zcash primitives.
 
 use ff::{Field, PrimeField, PrimeFieldRepr};
-
-use crate::constants;
-
-use crate::group_hash::group_hash;
-
-use crate::pedersen_hash::{pedersen_hash, Personalization};
-
+use std::fmt;
 use byteorder::{LittleEndian, WriteBytesExt};
+use blake2s_simd::Params as Blake2sParams;
+use bech32::{self, FromBase32, ToBase32};
+use pairing::bls12_381::Bls12;
+use std::str::FromStr;
 
+use crate::JUBJUB;
+use crate::constants;
+use crate::group_hash::group_hash;
+use crate::pedersen_hash::{pedersen_hash, Personalization};
 use crate::jubjub::{edwards, FixedGenerators, JubjubEngine, JubjubParams, PrimeOrder};
 
-use blake2s_simd::Params as Blake2sParams;
 
 #[derive(Clone)]
 pub struct ValueCommitment<E: JubjubEngine> {
@@ -138,6 +139,27 @@ impl<E: JubjubEngine> PartialEq for PaymentAddress<E> {
     }
 }
 
+impl<E: JubjubEngine> fmt::Display for PaymentAddress<E> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", bech32::encode("ztron", (&self.to_bytes()[..]).to_base32()).unwrap())
+    }
+}
+
+impl FromStr for PaymentAddress<Bls12> {
+    type Err = fmt::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+
+        let (hrp, data) = bech32::decode(s).map_err(|_| fmt::Error)?;
+        if hrp == "ztron" {
+            let raw = Vec::<u8>::from_base32(&data).map_err(|_| fmt::Error)?;
+            PaymentAddress::<Bls12>::from_bytes(&raw, &JUBJUB).ok_or(fmt::Error)
+        } else {
+            Err(fmt::Error)
+        }
+    }
+}
+
 impl<E: JubjubEngine> PaymentAddress<E> {
     /// Constructs a PaymentAddress from a diversifier and a Jubjub point.
     ///
@@ -165,7 +187,10 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     }
 
     /// Parses a PaymentAddress from bytes.
-    pub fn from_bytes(bytes: &[u8; 43], params: &E::Params) -> Option<Self> {
+    pub fn from_bytes(bytes: &[u8], params: &E::Params) -> Option<Self> {
+        if bytes.len() != 43 {
+            return None;
+        }
         let diversifier = {
             let mut tmp = [0; 11];
             tmp.copy_from_slice(&bytes[0..11]);
@@ -312,5 +337,29 @@ impl<E: JubjubEngine> Note<E> {
         // The commitment is in the prime order subgroup, so mapping the
         // commitment to the x-coordinate is an injective encoding.
         self.cm_full_point(params).to_xy().0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::JUBJUB;
+    use pairing::bls12_381::Bls12;
+
+    #[test]
+    fn paryment_address() {
+        let raw = [
+            22, 106, 69, 173, 225, 17, 87, 175, 245, 51, 184, // Diversifier
+            87, 51, 47, 45, 138, 162, 37, 14, 235, 116, 153,
+            118, 131, 215, 139, 45, 16, 176, 185, 127, 97, 104,
+             202, 47, 132, 227, 34, 199, 55, 52, 105, 207 // pk_d
+        ];
+        let expected_addr = "ztron1ze4ytt0pz9t6lafnhptnxted323z2rhtwjvhdq7h3vk3pv9e0ask3j30sn3j93ehx35u7ku7q0d";
+
+        let addr = PaymentAddress::<Bls12>::from_bytes(&raw, &JUBJUB).unwrap();
+        assert_eq!(addr.to_string(), expected_addr);
+
+        let parsed_addr: PaymentAddress<Bls12> = expected_addr.parse().unwrap();
+        assert_eq!(parsed_addr, addr);
     }
 }
