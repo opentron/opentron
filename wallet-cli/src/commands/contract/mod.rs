@@ -95,6 +95,9 @@ pub fn create_contract(matches: &ArgMatches) -> Result<(), Error> {
         }
         _ => unreachable!("required in cli.yml; qed"),
     };
+    if matches.is_present("libraries") {
+        return Err(Error::Runtime("--libraries unimplemented"));
+    }
     let mut bytecode: Vec<u8> = match matches.value_of("code") {
         Some(fname) if Path::new(fname).exists() => {
             let bytecode_hex = fs::read_to_string(fname)?;
