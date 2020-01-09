@@ -21,7 +21,7 @@ pub fn main<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     let transfer_contract = TransferContract {
         owner_address: sender.to_bytes().to_owned(),
         to_address: recipient.to_bytes().to_owned(),
-        amount: trx::parse_amount(amount, true)?,
+        amount: trx::parse_amount_with_surfix(amount, "TRX", 6)?,
         ..Default::default()
     };
 

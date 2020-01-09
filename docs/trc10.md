@@ -16,3 +16,13 @@
     TXBUwpDrRYfSH3MNha5amQ1SkprDBgRhpd TNSrdRdKQa1gpEyJ18okFEcwGyiEN7rtcp \
     10_000_000 "HI" --token-id 1000016
 ```
+
+## Participate Issuing
+
+When a TRC10 asset is issuing, you can participate the issuing. The following transaction
+exchange ICO tokens with 1_TRX.
+
+```shell
+./target/debug/wallet-cli asset participate TGQgfK497YXmjdgvun9Bg5Zu3xE15v17cu \
+    TXBUwpDrRYfSH3MNha5amQ1SkprDBgRhpd 1_TRX --token-id 1000018
+```

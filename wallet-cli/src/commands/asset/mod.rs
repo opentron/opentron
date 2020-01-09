@@ -153,13 +153,14 @@ fn participate_asset_issue(matches: &ArgMatches) -> Result<(), Error> {
         .value_of("RECIPIENT")
         .and_then(|s| s.parse::<Address>().ok())
         .ok_or(Error::Runtime("wrong recipient address format"))?;
+    // NOTE: this contract is used for get ICO token with TRX
     let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
     let assert_id = matches.value_of("token-id").expect("required in cli.yml; qed");
 
     let participate_contract = ParticipateAssetIssueContract {
         owner_address: sender.to_bytes().to_owned(),
         to_address: recipient.to_bytes().to_owned(),
-        amount: trx::parse_amount_without_surfix(amount)?,
+        amount: trx::parse_amount_with_surfix(amount, "TRX", 6)?,
         asset_name: assert_id.as_bytes().to_owned(),
         ..Default::default()
     };

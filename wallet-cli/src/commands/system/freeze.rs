@@ -25,7 +25,7 @@ pub fn freeze(matches: &ArgMatches) -> Result<(), Error> {
         } else {
             receiver.to_bytes().to_owned()
         },
-        frozen_balance: trx::parse_amount(amount, true)?,
+        frozen_balance: trx::parse_amount_with_surfix(amount, "TRX", 6)?,
         frozen_duration: duration.parse()?,
         resource: if matches.is_present("energy") {
             ResourceCode::ENERGY

@@ -848,7 +848,7 @@ subcommands:
                               help: Issuer of the token
                               required: true
                         - AMOUNT:
-                              help: Amount of TRC10 token
+                              help: Amount of TRX sent to exchange TRC10 token
                               required: true
                         - token-id:
                               help: TRC10 token id

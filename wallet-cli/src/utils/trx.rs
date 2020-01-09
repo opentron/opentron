@@ -123,27 +123,21 @@ pub fn parse_amount_without_surfix(amount: &str) -> Result<i64, Error> {
 }
 
 /// Parse command line amount to amount in pb.
-pub fn parse_amount(amount: &str, allow_unit: bool) -> Result<i64, Error> {
-    // NOTE: simple parse, buggy but works
+pub fn parse_amount_with_surfix(amount: &str, surfix: &str, precision: u32) -> Result<i64, Error> {
     if amount.is_empty() {
         return Err(Error::Runtime("can not parse empty amount"));
     }
-    if allow_unit {
-        let length = amount.as_bytes().len();
-        // FIXME: allow other unit
-        if amount.ends_with("TRX") || amount.ends_with("TRZ") {
-            String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
-                .replace("_", "")
-                .parse::<i64>()
-                .map(|v| v * 1_000_000)
-                .map_err(Error::from)
-        } else if amount.ends_with("SUN") {
-            Ok(String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
-                .replace("_", "")
-                .parse()?)
-        } else {
-            Ok(amount.replace("_", "").parse()?)
-        }
+    let length = amount.as_bytes().len();
+    if amount.ends_with(surfix) {
+        String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
+            .replace("_", "")
+            .parse::<i64>()
+            .map(|v| v * (10 as i64).pow(precision))
+            .map_err(Error::from)
+    } else if amount.ends_with("SUN") {
+        Ok(String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
+            .replace("_", "")
+            .parse()?)
     } else {
         Ok(amount.replace("_", "").parse()?)
     }
