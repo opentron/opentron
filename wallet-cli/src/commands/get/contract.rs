@@ -16,7 +16,7 @@ pub fn run(addr: &str) -> Result<(), Error> {
     req.set_value(address.to_bytes().to_owned());
 
     let (_, payload, _) = new_grpc_client()?.get_contract(Default::default(), req).wait()?;
-    if payload.get_bytecode().is_empty() {
+    if payload.get_code_hash().is_empty() {
         return Err(Error::Runtime("contract not found on chain"));
     }
 
@@ -37,7 +37,7 @@ fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Erro
         let mut pretty = match entry.get_field_type() {
             ::proto::core::SmartContract_ABI_Entry_EntryType::Function => "function".to_owned(),
             ::proto::core::SmartContract_ABI_Entry_EntryType::Event => "event".to_owned(),
-            _ => continue
+            _ => continue,
         };
         write!(pretty, " {:}", entry.get_name())?;
         let mut raw = entry.get_name().to_owned();
