@@ -1,19 +1,19 @@
 //! Structs for core Zcash primitives.
 
-use ff::{Field, PrimeField, PrimeFieldRepr};
-use std::fmt;
-use byteorder::{LittleEndian, WriteBytesExt};
-use blake2s_simd::Params as Blake2sParams;
 use bech32::{self, FromBase32, ToBase32};
+use blake2s_simd::Params as Blake2sParams;
+use byteorder::{LittleEndian, WriteBytesExt};
+use ff::{Field, PrimeField, PrimeFieldRepr};
 use pairing::bls12_381::Bls12;
+use std::fmt;
+use std::io;
 use std::str::FromStr;
 
-use crate::JUBJUB;
 use crate::constants;
 use crate::group_hash::group_hash;
-use crate::pedersen_hash::{pedersen_hash, Personalization};
 use crate::jubjub::{edwards, FixedGenerators, JubjubEngine, JubjubParams, PrimeOrder};
-
+use crate::pedersen_hash::{pedersen_hash, Personalization};
+use crate::JUBJUB;
 
 #[derive(Clone)]
 pub struct ValueCommitment<E: JubjubEngine> {
@@ -61,9 +61,7 @@ pub struct ViewingKey<E: JubjubEngine> {
 impl<E: JubjubEngine> ViewingKey<E> {
     pub fn rk(&self, ar: E::Fs, params: &E::Params) -> edwards::Point<E, PrimeOrder> {
         self.ak.add(
-            &params
-                .generator(FixedGenerators::SpendingKeyGenerator)
-                .mul(ar, params),
+            &params.generator(FixedGenerators::SpendingKeyGenerator).mul(ar, params),
             params,
         )
     }
@@ -92,11 +90,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
         E::Fs::from_repr(e).expect("should be a valid scalar")
     }
 
-    pub fn to_payment_address(
-        &self,
-        diversifier: Diversifier,
-        params: &E::Params,
-    ) -> Option<PaymentAddress<E>> {
+    pub fn to_payment_address(&self, diversifier: Diversifier, params: &E::Params) -> Option<PaymentAddress<E>> {
         diversifier.g_d(params).and_then(|g_d| {
             let pk_d = g_d.mul(self.ivk(), params);
 
@@ -109,15 +103,8 @@ impl<E: JubjubEngine> ViewingKey<E> {
 pub struct Diversifier(pub [u8; 11]);
 
 impl Diversifier {
-    pub fn g_d<E: JubjubEngine>(
-        &self,
-        params: &E::Params,
-    ) -> Option<edwards::Point<E, PrimeOrder>> {
-        group_hash::<E>(
-            &self.0,
-            constants::KEY_DIVERSIFICATION_PERSONALIZATION,
-            params,
-        )
+    pub fn g_d<E: JubjubEngine>(&self, params: &E::Params) -> Option<edwards::Point<E, PrimeOrder>> {
+        group_hash::<E>(&self.0, constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
     }
 }
 
@@ -141,21 +128,27 @@ impl<E: JubjubEngine> PartialEq for PaymentAddress<E> {
 
 impl<E: JubjubEngine> fmt::Display for PaymentAddress<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", bech32::encode("ztron", (&self.to_bytes()[..]).to_base32()).unwrap())
+        write!(
+            f,
+            "{}",
+            bech32::encode("ztron", (&self.to_bytes()[..]).to_base32()).unwrap()
+        )
     }
 }
 
 impl FromStr for PaymentAddress<Bls12> {
-    type Err = fmt::Error;
+    type Err = io::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-
-        let (hrp, data) = bech32::decode(s).map_err(|_| fmt::Error)?;
+        let (hrp, data) =
+            bech32::decode(s).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid z-address format"))?;
         if hrp == "ztron" {
-            let raw = Vec::<u8>::from_base32(&data).map_err(|_| fmt::Error)?;
-            PaymentAddress::<Bls12>::from_bytes(&raw, &JUBJUB).ok_or(fmt::Error)
+            let raw = Vec::<u8>::from_base32(&data)
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid z-address format"))?;
+            PaymentAddress::<Bls12>::from_bytes(&raw, &JUBJUB)
+                .ok_or(io::Error::new(io::ErrorKind::InvalidInput, "invalid z-address format"))
         } else {
-            Err(fmt::Error)
+            Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid z-address format"))
         }
     }
 }
@@ -164,10 +157,7 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     /// Constructs a PaymentAddress from a diversifier and a Jubjub point.
     ///
     /// Returns None if `pk_d` is the identity.
-    pub fn from_parts(
-        diversifier: Diversifier,
-        pk_d: edwards::Point<E, PrimeOrder>,
-    ) -> Option<Self> {
+    pub fn from_parts(diversifier: Diversifier, pk_d: edwards::Point<E, PrimeOrder>) -> Option<Self> {
         if pk_d == edwards::Point::zero() {
             None
         } else {
@@ -179,10 +169,7 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     ///
     /// Only for test code, as this explicitly bypasses the invariant.
     #[cfg(test)]
-    pub(crate) fn from_parts_unchecked(
-        diversifier: Diversifier,
-        pk_d: edwards::Point<E, PrimeOrder>,
-    ) -> Self {
+    pub(crate) fn from_parts_unchecked(diversifier: Diversifier, pk_d: edwards::Point<E, PrimeOrder>) -> Self {
         PaymentAddress { pk_d, diversifier }
     }
 
@@ -229,12 +216,7 @@ impl<E: JubjubEngine> PaymentAddress<E> {
         self.diversifier.g_d(params)
     }
 
-    pub fn create_note(
-        &self,
-        value: u64,
-        randomness: E::Fs,
-        params: &E::Params,
-    ) -> Option<Note<E>> {
+    pub fn create_note(&self, value: u64, randomness: E::Fs, params: &E::Params) -> Option<Note<E>> {
         self.g_d(params).map(|g_d| Note {
             value,
             r: randomness,
@@ -258,10 +240,7 @@ pub struct Note<E: JubjubEngine> {
 
 impl<E: JubjubEngine> PartialEq for Note<E> {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
-            && self.g_d == other.g_d
-            && self.pk_d == other.pk_d
-            && self.r == other.r
+        self.value == other.value && self.g_d == other.g_d && self.pk_d == other.pk_d && self.r == other.r
     }
 }
 
@@ -281,9 +260,7 @@ impl<E: JubjubEngine> Note<E> {
         let mut note_contents = vec![];
 
         // Writing the value in little endian
-        (&mut note_contents)
-            .write_u64::<LittleEndian>(self.value)
-            .unwrap();
+        (&mut note_contents).write_u64::<LittleEndian>(self.value).unwrap();
 
         // Write g_d
         self.g_d.write(&mut note_contents).unwrap();
@@ -350,9 +327,8 @@ mod tests {
     fn paryment_address() {
         let raw = [
             22, 106, 69, 173, 225, 17, 87, 175, 245, 51, 184, // Diversifier
-            87, 51, 47, 45, 138, 162, 37, 14, 235, 116, 153,
-            118, 131, 215, 139, 45, 16, 176, 185, 127, 97, 104,
-             202, 47, 132, 227, 34, 199, 55, 52, 105, 207 // pk_d
+            87, 51, 47, 45, 138, 162, 37, 14, 235, 116, 153, 118, 131, 215, 139, 45, 16, 176, 185, 127, 97, 104, 202,
+            47, 132, 227, 34, 199, 55, 52, 105, 207, // pk_d
         ];
         let expected_addr = "ztron1ze4ytt0pz9t6lafnhptnxted323z2rhtwjvhdq7h3vk3pv9e0ask3j30sn3j93ehx35u7ku7q0d";
 
