@@ -141,6 +141,5 @@ OPTIONS:
         --fee-limit <fee-limit>            Maximum value of TRX allowed consumed
         --permission-id <permission-id>    Permission id used by transaction [possible values: 0, 2, 1]
     -K, --private-key <private-key>        The private key used for signing
-    -r, --ref-block <ref-block>            Set the reference block num or block id used for TAPOS (Transaction as Proof-
-                                           of-Stake)
+    -r, --ref-block <ref-block>            Set the reference block num or block id used for TAPOS
 ```
