@@ -99,25 +99,14 @@ fn get_transaction_info(id: &str) -> Result<(), Error> {
         .get_transaction_info_by_id(Default::default(), req)
         .wait()?;
 
-    let json = serde_json::to_value(&payload)?;
-    let result = json!({
-        "id": json!(jsont::bytes_to_hex_string(&json["id"])),
-        "fee": json["fee"],
-        "blockNumber": json["blockNumber"],
-        "blockTimeStamp": json["blockTimeStamp"],
-        "contractResult": json!(
-            json["contractResult"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(jsont::bytes_to_hex_string)
-                .collect::<Vec<_>>()
-        ),
-        "contract_address": json!(jsont::bytes_to_hex_string(&json["contract_address"])),
-        "receipt": json["receipt"],
-    });
-    println!("{}", serde_json::to_string_pretty(&result)?);
-    Ok(())
+    if !payload.get_id().is_empty() {
+        let mut json = serde_json::to_value(&payload)?;
+        jsont::fix_transaction_info(&mut json);
+        println!("{}", serde_json::to_string_pretty(&json)?);
+        Ok(())
+    } else {
+        Err(Error::Runtime("transaction not found"))
+    }
 }
 
 /// Get account infomation.

@@ -451,6 +451,47 @@ pub fn fix_voucher_info(voucher_info: &mut serde_json::Value) {
         .last();
 }
 
+// pb: TransactionInfo
+pub fn fix_transaction_info(info: &mut serde_json::Value) {
+    info["id"] = json!(bytes_to_hex_string(&info["id"]));
+    info["contract_address"] = json!(bytes_to_hex_string(&info["contract_address"]));
+    info["contractResult"] = json!(info["contractResult"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(bytes_to_hex_string)
+        .collect::<Vec<_>>());
+    info["internal_transactions"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|trx| {
+            trx["caller_address"] = json!(bytes_to_hex_string(&trx["caller_address"]));
+            trx["hash"] = json!(bytes_to_hex_string(&trx["hash"]));
+            trx["note"] = json!(bytes_to_string(&trx["note"]));
+            // NOTE: the ugly camEl_case naming
+            trx["transferTo_address"] = json!(bytes_to_hex_string(&trx["transferTo_address"]));
+        })
+        .last();
+    info["log"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|log| {
+            log["address"] = json!(bytes_to_hex_string(&log["address"]));
+            log["data"] = json!(bytes_to_hex_string(&log["data"]));
+            log["topics"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .map(|t| {
+                    *t = json!(bytes_to_hex_string(t));
+                })
+                .last();
+        })
+        .last();
+}
+
 // revert for serializing to pb
 pub fn revert_permission_info(permission: &mut serde_json::Value) {
     if !permission["owner"].is_null() {
