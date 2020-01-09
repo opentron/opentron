@@ -63,7 +63,8 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
   - asset issue
 - [x] ParticipateAssetIssueContract
   - asset participate
-- [ ] UnfreezeAssetContract
+- [x] UnfreezeAssetContract
+  - asset unfreeze
 - [x] UpdateAssetContract
   - asset update
 - [x] VoteWitnessContract

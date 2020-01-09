@@ -5,7 +5,7 @@ use clap::ArgMatches;
 use keys::Address;
 use proto::core::{
     AssetIssueContract, AssetIssueContract_FrozenSupply as FrozenSupply, ParticipateAssetIssueContract,
-    TransferAssetContract, UpdateAssetContract,
+    TransferAssetContract, UnfreezeAssetContract, UpdateAssetContract,
 };
 
 use crate::error::Error;
@@ -41,10 +41,7 @@ pub fn issue_asset(matches: &ArgMatches) -> Result<(), Error> {
 
     let rate = matches.value_of("exchange-rate").expect("has default in cli.yml; qed");
     let (trx_num, ico_num) = match &rate.split(":").collect::<Vec<_>>()[..] {
-        [trc, ico] => (
-            trx::parse_amount(trc)?,
-            trx::parse_amount(ico)?,
-        ),
+        [trc, ico] => (trx::parse_amount(trc)?, trx::parse_amount(ico)?),
         _ => return Err(Error::Runtime("illegal exchange rate format")),
     };
 
@@ -168,12 +165,27 @@ fn participate_asset_issue(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(participate_contract, matches).run()
 }
 
+fn unfreeze_asset(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong sender address format"))?;
+
+    let unfreeze_contract = UnfreezeAssetContract {
+        owner_address: sender.to_bytes().to_owned(),
+        ..Default::default()
+    };
+
+    trx::TransactionHandler::handle(unfreeze_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("issue", Some(arg_matches)) => issue_asset(arg_matches),
         ("transfer", Some(arg_matches)) => transfer_asset(arg_matches),
         ("update", Some(arg_matches)) => update_asset_settings(arg_matches),
         ("participate", Some(arg_matches)) => participate_asset_issue(arg_matches),
+        ("unfreeze", Some(arg_matches)) => unfreeze_asset(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
