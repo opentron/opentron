@@ -111,9 +111,9 @@ async fn list_keys_in_wallet() -> Result<(), Error> {
         for raw_key in reply.public_keys {
             let pub_key = Public::try_from(raw_key)?;
             let addr = Address::from_public(&pub_key);
-            println!("Address(base58): {:}", addr);
+            println!("Address(Base58): {:}", addr);
             println!("Address(hex):    {:}", addr.encode_hex::<String>());
-            println!("       Public:   {:}\n", pub_key);
+            println!("         Public: {:}\n", pub_key);
         }
     } else {
         println!("{:?}", &reply);
