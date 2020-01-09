@@ -61,7 +61,8 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
   - asset transfer
 - [x] AssetIssueContract
   - asset issue
-- [ ] ParticipateAssetIssueContract
+- [x] ParticipateAssetIssueContract
+  - asset participate
 - [ ] UnfreezeAssetContract
 - [x] UpdateAssetContract
   - asset update

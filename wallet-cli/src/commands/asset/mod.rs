@@ -4,7 +4,8 @@ use chrono::{DateTime, Utc};
 use clap::ArgMatches;
 use keys::Address;
 use proto::core::{
-    AssetIssueContract, AssetIssueContract_FrozenSupply as FrozenSupply, TransferAssetContract, UpdateAssetContract,
+    AssetIssueContract, AssetIssueContract_FrozenSupply as FrozenSupply, ParticipateAssetIssueContract,
+    TransferAssetContract, UpdateAssetContract,
 };
 
 use crate::error::Error;
@@ -143,11 +144,35 @@ pub fn update_asset_settings(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(update_contract, matches).run()
 }
 
+fn participate_asset_issue(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong sender address format"))?;
+    let recipient = matches
+        .value_of("RECIPIENT")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong recipient address format"))?;
+    let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
+    let assert_id = matches.value_of("token-id").expect("required in cli.yml; qed");
+
+    let participate_contract = ParticipateAssetIssueContract {
+        owner_address: sender.to_bytes().to_owned(),
+        to_address: recipient.to_bytes().to_owned(),
+        amount: trx::parse_amount_without_surfix(amount)?,
+        asset_name: assert_id.as_bytes().to_owned(),
+        ..Default::default()
+    };
+
+    trx::TransactionHandler::handle(participate_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("issue", Some(arg_matches)) => issue_asset(arg_matches),
         ("transfer", Some(arg_matches)) => transfer_asset(arg_matches),
         ("update", Some(arg_matches)) => update_asset_settings(arg_matches),
+        ("participate", Some(arg_matches)) => participate_asset_issue(arg_matches),
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
