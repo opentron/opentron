@@ -1398,6 +1398,24 @@ subcommands:
                     about: Creates a new shielded address
               - debug:
                     about: debug rocks
+              - scan:
+                    about: Scan notes on chain
+                    args:
+                        - ADDR:
+                            help: Shielded address of the note
+                            required: true
+                            value_name: z-addr
+                        - incoming:
+                            help: Incoming notes, i.e. received TRZ tokens
+                        - outcoming:
+                            help: Outcoming notes, i.e. spent TRZ tokens
+                            conflicts_with:
+                                - incoming
+                        - start:
+                            help: Block num to start scan
+                        - end:
+                            help: Block num to end scan, (default, current block)
+
               - transfer:
                     about: Initiates a shielded transaction, amount can be 'auto'
                     args:
