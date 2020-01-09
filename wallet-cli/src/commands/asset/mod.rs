@@ -42,8 +42,8 @@ pub fn issue_asset(matches: &ArgMatches) -> Result<(), Error> {
     let rate = matches.value_of("exchange-rate").expect("has default in cli.yml; qed");
     let (trx_num, ico_num) = match &rate.split(":").collect::<Vec<_>>()[..] {
         [trc, ico] => (
-            trx::parse_amount_without_surfix(trc)?,
-            trx::parse_amount_without_surfix(ico)?,
+            trx::parse_amount(trc)?,
+            trx::parse_amount(ico)?,
         ),
         _ => return Err(Error::Runtime("illegal exchange rate format")),
     };
@@ -52,7 +52,7 @@ pub fn issue_asset(matches: &ArgMatches) -> Result<(), Error> {
         Some(raw) => raw
             .map(|params| match &params.split('=').collect::<Vec<_>>()[..] {
                 [amount, days] => Ok(FrozenSupply {
-                    frozen_amount: trx::parse_amount_without_surfix(amount)?,
+                    frozen_amount: trx::parse_amount(amount)?,
                     frozen_days: days.parse()?,
                     ..Default::default()
                 }),
@@ -67,7 +67,7 @@ pub fn issue_asset(matches: &ArgMatches) -> Result<(), Error> {
 
     issue_contract.set_name(name.as_bytes().to_owned());
     issue_contract.set_abbr(abbr.as_bytes().to_owned());
-    issue_contract.set_total_supply(trx::parse_amount_without_surfix(total_supply)?);
+    issue_contract.set_total_supply(trx::parse_amount(total_supply)?);
     issue_contract.set_precision(precision.parse()?);
     issue_contract.set_frozen_supply(freeze.into());
 
@@ -106,7 +106,7 @@ pub fn transfer_asset(matches: &ArgMatches) -> Result<(), Error> {
     let transfer_contract = TransferAssetContract {
         owner_address: sender.to_bytes().to_owned(),
         to_address: recipient.to_bytes().to_owned(),
-        amount: trx::parse_amount_without_surfix(amount)?,
+        amount: trx::parse_amount(amount)?,
         asset_name: assert_id.as_bytes().to_owned(),
         ..Default::default()
     };
