@@ -18,6 +18,7 @@ pub mod legacy;
 pub mod merkle_tree;
 pub mod note_encryption;
 pub mod pedersen_hash;
+pub mod prelude;
 pub mod primitives;
 pub mod prover;
 pub mod redjubjub;
