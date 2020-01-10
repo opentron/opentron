@@ -324,7 +324,7 @@ mod tests {
     use pairing::bls12_381::Bls12;
 
     #[test]
-    fn paryment_address() {
+    fn payment_address() {
         let raw = [
             22, 106, 69, 173, 225, 17, 87, 175, 245, 51, 184, // Diversifier
             87, 51, 47, 45, 138, 162, 37, 14, 235, 116, 153, 118, 131, 215, 139, 45, 16, 176, 185, 127, 97, 104, 202,
