@@ -24,11 +24,13 @@ pub type ProofGenerationKey = primitives::ProofGenerationKey<Bls12>;
 /// pk_d, d
 pub type PaymentAddress = primitives::PaymentAddress<Bls12>;
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::JUBJUB;
+    use ff::PrimeField; // into_repr()
+    use ff::PrimeFieldRepr;
+    use hex::{FromHex, ToHex};
 
     #[test]
     fn payment_address() {
@@ -44,5 +46,64 @@ mod tests {
 
         let parsed_addr: PaymentAddress = expected_addr.parse().unwrap();
         assert_eq!(parsed_addr, addr);
+    }
+
+    #[test]
+    fn generate_from_sk() {
+        // The following address is generated from nile testnet rpc
+        let sk = Vec::from_hex("04ccdf23099b4be2f2ab3a41877e94ff4d2ffaff4a9eb5fc4d0d6db685142d49").unwrap();
+        let d = Vec::from_hex("166a45ade11157aff533b8").unwrap();
+        let mut raw_d = [0u8; 11];
+        (&mut raw_d[..]).copy_from_slice(&d);
+        let diversifier = Diversifier(raw_d);
+
+        let esk = ExpandedSpendingKey::from_spending_key(&sk);
+
+        let mut buf: Vec<u8> = vec![];
+        esk.ask.into_repr().write_le(&mut buf).unwrap();
+        assert_eq!(
+            buf.encode_hex::<String>(),
+            "8c893dfa38956290f2a1df9e6019b4a6c5f670613583948d8d975dcbccf03407"
+        );
+
+        buf.clear();
+        esk.nsk.into_repr().write_le(&mut buf).unwrap();
+        assert_eq!(
+            buf.encode_hex::<String>(),
+            "560832b298c76f021126b35bfdd3d4bb62ec0d632029674b3e9157f1bff6b208"
+        );
+
+        assert_eq!(
+            esk.ovk.0.encode_hex::<String>(),
+            "034484bed6abcd44ca9a8af1dd64c8b66d70a0a92471dc24b87b5bfdba8f0ef9"
+        );
+
+        let fvk = FullViewingKey::from_expanded_spending_key(&esk, &JUBJUB);
+
+        buf.clear();
+        fvk.vk.ak.write(&mut buf).unwrap();
+        assert_eq!(
+            buf.encode_hex::<String>(),
+            "3255f7f2280657560a271f5b15e14ff9cfeae7b16e7f5910f904f8fe0ce45db6"
+        );
+
+        buf.clear();
+        fvk.vk.nk.write(&mut buf).unwrap();
+        assert_eq!(
+            buf.encode_hex::<String>(),
+            "c10e516acb4a2da828c0d31da54d9441f88f4d5713630c1809b9ebb3f7c4fbd4"
+        );
+
+        buf.clear();
+        fvk.vk.ivk().into_repr().write_le(&mut buf).unwrap();
+        assert_eq!(
+            buf.encode_hex::<String>(),
+            "b0456583f7a43c05ae2ec72905575ff5737fb2f652d4c0b4bc93849217481006"
+        );
+
+        assert_eq!(
+            fvk.vk.to_payment_address(diversifier, &JUBJUB).unwrap().to_string(),
+            "ztron1ze4ytt0pz9t6lafnhptnxted323z2rhtwjvhdq7h3vk3pv9e0ask3j30sn3j93ehx35u7ku7q0d"
+        );
     }
 }
