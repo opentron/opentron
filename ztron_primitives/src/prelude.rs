@@ -1,8 +1,10 @@
 //! Remove generics from basic type.
 
+use ff::{PrimeField, PrimeFieldRepr};
 use pairing::bls12_381::Bls12;
 
 use crate::keys;
+use crate::note_encryption::generate_esk;
 use crate::primitives;
 
 pub use crate::JUBJUB;
@@ -23,6 +25,17 @@ pub type ProofGenerationKey = primitives::ProofGenerationKey<Bls12>;
 
 /// pk_d, d
 pub type PaymentAddress = primitives::PaymentAddress<Bls12>;
+
+/// Generate uniformly random scalar in Jubjub. The result is of length 32.
+pub fn generate_r() -> [u8; 32] {
+    let mut rng = rand::rngs::OsRng;
+    let mut raw = [0u8; 32];
+    generate_esk(&mut rng)
+        .into_repr()
+        .write_le(&mut raw[..])
+        .expect("write ok");
+    raw
+}
 
 #[cfg(test)]
 mod tests {
@@ -46,6 +59,12 @@ mod tests {
 
         let parsed_addr: PaymentAddress = expected_addr.parse().unwrap();
         assert_eq!(parsed_addr, addr);
+    }
+
+    #[test]
+    fn generate_rcm() {
+        let rcm = generate_r();
+        assert_eq!(rcm.encode_hex::<String>().len(), 64); // 32 bytes
     }
 
     #[test]
