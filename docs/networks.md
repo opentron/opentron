@@ -8,7 +8,7 @@ Explorer
 - <https://tronscan.io/>
 - <https://www.trxplorer.io/>
 
-Full Node / Solidity Node HTTP API / Evenv API: <https://api.trongrid.io>
+Full Node / Solidity Node HTTP API / Event API: <https://api.trongrid.io>
 
 gRPC
 
@@ -23,7 +23,7 @@ Faucet: <https://www.trongrid.io/faucet>
 
 Explorer: <https://shasta.tronscan.org/>
 
-API: <https://api.shasta.trongrid.io>
+Full Node / Solidity Node / Event HTTP API: <https://api.shasta.trongrid.io>
 
 gRPC
 
@@ -42,7 +42,7 @@ Status: <http://nileex.io/status/getStatusPage>
 
 Full Node / Solidity Node HTTP API: <https://api.nileex.io/>
 
-Evenv API: <https://event.nileex.io/>
+Event API: <https://event.nileex.io/>
 
 Public Fullnode
 
@@ -71,7 +71,7 @@ Public Fullnode
 
 Home page: <https://tron.network/sunnetwork/>
 
-Evenv Server: sun.tronex.io/event
+Event Server: <https://sun.tronex.io/event>
 
 ### Cross Chain
 
@@ -88,7 +88,7 @@ SUN Network DAppChain(SideChain) gateway contract address
 
 HTTP API:
 
-- sun.tronex.io/wallet (CORS enabled)
+- <https://sun.tronex.io/wallet> (CORS enabled)
 - 47.90.245.159:8090
 - 47.90.211.50:8090
 - 47.252.6.19:8090
@@ -124,12 +124,12 @@ Home page: <https://tron.network/sunnetwork/doc/>
 
 Faucet: Use <http://testnet.tronex.io/join/getJoinPage> to get main-chain coin.
 
-Evenv Server:
+Event Server:
 
-- 47.252.81.14:8070(CORS Enabled) - main chain
-- 47.252.87.129:8070(CORS Enabled) - side chain
+- <http://47.252.81.14:8070> (CORS Enabled) - main chain
+- <http://47.252.87.129:8070> (CORS Enabled) - side chain
 
-### Cross Chain
+### Testnet Cross Chain
 
 sidechainid
 > 413AF23F37DA0D48234FDD43D89931E98E1144481B
@@ -140,7 +140,7 @@ main chain gateway contract address
 side chain gateway contract address
 > TRDepx5KoQ8oNbFVZ5sogwUxtdYmATDRgX
 
-### Full Nodes
+### Testnet Full Nodes
 
 HTTP API:
 
