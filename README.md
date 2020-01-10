@@ -9,8 +9,14 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 > curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
 > rustup component add rustfmt
 
+> # install protoc
+> brew install protobuf  # macOS
+> sudo pacman -S protobuf  # ArchLinux
+> sudo apt install protobuf-compiler  # Ubuntu / Debian
+
 > # get code
-> git clone --recurse-submodules git clone --recurse-submodules https://github.com/andelf/rust-tron.git
+> git clone --recurse-submodules https://github.com/andelf/rust-tron.git
+
 > # compile tools
 > cd ./rust-tron/
 > cargo build -p walletd
