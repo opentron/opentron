@@ -4,8 +4,8 @@ use super::ecc::{EdwardsPoint, MontgomeryPoint};
 use bellman::gadgets::boolean::Boolean;
 use bellman::gadgets::lookup::*;
 use bellman::{ConstraintSystem, SynthesisError};
-use zcash_primitives::jubjub::*;
-pub use zcash_primitives::pedersen_hash::Personalization;
+use ztron_primitives::jubjub::*;
+pub use ztron_primitives::pedersen_hash::Personalization;
 
 fn get_constant_bools(person: &Personalization) -> Vec<Boolean> {
     person
@@ -114,7 +114,7 @@ mod test {
     use pairing::bls12_381::{Bls12, Fr};
     use rand_core::{RngCore, SeedableRng};
     use rand_xorshift::XorShiftRng;
-    use zcash_primitives::pedersen_hash;
+    use ztron_primitives::pedersen_hash;
 
     /// Predict the number of constraints of a Pedersen hash
     fn ph_num_constraints(input_bits: usize) -> usize {

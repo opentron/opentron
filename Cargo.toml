@@ -45,5 +45,6 @@ members = [
     "wallet-cli",
     "wallet",
     "walletd",
-    "ztron_primitives"
+    "ztron_primitives",
+    "ztron_proofs",
 ]

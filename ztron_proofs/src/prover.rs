@@ -4,11 +4,11 @@ use bellman::groth16::{Parameters, PreparedVerifyingKey};
 use directories::BaseDirs;
 use pairing::bls12_381::{Bls12, Fr};
 use std::path::Path;
-use zcash_primitives::{
+use ztron_primitives::{
     jubjub::{edwards, fs::Fs, Unknown},
     primitives::{Diversifier, PaymentAddress, ProofGenerationKey},
 };
-use zcash_primitives::{
+use ztron_primitives::{
     merkle_tree::CommitmentTreeWitness,
     prover::TxProver,
     redjubjub::{PublicKey, Signature},
@@ -37,7 +37,7 @@ impl LocalTxProver {
     ///
     /// ```should_panic
     /// use std::path::Path;
-    /// use zcash_proofs::prover::LocalTxProver;
+    /// use ztron_proofs::prover::LocalTxProver;
     ///
     /// let tx_prover = LocalTxProver::new(
     ///     Path::new("/path/to/sapling-spend.params"),
@@ -74,7 +74,7 @@ impl LocalTxProver {
     /// # Examples
     ///
     /// ```
-    /// use zcash_proofs::prover::LocalTxProver;
+    /// use ztron_proofs::prover::LocalTxProver;
     ///
     /// match LocalTxProver::with_default_location() {
     ///     Some(tx_prover) => (),

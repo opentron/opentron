@@ -1,10 +1,10 @@
 //! Helpers for creating Sapling proofs.
 
 use pairing::bls12_381::Bls12;
-use zcash_primitives::jubjub::{
+use ztron_primitives::jubjub::{
     edwards, fs::FsRepr, FixedGenerators, JubjubBls12, JubjubParams, Unknown,
 };
-use zcash_primitives::transaction::components::Amount;
+use ztron_primitives::transaction::components::Amount;
 
 mod prover;
 mod verifier;

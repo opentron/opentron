@@ -9,7 +9,7 @@ use bellman::gadgets::Assignment;
 
 use bellman::gadgets::num::{AllocatedNum, Num};
 
-use zcash_primitives::jubjub::{edwards, FixedGenerators, JubjubEngine, JubjubParams};
+use ztron_primitives::jubjub::{edwards, FixedGenerators, JubjubEngine, JubjubParams};
 
 use bellman::gadgets::lookup::lookup3_xy;
 
@@ -670,8 +670,8 @@ mod test {
     use rand_xorshift::XorShiftRng;
 
     use bellman::gadgets::test::*;
-    use zcash_primitives::jubjub::fs::Fs;
-    use zcash_primitives::jubjub::{
+    use ztron_primitives::jubjub::fs::Fs;
+    use ztron_primitives::jubjub::{
         edwards, montgomery, FixedGenerators, JubjubBls12, JubjubParams,
     };
 

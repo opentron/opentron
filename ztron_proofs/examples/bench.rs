@@ -4,9 +4,9 @@ use pairing::bls12_381::{Bls12, Fr};
 use rand_core::{RngCore, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::time::{Duration, Instant};
-use zcash_primitives::jubjub::{edwards, fs, JubjubBls12};
-use zcash_primitives::primitives::{Diversifier, ProofGenerationKey, ValueCommitment};
-use zcash_proofs::circuit::sapling::Spend;
+use ztron_primitives::jubjub::{edwards, fs, JubjubBls12};
+use ztron_primitives::primitives::{Diversifier, ProofGenerationKey, ValueCommitment};
+use ztron_proofs::circuit::sapling::Spend;
 
 const TREE_DEPTH: usize = 32;
 

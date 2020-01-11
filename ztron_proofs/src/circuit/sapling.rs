@@ -4,11 +4,11 @@ use ff::{Field, PrimeField, PrimeFieldRepr};
 
 use bellman::{Circuit, ConstraintSystem, SynthesisError};
 
-use zcash_primitives::jubjub::{FixedGenerators, JubjubEngine};
+use ztron_primitives::jubjub::{FixedGenerators, JubjubEngine};
 
-use zcash_primitives::constants;
+use ztron_primitives::constants;
 
-use zcash_primitives::primitives::{PaymentAddress, ProofGenerationKey, ValueCommitment};
+use ztron_primitives::primitives::{PaymentAddress, ProofGenerationKey, ValueCommitment};
 
 use super::ecc;
 use super::pedersen_hash;
@@ -18,7 +18,7 @@ use bellman::gadgets::multipack;
 use bellman::gadgets::num;
 use bellman::gadgets::Assignment;
 
-pub const TREE_DEPTH: usize = zcash_primitives::sapling::SAPLING_COMMITMENT_TREE_DEPTH;
+pub const TREE_DEPTH: usize = ztron_primitives::sapling::SAPLING_COMMITMENT_TREE_DEPTH;
 
 /// This is an instance of the `Spend` circuit.
 pub struct Spend<'a, E: JubjubEngine> {
@@ -541,7 +541,7 @@ fn test_input_circuit_with_bls12_381() {
     use pairing::bls12_381::*;
     use rand_core::{RngCore, SeedableRng};
     use rand_xorshift::XorShiftRng;
-    use zcash_primitives::{
+    use ztron_primitives::{
         jubjub::{edwards, fs, JubjubBls12},
         pedersen_hash,
         primitives::{Diversifier, Note, ProofGenerationKey},
@@ -691,7 +691,7 @@ fn test_input_circuit_with_bls12_381_external_test_vectors() {
     use pairing::bls12_381::*;
     use rand_core::{RngCore, SeedableRng};
     use rand_xorshift::XorShiftRng;
-    use zcash_primitives::{
+    use ztron_primitives::{
         jubjub::{edwards, fs, JubjubBls12},
         pedersen_hash,
         primitives::{Diversifier, Note, ProofGenerationKey},
@@ -875,7 +875,7 @@ fn test_output_circuit_with_bls12_381() {
     use pairing::bls12_381::*;
     use rand_core::{RngCore, SeedableRng};
     use rand_xorshift::XorShiftRng;
-    use zcash_primitives::{
+    use ztron_primitives::{
         jubjub::{edwards, fs, JubjubBls12},
         primitives::{Diversifier, ProofGenerationKey},
     };

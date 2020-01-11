@@ -4,8 +4,8 @@ use bellman::{
 };
 use ff::Field;
 use pairing::bls12_381::{Bls12, Fr};
-use zcash_primitives::jubjub::{edwards, FixedGenerators, JubjubBls12, Unknown};
-use zcash_primitives::{
+use ztron_primitives::jubjub::{edwards, FixedGenerators, JubjubBls12, Unknown};
+use ztron_primitives::{
     redjubjub::{PublicKey, Signature},
     transaction::components::Amount,
 };
