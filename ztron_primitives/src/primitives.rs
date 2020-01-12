@@ -4,6 +4,7 @@ use bech32::{self, FromBase32, ToBase32};
 use blake2s_simd::Params as Blake2sParams;
 use byteorder::{LittleEndian, WriteBytesExt};
 use ff::{Field, PrimeField, PrimeFieldRepr};
+use hex::ToHex;
 use pairing::bls12_381::Bls12;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -100,8 +101,14 @@ impl<E: JubjubEngine> ViewingKey<E> {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Diversifier(pub [u8; 11]);
+
+impl fmt::Debug for Diversifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Diversifier(0x{})", (&self.0[..]).encode_hex::<String>())
+    }
+}
 
 impl Diversifier {
     pub fn g_d<E: JubjubEngine>(&self, params: &E::Params) -> Option<edwards::Point<E, PrimeOrder>> {
