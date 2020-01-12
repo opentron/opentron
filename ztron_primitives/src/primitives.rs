@@ -6,6 +6,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use ff::{Field, PrimeField, PrimeFieldRepr};
 use pairing::bls12_381::Bls12;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::io;
 use std::str::FromStr;
 
@@ -126,6 +127,8 @@ impl<E: JubjubEngine> PartialEq for PaymentAddress<E> {
     }
 }
 
+impl<E: JubjubEngine> Eq for PaymentAddress<E> {}
+
 impl<E: JubjubEngine> fmt::Display for PaymentAddress<E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -133,6 +136,12 @@ impl<E: JubjubEngine> fmt::Display for PaymentAddress<E> {
             "{}",
             bech32::encode("ztron", (&self.to_bytes()[..]).to_base32()).unwrap()
         )
+    }
+}
+
+impl<E: JubjubEngine> Hash for PaymentAddress<E> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.to_bytes().hash(state);
     }
 }
 
