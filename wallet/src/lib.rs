@@ -3,12 +3,12 @@ use keys::{Address, KeyPair, Private, Public, Signature};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
-use std::collections::hash_set::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
-use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
+use std::fs::{self, File};
+use std::io::Write;
 use std::path::PathBuf;
+use ztron_primitives::prelude::{generate_zkey_pair, PaymentAddress};
 
 use config::determine_config_directory;
 pub use error::Error;
@@ -20,6 +20,8 @@ mod error;
 const WALLET_FILENAME_EXTENSION: &'static str = ".wallet";
 const WALLET_FILE_VERSION: &'static str = "v1";
 
+type ZSecretKey = [u8; 32];
+
 /// Local wallet implementaion
 #[derive(Debug)]
 pub struct Wallet {
@@ -30,11 +32,12 @@ pub struct Wallet {
     // when unlocked
     crypto_key: Option<Vec<u8>>,
     keypairs: Option<Vec<KeyPair>>,
+    zaddrs: HashMap<PaymentAddress, Option<ZSecretKey>>,
 }
 
 impl Wallet {
     pub fn create(name: &str, password: &str) -> Result<Self, Error> {
-        if name.is_empty() || !name.chars().all(|c| c.is_ascii() && c.is_alphanumeric()) {
+        if name.is_empty() || !name.chars().all(|c| c.is_ascii() && (c.is_alphanumeric() || c == '-')) {
             return Err(Error::Runtime("invalid wallet name"));
         }
 
@@ -52,7 +55,8 @@ impl Wallet {
             "version": WALLET_FILE_VERSION.to_owned(),
             "salt": random_salt(),
             "checksum": "",
-            "keys": {}
+            "keys": {},
+            "zkeys": {},
         });
         file.write_all(serde_json::to_string_pretty(&json)?.as_bytes())?;
 
@@ -65,6 +69,7 @@ impl Wallet {
             keys: json_to_keys(&value)?,
             crypto_key: None,
             keypairs: None,
+            zaddrs: json_to_zkeys(&value)?,
         };
         w.set_password(password)?;
         Ok(w)
@@ -81,6 +86,7 @@ impl Wallet {
             keys: json_to_keys(&value)?,
             crypto_key: None,
             keypairs: None,
+            zaddrs: json_to_zkeys(&value)?,
         })
     }
 
@@ -90,6 +96,11 @@ impl Wallet {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn wallet_file(&self) -> PathBuf {
+        let config_dir = determine_config_directory();
+        config_dir.join(format!("{:}{:}", self.name, WALLET_FILENAME_EXTENSION))
     }
 
     pub fn keys(&self) -> impl Iterator<Item = &Public> {
@@ -124,12 +135,18 @@ impl Wallet {
 
         self.crypto_key = Some((&self.get_crypto_key(&wallet_json, password)?[..]).to_owned());
 
-        let kps = decrypt_wallet_json_to_keypairs(&wallet_json, self.crypto_key.as_ref().expect("won't fail; qed"))?;
+        let decrypt_key = self.crypto_key.as_ref().expect("won't fail; qed");
+
+        let kps = decrypt_wallet_json_to_keypairs(&wallet_json, decrypt_key)?;
         self.keypairs = Some(kps);
+
+        self.zaddrs = decrypt_wallet_json_to_zkeys(&wallet_json, decrypt_key)?;
+
         self.locked = false;
         Ok(())
     }
 
+    // NOTE: does not support change password for now
     pub fn set_password(&mut self, password: &str) -> Result<(), Error> {
         if self.is_locked() && !self.is_new() {
             Err(Error::Runtime("wallet is locked"))
@@ -147,7 +164,7 @@ impl Wallet {
             wallet_json["salt"] = json!(salt);
             wallet_json["checksum"] = json!((&checksum[..]).encode_hex::<String>());
 
-            self.sync_wallet_file(&wallet_json)?;
+            self.sync_json_to_wallet_file(&wallet_json)?;
             let _ = self.lock();
 
             Ok(())
@@ -187,7 +204,7 @@ impl Wallet {
             kps.push(kp);
             self.keypairs = Some(kps);
 
-            self.sync_keypairs_to_wallet_file()?;
+            self.sync_to_wallet_file()?;
             Ok(())
         }
     }
@@ -201,7 +218,7 @@ impl Wallet {
                 self.keys.remove(&public);
                 let kps = self.keypairs.take().expect("won't fail; qed");
                 self.keypairs = Some(kps.into_iter().filter(|kp| kp.public() != &public).collect::<Vec<_>>());
-                self.sync_keypairs_to_wallet_file()?;
+                self.sync_to_wallet_file()?;
                 return Ok(());
             }
         }
@@ -211,7 +228,7 @@ impl Wallet {
                 self.keys.remove(&public);
                 let kps = self.keypairs.take().expect("won't fail; qed");
                 self.keypairs = Some(kps.into_iter().filter(|kp| kp.public() != &public).collect::<Vec<_>>());
-                self.sync_keypairs_to_wallet_file()?;
+                self.sync_to_wallet_file()?;
                 return Ok(());
             }
         }
@@ -253,7 +270,22 @@ impl Wallet {
             .ok_or(Error::Runtime("matching public key not found"))
     }
 
-    fn sync_keypairs_to_wallet_file(&self) -> Result<(), Error> {
+    pub fn import_zkey(&mut self, addr: PaymentAddress, sk: ZSecretKey) -> Result<(), Error> {
+        if self.is_locked() {
+            return Err(Error::Runtime("unable to import key to a locked wallet"));
+        }
+        self.zaddrs.insert(addr, Some(sk));
+        self.sync_to_wallet_file()?;
+        Ok(())
+    }
+
+    pub fn create_zkey(&mut self) -> Result<(PaymentAddress, ZSecretKey), Error> {
+        let (addr, sk) = generate_zkey_pair();
+        self.import_zkey(addr.clone(), sk)?;
+        Ok((addr, sk))
+    }
+
+    fn sync_to_wallet_file(&self) -> Result<(), Error> {
         assert!(!self.is_locked(), "unreachable condition");
 
         let mut all_keys = json!({});
@@ -267,11 +299,12 @@ impl Wallet {
         let encrypt_key = self.crypto_key.as_ref().expect("won't fail; qed");
 
         wallet_json["keys"] = encrypt_keypairs_to_json(self.keypairs.as_ref().unwrap(), &encrypt_key)?;
-        self.sync_wallet_file(&wallet_json)?;
+        wallet_json["zkeys"] = encrypt_zkeys_to_json(&self.zaddrs, &encrypt_key)?;
+        self.sync_json_to_wallet_file(&wallet_json)?;
         Ok(())
     }
 
-    fn sync_wallet_file(&self, wallet_json: &serde_json::Value) -> Result<(), Error> {
+    fn sync_json_to_wallet_file(&self, wallet_json: &serde_json::Value) -> Result<(), Error> {
         let mut file = File::create(&self.wallet_path)?;
         file.write_all(serde_json::to_string_pretty(wallet_json)?.as_bytes())?;
         Ok(())
@@ -303,6 +336,29 @@ fn json_to_keys(val: &serde_json::Value) -> Result<HashSet<Public>, Error> {
     }
 }
 
+fn json_to_zkeys(val: &serde_json::Value) -> Result<HashMap<PaymentAddress, Option<ZSecretKey>>, Error> {
+    if val["version"] == json!(WALLET_FILE_VERSION.to_owned()) {
+        if val["zkeys"].is_null() {
+            Ok(Default::default())
+        } else {
+            val["zkeys"]
+                .as_object()
+                .ok_or(Error::Runtime("malformed json"))
+                .and_then(|obj| {
+                    obj.keys()
+                        .map(|k| {
+                            k.parse::<PaymentAddress>()
+                                .and_then(|addr| Ok((addr, None)))
+                                .map_err(Error::from)
+                        })
+                        .collect()
+                })
+        }
+    } else {
+        Err(Error::Runtime("malformed json"))
+    }
+}
+
 fn encrypt_keypairs_to_json(keypairs: &Vec<KeyPair>, encrypt_key: &[u8]) -> Result<serde_json::Value, Error> {
     let mut result = json!({});
     keypairs
@@ -312,6 +368,25 @@ fn encrypt_keypairs_to_json(keypairs: &Vec<KeyPair>, encrypt_key: &[u8]) -> Resu
             let privkey = kp.private();
             let eprivkey = crypto::aes_encrypt(encrypt_key, privkey.as_ref())?;
             result[pubkey] = json!(eprivkey.encode_hex::<String>());
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
+
+    Ok(result)
+}
+
+fn encrypt_zkeys_to_json(
+    zkeys: &HashMap<PaymentAddress, Option<ZSecretKey>>,
+    encrypt_key: &[u8],
+) -> Result<serde_json::Value, Error> {
+    let mut result = json!({});
+    zkeys
+        .iter()
+        .map(|(addr, sk)| {
+            let zaddr = addr.to_string();
+            let sk = sk.expect("unlocked");
+            let esk = crypto::aes_encrypt(encrypt_key, &sk[..])?;
+            result[zaddr] = json!(esk.encode_hex::<String>());
             Ok(())
         })
         .collect::<Result<Vec<_>, Error>>()?;
@@ -341,6 +416,33 @@ fn decrypt_wallet_json_to_keypairs(val: &serde_json::Value, decrypt_key: &[u8]) 
     Ok(kps)
 }
 
+fn decrypt_wallet_json_to_zkeys(
+    val: &serde_json::Value,
+    decrypt_key: &[u8],
+) -> Result<HashMap<PaymentAddress, Option<ZSecretKey>>, Error> {
+    if val["version"] != json!(WALLET_FILE_VERSION.to_owned()) {
+        return Err(Error::Runtime("malformed json"));
+    }
+    let zkeys = val["zkeys"]
+        .as_object()
+        .ok_or(Error::Runtime("malformed json"))
+        .and_then(|obj| {
+            obj.iter()
+                .map(|(addr, esk)| {
+                    let cipher = esk
+                        .as_str()
+                        .ok_or(Error::Runtime("malformed json"))
+                        .and_then(|s| Vec::from_hex(s).map_err(Error::from))?;
+                    let sk_raw = crypto::aes_decrypt(decrypt_key, &cipher)?;
+                    let mut sk = ZSecretKey::default();
+                    (&mut sk).copy_from_slice(&sk_raw);
+                    Ok((addr.parse()?, Some(sk)))
+                })
+                .collect::<Result<HashMap<PaymentAddress, Option<ZSecretKey>>, Error>>()
+        })?;
+    Ok(zkeys)
+}
+
 #[inline]
 fn random_salt() -> String {
     let rng = thread_rng();
@@ -349,17 +451,26 @@ fn random_salt() -> String {
 
 #[test]
 fn test_hello() {
-    let mut w = Wallet::open("default").unwrap();
+    let mut w = Wallet::create("test-only", "88888888").unwrap();
+    // let mut w = Wallet::open("test-only").unwrap();
 
-    w.set_password("12345678").expect("set password");
-
-    assert!(w.check_password("12345678").unwrap());
+    assert!(w.check_password("88888888").unwrap());
     assert!(!w.check_password("68754321").unwrap());
 
     assert!(w.is_locked());
-    assert!(w.unlock("12345678").is_ok());
+    assert!(w.unlock("88888888").is_ok());
 
-    w.import_key("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc".parse().unwrap())
-        .expect("import key");
+    w.import_key(
+        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            .parse()
+            .unwrap(),
+    )
+    .expect("import key");
+
+    w.create_zkey().expect("create zkey");
+
     println!("{:?}", w.keypairs);
+    println!("{:?}", w.zaddrs);
+
+    assert!(fs::remove_file(w.wallet_file()).is_ok());
 }
