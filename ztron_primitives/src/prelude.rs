@@ -1,6 +1,7 @@
 //! Remove generics from basic type.
 
 use ff::{PrimeField, PrimeFieldRepr};
+use hex::ToHex;
 use pairing::bls12_381::Bls12;
 
 use crate::jubjub::JubjubEngine;
@@ -42,6 +43,32 @@ pub fn generate_r() -> <Bls12 as JubjubEngine>::Fs {
         .write_le(&mut raw[..])
         .expect("write ok");
     raw */
+}
+
+/// (PaymentAddress, sk)
+pub fn generate_zkey_pair() -> (PaymentAddress, [u8; 32]) {
+    let sk = rand::random::<[u8; 32]>();
+
+    let mut d: [u8; 11];
+    let mut diversifier: Diversifier;
+    loop {
+        d = rand::random();
+        diversifier = Diversifier(d);
+        if diversifier.g_d::<Bls12>(&JUBJUB).is_some() {
+            break;
+        }
+    }
+
+    let esk = ExpandedSpendingKey::from_spending_key(&sk);
+    let fvk = FullViewingKey::from_expanded_spending_key(&esk, &JUBJUB);
+
+    let zaddr = fvk.vk.to_payment_address(diversifier, &JUBJUB).unwrap();
+
+    eprintln!("sk: {:}", (&sk[..]).encode_hex::<String>());
+    eprintln!("d: {:}", (&d[..]).encode_hex::<String>());
+    eprintln!("addr: {:}", zaddr.to_string());
+
+    (zaddr, sk)
 }
 
 pub fn rcm_to_bytes(rcm: <Bls12 as JubjubEngine>::Fs) -> Vec<u8> {
@@ -90,9 +117,8 @@ mod tests {
     }
 
     #[test]
-    fn generate_rcm() {
-        let rcm = generate_r();
-        assert_eq!(rcm.encode_hex::<String>().len(), 64); // 32 bytes
+    fn generate_address() {
+        let (_, _) = generate_zkey_pair();
     }
 
     #[test]
