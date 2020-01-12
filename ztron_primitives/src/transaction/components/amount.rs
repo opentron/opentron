@@ -1,5 +1,6 @@
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::convert::TryFrom;
 
 const COIN: i64 = 1_0000_0000;
 const MAX_MONEY: i64 = 21_000_000 * COIN;
@@ -98,6 +99,14 @@ impl Amount {
     /// positive.
     pub const fn is_negative(self) -> bool {
         self.0.is_negative()
+    }
+}
+
+impl TryFrom<i64> for Amount {
+    type Error = ();
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        Amount::from_i64(value)
     }
 }
 

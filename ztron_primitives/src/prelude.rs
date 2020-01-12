@@ -3,13 +3,16 @@
 use ff::{PrimeField, PrimeFieldRepr};
 use pairing::bls12_381::Bls12;
 
+use crate::jubjub::JubjubEngine;
 use crate::keys;
 use crate::note_encryption::generate_esk;
 use crate::primitives;
 
+pub use crate::keys::{prf_expand, OutgoingViewingKey};
+pub use crate::note_encryption::{Memo, SaplingNoteEncryption};
+pub use crate::primitives::Diversifier;
+pub use crate::transaction::components::Amount;
 pub use crate::JUBJUB;
-pub use keys::{prf_expand, OutgoingViewingKey};
-pub use primitives::Diversifier;
 
 /// ask, nsk, ovk
 pub type ExpandedSpendingKey = keys::ExpandedSpendingKey<Bls12>;
@@ -27,14 +30,39 @@ pub type ProofGenerationKey = primitives::ProofGenerationKey<Bls12>;
 pub type PaymentAddress = primitives::PaymentAddress<Bls12>;
 
 /// Generate uniformly random scalar in Jubjub. The result is of length 32.
-pub fn generate_r() -> [u8; 32] {
+pub fn generate_r() -> <Bls12 as JubjubEngine>::Fs {
     let mut rng = rand::rngs::OsRng;
-    let mut raw = [0u8; 32];
+    // Fs::random(&mut rng)
+    generate_esk(&mut rng)
+    // let mut raw = [0u8; 32];
+    // generate_esk(&mut rng)
+    /*
     generate_esk(&mut rng)
         .into_repr()
         .write_le(&mut raw[..])
         .expect("write ok");
+    raw */
+}
+
+pub fn rcm_to_bytes(rcm: <Bls12 as JubjubEngine>::Fs) -> Vec<u8> {
+    let mut raw = vec![];
+    rcm.into_repr().write_le(&mut raw).expect("write ok");
     raw
+}
+
+/// value, r
+pub type ValueCommitment = primitives::ValueCommitment<Bls12>;
+
+/// pk_d, d, value, r
+pub type Note = primitives::Note<Bls12>;
+
+pub fn compute_note_commitment(note: &Note) -> Vec<u8> {
+    let mut result = vec![];
+    note.cm(&JUBJUB)
+        .into_repr()
+        .write_le(&mut result)
+        .expect("length is 32 bytes");
+    result
 }
 
 #[cfg(test)]
