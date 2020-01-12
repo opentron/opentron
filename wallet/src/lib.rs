@@ -18,7 +18,7 @@ mod crypto;
 mod error;
 
 const WALLET_FILENAME_EXTENSION: &'static str = ".wallet";
-const WALLET_FILE_VERSION_STR: &'static str = "v1";
+const WALLET_FILE_VERSION: &'static str = "v1";
 
 /// Local wallet implementaion
 #[derive(Debug)]
@@ -43,7 +43,7 @@ impl Wallet {
             if !wallet_file.exists() {
                 let mut file = File::create(&wallet_file)?;
                 let json = json!({
-                    "version": json!(WALLET_FILE_VERSION_STR.to_owned()),
+                    "version": json!(WALLET_FILE_VERSION.to_owned()),
                     "salt": random_salt(),
                     "checksum": "",
                     "keys": {}
@@ -81,7 +81,7 @@ impl Wallet {
 
         let mut file = File::create(&wallet_file)?;
         let json = json!({
-            "version": json!(WALLET_FILE_VERSION_STR.to_owned()),
+            "version": json!(WALLET_FILE_VERSION.to_owned()),
             "salt": random_salt(),
             "checksum": "",
             "keys": {}
@@ -325,7 +325,7 @@ impl Wallet {
 }
 
 fn json_to_keys(val: &serde_json::Value) -> Result<HashSet<Public>, Error> {
-    if val["version"] == json!("v1".to_owned()) {
+    if val["version"] == json!(WALLET_FILE_VERSION.to_owned()) {
         val["keys"]
             .as_object()
             .ok_or(Error::Runtime("malformed json"))
@@ -352,7 +352,7 @@ fn encrypt_keypairs_to_json(keypairs: &Vec<KeyPair>, encrypt_key: &[u8]) -> Resu
 }
 
 fn decrypt_wallet_json_to_keypairs(val: &serde_json::Value, decrypt_key: &[u8]) -> Result<Vec<KeyPair>, Error> {
-    if val["version"] != json!("v1".to_owned()) {
+    if val["version"] != json!(WALLET_FILE_VERSION.to_owned()) {
         return Err(Error::Runtime("malformed json"));
     }
     let kps = val["keys"]
