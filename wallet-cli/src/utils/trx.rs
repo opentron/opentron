@@ -169,7 +169,8 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         self
     }
 
-    pub fn run(&mut self) -> Result<(), Error> {
+    /// Extract the filled Transaction.raw
+    pub fn to_raw_transaction(&mut self) -> Result<TransactionRaw, Error> {
         let matches = self.arg_matches;
 
         // packing contract to TransactionRaw
@@ -221,7 +222,11 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         raw.set_ref_block_hash(ref_block.blockid[8..16].to_owned());
 
         raw.set_timestamp(timestamp_millis());
+        Ok(raw)
+    }
 
+    /// Resume running from a Transaction.raw
+    pub fn resume(raw: TransactionRaw, matches: &ArgMatches) -> Result<(), Error> {
         // signature
         let txid = crypto::sha256(&raw.write_to_bytes()?);
         let mut signatures: Vec<Vec<u8>> = Vec::new();
@@ -258,7 +263,9 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
             Ok(())
         } else {
-            let (_, payload, _) = grpc_client.broadcast_transaction(Default::default(), req).wait()?;
+            let (_, payload, _) = client::new_grpc_client()?
+                .broadcast_transaction(Default::default(), req)
+                .wait()?;
             let mut result = serde_json::to_value(&payload)?;
             jsont::fix_api_return(&mut result);
             eprintln!("got => {:}", serde_json::to_string_pretty(&result)?);
@@ -269,6 +276,11 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
                 Err(Error::Runtime("broadcast transaction failed!"))
             }
         }
+    }
+
+    pub fn run(&mut self) -> Result<(), Error> {
+        let raw = self.to_raw_transaction()?;
+        Self::resume(raw, self.arg_matches)
     }
 }
 
