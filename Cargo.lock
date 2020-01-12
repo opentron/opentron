@@ -2579,8 +2579,6 @@ dependencies = [
  "tokio 0.2.6",
  "tonic",
  "walletd",
- "ztron_primitives",
- "ztron_proofs",
 ]
 
 [[package]]
