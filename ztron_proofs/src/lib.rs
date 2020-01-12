@@ -14,6 +14,7 @@ use std::path::Path;
 
 pub mod circuit;
 mod hashreader;
+pub mod prelude;
 pub mod sapling;
 pub mod sprout;
 
