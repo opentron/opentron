@@ -43,7 +43,7 @@ impl Wallet {
             if !wallet_file.exists() {
                 let mut file = File::create(&wallet_file)?;
                 let json = json!({
-                    "version": json!(WALLET_FILE_VERSION.to_owned()),
+                    "version": WALLET_FILE_VERSION.to_owned(),
                     "salt": random_salt(),
                     "checksum": "",
                     "keys": {}
@@ -81,7 +81,7 @@ impl Wallet {
 
         let mut file = File::create(&wallet_file)?;
         let json = json!({
-            "version": json!(WALLET_FILE_VERSION.to_owned()),
+            "version": WALLET_FILE_VERSION.to_owned(),
             "salt": random_salt(),
             "checksum": "",
             "keys": {}
@@ -373,6 +373,7 @@ fn decrypt_wallet_json_to_keypairs(val: &serde_json::Value, decrypt_key: &[u8]) 
     Ok(kps)
 }
 
+#[inline]
 fn random_salt() -> String {
     let rng = thread_rng();
     rng.sample_iter(Alphanumeric).take(16).collect()
@@ -390,7 +391,7 @@ fn test_hello() {
     assert!(w.is_locked());
     assert!(w.unlock("12345678").is_ok());
 
-    w.import_key("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
+    w.import_key("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc".parse().unwrap())
         .expect("import key");
     println!("{:?}", w.keypairs);
 }
