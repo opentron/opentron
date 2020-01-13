@@ -35,8 +35,14 @@ pub fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bHash {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OutgoingViewingKey(pub [u8; 32]);
 
+impl OutgoingViewingKey {
+    pub fn as_bytes(&self) -> Vec<u8> {
+        (&self.0[..]).to_owned()
+    }
+}
+
 /// A Sapling expanded spending key
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ExpandedSpendingKey<E: JubjubEngine> {
     pub ask: E::Fs,
     pub nsk: E::Fs,

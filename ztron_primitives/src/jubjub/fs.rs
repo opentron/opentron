@@ -256,6 +256,14 @@ impl PrimeFieldRepr for FsRepr {
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Fs(FsRepr);
 
+impl Fs {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut raw = vec![];
+        self.into_repr().write_le(&mut raw).expect("as_bytes error");
+        raw
+    }
+}
+
 impl ::std::fmt::Display for Fs {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "Fs({})", self.into_repr())
