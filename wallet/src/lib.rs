@@ -8,7 +8,7 @@ use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
-use ztron_primitives::prelude::{generate_zkey_pair, PaymentAddress};
+use ztron_primitives::prelude::{generate_zkey_pair, PaymentAddress, ExpandedSpendingKey};
 
 use config::determine_config_directory;
 pub use error::Error;
@@ -140,7 +140,7 @@ impl Wallet {
         let kps = decrypt_wallet_json_to_keypairs(&wallet_json, decrypt_key)?;
         self.keypairs = Some(kps);
 
-        self.zaddrs = decrypt_wallet_json_to_zkeys(&wallet_json, decrypt_key)?;
+        self.zaddrs = decrypt_wallet_json_to_zkeys(&wallet_json, decrypt_key).unwrap_or_default();
 
         self.locked = false;
         Ok(())
@@ -285,6 +285,10 @@ impl Wallet {
         Ok((addr, sk))
     }
 
+    pub fn get_expanded_spending_key(&self, addr: &PaymentAddress) -> Result<ExpandedSpendingKey, Error> {
+        unimplemented!()
+    }
+
     fn sync_to_wallet_file(&self) -> Result<(), Error> {
         assert!(!self.is_locked(), "unreachable condition");
 
@@ -319,10 +323,8 @@ impl Wallet {
         Ok(crypto::sha512(&raw))
     }
 
-    /*
-    list_keys()
-    list_public_keys()
-    */
+    // list_keys()
+    // list_public_keys()
 }
 
 fn json_to_keys(val: &serde_json::Value) -> Result<HashSet<Public>, Error> {
@@ -449,28 +451,33 @@ fn random_salt() -> String {
     rng.sample_iter(Alphanumeric).take(16).collect()
 }
 
-#[test]
-fn test_hello() {
-    let mut w = Wallet::create("test-only", "88888888").unwrap();
-    // let mut w = Wallet::open("test-only").unwrap();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    assert!(w.check_password("88888888").unwrap());
-    assert!(!w.check_password("68754321").unwrap());
+    #[test]
+    fn wallet_basic_op_works() {
+        let mut w = Wallet::create("test-only", "88888888").unwrap();
+        // let mut w = Wallet::open("test-only").unwrap();
 
-    assert!(w.is_locked());
-    assert!(w.unlock("88888888").is_ok());
+        assert!(w.check_password("88888888").unwrap());
+        assert!(!w.check_password("68754321").unwrap());
 
-    w.import_key(
-        "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
-            .parse()
-            .unwrap(),
-    )
-    .expect("import key");
+        assert!(w.is_locked());
+        assert!(w.unlock("88888888").is_ok());
 
-    w.create_zkey().expect("create zkey");
+        w.import_key(
+            "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+                .parse()
+                .unwrap(),
+        )
+        .expect("import key");
 
-    println!("{:?}", w.keypairs);
-    println!("{:?}", w.zaddrs);
+        w.create_zkey().expect("create zkey");
 
-    assert!(fs::remove_file(w.wallet_file()).is_ok());
+        println!("{:?}", w.keypairs);
+        println!("{:?}", w.zaddrs);
+
+        assert!(fs::remove_file(w.wallet_file()).is_ok());
+    }
 }
