@@ -244,7 +244,8 @@ pub fn debug_taddr_to_zaddr() -> Result<(), Error> {
 
     // when input is transparent. hardcoded in wallet-cli
     params.set_ovk(Vec::from_hex(
-        "030c8c2bc59fb3eb8afb047a8ea4b028743d23e7d38c6fa30908358431e2314d",
+        // "030c8c2bc59fb3eb8afb047a8ea4b028743d23e7d38c6fa30908358431e2314d",
+        "0000000000000000000000000000000000000000000000000000000000000000",
     )?);
 
     let (_, transaction_ext, _) = grpc_client
