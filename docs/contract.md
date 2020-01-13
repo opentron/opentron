@@ -10,7 +10,8 @@
 > # create contract
 > ./target/debug/wallet-cli contract create TGQgfK497YXmjdgvun9Bg5Zu3xE15v17cu \
 >     --abi ./Contract.abi --code ./Contract.bin \
->     --name YourSuperCoolContractName
+>     --name YourSuperCoolContractName \
+>     --energy-limit 1000  # must set on mainnet
 .... (omitted)
 TX: d8228648cb275bb548da9a8b2d11beb956275413774015a63e390de85bc1fb57
 .... (omitted)
