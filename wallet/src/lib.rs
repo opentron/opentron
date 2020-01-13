@@ -8,7 +8,7 @@ use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
-use ztron_primitives::prelude::{generate_zkey_pair, PaymentAddress, ExpandedSpendingKey};
+use ztron_primitives::prelude::{generate_zkey_pair, ExpandedSpendingKey, PaymentAddress};
 
 use config::determine_config_directory;
 pub use error::Error;
@@ -140,7 +140,7 @@ impl Wallet {
         let kps = decrypt_wallet_json_to_keypairs(&wallet_json, decrypt_key)?;
         self.keypairs = Some(kps);
 
-        self.zaddrs = decrypt_wallet_json_to_zkeys(&wallet_json, decrypt_key).unwrap_or_default();
+        self.zaddrs = decrypt_wallet_json_to_zkeys(&wallet_json, decrypt_key)?;
 
         self.locked = false;
         Ok(())
@@ -339,26 +339,25 @@ fn json_to_keys(val: &serde_json::Value) -> Result<HashSet<Public>, Error> {
 }
 
 fn json_to_zkeys(val: &serde_json::Value) -> Result<HashMap<PaymentAddress, Option<ZSecretKey>>, Error> {
-    if val["version"] == json!(WALLET_FILE_VERSION.to_owned()) {
-        if val["zkeys"].is_null() {
-            Ok(Default::default())
-        } else {
-            val["zkeys"]
-                .as_object()
-                .ok_or(Error::Runtime("malformed json"))
-                .and_then(|obj| {
-                    obj.keys()
-                        .map(|k| {
-                            k.parse::<PaymentAddress>()
-                                .and_then(|addr| Ok((addr, None)))
-                                .map_err(Error::from)
-                        })
-                        .collect()
-                })
-        }
-    } else {
-        Err(Error::Runtime("malformed json"))
+    if val["version"] != json!(WALLET_FILE_VERSION.to_owned()) {
+        return Err(Error::Runtime("malformed json, version not supported"));
     }
+    if val["zkeys"].is_null() {
+        return Ok(Default::default());
+    }
+
+    val["zkeys"]
+        .as_object()
+        .ok_or(Error::Runtime("malformed json"))
+        .and_then(|obj| {
+            obj.keys()
+                .map(|k| {
+                    k.parse::<PaymentAddress>()
+                        .and_then(|addr| Ok((addr, None)))
+                        .map_err(Error::from)
+                })
+                .collect()
+        })
 }
 
 fn encrypt_keypairs_to_json(keypairs: &Vec<KeyPair>, encrypt_key: &[u8]) -> Result<serde_json::Value, Error> {
@@ -425,6 +424,10 @@ fn decrypt_wallet_json_to_zkeys(
     if val["version"] != json!(WALLET_FILE_VERSION.to_owned()) {
         return Err(Error::Runtime("malformed json"));
     }
+    if val["zkeys"].is_null() {
+        return Ok(Default::default());
+    }
+
     let zkeys = val["zkeys"]
         .as_object()
         .ok_or(Error::Runtime("malformed json"))
