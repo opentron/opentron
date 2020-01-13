@@ -16,6 +16,8 @@ service LocalWallet {
   rpc ListPrivateKeys(ListPrivateKeysRequest)
       returns (ListPrivateKeysResponse) {}
   rpc SignDigest(SignDigestRequest) returns (SignDigestResponse) {}
+  // shielded transaction
+  rpc CreateZKey(CreateZKeyRequest) returns (CreateZKeyResponse) {}
 }
 
 message KeyPair {
@@ -94,4 +96,12 @@ message SignDigestResponse {
   int32 code = 1;
   string message = 2;
   bytes signature = 7;
+}
+
+message CreateZKeyRequest {}
+
+message CreateZKeyResponse {
+  int32 code = 1;
+  string message = 2;
+  string zaddress = 3;
 }
