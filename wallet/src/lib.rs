@@ -8,7 +8,7 @@ use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
-use ztron_primitives::prelude::{generate_zkey_pair, ExpandedSpendingKey, PaymentAddress};
+use ztron_primitives::prelude::{generate_zkey_pair, ExpandedSpendingKey, FullViewingKey, PaymentAddress, JUBJUB};
 
 use config::determine_config_directory;
 pub use error::Error;
@@ -286,7 +286,28 @@ impl Wallet {
     }
 
     pub fn get_expanded_spending_key(&self, addr: &PaymentAddress) -> Result<ExpandedSpendingKey, Error> {
-        unimplemented!()
+        if self.is_locked() {
+            return Err(Error::Runtime("unable to import key to a locked wallet"));
+        }
+
+        match self.zaddrs.get(addr) {
+            Some(&Some(ref sk)) => Ok(ExpandedSpendingKey::from_spending_key(sk)),
+            _ => Err(Error::Runtime("payment address not found in wallet")),
+        }
+    }
+
+    pub fn get_full_viewing_key(&self, addr: &PaymentAddress) -> Result<FullViewingKey, Error> {
+        if self.is_locked() {
+            return Err(Error::Runtime("unable to import key to a locked wallet"));
+        }
+
+        match self.zaddrs.get(addr) {
+            Some(&Some(ref sk)) => Ok(FullViewingKey::from_expanded_spending_key(
+                &ExpandedSpendingKey::from_spending_key(sk),
+                &JUBJUB,
+            )),
+            _ => Err(Error::Runtime("payment address not found in wallet")),
+        }
     }
 
     fn sync_to_wallet_file(&self) -> Result<(), Error> {
@@ -478,8 +499,19 @@ mod tests {
 
         w.create_zkey().expect("create zkey");
 
-        println!("{:?}", w.keypairs);
-        println!("{:?}", w.zaddrs);
+        // println!("{:?}", w.keypairs);
+        // println!("{:?}", w.zaddrs);
+
+        let zaddr = w.zaddrs.keys().next().unwrap();
+        let esk = w.get_expanded_spending_key(zaddr).unwrap();
+        println!("ask => {:}", esk.ask.to_bytes().encode_hex::<String>());
+        println!("nsk => {:}", esk.nsk.to_bytes().encode_hex::<String>());
+        println!("ovk => {:}", esk.ovk.as_bytes().encode_hex::<String>());
+
+        let fvk = w.get_full_viewing_key(zaddr).unwrap();
+        println!("ak  => {:}", fvk.vk.ak.to_bytes().encode_hex::<String>());
+        println!("nk  => {:}", fvk.vk.nk.to_bytes().encode_hex::<String>());
+        println!("ivk => {:}", fvk.vk.ivk().to_bytes().encode_hex::<String>());
 
         assert!(fs::remove_file(w.wallet_file()).is_ok());
     }
