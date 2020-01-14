@@ -60,7 +60,11 @@ fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Erro
             entry
                 .get_inputs()
                 .iter()
-                .map(|arg| format!("{:} {:}", arg.get_field_type(), arg.get_name()))
+                .map(|arg| if arg.get_name().is_empty() {
+                    arg.get_field_type().to_owned()
+                } else {
+                    format!("{:} {:}", arg.get_field_type(), arg.get_name())
+                })
                 .collect::<Vec<_>>()
                 .join(", ")
         )?;
@@ -82,7 +86,7 @@ fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Erro
             )?;
         }
 
-        eprintln!(
+        println!(
             "{:}\n    => {:}: {:}",
             pretty,
             (&fnhash[..]).encode_hex::<String>(),
