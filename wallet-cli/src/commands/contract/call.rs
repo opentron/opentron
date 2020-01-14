@@ -50,12 +50,16 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         (_, _) => unreachable!("set conflicts in cli.yml; qed"),
     };
 
-    let trigger_contract = TriggerSmartContract {
+    let mut trigger_contract = TriggerSmartContract {
         owner_address: sender.to_bytes().to_owned(),
         contract_address: contract.to_bytes().to_owned(),
         data: data.into(),
         ..Default::default()
     };
+
+    if let Some(value) = matches.value_of("value") {
+        trigger_contract.set_call_value(trx::parse_amount_with_surfix(value, "TRX", 6)?);
+    }
 
     trx::TransactionHandler::handle(trigger_contract, matches)
         .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))

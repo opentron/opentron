@@ -1140,11 +1140,15 @@ subcommands:
                               multiple: true
                               last: true
                         - data:
-                              help: raw data to call contract
+                              help: Raw data to call contract
                               long: data
                               takes_value: true
                               conflicts_with:
                                   - ARGS
+                        - value:
+                              help: Amount of TRX to send to contract while calling
+                              long: value
+                              takes_value: true
                         - account:
                               help: The account address used for signing
                               short: k
