@@ -455,6 +455,7 @@ pub fn fix_voucher_info(voucher_info: &mut serde_json::Value) {
 pub fn fix_transaction_info(info: &mut serde_json::Value) {
     info["id"] = json!(bytes_to_hex_string(&info["id"]));
     info["contract_address"] = json!(bytes_to_hex_string(&info["contract_address"]));
+    info["resMessage"] = json!(bytes_to_string(&info["resMessage"]));
     info["contractResult"] = json!(info["contractResult"]
         .as_array()
         .unwrap()
