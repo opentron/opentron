@@ -130,6 +130,9 @@ Event Server:
 - <http://47.252.87.129:8070> (CORS Enabled) - side chain
 - <https://suntest.tronex.io/event> (CORS Enabled) - side chain
 
+NOTE: event listening is via:
+> <http://47.252.87.129:8070/events/contract/{CONTRACT_ADDRESS}/{EVENT_NAME}>
+
 ### Testnet Cross Chain
 
 sidechainid
