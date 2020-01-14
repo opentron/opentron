@@ -57,15 +57,6 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 
     // signature
     let txid = crypto::sha256(&raw.write_to_bytes()?);
-
-    if !signatures.is_empty() {
-        eprintln!("! Already signed by:");
-        for sig in &signatures {
-            let public = Public::recover_digest(&txid[..], &FromHex::from_hex(sig)?)?;
-            eprintln!("  {}", Address::from_public(&public));
-        }
-    }
-
     let digest = if let Some(chain_id) = unsafe { CHAIN_ID } {
         let mut raw = (&txid[..]).to_owned();
         raw.extend(Vec::from_hex(chain_id)?);
@@ -73,6 +64,14 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     } else {
         txid
     };
+
+    if !signatures.is_empty() {
+        eprintln!("! Already signed by:");
+        for sig in &signatures {
+            let public = Public::recover_digest(&digest[..], &FromHex::from_hex(sig)?)?;
+            eprintln!("  {}", Address::from_public(&public));
+        }
+    }
 
     if !matches.is_present("skip-sign") {
         let signature = if let Some(raw_key) = matches.value_of("private-key") {
