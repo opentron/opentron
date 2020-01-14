@@ -128,6 +128,7 @@ Event Server:
 
 - <http://47.252.81.14:8070> (CORS Enabled) - main chain
 - <http://47.252.87.129:8070> (CORS Enabled) - side chain
+- <https://suntest.tronex.io/event> (CORS Enabled) - side chain
 
 ### Testnet Cross Chain
 
