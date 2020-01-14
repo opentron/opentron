@@ -230,12 +230,20 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
     pub fn resume(raw: TransactionRaw, matches: &ArgMatches) -> Result<(), Error> {
         // signature
         let txid = crypto::sha256(&raw.write_to_bytes()?);
+        // special signature routine for Sun-Network
+        let digest = if let Some(chain_id) = unsafe { CHAIN_ID } {
+            let mut raw = (&txid[..]).to_owned();
+            raw.extend(Vec::from_hex(chain_id)?);
+            crypto::sha256(&raw)
+        } else {
+            txid
+        };
         let mut signatures: Vec<Vec<u8>> = Vec::new();
         if !matches.is_present("skip-sign") {
             let signature = if let Some(raw_key) = matches.value_of("private-key") {
                 eprintln!("! Signing using raw private key from --private-key");
                 let priv_key = raw_key.parse::<Private>()?;
-                priv_key.sign_digest(&txid)?[..].to_owned()
+                priv_key.sign_digest(&digest)?[..].to_owned()
             } else {
                 let owner_address = matches
                     .value_of("account")
@@ -243,16 +251,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
                     .or_else(|| extract_owner_address_from_parameter(raw.contract[0].get_parameter()).ok())
                     .ok_or(Error::Runtime("can not determine owner address for signing"))?;
                 eprintln!("! Signing using wallet key {:}", owner_address);
-
-                match unsafe { CHAIN_ID } {
-                    Some(chain_id) => {
-                        let mut raw = (&txid[..]).to_owned();
-                        raw.extend(Vec::from_hex(chain_id)?);
-                        let digest = crypto::sha256(&raw);
-                        sign_digest(&digest, &owner_address)?
-                    }
-                    None => sign_digest(&txid, &owner_address)?,
-                }
+                sign_digest(&digest, &owner_address)?
             };
             signatures.push(signature);
         }

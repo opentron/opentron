@@ -66,11 +66,19 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         }
     }
 
+    let digest = if let Some(chain_id) = unsafe { CHAIN_ID } {
+        let mut raw = (&txid[..]).to_owned();
+        raw.extend(Vec::from_hex(chain_id)?);
+        crypto::sha256(&raw)
+    } else {
+        txid
+    };
+
     if !matches.is_present("skip-sign") {
         let signature = if let Some(raw_key) = matches.value_of("private-key") {
             eprintln!("! Signing using raw private key from --private-key");
             let priv_key = raw_key.parse::<Private>()?;
-            priv_key.sign_digest(&txid)?[..].to_owned()
+            priv_key.sign_digest(&digest)?[..].to_owned()
         } else {
             let owner_address = matches
                 .value_of("account")
@@ -78,20 +86,10 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .or_else(|| trx::extract_owner_address_from_parameter(raw.contract[0].get_parameter()).ok())
                 .ok_or(Error::Runtime("can not determine owner address for signing"))?;
             eprintln!("! Signing using wallet key {:}", owner_address);
-
-            match unsafe { CHAIN_ID } {
-                Some(chain_id) => {
-                    let mut raw = (&txid[..]).to_owned();
-                    raw.extend(Vec::from_hex(chain_id)?);
-                    let digest = crypto::sha256(&raw);
-                    sign_digest(&digest, &owner_address)?
-                }
-                None => sign_digest(&txid, &owner_address)?,
-            }
+            sign_digest(&digest, &owner_address)?
         };
 
         let sig_hex = signature.encode_hex::<String>();
-
         if signatures.contains(&sig_hex) {
             return Err(Error::Runtime("already signed by this key"));
         } else {
