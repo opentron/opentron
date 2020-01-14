@@ -2,7 +2,7 @@
 
 use chrono::Utc;
 use clap::ArgMatches;
-use hex::ToHex;
+use hex::{FromHex, ToHex};
 use keys::{Address, Private};
 use proto::api::NumberMessage;
 use proto::api_grpc::Wallet;
@@ -29,6 +29,7 @@ use crate::error::Error;
 use crate::utils::client;
 use crate::utils::crypto;
 use crate::utils::jsont;
+use crate::CHAIN_ID;
 
 pub fn timestamp_millis() -> i64 {
     Utc::now().timestamp_millis()
@@ -231,18 +232,27 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         let txid = crypto::sha256(&raw.write_to_bytes()?);
         let mut signatures: Vec<Vec<u8>> = Vec::new();
         if !matches.is_present("skip-sign") {
-            let signature = if let Some(raw_addr) = matches.value_of("account") {
-                let addr = raw_addr.parse::<Address>()?;
-                eprintln!("! Signing using wallet key from --account {:}", addr);
-                sign_digest(&txid, &addr)?
-            } else if let Some(raw_key) = matches.value_of("private-key") {
+            let signature = if let Some(raw_key) = matches.value_of("private-key") {
                 eprintln!("! Signing using raw private key from --private-key");
                 let priv_key = raw_key.parse::<Private>()?;
                 priv_key.sign_digest(&txid)?[..].to_owned()
             } else {
-                let owner_address = extract_owner_address_from_parameter(raw.contract[0].get_parameter())?;
+                let owner_address = matches
+                    .value_of("account")
+                    .and_then(|addr| addr.parse().ok())
+                    .or_else(|| extract_owner_address_from_parameter(raw.contract[0].get_parameter()).ok())
+                    .ok_or(Error::Runtime("can not determine owner address for signing"))?;
                 eprintln!("! Signing using wallet key {:}", owner_address);
-                sign_digest(&txid, &owner_address)?
+
+                match unsafe { CHAIN_ID } {
+                    Some(chain_id) => {
+                        let mut raw = (&txid[..]).to_owned();
+                        raw.extend(Vec::from_hex(chain_id)?);
+                        let digest = crypto::sha256(&raw);
+                        sign_digest(&digest, &owner_address)?
+                    }
+                    None => sign_digest(&txid, &owner_address)?,
+                }
             };
             signatures.push(signature);
         }

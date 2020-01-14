@@ -8,6 +8,8 @@ use error::Error;
 
 // FIXME: should use AppConfig, for now, use static var
 static mut RPC_HOST: &str = "grpc.trongrid.io:50051";
+/// Used for sun-network
+static mut CHAIN_ID: Option<&str> = None;
 
 fn main() -> Result<(), Error> {
     utils::walletd::ensure_walletd()?;
@@ -25,7 +27,12 @@ fn main() -> Result<(), Error> {
             (Some("dappchain"), _) => "47.90.245.159:50051",
             (Some("dappchain-testnet"), _) => "47.252.85.90:50051",
             _ => unreachable!(),
-        }
+        };
+        CHAIN_ID = match matches.value_of("network") {
+            Some("dappchain") => Some("41E209E4DE650F0150788E8EC5CAFA240A23EB8EB7"),
+            Some("dappchain-testnet") => Some("413AF23F37DA0D48234FDD43D89931E98E1144481B"),
+            _ => None,
+        };
     }
 
     match matches.subcommand() {

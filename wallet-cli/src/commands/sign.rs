@@ -17,6 +17,7 @@ use crate::utils::client::new_grpc_client;
 use crate::utils::crypto;
 use crate::utils::jsont;
 use crate::utils::trx;
+use crate::CHAIN_ID;
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let trx = matches.value_of("TRANSACTION").expect("required in cli.yml; qed");
@@ -29,7 +30,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             io::stdin().read_to_string(&mut buffer)?;
             buffer
         }
-        _ => trx.to_owned()
+        _ => trx.to_owned(),
     };
 
     let mut signatures = Vec::new();
@@ -66,18 +67,27 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     }
 
     if !matches.is_present("skip-sign") {
-        let signature: Vec<u8> = if let Some(raw_addr) = matches.value_of("account") {
-            let addr = raw_addr.parse::<Address>()?;
-            eprintln!("! Signing using wallet key from --account {:}", addr);
-            sign_digest(&txid, &addr)?
-        } else if let Some(raw_key) = matches.value_of("private-key") {
-            let private = raw_key.parse::<Private>()?;
-            eprintln!("! Signing with --private-key {:}", Address::from_private(&private));
-            private.sign_digest(&txid)?[..].to_owned()
+        let signature = if let Some(raw_key) = matches.value_of("private-key") {
+            eprintln!("! Signing using raw private key from --private-key");
+            let priv_key = raw_key.parse::<Private>()?;
+            priv_key.sign_digest(&txid)?[..].to_owned()
         } else {
-            let owner_address = trx::extract_owner_address_from_parameter(raw.contract[0].get_parameter())?;
+            let owner_address = matches
+                .value_of("account")
+                .and_then(|addr| addr.parse().ok())
+                .or_else(|| trx::extract_owner_address_from_parameter(raw.contract[0].get_parameter()).ok())
+                .ok_or(Error::Runtime("can not determine owner address for signing"))?;
             eprintln!("! Signing using wallet key {:}", owner_address);
-            sign_digest(&txid, &owner_address)?
+
+            match unsafe { CHAIN_ID } {
+                Some(chain_id) => {
+                    let mut raw = (&txid[..]).to_owned();
+                    raw.extend(Vec::from_hex(chain_id)?);
+                    let digest = crypto::sha256(&raw);
+                    sign_digest(&digest, &owner_address)?
+                }
+                None => sign_digest(&txid, &owner_address)?,
+            }
         };
 
         let sig_hex = signature.encode_hex::<String>();
@@ -107,7 +117,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .into_iter()
                 .map(|sig| Vec::from_hex(sig).unwrap())
                 .collect::<Vec<_>>()
-                .into()
+                .into(),
         );
 
         let (_, payload, _) = new_grpc_client()?
