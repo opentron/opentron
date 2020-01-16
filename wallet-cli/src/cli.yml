@@ -130,8 +130,8 @@ subcommands:
                     about: Get details of a TRC10 token
                     args:
                         - ID:
-                            help: Token id
-                            required: true
+                              help: Token id
+                              required: true
 
     - set:
           about: Set or update the blockchain state
@@ -1140,15 +1140,29 @@ subcommands:
                               multiple: true
                               last: true
                         - data:
-                              help: Raw data to call contract
+                              help: Raw hex data to call contract
                               long: data
                               takes_value: true
+                              value_name: DATA
                               conflicts_with:
                                   - ARGS
                         - value:
                               help: Amount of TRX to send to contract while calling
                               long: value
                               takes_value: true
+                              value_name: AMOUNT
+                        - token-id:
+                              help: TRC10 token id to send to contract
+                              long: token-id
+                              takes_value: true
+                              value_name: ID
+                        - token-value:
+                              help: Amount of TRC10 token to send to contract
+                              long: token-value
+                              takes_value: true
+                              value_name: AMOUNT
+                              requires:
+                                  - token-id
                         - account:
                               help: The account address used for signing
                               short: k
@@ -1412,19 +1426,19 @@ subcommands:
                     about: Scan notes on chain
                     args:
                         - ADDR:
-                            help: Shielded address of the note
-                            required: true
-                            value_name: z-addr
+                              help: Shielded address of the note
+                              required: true
+                              value_name: z-addr
                         - incoming:
-                            help: Incoming notes, i.e. received TRZ tokens
+                              help: Incoming notes, i.e. received TRZ tokens
                         - outcoming:
-                            help: Outcoming notes, i.e. spent TRZ tokens
-                            conflicts_with:
-                                - incoming
+                              help: Outcoming notes, i.e. spent TRZ tokens
+                              conflicts_with:
+                                  - incoming
                         - start:
-                            help: Block num to start scan
+                              help: Block num to start scan
                         - end:
-                            help: Block num to end scan, (default, current block)
+                              help: Block num to end scan, (default, current block)
 
               - transfer:
                     about: Initiates a shielded transaction, amount can be 'auto'

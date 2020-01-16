@@ -61,6 +61,12 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         trigger_contract.set_call_value(trx::parse_amount_with_surfix(value, "TRX", 6)?);
     }
 
+    if let Some(token_id) = matches.value_of("token-id") {
+        let value = matches.value_of("token-value").expect("constraint in cli.yml; qed");
+        trigger_contract.set_token_id(token_id.parse()?);
+        trigger_contract.set_call_token_value(trx::parse_amount(value)?);
+    }
+
     trx::TransactionHandler::handle(trigger_contract, matches)
         .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))
         .run()
