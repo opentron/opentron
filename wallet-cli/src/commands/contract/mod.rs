@@ -19,13 +19,14 @@ mod call;
 
 #[inline]
 fn translate_state_mutablility(val: &serde_json::Value) -> AbiEntryStateMutabilityType {
-    match val.as_str().unwrap_or("") {
+    match val.as_str().unwrap_or_default() {
         "view" | "View" => AbiEntryStateMutabilityType::View,
         "nonpayable" | "Nonpayable" => AbiEntryStateMutabilityType::Nonpayable,
         "payable" | "Payable" => AbiEntryStateMutabilityType::Payable,
         "pure" | "Pure" => AbiEntryStateMutabilityType::Pure,
+        "" => AbiEntryStateMutabilityType::UnknownMutabilityType,
         x => {
-            println!("unknown => {}", x);
+            println!("unknown => {:?}", x);
             unimplemented!()
         }
     }
@@ -44,15 +45,17 @@ fn translate_abi_type(val: &serde_json::Value) -> AbiEntryType {
 #[inline]
 fn translate_abi_entry_params(val: &serde_json::Value) -> Vec<AbiEntryParam> {
     val.as_array()
-        .unwrap()
-        .iter()
-        .map(|param| AbiEntryParam {
-            indexed: param["indexed"].as_bool().unwrap_or(false),
-            name: param["name"].as_str().unwrap_or("").to_owned(),
-            field_type: param["type"].as_str().unwrap_or("").to_owned(),
-            ..Default::default()
+        .map(|arr| {
+            arr.iter()
+                .map(|param| AbiEntryParam {
+                    indexed: param["indexed"].as_bool().unwrap_or(false),
+                    name: param["name"].as_str().unwrap_or("").to_owned(),
+                    field_type: param["type"].as_str().unwrap_or("").to_owned(),
+                    ..Default::default()
+                })
+                .collect()
         })
-        .collect()
+        .unwrap_or_default()
 }
 
 fn json_to_abi(json: &serde_json::Value) -> Abi {
