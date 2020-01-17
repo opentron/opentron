@@ -77,8 +77,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             .wait()?;
         let mut trx_ext = serde_json::to_value(&resp)?;
         jsont::fix_transaction_ext(&mut trx_ext)?;
-        trx_ext["transaction"] = json!("[OMITTED]".to_owned());
-        println!("{:}", serde_json::to_string_pretty(&trx_ext)?);
+        let ret = json!({
+            "result": trx_ext["result"],
+            "constant_result": trx_ext["constant_result"],
+        });
+        println!("{:}", serde_json::to_string_pretty(&ret)?);
         Ok(())
     } else {
         trx::TransactionHandler::handle(trigger_contract, matches)
