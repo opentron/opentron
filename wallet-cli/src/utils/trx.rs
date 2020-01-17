@@ -151,6 +151,7 @@ pub struct TransactionHandler<'a, C> {
     contract: C,
     arg_matches: &'a ArgMatches<'a>,
     raw_trx_fn: Option<Box<dyn FnMut(&mut TransactionRaw) -> () + 'static>>,
+    txid: Option<[u8; 32]>,
 }
 
 impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
@@ -159,6 +160,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             contract,
             arg_matches: matches,
             raw_trx_fn: None,
+            txid: None,
         }
     }
 
@@ -227,9 +229,13 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
     }
 
     /// Resume running from a Transaction.raw
-    pub fn resume(raw: TransactionRaw, matches: &ArgMatches) -> Result<(), Error> {
+    pub fn resume(&mut self, raw: TransactionRaw) -> Result<(), Error> {
+        let matches = self.arg_matches;
+
         // signature
         let txid = crypto::sha256(&raw.write_to_bytes()?);
+        self.txid = Some(txid);
+
         // special signature routine for Sun-Network
         let digest = if let Some(chain_id) = unsafe { CHAIN_ID } {
             let mut raw = (&txid[..]).to_owned();
@@ -289,7 +295,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
     pub fn run(&mut self) -> Result<(), Error> {
         let raw = self.to_raw_transaction()?;
-        Self::resume(raw, self.arg_matches)
+        self.resume(raw)
     }
 }
 
