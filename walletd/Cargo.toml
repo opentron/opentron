@@ -7,10 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tonic = "0.1.0-beta.1"
-# NOTE: prost 0.5 requires bytes = 0.4
-bytes = "0.4"
-prost = "0.5"
+tonic = "0.1"
+bytes = "0.5"
+prost = "0.6"
 daemonize = "0.4"
 
 tokio = { version = "0.2", features = ["rt-threaded", "time", "stream", "fs", "macros", "uds"] }
@@ -20,4 +19,4 @@ keys = { path = "../keys" }
 wallet = { path = "../wallet" }
 
 [build-dependencies]
-tonic-build = "0.1.0-beta.1"
+tonic-build = "0.1"
