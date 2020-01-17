@@ -1148,6 +1148,9 @@ subcommands:
                               value_name: DATA
                               conflicts_with:
                                   - ARGS
+                        - const:
+                            help: Trigger constant call
+                            long: const
                         - value:
                               help: Amount of TRX to send to contract while calling
                               long: value

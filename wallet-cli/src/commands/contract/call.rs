@@ -3,11 +3,15 @@
 use clap::ArgMatches;
 use hex::{FromHex, ToHex};
 use keys::Address;
+use proto::api_grpc::Wallet;
 use proto::core::TriggerSmartContract;
+use serde_json::json;
 
 use crate::error::Error;
 use crate::utils::abi;
+use crate::utils::client;
 use crate::utils::trx;
+use crate::utils::jsont;
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
@@ -67,9 +71,20 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         trigger_contract.set_call_token_value(trx::parse_amount(value)?);
     }
 
-    trx::TransactionHandler::handle(trigger_contract, matches)
-        .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))
-        .run()
+    if matches.is_present("const") {
+        let (_, resp, _) = client::new_grpc_client()?
+            .trigger_constant_contract(Default::default(), trigger_contract)
+            .wait()?;
+        let mut trx_ext = serde_json::to_value(&resp)?;
+        jsont::fix_transaction_ext(&mut trx_ext)?;
+        trx_ext["transaction"] = json!("[OMITTED]".to_owned());
+        println!("{:}", serde_json::to_string_pretty(&trx_ext)?);
+        Ok(())
+    } else {
+        trx::TransactionHandler::handle(trigger_contract, matches)
+            .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))
+            .run()
+    }
 }
 
 #[inline]

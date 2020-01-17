@@ -342,8 +342,16 @@ pub fn fix_transaction(transaction: &mut serde_json::Value) -> Result<(), Error>
 
 // pb: TransactionExtention
 pub fn fix_transaction_ext(transaction_ext: &mut serde_json::Value) -> Result<(), Error> {
-    if transaction_ext["result"]["result"].as_bool().unwrap() == false {
+    if transaction_ext["result"]["message"].is_array() {
         transaction_ext["result"]["message"] = json!(bytes_to_string(&transaction_ext["result"]["message"]));
+    }
+    if transaction_ext["constant_result"].is_array() {
+        transaction_ext["constant_result"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .map(|res| *res = json!(bytes_to_hex_string(res)))
+            .last();
     }
     if !transaction_ext["transaction"].is_null() {
         fix_transaction(&mut transaction_ext["transaction"])?;
