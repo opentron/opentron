@@ -4,8 +4,9 @@ use chrono::Utc;
 use clap::ArgMatches;
 use hex::{FromHex, ToHex};
 use keys::{Address, Private};
-use proto::api::NumberMessage;
+use proto::api::{BytesMessage, NumberMessage};
 use proto::api_grpc::Wallet;
+use proto::core::SmartContract_ABI_Entry as AbiEntry;
 use proto::core::{
     AccountCreateContract, AccountPermissionUpdateContract, AccountUpdateContract, AssetIssueContract,
     ClearABIContract, CreateSmartContract, ExchangeCreateContract, ExchangeInjectContract, ExchangeTransactionContract,
@@ -297,6 +298,15 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         let raw = self.to_raw_transaction()?;
         self.resume(raw)
     }
+}
+
+pub fn get_contract_abi(address: &Address) -> Result<Vec<AbiEntry>, Error> {
+    let mut req = BytesMessage::new();
+    req.set_value(address.to_bytes().to_owned());
+    let (_, mut payload, _) = client::new_grpc_client()?
+        .get_contract(Default::default(), req)
+        .wait()?;
+    Ok(payload.mut_abi().take_entrys().into())
 }
 
 /// Helper trait for packing contract.

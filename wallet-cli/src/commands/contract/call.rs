@@ -10,8 +10,8 @@ use serde_json::json;
 use crate::error::Error;
 use crate::utils::abi;
 use crate::utils::client;
-use crate::utils::trx;
 use crate::utils::jsont;
+use crate::utils::trx;
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
@@ -72,16 +72,19 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     }
 
     if matches.is_present("const") {
-        let (_, resp, _) = client::new_grpc_client()?
+        let (_, trx_ext, _) = client::new_grpc_client()?
             .trigger_constant_contract(Default::default(), trigger_contract)
             .wait()?;
-        let mut trx_ext = serde_json::to_value(&resp)?;
-        jsont::fix_transaction_ext(&mut trx_ext)?;
+        let mut json = serde_json::to_value(&trx_ext)?;
+        jsont::fix_transaction_ext(&mut json)?;
         let ret = json!({
-            "result": trx_ext["result"],
-            "constant_result": trx_ext["constant_result"],
+            "result": json["result"],
+            "constant_result": json["constant_result"],
         });
         println!("{:}", serde_json::to_string_pretty(&ret)?);
+        if !trx_ext.get_constant_result().is_empty() && !trx_ext.get_constant_result()[0].is_empty() {
+            handle_transaction_result(&contract, method, &trx_ext.get_constant_result()[0])?;
+        }
         Ok(())
     } else {
         trx::TransactionHandler::handle(trigger_contract, matches)
@@ -95,4 +98,17 @@ fn extract_types(fnname: &str) -> Result<Vec<&str>, Error> {
     let start = fnname.find('(').ok_or(Error::Runtime("malformed method name"))?;
     let end = fnname.find(')').ok_or(Error::Runtime("malformed method name"))?;
     Ok(fnname[start + 1..end].split(",").filter(|ty| !ty.is_empty()).collect())
+}
+
+fn handle_transaction_result(contract: &Address, method: &str, result: &[u8]) -> Result<(), Error> {
+    let abi = trx::get_contract_abi(contract)?;
+    abi.iter()
+        .find(|entry| abi::entry_to_method_name(entry) == method)
+        .ok_or(Error::Runtime("ABI not found, can not parse result"))
+        .and_then(|entry| {
+            let types = abi::entry_to_output_types(&entry);
+            let output = abi::decode_params(&types, &result.encode_hex::<String>())?;
+            eprintln!("! Parsed result:\n{:}", output);
+            Ok(())
+        })
 }

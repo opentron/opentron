@@ -1,8 +1,10 @@
 //! ABI related utilities
 
-use ethabi::encode;
 use ethabi::param_type::{ParamType, Reader};
 use ethabi::token::{LenientTokenizer, StrictTokenizer, Token, Tokenizer};
+use ethabi::{decode, encode};
+use hex::FromHex;
+use proto::core::SmartContract_ABI_Entry as AbiEntry;
 
 use crate::error::Error;
 use crate::utils::crypto;
@@ -28,15 +30,52 @@ pub fn encode_params(types: &[&str], values: &[String]) -> Result<Vec<u8>, Error
     Ok(result.to_vec())
 }
 
+pub fn decode_params(types: &[&str], data: &str) -> Result<String, Error> {
+    let types: Vec<ParamType> = types.iter().map(|s| Reader::read(s)).collect::<Result<_, _>>()?;
+    let data: Vec<u8> = Vec::from_hex(data)?;
+    let tokens = decode(&types, &data)?;
+
+    assert_eq!(types.len(), tokens.len());
+
+    let result = types
+        .iter()
+        .zip(tokens.iter())
+        .map(|(ty, to)| format!("{}: {:}", ty, to))
+        .collect::<Vec<String>>()
+        .join("\n");
+    Ok(result)
+}
+
 fn parse_tokens(params: &[(ParamType, &str)], lenient: bool) -> Result<Vec<Token>, Error> {
     params
         .iter()
         .map(|&(ref param, value)| match lenient {
             true => LenientTokenizer::tokenize(param, value),
-            false => StrictTokenizer::tokenize(param, value)
+            false => StrictTokenizer::tokenize(param, value),
         })
         .collect::<Result<_, _>>()
         .map_err(From::from)
+}
+
+pub fn entry_to_method_name(entry: &AbiEntry) -> String {
+    format!(
+        "{}({})",
+        entry.get_name(),
+        entry
+            .get_inputs()
+            .iter()
+            .map(|arg| arg.get_field_type().to_owned())
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+pub fn entry_to_output_types(entry: &AbiEntry) -> Vec<&str> {
+    entry
+        .get_outputs()
+        .iter()
+        .map(|arg| arg.get_field_type())
+        .collect::<Vec<_>>()
 }
 
 #[test]

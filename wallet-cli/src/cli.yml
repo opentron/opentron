@@ -62,8 +62,7 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values:
-              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
     - rpc-host:
           help: Raw RPC host to connect
@@ -1134,20 +1133,20 @@ subcommands:
                               help: Contract address
                               required: true
                         - const:
-                            help: Trigger constant call
-                            long: const
-                            conflicts_with:
-                                - value
-                                - token-id
-                                - token-value
-                                - account
-                                - private-key
-                                - skip-sign
-                                - dont-broadcast
-                                - expiration
-                                - fee-limit
-                                - ref-block
-                                - permission-id
+                              help: Trigger constant call
+                              long: const
+                              conflicts_with:
+                                  - value
+                                  - token-id
+                                  - token-value
+                                  - account
+                                  - private-key
+                                  - skip-sign
+                                  - dont-broadcast
+                                  - expiration
+                                  - fee-limit
+                                  - ref-block
+                                  - permission-id
                         - METHOD:
                               help: The called method name, with args
                               required: true
