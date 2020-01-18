@@ -130,6 +130,7 @@ fn get_account(name: &str) -> Result<(), Error> {
     jsont::fix_account(&mut account);
 
     println!("{}", serde_json::to_string_pretty(&account)?);
+    eprintln!("! Address(Base58Check) = {:}", addr);
     Ok(())
 }
 
