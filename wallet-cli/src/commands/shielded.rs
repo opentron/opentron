@@ -182,7 +182,7 @@ pub fn debug_zaddr_to_taddr() -> Result<(), Error> {
     )?);
 
     let taddr: Address = "TQHAvs2ZFTbsd93ycTfw1Wuf1e4WsPZWCp".parse()?;
-    params.set_transparent_to_address(taddr.as_ref().to_owned());
+    params.set_transparent_to_address(taddr.as_bytes().to_owned());
     // from amount - 10_000_000
     params.set_to_amount(180_000_000);
 
@@ -212,7 +212,7 @@ pub fn debug_taddr_to_zaddr() -> Result<(), Error> {
     let mut params = PrivateParameters::new();
 
     let taddr = "TJRabPrwbZy45sbavfcjinPJC18kjpRTv8".parse::<Address>()?;
-    params.set_transparent_from_address(taddr.as_ref().to_owned());
+    params.set_transparent_from_address(taddr.as_bytes().to_owned());
     // NOTE: current FEE = 10_000000, and amount > FEE
     params.set_from_amount(20_000_000);
 

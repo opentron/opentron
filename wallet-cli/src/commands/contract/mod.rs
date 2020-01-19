@@ -21,8 +21,8 @@ pub fn update_contract_settings(matches: &ArgMatches) -> Result<(), Error> {
     ) {
         (Some(res_percent), None) => {
             let update_contract = UpdateSettingContract {
-                owner_address: owner_address.to_bytes().to_owned(),
-                contract_address: contract.to_bytes().to_owned(),
+                owner_address: owner_address.as_bytes().to_owned(),
+                contract_address: contract.as_bytes().to_owned(),
                 consume_user_resource_percent: res_percent.parse()?,
                 ..Default::default()
             };
@@ -30,8 +30,8 @@ pub fn update_contract_settings(matches: &ArgMatches) -> Result<(), Error> {
         }
         (None, Some(limit)) => {
             let update_contract = UpdateEnergyLimitContract {
-                owner_address: owner_address.to_bytes().to_owned(),
-                contract_address: contract.to_bytes().to_owned(),
+                owner_address: owner_address.as_bytes().to_owned(),
+                contract_address: contract.as_bytes().to_owned(),
                 origin_energy_limit: limit.parse()?,
                 ..Default::default()
             };
@@ -51,8 +51,8 @@ pub fn clear_contract_abi(matches: &ArgMatches) -> Result<(), Error> {
         .ok_or(Error::Runtime("wrong contract address format"))?;
 
     let clear_contract = ClearABIContract {
-        owner_address: owner_address.to_bytes().to_owned(),
-        contract_address: contract.to_bytes().to_owned(),
+        owner_address: owner_address.as_bytes().to_owned(),
+        contract_address: contract.as_bytes().to_owned(),
         ..Default::default()
     };
     trx::TransactionHandler::handle(clear_contract, matches).run()

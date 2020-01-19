@@ -113,7 +113,7 @@ fn get_transaction_info(id: &str) -> Result<(), Error> {
 fn get_account(name: &str) -> Result<(), Error> {
     let mut req = Account::new();
     let addr = name.parse::<Address>()?;
-    req.set_address(addr.to_bytes().to_owned());
+    req.set_address(addr.as_bytes().to_owned());
     // FIXME: account name not supported
     // req.set_account_name(name.as_bytes().to_owned());
 
@@ -138,7 +138,7 @@ fn get_account(name: &str) -> Result<(), Error> {
 fn get_account_permission(name: &str) -> Result<(), Error> {
     let mut req = Account::new();
     let addr = name.parse::<Address>()?;
-    req.set_address(addr.to_bytes().to_owned());
+    req.set_address(addr.as_bytes().to_owned());
 
     let (_, payload, _) = client::GRPC_CLIENT.get_account(Default::default(), req).wait()?;
 
@@ -159,7 +159,7 @@ fn get_account_permission(name: &str) -> Result<(), Error> {
 fn get_account_resource(name: &str) -> Result<(), Error> {
     let mut req = Account::new();
     let addr = name.parse::<Address>()?;
-    req.set_address(addr.to_bytes().to_owned());
+    req.set_address(addr.as_bytes().to_owned());
 
     let (_, payload, _) = client::GRPC_CLIENT
         .get_account_resource(Default::default(), req)

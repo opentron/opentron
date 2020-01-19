@@ -30,8 +30,12 @@ impl Address {
         Address::from_public(&Public::from_private(private).expect("public from private; qed"))
     }
 
-    pub fn to_bytes(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    pub fn as_tvm_bytes(&self) -> &[u8] {
+        &self.0[1..]
     }
 }
 

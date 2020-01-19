@@ -388,7 +388,7 @@ fn encrypt_keypairs_to_json(keypairs: &Vec<KeyPair>, encrypt_key: &[u8]) -> Resu
         .map(|kp| {
             let pubkey = kp.public().encode_hex::<String>();
             let privkey = kp.private();
-            let eprivkey = crypto::aes_encrypt(encrypt_key, privkey.as_ref())?;
+            let eprivkey = crypto::aes_encrypt(encrypt_key, privkey.as_bytes())?;
             result[pubkey] = json!(eprivkey.encode_hex::<String>());
             Ok(())
         })

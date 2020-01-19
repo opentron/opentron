@@ -65,13 +65,17 @@ impl Public {
     pub fn from_private(private: &Private) -> Result<Public, Error> {
         let secp = Secp256k1::new();
 
-        let secret_key = SecretKey::from_slice(&secp, private.as_ref())?;
+        let secret_key = SecretKey::from_slice(&secp, private.as_bytes())?;
         let pub_key = PublicKey::from_secret_key(&secp, &secret_key)?;
 
         let mut key = [0u8; 64];
         key[..].copy_from_slice(&pub_key.serialize_vec(&secp, /* compressed */ false)[1..]);
 
         Ok(Public(key))
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0[..]
     }
 }
 

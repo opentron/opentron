@@ -27,7 +27,7 @@ fn set_account_permission(matches: &ArgMatches) -> Result<(), Error> {
 
     // convert from hex byte repr to Vec<u8>
     jsont::revert_permission_info(&mut permission_info);
-    permission_info["owner_address"] = json!(addr.as_ref().to_owned());
+    permission_info["owner_address"] = json!(addr.as_bytes().to_owned());
 
     let perm_contract: AccountPermissionUpdateContract = serde_json::from_value(permission_info)?;
 
@@ -43,7 +43,7 @@ fn set_account_name(matches: &ArgMatches) -> Result<(), Error> {
     let name = matches.value_of("NAME").expect("required in cli.yml; qed");
 
     let update_contract: AccountUpdateContract = AccountUpdateContract {
-        owner_address: addr.as_ref().to_owned(),
+        owner_address: addr.as_bytes().to_owned(),
         account_name: name.as_bytes().to_owned(),
         ..Default::default()
     };

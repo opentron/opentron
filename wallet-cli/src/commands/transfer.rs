@@ -19,8 +19,8 @@ pub fn main<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     let memo = matches.value_of("MEMO").unwrap_or("").as_bytes().to_owned();
 
     let transfer_contract = TransferContract {
-        owner_address: sender.to_bytes().to_owned(),
-        to_address: recipient.to_bytes().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
+        to_address: recipient.as_bytes().to_owned(),
         amount: trx::parse_amount_with_surfix(amount, "TRX", 6)?,
         ..Default::default()
     };

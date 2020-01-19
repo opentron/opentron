@@ -27,7 +27,7 @@ pub fn vote_witnesses(matches: &ArgMatches) -> Result<(), Error> {
             .map(|chunk| {
                 if let &[addr, count] = &chunk.collect::<Vec<_>>()[..] {
                     Ok(Vote {
-                        vote_address: addr.parse::<Address>()?.as_ref().to_owned(),
+                        vote_address: addr.parse::<Address>()?.as_bytes().to_owned(),
                         vote_count: count.parse()?,
                         ..Default::default()
                     })
@@ -40,7 +40,7 @@ pub fn vote_witnesses(matches: &ArgMatches) -> Result<(), Error> {
     };
 
     let vote_contract = VoteWitnessContract {
-        owner_address: sender.as_ref().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         votes: votes.into(),
         ..Default::default()
     };
@@ -56,7 +56,7 @@ pub fn create_witness(matches: &ArgMatches) -> Result<(), Error> {
     let url = matches.value_of("URL").expect("required in cli.yml; qed");
 
     let create_contract = WitnessCreateContract {
-        owner_address: sender.as_ref().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         url: url.as_bytes().to_owned(),
         ..Default::default()
     };
@@ -71,7 +71,7 @@ pub fn update_witness(matches: &ArgMatches) -> Result<(), Error> {
     let url = matches.value_of("URL").expect("required in cli.yml; qed");
 
     let update_contract = WitnessUpdateContract {
-        owner_address: sender.as_ref().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         update_url: url.as_bytes().to_owned(),
         ..Default::default()
     };
@@ -85,7 +85,7 @@ pub fn withdraw_reward(matches: &ArgMatches) -> Result<(), Error> {
         .ok_or(Error::Runtime("wrong from address format"))?;
 
     let withdraw_contract = WithdrawBalanceContract {
-        owner_address: sender.as_ref().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         ..Default::default()
     };
     trx::TransactionHandler::handle(withdraw_contract, matches).run()
@@ -109,7 +109,7 @@ pub fn create_proposal(matches: &ArgMatches) -> Result<(), Error> {
         });
 
     let create_contract = ProposalCreateContract {
-        owner_address: sender.as_ref().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         parameters: params.collect::<Result<HashMap<i64, i64>, Error>>()?,
         ..Default::default()
     };
@@ -125,7 +125,7 @@ pub fn approve_proposal(approve: bool, matches: &ArgMatches) -> Result<(), Error
     let id = matches.value_of("ID").expect("required in cli.yml; qed");
 
     let approve_contract = ProposalApproveContract {
-        owner_address: sender.as_ref().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         proposal_id: id.parse()?,
         is_add_approval: approve,
         ..Default::default()
@@ -141,7 +141,7 @@ pub fn delete_proposal(matches: &ArgMatches) -> Result<(), Error> {
     let id = matches.value_of("ID").expect("required in cli.yml; qed");
 
     let delete_contract = ProposalDeleteContract {
-        owner_address: sender.as_ref().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         proposal_id: id.parse()?,
         ..Default::default()
     };

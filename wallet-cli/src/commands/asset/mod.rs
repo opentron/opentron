@@ -60,7 +60,7 @@ pub fn issue_asset(matches: &ArgMatches) -> Result<(), Error> {
     };
 
     let mut issue_contract = AssetIssueContract::new();
-    issue_contract.set_owner_address(sender.as_ref().to_owned());
+    issue_contract.set_owner_address(sender.as_bytes().to_owned());
 
     issue_contract.set_name(name.as_bytes().to_owned());
     issue_contract.set_abbr(abbr.as_bytes().to_owned());
@@ -101,8 +101,8 @@ pub fn transfer_asset(matches: &ArgMatches) -> Result<(), Error> {
     let assert_id = matches.value_of("token-id").expect("required in cli.yml; qed");
 
     let transfer_contract = TransferAssetContract {
-        owner_address: sender.to_bytes().to_owned(),
-        to_address: recipient.to_bytes().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
+        to_address: recipient.as_bytes().to_owned(),
         amount: trx::parse_amount(amount)?,
         asset_name: assert_id.as_bytes().to_owned(),
         ..Default::default()
@@ -126,7 +126,7 @@ pub fn update_asset_settings(matches: &ArgMatches) -> Result<(), Error> {
     let url = matches.value_of("url").expect("required in cli.yml; qed");
 
     let mut update_contract = UpdateAssetContract::new();
-    update_contract.set_owner_address(sender.as_ref().to_owned());
+    update_contract.set_owner_address(sender.as_bytes().to_owned());
 
     update_contract.set_description(description.as_bytes().to_owned());
     update_contract.set_url(url.as_bytes().to_owned());
@@ -155,8 +155,8 @@ fn participate_asset_issue(matches: &ArgMatches) -> Result<(), Error> {
     let assert_id = matches.value_of("token-id").expect("required in cli.yml; qed");
 
     let participate_contract = ParticipateAssetIssueContract {
-        owner_address: sender.to_bytes().to_owned(),
-        to_address: recipient.to_bytes().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
+        to_address: recipient.as_bytes().to_owned(),
         amount: trx::parse_amount_with_surfix(amount, "TRX", 6)?,
         asset_name: assert_id.as_bytes().to_owned(),
         ..Default::default()
@@ -172,7 +172,7 @@ fn unfreeze_asset(matches: &ArgMatches) -> Result<(), Error> {
         .ok_or(Error::Runtime("wrong sender address format"))?;
 
     let unfreeze_contract = UnfreezeAssetContract {
-        owner_address: sender.to_bytes().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
         ..Default::default()
     };
 

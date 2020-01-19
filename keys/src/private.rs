@@ -38,6 +38,10 @@ impl Private {
 
         self.sign_digest(&digest)
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0[..]
+    }
 }
 
 impl fmt::Display for Private {

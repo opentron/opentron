@@ -309,7 +309,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         if !self.broadcasted {
             return Ok(());
         }
-        if let Some(txid) = self.txid.as_ref() {
+        if let Some(ref txid) = self.txid {
             eprintln!("! Watching ... sleep for 4 secs");
             thread::sleep(Duration::from_secs(4));
             let mut req = BytesMessage::new();
@@ -331,7 +331,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
 pub fn get_contract_abi(address: &Address) -> Result<Vec<AbiEntry>, Error> {
     let mut req = BytesMessage::new();
-    req.set_value(address.to_bytes().to_owned());
+    req.set_value(address.as_bytes().to_owned());
     let (_, mut payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
     Ok(payload.mut_abi().take_entrys().into())
 }

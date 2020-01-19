@@ -81,7 +81,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     new_contract.set_bytecode(bytecode);
     new_contract.set_abi(abi);
 
-    new_contract.set_origin_address(owner_address.as_ref().to_owned());
+    new_contract.set_origin_address(owner_address.as_bytes().to_owned());
     if let Some(name) = matches.value_of("name") {
         new_contract.set_name(name.to_owned());
     }
@@ -97,7 +97,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     }
 
     let mut create_contract = CreateSmartContract::new();
-    create_contract.set_owner_address(owner_address.as_ref().to_owned());
+    create_contract.set_owner_address(owner_address.as_bytes().to_owned());
     create_contract.set_new_contract(new_contract);
 
     let mut handler = trx::TransactionHandler::handle(create_contract, matches);

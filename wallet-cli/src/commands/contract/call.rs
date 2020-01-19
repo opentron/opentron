@@ -55,8 +55,8 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     };
 
     let mut trigger_contract = TriggerSmartContract {
-        owner_address: sender.to_bytes().to_owned(),
-        contract_address: contract.to_bytes().to_owned(),
+        owner_address: sender.as_bytes().to_owned(),
+        contract_address: contract.as_bytes().to_owned(),
         data: data.into(),
         ..Default::default()
     };

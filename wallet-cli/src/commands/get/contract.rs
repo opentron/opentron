@@ -12,7 +12,7 @@ use crate::utils::jsont;
 pub fn run(addr: &str) -> Result<(), Error> {
     let address: Address = addr.parse()?;
     let mut req = BytesMessage::new();
-    req.set_value(address.to_bytes().to_owned());
+    req.set_value(address.as_bytes().to_owned());
 
     let (_, payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
     if payload.get_contract_address().is_empty() {

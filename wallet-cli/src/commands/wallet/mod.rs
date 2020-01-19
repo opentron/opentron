@@ -92,7 +92,7 @@ async fn import_key_to_wallet(private_key: &str) -> Result<(), Error> {
     println!("Importing private key for {:} ...", Address::from_private(&private));
     let request = Request::new(ImportKeyRequest {
         name: "".into(),
-        private_key: private.as_ref().to_owned(),
+        private_key: private.as_bytes().to_owned(),
     });
     let response = wallet_client.import_key(request).await?;
 
@@ -127,7 +127,7 @@ async fn sign_digest_via_address(digest: &[u8], address: &Address) -> Result<Vec
     let request = Request::new(SignDigestRequest {
         name: "default".to_owned(), // TODO: refine wallet name handling
         digest: digest.to_owned(),
-        private_key_of: Some(PrivateKeyOf::RawAddress(address.as_ref().to_owned())),
+        private_key_of: Some(PrivateKeyOf::RawAddress(address.as_bytes().to_owned())),
     });
 
     let response = wallet_client.sign_digest(request).await?;

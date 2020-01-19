@@ -34,6 +34,10 @@ impl Signature {
         ];
         self.s() <= &LOW_SIG_THRESHOLD[..]
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0[..]
+    }
 }
 
 impl PartialEq for Signature {

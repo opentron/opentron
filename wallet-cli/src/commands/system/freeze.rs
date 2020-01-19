@@ -19,11 +19,11 @@ pub fn freeze(matches: &ArgMatches) -> Result<(), Error> {
 
     // if receiver is self, receiver_address must be empty
     let freeze_contract = FreezeBalanceContract {
-        owner_address: from.to_bytes().to_owned(),
+        owner_address: from.as_bytes().to_owned(),
         receiver_address: if receiver == from {
             vec![]
         } else {
-            receiver.to_bytes().to_owned()
+            receiver.as_bytes().to_owned()
         },
         frozen_balance: trx::parse_amount_with_surfix(amount, "TRX", 6)?,
         frozen_duration: duration.parse()?,
@@ -50,11 +50,11 @@ pub fn unfreeze(matches: &ArgMatches) -> Result<(), Error> {
 
     // if receiver is self, receiver_address must be empty
     let unfreeze_contract = UnfreezeBalanceContract {
-        owner_address: from.to_bytes().to_owned(),
+        owner_address: from.as_bytes().to_owned(),
         receiver_address: if receiver == from {
             vec![]
         } else {
-            receiver.to_bytes().to_owned()
+            receiver.as_bytes().to_owned()
         },
         resource: if matches.is_present("energy") {
             ResourceCode::ENERGY

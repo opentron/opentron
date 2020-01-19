@@ -123,7 +123,7 @@ pub fn entry_to_output_types(entry: &AbiEntry) -> Vec<&str> {
 #[test]
 fn test_encode_params() {
     assert_eq!(
-        encode_params(&["address"], &["407d73d8a49eeb85d32cf465507dd71d507100c1"]).unwrap(),
+        encode_params(&["address"], &["407d73d8a49eeb85d32cf465507dd71d507100c1".to_owned()]).unwrap(),
         vec![0u8]
     );
 }

@@ -73,9 +73,8 @@ impl LocalWallet for LocalWalletService {
     async fn lock(&self, request: Request<LockRequest>) -> Result<Response<StatusResponse>, Status> {
         println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
         // let name = &request.get_ref().name;
-        let mut w = (*self.wallet).write().unwrap();
-        let reply = match w.as_mut() {
-            Some(wallet) => wallet
+        let reply = match *(*self.wallet).write().unwrap(); {
+            Some(ref mut wallet) => wallet
                 .lock()
                 .map(|_| StatusResponse {
                     code: 200,
@@ -99,9 +98,8 @@ impl LocalWallet for LocalWalletService {
         // let name = &request.get_ref().name;
         let password = &request.get_ref().password;
 
-        let mut w = (*self.wallet).write().unwrap();
-        let reply = match w.as_mut() {
-            Some(wallet) => wallet
+        let reply = match *(*self.wallet).write().unwrap() {
+            Some(ref mut wallet) => wallet
                 .unlock(password)
                 .map(|_| StatusResponse {
                     code: 200,
@@ -122,16 +120,16 @@ impl LocalWallet for LocalWalletService {
 
     async fn create_key(&self, request: Request<CreateKeyRequest>) -> Result<Response<CreateKeyResponse>, Status> {
         println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
-        let mut w = (*self.wallet).write().unwrap();
-        let reply = match w.as_mut() {
-            Some(wallet) => wallet
+
+        let reply = match *(*self.wallet).write().unwrap() {
+            Some(ref mut wallet) => wallet
                 .create_key()
                 .map(|kp| CreateKeyResponse {
                     code: 200,
                     message: "OK".to_owned(),
                     key_pair: Some(KeyPair {
-                        public: kp.public().as_ref().to_owned(),
-                        private: kp.private().as_ref().to_owned(),
+                        public: kp.public().as_bytes().to_owned(),
+                        private: kp.private().as_bytes().to_owned(),
                     }),
                 })
                 .map_err(|e| CreateKeyResponse {
@@ -153,9 +151,9 @@ impl LocalWallet for LocalWalletService {
     async fn import_key(&self, request: Request<ImportKeyRequest>) -> Result<Response<StatusResponse>, Status> {
         println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
         let raw_key = &request.get_ref().private_key;
-        let mut w = (*self.wallet).write().unwrap();
-        let reply = match w.as_mut() {
-            Some(wallet) => keys::Private::try_from(raw_key)
+
+        let reply = match *(*self.wallet).write().unwrap() {
+            Some(ref mut wallet) => keys::Private::try_from(raw_key)
                 .map_err(From::from)
                 .and_then(|priv_key| wallet.import_key(priv_key))
                 .map(|_| StatusResponse {
@@ -178,10 +176,9 @@ impl LocalWallet for LocalWalletService {
 
     async fn list_keys(&self, request: Request<ListKeysRequest>) -> Result<Response<ListKeysResponse>, Status> {
         println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
-        let w = (*self.wallet).read().unwrap();
-        let reply = match w.as_ref() {
-            Some(wallet) => {
-                let pub_keys = wallet.keys().map(|k| k.as_ref().to_owned()).collect::<Vec<_>>();
+        let reply = match *(*self.wallet).read().unwrap() {
+            Some(ref wallet) => {
+                let pub_keys = wallet.keys().map(|k| k.as_bytes().to_owned()).collect::<Vec<_>>();
                 ListKeysResponse {
                     code: 200,
                     message: "OK".to_owned(),
@@ -203,9 +200,8 @@ impl LocalWallet for LocalWalletService {
         let digest = &request.get_ref().digest;
         let key_of = &request.get_ref().private_key_of.as_ref().expect("won't fail; qed");
 
-        let w = (*self.wallet).read().unwrap();
-        let reply = match w.as_ref() {
-            Some(wallet) => {
+        let reply = match *(*self.wallet).read().unwrap() {
+            Some(ref wallet) => {
                 let (public, address) = match key_of {
                     PrivateKeyOf::PublicKey(raw) => (Some(raw), None),
                     PrivateKeyOf::RawAddress(raw) => (None, Some(raw)),
@@ -264,12 +260,12 @@ fn sign_digest_via_public_or_address(
     match (public, address) {
         (Some(raw), _) => {
             let pub_key = keys::Public::try_from(raw)?;
-            wallet.sign_digest(digest, &pub_key).map(|s| s.as_ref().to_owned())
+            wallet.sign_digest(digest, &pub_key).map(|s| s.as_bytes().to_owned())
         }
         (_, Some(raw)) => {
             let addr = keys::Address::try_from(raw)?;
             let pub_key = wallet.get_public_key(&addr)?;
-            wallet.sign_digest(digest, &pub_key).map(|s| s.as_ref().to_owned())
+            wallet.sign_digest(digest, &pub_key).map(|s| s.as_bytes().to_owned())
         }
         (_, _) => unreachable!(),
     }
