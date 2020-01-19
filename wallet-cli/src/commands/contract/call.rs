@@ -87,9 +87,12 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         }
         Ok(())
     } else {
-        trx::TransactionHandler::handle(trigger_contract, matches)
-            .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))
-            .run()
+        let mut handler = trx::TransactionHandler::handle(trigger_contract, matches);
+        handler.map_raw_transaction(|raw| raw.set_fee_limit(1_000_000));
+        handler.run()?;
+        handler.watch(|info| {
+            let _ = handle_contract_result(&contract, method, &info.get_contractResult()[0]);
+        })
     }
 }
 

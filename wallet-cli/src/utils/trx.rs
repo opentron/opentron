@@ -17,13 +17,15 @@ use proto::core::{
     VoteWitnessContract, WithdrawBalanceContract, WitnessCreateContract, WitnessUpdateContract,
 };
 use proto::core::{
-    Transaction, Transaction_Contract as Contract, Transaction_Contract_ContractType as ContractType,
-    Transaction_raw as TransactionRaw,
+    Transaction, TransactionInfo, TransactionInfo_code as TransactionInfoCode, Transaction_Contract as Contract,
+    Transaction_Contract_ContractType as ContractType, Transaction_raw as TransactionRaw,
 };
 use protobuf::well_known_types::Any;
 use protobuf::{parse_from_bytes, Message};
 use serde_json::json;
 use std::convert::TryFrom;
+use std::thread;
+use std::time::Duration;
 
 use crate::commands::wallet::sign_digest;
 use crate::error::Error;
@@ -267,7 +269,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         req.set_raw_data(raw);
         req.set_signature(signatures.into());
 
-        eprintln!("TX: {:}", txid.encode_hex::<String>());
+        eprintln!("! TX: {:}", txid.encode_hex::<String>());
 
         // skip-sign implies dont-broadcast
         if matches.is_present("skip-sign") || matches.is_present("dont-broadcast") {
@@ -297,6 +299,29 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
     pub fn run(&mut self) -> Result<(), Error> {
         let raw = self.to_raw_transaction()?;
         self.resume(raw)
+    }
+
+    pub fn watch<F>(&mut self, on_success: F) -> Result<(), Error>
+    where
+        F: Fn(TransactionInfo) -> (),
+    {
+        if let Some(txid) = self.txid.as_ref() {
+            eprintln!("! Watching ... sleep for 4 secs");
+            thread::sleep(Duration::from_secs(4));
+            let mut req = BytesMessage::new();
+            req.set_value(txid[..].to_owned());
+            let (_, trx_info, _) = client::new_grpc_client()?
+                .get_transaction_info_by_id(Default::default(), req)
+                .wait()?;
+            let mut json = serde_json::to_value(&trx_info)?;
+            jsont::fix_transaction_info(&mut json);
+
+            println!("{:}", serde_json::to_string_pretty(&json)?);
+            if trx_info.get_result() == TransactionInfoCode::SUCESS {
+                on_success(trx_info);
+            }
+        }
+        Ok(())
     }
 }
 
