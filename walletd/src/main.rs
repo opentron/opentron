@@ -9,7 +9,7 @@ use wallet::Wallet;
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::{sign_digest_request::PrivateKeyOf, KeyPair};
 use api::{
-    CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZKeyRequest, CreateZKeyResponse, ImportKeyRequest,
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse, ImportKeyRequest,
     ListKeyPairsRequest, ListKeyPairsResponse, ListKeysRequest, ListKeysResponse, ListPrivateKeysRequest,
     ListPrivateKeysResponse, LockAllRequest, LockRequest, OpenRequest, SignDigestRequest, SignDigestResponse,
     StatusResponse, UnlockRequest,
@@ -73,7 +73,7 @@ impl LocalWallet for LocalWalletService {
     async fn lock(&self, request: Request<LockRequest>) -> Result<Response<StatusResponse>, Status> {
         println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
         // let name = &request.get_ref().name;
-        let reply = match *(*self.wallet).write().unwrap(); {
+        let reply = match *(*self.wallet).write().unwrap() {
             Some(ref mut wallet) => wallet
                 .lock()
                 .map(|_| StatusResponse {
@@ -246,7 +246,7 @@ impl LocalWallet for LocalWalletService {
     ) -> Result<Response<ListPrivateKeysResponse>, Status> {
         unimplemented!()
     }
-    async fn create_z_key(&self, _request: Request<CreateZKeyRequest>) -> Result<Response<CreateZKeyResponse>, Status> {
+    async fn create_zkey(&self, _request: Request<CreateZkeyRequest>) -> Result<Response<CreateZkeyResponse>, Status> {
         unimplemented!()
     }
 }
