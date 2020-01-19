@@ -306,7 +306,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
     pub fn watch<F>(&mut self, on_success: F) -> Result<(), Error>
     where
-        F: Fn(TransactionInfo) -> (),
+        F: Fn(TransactionInfo) -> Result<(), Error>,
     {
         if !self.broadcasted {
             return Ok(());
@@ -324,7 +324,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
             println!("{:}", serde_json::to_string_pretty(&json)?);
             if trx_info.get_result() == TransactionInfoCode::SUCESS {
-                on_success(trx_info);
+                on_success(trx_info)?;
             }
         }
         Ok(())

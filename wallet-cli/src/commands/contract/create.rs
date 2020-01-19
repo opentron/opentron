@@ -6,6 +6,7 @@ use proto::core::{
     SmartContract_ABI_Entry_EntryType as AbiEntryType, SmartContract_ABI_Entry_Param as AbiEntryParam,
     SmartContract_ABI_Entry_StateMutabilityType as AbiEntryStateMutabilityType,
 };
+use std::convert::TryFrom;
 use std::fs;
 use std::path::Path;
 
@@ -99,9 +100,16 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     create_contract.set_owner_address(owner_address.as_ref().to_owned());
     create_contract.set_new_contract(new_contract);
 
-    trx::TransactionHandler::handle(create_contract, matches)
-        .map_raw_transaction(|raw| raw.set_fee_limit(1_000_000))
-        .run()
+    let mut handler = trx::TransactionHandler::handle(create_contract, matches);
+    handler.map_raw_transaction(|raw| raw.set_fee_limit(1_000_000));
+    handler.run()?;
+    handler.watch(|info| {
+        println!(
+            "! Contract Address(Base58Check) = {}",
+            Address::try_from(info.get_contract_address())?
+        );
+        Ok(())
+    })
 }
 
 #[inline]
