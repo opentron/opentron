@@ -19,8 +19,7 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 
 > # compile tools
 > cd ./rust-tron/
-> cargo build -p walletd
-> cargo build -p wallet-cli
+> cargo build --all
 
 > # time to rock !!!
 > ./target/debug/wallet-cli --help

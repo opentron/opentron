@@ -46,5 +46,5 @@ members = [
     "wallet",
     "walletd",
     "ztron_primitives",
-    "ztron_proofs",
+    # "ztron_proofs",
 ]
