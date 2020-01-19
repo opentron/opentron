@@ -155,6 +155,7 @@ pub struct TransactionHandler<'a, C> {
     arg_matches: &'a ArgMatches<'a>,
     raw_trx_fn: Option<Box<dyn FnMut(&mut TransactionRaw) -> () + 'static>>,
     txid: Option<[u8; 32]>,
+    broadcasted: bool,
 }
 
 impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
@@ -164,6 +165,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             arg_matches: matches,
             raw_trx_fn: None,
             txid: None,
+            broadcasted: false,
         }
     }
 
@@ -289,6 +291,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             eprintln!("got => {:}", serde_json::to_string_pretty(&result)?);
 
             if result["result"].as_bool().unwrap_or(false) {
+                self.broadcasted = true;
                 Ok(())
             } else {
                 Err(Error::Runtime("broadcast transaction failed!"))
@@ -305,6 +308,9 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
     where
         F: Fn(TransactionInfo) -> (),
     {
+        if !self.broadcasted {
+            return Ok(());
+        }
         if let Some(txid) = self.txid.as_ref() {
             eprintln!("! Watching ... sleep for 4 secs");
             thread::sleep(Duration::from_secs(4));
