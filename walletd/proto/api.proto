@@ -18,11 +18,23 @@ service LocalWallet {
   rpc SignDigest(SignDigestRequest) returns (SignDigestResponse) {}
   // shielded transaction
   rpc CreateZkey(CreateZkeyRequest) returns (CreateZkeyResponse) {}
+  rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {}
+  rpc ImportZkey(ImportZkeyRequest) returns (StatusResponse) {}
+  rpc ImportNote(ImportNoteRequest) returns (StatusResponse) {}
 }
 
 message KeyPair {
   bytes public = 1;
   bytes private = 2;
+}
+
+// Note for shielded transaction
+message Note {
+  int64 value = 1;
+  string address = 2;
+  bytes rcm = 3;
+  bytes txhash = 4;
+  int32 index = 5;
 }
 
 message StatusResponse {
@@ -104,4 +116,21 @@ message CreateZkeyResponse {
   int32 code = 1;
   string message = 2;
   string zaddress = 3;
+}
+
+message ListNotesRequest {}
+
+message ListNotesResponse {
+  int32 code = 1;
+  string message = 2;
+  repeated Note notes = 3;
+}
+
+message ImportNoteRequest {
+  Note note = 1;
+}
+
+message ImportZkeyRequest {
+  bytes sk = 1;
+  bytes d = 2;
 }

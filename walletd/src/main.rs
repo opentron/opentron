@@ -10,9 +10,9 @@ use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::{sign_digest_request::PrivateKeyOf, KeyPair};
 use api::{
     CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse, ImportKeyRequest,
-    ListKeyPairsRequest, ListKeyPairsResponse, ListKeysRequest, ListKeysResponse, ListPrivateKeysRequest,
-    ListPrivateKeysResponse, LockAllRequest, LockRequest, OpenRequest, SignDigestRequest, SignDigestResponse,
-    StatusResponse, UnlockRequest,
+    ImportNoteRequest, ImportZkeyRequest, ListKeyPairsRequest, ListKeyPairsResponse, ListKeysRequest, ListKeysResponse,
+    ListNotesRequest, ListNotesResponse, ListPrivateKeysRequest, ListPrivateKeysResponse, LockAllRequest, LockRequest,
+    OpenRequest, SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 pub mod api {
@@ -246,7 +246,20 @@ impl LocalWallet for LocalWalletService {
     ) -> Result<Response<ListPrivateKeysResponse>, Status> {
         unimplemented!()
     }
+
     async fn create_zkey(&self, _request: Request<CreateZkeyRequest>) -> Result<Response<CreateZkeyResponse>, Status> {
+        unimplemented!()
+    }
+
+    async fn list_notes(&self, _request: Request<ListNotesRequest>) -> Result<Response<ListNotesResponse>, Status> {
+        unimplemented!()
+    }
+
+    async fn import_zkey(&self, _request: Request<ImportZkeyRequest>) -> Result<Response<StatusResponse>, Status> {
+        unimplemented!()
+    }
+
+    async fn import_note(&self, _request: Request<ImportNoteRequest>) -> Result<Response<StatusResponse>, Status> {
         unimplemented!()
     }
 }
