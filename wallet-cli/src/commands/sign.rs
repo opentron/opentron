@@ -13,7 +13,7 @@ use std::path::Path;
 
 use crate::commands::wallet::sign_digest;
 use crate::error::Error;
-use crate::utils::client::new_grpc_client;
+use crate::utils::client;
 use crate::utils::crypto;
 use crate::utils::jsont;
 use crate::utils::trx;
@@ -117,7 +117,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .into(),
         );
 
-        let (_, payload, _) = new_grpc_client()?
+        let (_, payload, _) = client::GRPC_CLIENT
             .broadcast_transaction(Default::default(), req)
             .wait()?;
         let mut result = serde_json::to_value(&payload)?;

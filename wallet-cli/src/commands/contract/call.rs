@@ -72,7 +72,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     }
 
     if matches.is_present("const") {
-        let (_, trx_ext, _) = client::new_grpc_client()?
+        let (_, trx_ext, _) = client::GRPC_CLIENT
             .trigger_constant_contract(Default::default(), trigger_contract)
             .wait()?;
         let mut json = serde_json::to_value(&trx_ext)?;

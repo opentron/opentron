@@ -7,13 +7,13 @@ use proto::core::Account;
 use serde_json::json;
 
 use crate::error::Error;
-use crate::utils::client::new_grpc_client;
+use crate::utils::client;
 use crate::utils::jsont;
 
 mod contract;
 
 fn node_info() -> Result<(), Error> {
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .get_node_info(Default::default(), EmptyMessage::new())
         .wait()?;
     println!("{}", serde_json::to_string_pretty(&payload)?);
@@ -21,23 +21,23 @@ fn node_info() -> Result<(), Error> {
 }
 
 fn get_block(matches: &ArgMatches) -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let mut block = match matches.value_of("BLOCK") {
         Some(id) if id.starts_with("0000") => {
             let mut req = BytesMessage::new();
             req.value = Vec::from_hex(id)?;
-            let (_, payload, _) = client.get_block_by_id(Default::default(), req).wait()?;
+            let (_, payload, _) = client::GRPC_CLIENT.get_block_by_id(Default::default(), req).wait()?;
             serde_json::to_value(&payload)?
         }
         Some(num) => {
             let mut req = NumberMessage::new();
             req.num = num.parse()?;
-            let (_, payload, _) = client.get_block_by_num2(Default::default(), req).wait()?;
+            let (_, payload, _) = client::GRPC_CLIENT.get_block_by_num2(Default::default(), req).wait()?;
             serde_json::to_value(&payload)?
         }
         None => {
-            let (_, payload, _) = client.get_now_block(Default::default(), EmptyMessage::new()).wait()?;
+            let (_, payload, _) = client::GRPC_CLIENT
+                .get_now_block(Default::default(), EmptyMessage::new())
+                .wait()?;
             serde_json::to_value(&payload)?
         }
     };
@@ -77,7 +77,7 @@ fn get_transaction(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.value = Vec::from_hex(id)?;
 
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .get_transaction_by_id(Default::default(), req)
         .wait()?;
 
@@ -95,7 +95,7 @@ fn get_transaction_info(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.value = Vec::from_hex(id)?;
 
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .get_transaction_info_by_id(Default::default(), req)
         .wait()?;
 
@@ -117,7 +117,7 @@ fn get_account(name: &str) -> Result<(), Error> {
     // FIXME: account name not supported
     // req.set_account_name(name.as_bytes().to_owned());
 
-    let (_, payload, _) = new_grpc_client()?.get_account(Default::default(), req).wait()?;
+    let (_, payload, _) = client::GRPC_CLIENT.get_account(Default::default(), req).wait()?;
 
     let mut account = serde_json::to_value(&payload)?;
 
@@ -140,7 +140,7 @@ fn get_account_permission(name: &str) -> Result<(), Error> {
     let addr = name.parse::<Address>()?;
     req.set_address(addr.to_bytes().to_owned());
 
-    let (_, payload, _) = new_grpc_client()?.get_account(Default::default(), req).wait()?;
+    let (_, payload, _) = client::GRPC_CLIENT.get_account(Default::default(), req).wait()?;
 
     let mut account = serde_json::to_value(&payload)?;
     jsont::fix_account(&mut account);
@@ -161,7 +161,7 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
     let addr = name.parse::<Address>()?;
     req.set_address(addr.to_bytes().to_owned());
 
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .get_account_resource(Default::default(), req)
         .wait()?;
 
@@ -175,7 +175,7 @@ fn get_proposal_by_id(id: &str) -> Result<(), Error> {
     let id_hex = format!("{:016x}", id.parse::<i64>()?);
     req.set_value(Vec::from_hex(id_hex)?);
 
-    let (_, payload, _) = new_grpc_client()?.get_proposal_by_id(Default::default(), req).wait()?;
+    let (_, payload, _) = client::GRPC_CLIENT.get_proposal_by_id(Default::default(), req).wait()?;
     let mut proposal = serde_json::to_value(&payload)?;
     proposal["proposer_address"] = json!(jsont::bytes_to_hex_string(&proposal["proposer_address"]));
     proposal["approvals"]
@@ -194,7 +194,7 @@ fn get_asset_by_id(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value(id.as_bytes().to_owned());
 
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .get_asset_issue_by_id(Default::default(), req)
         .wait()?;
     if payload.get_owner_address().is_empty() {

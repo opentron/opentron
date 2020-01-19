@@ -2416,6 +2416,7 @@ dependencies = [
  "hex",
  "itertools",
  "keys",
+ "lazy_static",
  "proto",
  "protobuf",
  "rand 0.7.3",

@@ -205,18 +205,16 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         let expiration = matches.value_of("expiration").unwrap_or("60").parse::<i64>()?;
         raw.set_expiration(timestamp_millis() + 1000 * expiration);
 
-        let grpc_client = client::new_grpc_client()?;
-
         // fill ref_block info
         let ref_block = match matches.value_of("ref-block") {
             Some(num) => {
                 let mut req = NumberMessage::new();
                 req.set_num(num.parse()?);
-                let (_, block, _) = grpc_client.get_block_by_num2(Default::default(), req).wait()?;
+                let (_, block, _) = client::GRPC_CLIENT.get_block_by_num2(Default::default(), req).wait()?;
                 block
             }
             None => {
-                let (_, block, _) = grpc_client
+                let (_, block, _) = client::GRPC_CLIENT
                     .get_now_block2(Default::default(), Default::default())
                     .wait()?;
                 block
@@ -283,7 +281,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
             Ok(())
         } else {
-            let (_, payload, _) = client::new_grpc_client()?
+            let (_, payload, _) = client::GRPC_CLIENT
                 .broadcast_transaction(Default::default(), req)
                 .wait()?;
             let mut result = serde_json::to_value(&payload)?;
@@ -316,7 +314,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             thread::sleep(Duration::from_secs(4));
             let mut req = BytesMessage::new();
             req.set_value(txid[..].to_owned());
-            let (_, trx_info, _) = client::new_grpc_client()?
+            let (_, trx_info, _) = client::GRPC_CLIENT
                 .get_transaction_info_by_id(Default::default(), req)
                 .wait()?;
             let mut json = serde_json::to_value(&trx_info)?;
@@ -334,9 +332,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 pub fn get_contract_abi(address: &Address) -> Result<Vec<AbiEntry>, Error> {
     let mut req = BytesMessage::new();
     req.set_value(address.to_bytes().to_owned());
-    let (_, mut payload, _) = client::new_grpc_client()?
-        .get_contract(Default::default(), req)
-        .wait()?;
+    let (_, mut payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
     Ok(payload.mut_abi().take_entrys().into())
 }
 

@@ -6,7 +6,7 @@ use serde_json::json;
 
 use crate::error::Error;
 use crate::utils::abi;
-use crate::utils::client::new_grpc_client;
+use crate::utils::client;
 use crate::utils::jsont;
 
 pub fn run(addr: &str) -> Result<(), Error> {
@@ -14,7 +14,7 @@ pub fn run(addr: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value(address.to_bytes().to_owned());
 
-    let (_, payload, _) = new_grpc_client()?.get_contract(Default::default(), req).wait()?;
+    let (_, payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
     if payload.get_contract_address().is_empty() {
         return Err(Error::Runtime("contract not found on chain"));
     }

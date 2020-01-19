@@ -13,11 +13,11 @@ use protobuf::Message;
 use serde_json::json;
 
 use crate::error::Error;
-use crate::utils::client::new_grpc_client;
+use crate::utils::client;
 use crate::utils::jsont;
 
 pub fn new_shielded_address() -> Result<(), Error> {
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .get_new_shielded_address(Default::default(), EmptyMessage::new())
         .wait()?;
     let mut addr_info = serde_json::to_value(&payload)?;
@@ -55,7 +55,7 @@ pub fn scan_note_and_check_spend_status() -> Result<(), Error> {
         "c10e516acb4a2da828c0d31da54d9441f88f4d5713630c1809b9ebb3f7c4fbd4",
     )?);
 
-    let (_, notes, _) = new_grpc_client()?
+    let (_, notes, _) = client::GRPC_CLIENT
         .scan_and_mark_note_by_ivk(Default::default(), req)
         .wait()?;
     let mut json = serde_json::to_value(&notes)?;
@@ -83,7 +83,7 @@ pub fn scan_outcoming_note() -> Result<(), Error> {
         "034484bed6abcd44ca9a8af1dd64c8b66d70a0a92471dc24b87b5bfdba8f0ef9",
     )?);
 
-    let (_, notes, _) = new_grpc_client()?.scan_note_by_ovk(Default::default(), req).wait()?;
+    let (_, notes, _) = client::GRPC_CLIENT.scan_note_by_ovk(Default::default(), req).wait()?;
     let mut json = serde_json::to_value(&notes)?;
     json["noteTxs"]
         .as_array_mut()
@@ -108,7 +108,7 @@ pub fn scan_incoming_note() -> Result<(), Error> {
         "b0456583f7a43c05ae2ec72905575ff5737fb2f652d4c0b4bc93849217481006",
     )?);
 
-    let (_, notes, _) = new_grpc_client()?.scan_note_by_ivk(Default::default(), req).wait()?;
+    let (_, notes, _) = client::GRPC_CLIENT.scan_note_by_ivk(Default::default(), req).wait()?;
     let mut json = serde_json::to_value(&notes)?;
     json["noteTxs"]
         .as_array_mut()
@@ -126,8 +126,6 @@ pub fn scan_incoming_note() -> Result<(), Error> {
 }
 
 pub fn debug_zaddr_to_taddr() -> Result<(), Error> {
-    let grpc_client = new_grpc_client()?;
-
     // # Step 1: GetMerkleTreeVoucherInfo
     let mut out_point = OutputPoint::new();
     // TX hash of the transaction
@@ -140,7 +138,7 @@ pub fn debug_zaddr_to_taddr() -> Result<(), Error> {
     req_info.set_out_points(vec![out_point].into());
     req_info.set_block_num(1); // seemed useless, 0 or 1
 
-    let (_, mut voucher_info, _) = grpc_client
+    let (_, mut voucher_info, _) = client::GRPC_CLIENT
         .get_merkle_tree_voucher_info(Default::default(), req_info)
         .wait()?;
     let mut info = serde_json::to_value(&voucher_info)?;
@@ -164,7 +162,7 @@ pub fn debug_zaddr_to_taddr() -> Result<(), Error> {
     let mut spend_node = SpendNote::new();
     spend_node.set_note(note);
 
-    spend_node.set_alpha(get_rcm(&grpc_client)?);
+    spend_node.set_alpha(get_rcm(&client::GRPC_CLIENT)?);
 
     spend_node.set_voucher(voucher_info.take_vouchers().into_iter().next().unwrap());
     spend_node.set_path(voucher_info.take_paths().into_iter().next().unwrap());
@@ -188,7 +186,7 @@ pub fn debug_zaddr_to_taddr() -> Result<(), Error> {
     // from amount - 10_000_000
     params.set_to_amount(180_000_000);
 
-    let (_, transaction_ext, _) = grpc_client
+    let (_, transaction_ext, _) = client::GRPC_CLIENT
         .create_shielded_transaction(Default::default(), params)
         .wait()?;
 
@@ -211,8 +209,6 @@ pub fn debug_zaddr_to_taddr() -> Result<(), Error> {
 }
 
 pub fn debug_taddr_to_zaddr() -> Result<(), Error> {
-    let grpc_client = new_grpc_client()?;
-
     let mut params = PrivateParameters::new();
 
     let taddr = "TJRabPrwbZy45sbavfcjinPJC18kjpRTv8".parse::<Address>()?;
@@ -231,7 +227,7 @@ pub fn debug_taddr_to_zaddr() -> Result<(), Error> {
     note.set_memo(memo.as_bytes().to_owned());
 
     // rcm: random commitment
-    let rcm = get_rcm(&grpc_client)?;
+    let rcm = get_rcm(&client::GRPC_CLIENT)?;
     eprintln!("! rcm = {:?}", rcm.encode_hex::<String>());
     note.set_rcm(rcm);
 
@@ -248,7 +244,7 @@ pub fn debug_taddr_to_zaddr() -> Result<(), Error> {
         "0000000000000000000000000000000000000000000000000000000000000000",
     )?);
 
-    let (_, transaction_ext, _) = grpc_client
+    let (_, transaction_ext, _) = client::GRPC_CLIENT
         .create_shielded_transaction(Default::default(), params)
         .wait()?;
 

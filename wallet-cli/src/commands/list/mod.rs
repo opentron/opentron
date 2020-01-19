@@ -4,13 +4,12 @@ use proto::api_grpc::Wallet;
 use serde_json::json;
 
 use crate::error::Error;
-use crate::utils::client::new_grpc_client;
+use crate::utils::client;
 use crate::utils::jsont;
 
 fn list_nodes() -> Result<(), Error> {
-    let client = new_grpc_client()?;
     let req = EmptyMessage::new();
-    let (_, payload, _) = client.list_nodes(Default::default(), req).wait()?;
+    let (_, payload, _) = client::GRPC_CLIENT.list_nodes(Default::default(), req).wait()?;
 
     let mut nodes = serde_json::to_value(&payload)?;
     nodes["nodes"]
@@ -26,9 +25,8 @@ fn list_nodes() -> Result<(), Error> {
 }
 
 fn list_witnesses() -> Result<(), Error> {
-    let client = new_grpc_client()?;
     let req = EmptyMessage::new();
-    let (_, payload, _) = client.list_witnesses(Default::default(), req).wait()?;
+    let (_, payload, _) = client::GRPC_CLIENT.list_witnesses(Default::default(), req).wait()?;
     let mut witnesses = serde_json::to_value(&payload)?;
     witnesses["witnesses"]
         .as_array_mut()
@@ -43,10 +41,8 @@ fn list_witnesses() -> Result<(), Error> {
 }
 
 fn list_assets() -> Result<(), Error> {
-    let client = new_grpc_client()?;
-
     let req = EmptyMessage::new();
-    let (_, payload, _) = client.get_asset_issue_list(Default::default(), req).wait()?;
+    let (_, payload, _) = client::GRPC_CLIENT.get_asset_issue_list(Default::default(), req).wait()?;
     let mut assets = serde_json::to_value(&payload)?;
 
     assets["assetIssue"]
@@ -61,7 +57,7 @@ fn list_assets() -> Result<(), Error> {
 }
 
 pub fn list_proposals() -> Result<(), Error> {
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .list_proposals(Default::default(), EmptyMessage::new())
         .wait()?;
     let mut proposals = serde_json::to_value(&payload)?;
@@ -87,7 +83,7 @@ pub fn list_proposals() -> Result<(), Error> {
 }
 
 pub fn list_parameters() -> Result<(), Error> {
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .get_chain_parameters(Default::default(), EmptyMessage::new())
         .wait()?;
     let parameters = serde_json::to_value(&payload)?;
@@ -96,7 +92,7 @@ pub fn list_parameters() -> Result<(), Error> {
 }
 
 pub fn list_exchanges() -> Result<(), Error> {
-    let (_, payload, _) = new_grpc_client()?
+    let (_, payload, _) = client::GRPC_CLIENT
         .list_exchanges(Default::default(), EmptyMessage::new())
         .wait()?;
     let mut exchanges = serde_json::to_value(&payload)?;

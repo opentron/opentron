@@ -22,6 +22,7 @@ rand = "0.7"
 itertools = "0.8"
 rpassword = "4"
 ethabi = "11"
+lazy_static = "1.4"
 
 proto = { path = "../proto" }
 keys = { path = "../keys" }
