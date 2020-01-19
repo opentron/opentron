@@ -3,7 +3,6 @@ use keys::Address;
 use proto::api::BytesMessage;
 use proto::api_grpc::Wallet;
 use serde_json::json;
-use std::fmt::Write as FmtWrite;
 
 use crate::error::Error;
 use crate::utils::abi;
@@ -16,7 +15,7 @@ pub fn run(addr: &str) -> Result<(), Error> {
     req.set_value(address.to_bytes().to_owned());
 
     let (_, payload, _) = new_grpc_client()?.get_contract(Default::default(), req).wait()?;
-    if payload.get_code_hash().is_empty() {
+    if payload.get_contract_address().is_empty() {
         return Err(Error::Runtime("contract not found on chain"));
     }
 
@@ -34,63 +33,13 @@ pub fn run(addr: &str) -> Result<(), Error> {
 // NOTE: there is a typo in pb: abi.`entrys`
 fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Error> {
     for entry in abi.entrys.iter() {
-        let mut pretty = match entry.get_field_type() {
-            ::proto::core::SmartContract_ABI_Entry_EntryType::Function => "function".to_owned(),
-            ::proto::core::SmartContract_ABI_Entry_EntryType::Event => "event".to_owned(),
-            _ => continue,
-        };
-        write!(pretty, " {:}", entry.get_name())?;
-        let mut raw = entry.get_name().to_owned();
-
-        write!(
-            raw,
-            "({})",
-            entry
-                .get_inputs()
-                .iter()
-                .map(|arg| arg.get_field_type().to_owned())
-                .collect::<Vec<_>>()
-                .join(",")
-        )?;
-        let fnhash = abi::fnhash(&raw);
-
-        write!(
-            pretty,
-            "({})",
-            entry
-                .get_inputs()
-                .iter()
-                .map(|arg| if arg.get_name().is_empty() {
-                    arg.get_field_type().to_owned()
-                } else {
-                    format!("{:} {:}", arg.get_field_type(), arg.get_name())
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        )?;
-
-        if entry.payable {
-            write!(pretty, " payable")?;
-        }
-
-        if !entry.get_outputs().is_empty() {
-            write!(
-                pretty,
-                " returns ({})",
-                entry
-                    .get_outputs()
-                    .iter()
-                    .map(|arg| arg.get_field_type().to_owned())
-                    .collect::<Vec<_>>()
-                    .join(", "),
-            )?;
-        }
-
+        let method = abi::entry_to_method_name(entry);
+        let fnhash = abi::fnhash(&method);
         println!(
             "{:}\n    => {:}: {:}",
-            pretty,
+            abi::entry_to_method_name_pretty(entry)?,
             (&fnhash[..]).encode_hex::<String>(),
-            raw
+            method
         );
     }
     Ok(())
