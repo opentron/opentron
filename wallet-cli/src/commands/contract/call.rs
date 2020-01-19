@@ -83,7 +83,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         });
         println!("{:}", serde_json::to_string_pretty(&ret)?);
         if !trx_ext.get_constant_result().is_empty() && !trx_ext.get_constant_result()[0].is_empty() {
-            handle_transaction_result(&contract, method, &trx_ext.get_constant_result()[0])?;
+            handle_contract_result(&contract, method, &trx_ext.get_constant_result()[0])?;
         }
         Ok(())
     } else {
@@ -100,7 +100,7 @@ fn extract_types(fnname: &str) -> Result<Vec<&str>, Error> {
     Ok(fnname[start + 1..end].split(",").filter(|ty| !ty.is_empty()).collect())
 }
 
-fn handle_transaction_result(contract: &Address, method: &str, result: &[u8]) -> Result<(), Error> {
+fn handle_contract_result(contract: &Address, method: &str, result: &[u8]) -> Result<(), Error> {
     let abi = trx::get_contract_abi(contract)?;
     abi.iter()
         .find(|entry| abi::entry_to_method_name(entry) == method)
