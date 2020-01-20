@@ -61,7 +61,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .map(|(arg, ty)| {
                     if ty == &"address" {
                         arg.parse::<Address>()
-                            .map(|addr| addr.encode_hex::<String>()[2..].to_owned())
+                            .map(|addr| addr.as_tvm_bytes().encode_hex::<String>())
                             .map_err(Error::from)
                     } else {
                         Ok(arg.to_owned())
