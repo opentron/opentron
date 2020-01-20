@@ -141,7 +141,7 @@ pub fn parse_amount_with_surfix(amount: &str, surfix: &str, precision: u32) -> R
             .parse::<i64>()
             .map(|v| v * (10 as i64).pow(precision))
             .map_err(Error::from)
-    } else if amount.ends_with("SUN") {
+    } else if surfix == "TRX" && amount.ends_with("SUN") {
         Ok(String::from_utf8_lossy(&amount.as_bytes()[..length - 3])
             .replace("_", "")
             .parse()?)
