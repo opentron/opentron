@@ -41,6 +41,9 @@ fn get_block(matches: &ArgMatches) -> Result<(), Error> {
             serde_json::to_value(&payload)?
         }
     };
+    if block["block_header"].is_null() {
+        return Err(Error::Runtime("block not found on chain"));
+    }
 
     // get_block_by_id won't return blockid
     if block["blockid"].is_array() {
@@ -118,15 +121,12 @@ fn get_account(name: &str) -> Result<(), Error> {
     // req.set_account_name(name.as_bytes().to_owned());
 
     let (_, payload, _) = client::GRPC_CLIENT.get_account(Default::default(), req).wait()?;
-
-    let mut account = serde_json::to_value(&payload)?;
-
-    // first byte of address
-    if account["address"][0].is_null() {
+    if payload.get_address().is_empty() {
         println!("{}", serde_json::to_string_pretty(&payload)?);
         return Err(Error::Runtime("account not found on chain"));
     }
 
+    let mut account = serde_json::to_value(&payload)?;
     jsont::fix_account(&mut account);
 
     println!("{}", serde_json::to_string_pretty(&account)?);
@@ -141,10 +141,13 @@ fn get_account_permission(name: &str) -> Result<(), Error> {
     req.set_address(addr.as_bytes().to_owned());
 
     let (_, payload, _) = client::GRPC_CLIENT.get_account(Default::default(), req).wait()?;
+    if payload.get_address().is_empty() {
+        println!("{}", serde_json::to_string_pretty(&payload)?);
+        return Err(Error::Runtime("account not found on chain"));
+    }
 
     let mut account = serde_json::to_value(&payload)?;
     jsont::fix_account(&mut account);
-
     let permission_info = json!({
         "owner": account["owner_permission"],
         "witness": account["witness_permission"],
@@ -176,6 +179,10 @@ fn get_proposal_by_id(id: &str) -> Result<(), Error> {
     req.set_value(Vec::from_hex(id_hex)?);
 
     let (_, payload, _) = client::GRPC_CLIENT.get_proposal_by_id(Default::default(), req).wait()?;
+    if payload.get_proposal_id() == 0 {
+        return Err(Error::Runtime("proposal not found on chain"));
+    }
+
     let mut proposal = serde_json::to_value(&payload)?;
     proposal["proposer_address"] = json!(jsont::bytes_to_hex_string(&proposal["proposer_address"]));
     proposal["approvals"]
@@ -198,13 +205,12 @@ fn get_asset_by_id(id: &str) -> Result<(), Error> {
         .get_asset_issue_by_id(Default::default(), req)
         .wait()?;
     if payload.get_owner_address().is_empty() {
-        Err(Error::Runtime("asset not found"))
-    } else {
-        let mut asset = serde_json::to_value(&payload)?;
-        jsont::fix_asset_issue_contract(&mut asset);
-        println!("{}", serde_json::to_string_pretty(&asset)?);
-        Ok(())
+        return Err(Error::Runtime("asset not found"));
     }
+    let mut asset = serde_json::to_value(&payload)?;
+    jsont::fix_asset_issue_contract(&mut asset);
+    println!("{}", serde_json::to_string_pretty(&asset)?);
+    Ok(())
 }
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
