@@ -62,7 +62,8 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values:
+              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
     - rpc-host:
           help: Raw RPC host to connect
@@ -1429,6 +1430,13 @@ subcommands:
                     conflicts_with:
                         - account
                         - private-key
+
+    - create:
+          about: Create various items, on and off the blockchain
+          settings: *default_settings
+          subcommands:
+              - key:
+                    about: Creates a new keypair and prints the address and private key
 
     - shielded:
           about: Manage shielded transactions and shielded notes

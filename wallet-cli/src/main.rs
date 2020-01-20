@@ -45,6 +45,7 @@ fn main() -> Result<(), Error> {
         ("transfer", Some(arg_matches)) => commands::transfer::main(arg_matches),
         ("sign", Some(arg_matches)) => commands::sign::main(arg_matches),
         ("wallet", Some(arg_matches)) => commands::wallet::main(arg_matches),
+        ("create", Some(arg_matches)) => commands::create::main(arg_matches),
         ("shielded", Some(arg_matches)) => commands::shielded::main(arg_matches),
         _ => unreachable!("handled by cli.yml; qed"),
     }
