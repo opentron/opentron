@@ -4,6 +4,7 @@ use ethabi::param_type::{ParamType, Reader};
 use ethabi::token::{LenientTokenizer, StrictTokenizer, Token, Tokenizer};
 use ethabi::{decode, encode};
 use hex::FromHex;
+use keys::Address;
 use proto::core::SmartContract_ABI_Entry as AbiEntry;
 use std::fmt::Write as FmtWrite;
 
@@ -41,7 +42,7 @@ pub fn decode_params(types: &[&str], data: &str) -> Result<String, Error> {
     let result = types
         .iter()
         .zip(tokens.iter())
-        .map(|(ty, to)| format!("{}: {:}", ty, to))
+        .map(|(ty, tok)| format!("{}: {}", ty, pformat_abi_token(tok)))
         .collect::<Vec<String>>()
         .join("\n");
     Ok(result)
@@ -56,6 +57,16 @@ fn parse_tokens(params: &[(ParamType, &str)], lenient: bool) -> Result<Vec<Token
         })
         .collect::<Result<_, _>>()
         .map_err(From::from)
+}
+
+fn pformat_abi_token(tok: &Token) -> String {
+    match tok {
+        Token::Address(raw) => Address::from_tvm_bytes(raw.as_ref()).to_string(),
+        Token::String(s) => format!("{:?}", s),
+        Token::Uint(val) => val.to_string(),
+        Token::Bool(val) => val.to_string(),
+        ref t => format!("{:?}", t),
+    }
 }
 
 pub fn entry_to_method_name(entry: &AbiEntry) -> String {

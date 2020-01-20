@@ -7,8 +7,8 @@ use std::fmt;
 use std::str::FromStr; // .parse
 
 use crate::error::Error;
-use crate::public::Public;
 use crate::private::Private;
+use crate::public::Public;
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Address([u8; 21]);
@@ -36,6 +36,14 @@ impl Address {
 
     pub fn as_tvm_bytes(&self) -> &[u8] {
         &self.0[1..]
+    }
+
+    pub fn from_tvm_bytes(raw: &[u8]) -> Self {
+        assert!(raw.len() == 20);
+
+        let mut inner = [0x41; 21];
+        inner[1..21].copy_from_slice(raw);
+        Address(inner)
     }
 }
 
