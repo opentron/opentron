@@ -1436,14 +1436,14 @@ subcommands:
           settings: *default_settings
           subcommands:
               - key:
-                    about: Creates a new keypair and prints the address and private key
+                    about: Create a new keypair and prints the address and private key
+              - zkey:
+                    about: Create a new shielded address
 
     - shielded:
           about: Manage shielded transactions and shielded notes
           settings: *default_settings
           subcommands:
-              - create_address:
-                    about: Creates a new shielded address
               - debug:
                     about: debug rocks
               - scan:

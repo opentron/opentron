@@ -16,26 +16,6 @@ use crate::error::Error;
 use crate::utils::client;
 use crate::utils::jsont;
 
-pub fn new_shielded_address() -> Result<(), Error> {
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_new_shielded_address(Default::default(), EmptyMessage::new())
-        .wait()?;
-    let mut addr_info = serde_json::to_value(&payload)?;
-
-    // sk: spending key => ask, nsk, ovk
-    // ask: spend authorizing key, 256 => ak
-    // nsk: proof authorizing key, 256 => nk
-    // ovk: outgoing viewing key, 256
-    // ivk: incoming viewing key, 256 => pkD
-    // d: diversifier, 11
-    // pkD: the public key of the address, g_d^ivk
-    // pkD + d => z-addr
-    for key in &["sk", "ask", "nsk", "ovk", "ak", "nk", "ivk", "d", "pkD"] {
-        addr_info[key] = json!(jsont::bytes_to_hex_string(&addr_info[key]));
-    }
-    println!("{}", serde_json::to_string_pretty(&addr_info)?);
-    Ok(())
-}
 
 pub fn debug() -> Result<(), Error> {
     unimplemented!()
@@ -290,7 +270,6 @@ fn scan_notes(_matches: &ArgMatches) -> Result<(), Error> {
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
-        ("create_address", _) => new_shielded_address(),
         ("scan", Some(arg_matches)) => scan_notes(arg_matches),
         ("debug", _) => debug(),
         ("debug1", _) => debug_taddr_to_zaddr(),
