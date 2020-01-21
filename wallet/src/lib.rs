@@ -280,7 +280,7 @@ impl Wallet {
     }
 
     pub fn create_zkey(&mut self) -> Result<(PaymentAddress, ZSecretKey), Error> {
-        let (addr, sk) = generate_zkey_pair();
+        let (addr, sk, _, _) = generate_zkey_pair();
         self.import_zkey(addr.clone(), sk)?;
         Ok((addr, sk))
     }

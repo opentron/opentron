@@ -1439,6 +1439,10 @@ subcommands:
                     about: Create a new keypair and prints the address and private key
               - zkey:
                     about: Create a new shielded address
+                    args:
+                        - offline:
+                              help: Use offline ztron library to generate address
+                              long: offline
 
     - shielded:
           about: Manage shielded transactions and shielded notes

@@ -114,6 +114,10 @@ impl Diversifier {
     pub fn g_d<E: JubjubEngine>(&self, params: &E::Params) -> Option<edwards::Point<E, PrimeOrder>> {
         group_hash::<E>(&self.0, constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        return &self.0[..]
+    }
 }
 
 /// A Sapling payment address.

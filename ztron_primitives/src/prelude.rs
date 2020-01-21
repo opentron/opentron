@@ -1,7 +1,6 @@
 //! Remove generics from basic type.
 
 use ff::{PrimeField, PrimeFieldRepr};
-use hex::ToHex;
 use pairing::bls12_381::Bls12;
 
 use crate::jubjub::JubjubEngine;
@@ -37,16 +36,15 @@ pub fn generate_r() -> <Bls12 as JubjubEngine>::Fs {
     generate_esk(&mut rng)
     // let mut raw = [0u8; 32];
     // generate_esk(&mut rng)
-    /*
-    generate_esk(&mut rng)
-        .into_repr()
-        .write_le(&mut raw[..])
-        .expect("write ok");
-    raw */
+    // generate_esk(&mut rng)
+    // .into_repr()
+    // .write_le(&mut raw[..])
+    // .expect("write ok");
+    // raw
 }
 
 /// (PaymentAddress, sk)
-pub fn generate_zkey_pair() -> (PaymentAddress, [u8; 32]) {
+pub fn generate_zkey_pair() -> (PaymentAddress, [u8; 32], ExpandedSpendingKey, FullViewingKey) {
     let sk = rand::random::<[u8; 32]>();
 
     let mut d: [u8; 11];
@@ -64,11 +62,7 @@ pub fn generate_zkey_pair() -> (PaymentAddress, [u8; 32]) {
 
     let zaddr = fvk.vk.to_payment_address(diversifier, &JUBJUB).unwrap();
 
-    eprintln!("sk: {:}", (&sk[..]).encode_hex::<String>());
-    eprintln!("d: {:}", (&d[..]).encode_hex::<String>());
-    eprintln!("addr: {:}", zaddr.to_string());
-
-    (zaddr, sk)
+    (zaddr, sk, esk, fvk)
 }
 
 pub fn rcm_to_bytes(rcm: <Bls12 as JubjubEngine>::Fs) -> Vec<u8> {

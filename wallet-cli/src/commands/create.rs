@@ -4,6 +4,9 @@ use keys::KeyPair;
 use proto::api::EmptyMessage;
 use proto::api_grpc::Wallet;
 use serde_json::json;
+use ztron_primitives::prelude::{
+    generate_zkey_pair,
+};
 
 use crate::error::Error;
 use crate::utils::client;
@@ -20,7 +23,11 @@ fn create_key() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn create_zkey() -> Result<(), Error> {
+pub fn create_zkey(matches: &ArgMatches) -> Result<(), Error> {
+    if matches.is_present("offline") {
+        return create_zkey_offline();
+    }
+
     let (_, payload, _) = client::GRPC_CLIENT
         .get_new_shielded_address(Default::default(), EmptyMessage::new())
         .wait()?;
@@ -41,10 +48,40 @@ pub fn create_zkey() -> Result<(), Error> {
     Ok(())
 }
 
+pub fn create_zkey_offline() -> Result<(), Error> {
+    let (addr, sk, esk, fvk) = generate_zkey_pair();
+
+    let ask = esk.ask.to_bytes();
+    let nsk = esk.nsk.to_bytes();
+    let ovk = esk.ovk.as_bytes();
+
+    let ak = fvk.vk.ak.to_bytes();
+    let nk = fvk.vk.nk.to_bytes();
+    let ivk = fvk.vk.ivk().to_bytes();
+
+    let pk_d = addr.pk_d().to_bytes();
+    let d = addr.diversifier().as_bytes();
+
+    println!("d = {}", d.encode_hex::<String>());
+    println!("sk  => {}", sk.encode_hex::<String>());
+    println!("pk_d = {}", pk_d.encode_hex::<String>());
+    println!("address = {}", addr);
+
+    println!("ask => {}", ask.encode_hex::<String>());
+    println!("nsk => {}", nsk.encode_hex::<String>());
+    println!("ovk => {}", ovk.encode_hex::<String>());
+
+    println!("ak  = {}", ak.encode_hex::<String>());
+    println!("nk  = {}", nk.encode_hex::<String>());
+    println!("ivk = {}", ivk.encode_hex::<String>());
+
+    Ok(())
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("key", _) => create_key(),
-        ("zkey", _) => create_zkey(),
+        ("zkey", Some(arg_matches)) => create_zkey(arg_matches),
         _ => unreachable!("checked by cli.yml; qed"),
     }
 }
