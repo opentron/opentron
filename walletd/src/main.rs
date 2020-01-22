@@ -11,8 +11,8 @@ use api::{sign_digest_request::PrivateKeyOf, KeyPair};
 use api::{
     CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse, ImportKeyRequest,
     ImportNoteRequest, ImportZkeyRequest, ListKeysRequest, ListKeysResponse, ListNotesRequest, ListNotesResponse,
-    ListPrivateKeysRequest, ListPrivateKeysResponse, ListZkeysRequest, ListZkeysResponse, LockAllRequest, LockRequest,
-    OpenRequest, SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
+    ListPrivateKeysRequest, ListPrivateKeysResponse, ListZkeysRequest, ListZkeysResponse, LockRequest, OpenRequest,
+    SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 pub mod api {
@@ -227,10 +227,6 @@ impl LocalWallet for LocalWalletService {
             },
         };
         Ok(Response::new(reply))
-    }
-
-    async fn lock_all(&self, _request: Request<LockAllRequest>) -> Result<Response<StatusResponse>, Status> {
-        unimplemented!()
     }
 
     async fn list_private_keys(

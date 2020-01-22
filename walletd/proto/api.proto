@@ -8,7 +8,6 @@ service LocalWallet {
   rpc Open(OpenRequest) returns (StatusResponse) {}
   rpc Lock(LockRequest) returns (StatusResponse) {}
   rpc Unlock(UnlockRequest) returns (StatusResponse) {}
-  rpc LockAll(LockAllRequest) returns (StatusResponse) {}
   rpc CreateKey(CreateKeyRequest) returns (CreateKeyResponse) {}
   rpc ImportKey(ImportKeyRequest) returns (StatusResponse) {}
   rpc ListKeys(ListKeysRequest) returns (ListKeysResponse) {}
@@ -55,8 +54,6 @@ message UnlockRequest {
   string name = 1;
   string password = 2;
 }
-
-message LockAllRequest {}
 
 message CreateKeyRequest { string name = 1; }
 

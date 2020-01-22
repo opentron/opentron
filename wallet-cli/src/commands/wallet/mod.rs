@@ -81,7 +81,7 @@ async fn create_key_in_wallet() -> Result<(), Error> {
         println!("Public:  {:}", kp.public());
         println!("Private: {:}", kp.private());
     } else {
-        println!("{:?}", &reply);
+        eprintln!("{:?}", &reply);
     }
     Ok(())
 }
@@ -117,7 +117,7 @@ async fn list_keys_in_wallet() -> Result<(), Error> {
             println!("         Public: {:}\n", pub_key);
         }
     } else {
-        println!("{:?}", &reply);
+        eprintln!("{:?}", &reply);
     }
     Ok(())
 }
@@ -133,7 +133,7 @@ async fn create_zkey_in_wallet() -> Result<(), Error> {
         println!("Address: {:}", reply.address);
         println!("SK:      {:}", reply.sk.encode_hex::<String>());
     } else {
-        println!("{:?}", &reply);
+        eprintln!("{:?}", &reply);
     }
     Ok(())
 }
@@ -149,7 +149,7 @@ async fn list_zkeys_in_wallet() -> Result<(), Error> {
             println!("Address: {:}", addr);
         }
     } else {
-        println!("{:?}", &reply);
+        eprintln!("{:?}", &reply);
     }
     Ok(())
 }
@@ -168,7 +168,7 @@ async fn sign_digest_via_address(digest: &[u8], address: &Address) -> Result<Vec
     if reply.code == 200 {
         Ok(reply.signature)
     } else {
-        println!("{:?}", &reply);
+        eprintln!("{:?}", &reply);
         Err(Error::Runtime("fail to sign digest"))
     }
 }
