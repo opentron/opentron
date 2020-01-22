@@ -10,8 +10,8 @@ use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::{sign_digest_request::PrivateKeyOf, KeyPair};
 use api::{
     CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse, ImportKeyRequest,
-    ImportNoteRequest, ImportZkeyRequest, ListKeyPairsRequest, ListKeyPairsResponse, ListKeysRequest, ListKeysResponse,
-    ListNotesRequest, ListNotesResponse, ListPrivateKeysRequest, ListPrivateKeysResponse, LockAllRequest, LockRequest,
+    ImportNoteRequest, ImportZkeyRequest, ListKeysRequest, ListKeysResponse, ListNotesRequest, ListNotesResponse,
+    ListPrivateKeysRequest, ListPrivateKeysResponse, ListZkeysRequest, ListZkeysResponse, LockAllRequest, LockRequest,
     OpenRequest, SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
@@ -233,13 +233,6 @@ impl LocalWallet for LocalWalletService {
         unimplemented!()
     }
 
-    async fn list_key_pairs(
-        &self,
-        _request: Request<ListKeyPairsRequest>,
-    ) -> Result<Response<ListKeyPairsResponse>, Status> {
-        unimplemented!()
-    }
-
     async fn list_private_keys(
         &self,
         _request: Request<ListPrivateKeysRequest>,
@@ -249,6 +242,32 @@ impl LocalWallet for LocalWalletService {
 
     async fn create_zkey(&self, _request: Request<CreateZkeyRequest>) -> Result<Response<CreateZkeyResponse>, Status> {
         unimplemented!()
+    }
+
+    async fn list_zkeys(&self, request: Request<ListZkeysRequest>) -> Result<Response<ListZkeysResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+
+        let reply = match *(*self.wallet).read().unwrap() {
+            Some(ref wallet) => {
+                let addrs = wallet
+                    .list_zkeys()
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|addr| addr.to_string())
+                    .collect();
+                ListZkeysResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                    addresses: addrs,
+                }
+            }
+            None => ListZkeysResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
+                ..Default::default()
+            },
+        };
+        Ok(Response::new(reply))
     }
 
     async fn list_notes(&self, _request: Request<ListNotesRequest>) -> Result<Response<ListNotesResponse>, Status> {

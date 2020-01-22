@@ -12,12 +12,12 @@ service LocalWallet {
   rpc CreateKey(CreateKeyRequest) returns (CreateKeyResponse) {}
   rpc ImportKey(ImportKeyRequest) returns (StatusResponse) {}
   rpc ListKeys(ListKeysRequest) returns (ListKeysResponse) {}
-  rpc ListKeyPairs(ListKeyPairsRequest) returns (ListKeyPairsResponse) {}
   rpc ListPrivateKeys(ListPrivateKeysRequest)
       returns (ListPrivateKeysResponse) {}
   rpc SignDigest(SignDigestRequest) returns (SignDigestResponse) {}
   // shielded transaction
   rpc CreateZkey(CreateZkeyRequest) returns (CreateZkeyResponse) {}
+  rpc ListZkeys(ListZkeysRequest) returns (ListZkeysResponse) {}
   rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {}
   rpc ImportZkey(ImportZkeyRequest) returns (StatusResponse) {}
   rpc ImportNote(ImportNoteRequest) returns (StatusResponse) {}
@@ -116,6 +116,14 @@ message CreateZkeyResponse {
   int32 code = 1;
   string message = 2;
   string zaddress = 3;
+}
+
+message ListZkeysRequest {}
+
+message ListZkeysResponse {
+  int32 code = 1;
+  string message = 2;
+  repeated string addresses = 3;
 }
 
 message ListNotesRequest {}

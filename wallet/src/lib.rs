@@ -285,6 +285,10 @@ impl Wallet {
         Ok((addr, sk))
     }
 
+    pub fn list_zkeys(&self) -> Result<Vec<PaymentAddress>, Error> {
+        Ok(self.zaddrs.keys().cloned().collect())
+    }
+
     pub fn get_expanded_spending_key(&self, addr: &PaymentAddress) -> Result<ExpandedSpendingKey, Error> {
         if self.is_locked() {
             return Err(Error::Runtime("unable to import key to a locked wallet"));

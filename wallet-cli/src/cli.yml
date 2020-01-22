@@ -1550,3 +1550,5 @@ subcommands:
                               help: The password of the wallet
                               long: password
                               takes_value: true
+              - zkeys:
+                    about: List all shielded addresses
