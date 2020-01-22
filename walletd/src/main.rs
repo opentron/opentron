@@ -292,8 +292,32 @@ impl LocalWallet for LocalWalletService {
         unimplemented!()
     }
 
-    async fn import_zkey(&self, _request: Request<ImportZkeyRequest>) -> Result<Response<StatusResponse>, Status> {
-        unimplemented!()
+    async fn import_zkey(&self, request: Request<ImportZkeyRequest>) -> Result<Response<StatusResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+
+        let address = &request.get_ref().address;
+        let mut sk = [0u8; 32];
+        sk[..32].copy_from_slice(&request.get_ref().sk);
+
+        let reply = match *(*self.wallet).write().unwrap() {
+            Some(ref mut wallet) => address
+                .parse()
+                .map_err(From::from)
+                .and_then(|addr| wallet.import_zkey(addr, sk))
+                .map(|_| StatusResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                })
+                .unwrap_or_else(|e| StatusResponse {
+                    code: 500,
+                    message: format!("Can not import zkey: {:?}", e),
+                }),
+            None => StatusResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
+            },
+        };
+        Ok(Response::new(reply))
     }
 
     async fn import_note(&self, _request: Request<ImportNoteRequest>) -> Result<Response<StatusResponse>, Status> {

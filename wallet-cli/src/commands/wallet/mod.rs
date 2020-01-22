@@ -1,5 +1,5 @@
 use clap::ArgMatches;
-use hex::ToHex;
+use hex::{FromHex, ToHex};
 use keys::{Address, KeyPair, Private, Public};
 use std::convert::TryFrom;
 use tokio::runtime::Builder;
@@ -8,8 +8,8 @@ use walletd::api::local_wallet_client::LocalWalletClient;
 use walletd::api::sign_digest_request::PrivateKeyOf;
 use walletd::api::{
     CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse, ImportKeyRequest,
-    ListKeysRequest, ListKeysResponse, ListZkeysRequest, ListZkeysResponse, LockRequest, OpenRequest,
-    SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
+    ImportZkeyRequest, ListKeysRequest, ListKeysResponse, ListZkeysRequest, ListZkeysResponse, LockRequest,
+    OpenRequest, SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 use crate::error::Error;
@@ -138,6 +138,24 @@ async fn create_zkey_in_wallet() -> Result<(), Error> {
     Ok(())
 }
 
+async fn import_zkey_to_wallet<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
+    let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
+
+    let address = matches.value_of("ADDR").expect("required in cli.yml; qed").to_owned();
+    let sk = Vec::from_hex(matches.value_of("sk").expect("required in cli.yml; qed"))?;
+    if sk.len() != 32 {
+        return Err(Error::Runtime("illegal sk format, use 32 bytes hex"));
+    }
+
+    println!("Importing shielded address: {:} ...", address);
+    let request = Request::new(ImportZkeyRequest { address, sk });
+    let response = wallet_client.import_zkey(request).await?;
+
+    let status: StatusResponse = response.into_inner();
+    println!("{:?}", &status);
+    Ok(())
+}
+
 async fn list_zkeys_in_wallet() -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
@@ -213,6 +231,7 @@ async fn run<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
         }
         ("keys", _) => list_keys_in_wallet().await,
         ("create_zkey", _) => create_zkey_in_wallet().await,
+        ("import_zkey", Some(arg_matches)) => import_zkey_to_wallet(arg_matches).await,
         ("zkeys", _) => list_zkeys_in_wallet().await,
         _ => {
             eprintln!("{}", matches.usage());

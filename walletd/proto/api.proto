@@ -137,6 +137,6 @@ message ImportNoteRequest {
 }
 
 message ImportZkeyRequest {
-  bytes sk = 1;
-  bytes d = 2;
+  string address = 1;
+  bytes sk = 2;
 }

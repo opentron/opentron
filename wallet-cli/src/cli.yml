@@ -1553,3 +1553,15 @@ subcommands:
                     about: List all shielded addresses
               - create_zkey:
                     about: Create a shielded address key pair within the wallet
+              - import_zkey:
+                    about: Import a shielded address key pair into wallet
+                    args:
+                        - ADDR:
+                              help: The shielded address to import
+                              value_name: "z-ADDR"
+                              required: true
+                        - sk:
+                              help: Spending key in hex format (32bytes)
+                              long: sk
+                              takes_value: true
+                              required: true
