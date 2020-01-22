@@ -7,9 +7,9 @@ use tonic::Request;
 use walletd::api::local_wallet_client::LocalWalletClient;
 use walletd::api::sign_digest_request::PrivateKeyOf;
 use walletd::api::{
-    CreateKeyRequest, CreateKeyResponse, CreateRequest, ImportKeyRequest, ListKeysRequest, ListKeysResponse,
-    ListZkeysRequest, ListZkeysResponse, LockRequest, OpenRequest, SignDigestRequest, SignDigestResponse,
-    StatusResponse, UnlockRequest,
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse, ImportKeyRequest,
+    ListKeysRequest, ListKeysResponse, ListZkeysRequest, ListZkeysResponse, LockRequest, OpenRequest,
+    SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 use crate::error::Error;
@@ -122,6 +122,22 @@ async fn list_keys_in_wallet() -> Result<(), Error> {
     Ok(())
 }
 
+async fn create_zkey_in_wallet() -> Result<(), Error> {
+    let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
+
+    let request = Request::new(CreateZkeyRequest {});
+    let response = wallet_client.create_zkey(request).await?;
+
+    let reply: CreateZkeyResponse = response.into_inner();
+    if reply.code == 200 {
+        println!("Address: {:}", reply.address);
+        println!("SK:      {:}", reply.sk.encode_hex::<String>());
+    } else {
+        println!("{:?}", &reply);
+    }
+    Ok(())
+}
+
 async fn list_zkeys_in_wallet() -> Result<(), Error> {
     let mut wallet_client = LocalWalletClient::connect(WALLETD_RPC_URL).await?;
 
@@ -130,7 +146,7 @@ async fn list_zkeys_in_wallet() -> Result<(), Error> {
     let reply: ListZkeysResponse = response.into_inner();
     if reply.code == 200 {
         for addr in reply.addresses {
-            println!("  Address: {:}\n", addr);
+            println!("Address: {:}", addr);
         }
     } else {
         println!("{:?}", &reply);
@@ -196,6 +212,7 @@ async fn run<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
             import_key_to_wallet(priv_key).await
         }
         ("keys", _) => list_keys_in_wallet().await,
+        ("create_zkey", _) => create_zkey_in_wallet().await,
         ("zkeys", _) => list_zkeys_in_wallet().await,
         _ => {
             eprintln!("{}", matches.usage());

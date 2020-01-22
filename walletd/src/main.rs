@@ -240,8 +240,30 @@ impl LocalWallet for LocalWalletService {
         unimplemented!()
     }
 
-    async fn create_zkey(&self, _request: Request<CreateZkeyRequest>) -> Result<Response<CreateZkeyResponse>, Status> {
-        unimplemented!()
+    async fn create_zkey(&self, request: Request<CreateZkeyRequest>) -> Result<Response<CreateZkeyResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+        let reply = match *(*self.wallet).write().unwrap() {
+            Some(ref mut wallet) => wallet
+                .create_zkey()
+                .map(|(addr, sk)| CreateZkeyResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                    address: addr.to_string(),
+                    sk: sk[..].to_owned(),
+                })
+                .unwrap_or_else(|e| CreateZkeyResponse {
+                    code: 500,
+                    message: format!("Can not create zkey: {:}", e),
+                    ..Default::default()
+                }),
+            None => CreateZkeyResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
+                ..Default::default()
+            },
+        };
+
+        Ok(Response::new(reply))
     }
 
     async fn list_zkeys(&self, request: Request<ListZkeysRequest>) -> Result<Response<ListZkeysResponse>, Status> {

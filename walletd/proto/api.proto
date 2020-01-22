@@ -115,7 +115,8 @@ message CreateZkeyRequest {}
 message CreateZkeyResponse {
   int32 code = 1;
   string message = 2;
-  string zaddress = 3;
+  string address = 3;
+  bytes sk = 4;
 }
 
 message ListZkeysRequest {}

@@ -62,8 +62,7 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values:
-              [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
     - rpc-host:
           help: Raw RPC host to connect
@@ -1552,3 +1551,5 @@ subcommands:
                               takes_value: true
               - zkeys:
                     about: List all shielded addresses
+              - create_zkey:
+                    about: Create a shielded address key pair within the wallet
