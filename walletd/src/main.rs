@@ -296,19 +296,27 @@ impl LocalWallet for LocalWalletService {
         println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
 
         let address = &request.get_ref().address;
-        let mut sk = [0u8; 32];
-        sk[..32].copy_from_slice(&request.get_ref().sk);
 
         let reply = match *(*self.wallet).write().unwrap() {
             Some(ref mut wallet) => address
                 .parse()
                 .map_err(From::from)
-                .and_then(|addr| wallet.import_zkey(addr, sk))
-                .map(|_| StatusResponse {
-                    code: 200,
-                    message: "OK".to_owned(),
+                .and_then(|addr| {
+                    if request.get_ref().sk.len() != 32 {
+                        return Ok(StatusResponse {
+                            code: 500,
+                            message: "illegal sk length".to_owned(),
+                        });
+                    }
+                    let mut sk = [0u8; 32];
+                    sk[..32].copy_from_slice(&request.get_ref().sk);
+                    wallet.import_zkey(addr, sk)?;
+                    Ok(StatusResponse {
+                        code: 200,
+                        message: "OK".to_owned(),
+                    })
                 })
-                .unwrap_or_else(|e| StatusResponse {
+                .unwrap_or_else(|e: wallet::Error| StatusResponse {
                     code: 500,
                     message: format!("Can not import zkey: {:?}", e),
                 }),

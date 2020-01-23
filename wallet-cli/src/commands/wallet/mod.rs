@@ -143,9 +143,6 @@ async fn import_zkey_to_wallet<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Er
 
     let address = matches.value_of("ADDR").expect("required in cli.yml; qed").to_owned();
     let sk = Vec::from_hex(matches.value_of("sk").expect("required in cli.yml; qed"))?;
-    if sk.len() != 32 {
-        return Err(Error::Runtime("illegal sk format, use 32 bytes hex"));
-    }
 
     println!("Importing shielded address: {:} ...", address);
     let request = Request::new(ImportZkeyRequest { address, sk });
