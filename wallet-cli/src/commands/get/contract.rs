@@ -35,12 +35,16 @@ fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Erro
     for entry in abi.entrys.iter() {
         let method = abi::entry_to_method_name(entry);
         let fnhash = abi::fnhash(&method);
-        println!(
-            "{:}\n    => {:}: {:}",
-            abi::entry_to_method_name_pretty(entry)?,
-            (&fnhash[..]).encode_hex::<String>(),
-            method
-        );
+        if entry.get_field_type() == ::proto::core::SmartContract_ABI_Entry_EntryType::Function {
+            println!(
+                "{:}\n    => {:}: {:}",
+                abi::entry_to_method_name_pretty(entry)?,
+                (&fnhash[..]).encode_hex::<String>(),
+                method
+            );
+        } else {
+            println!("{:}", abi::entry_to_method_name_pretty(entry)?,);
+        }
     }
     Ok(())
 }
