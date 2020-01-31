@@ -179,8 +179,7 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
 fn get_proposal_by_id(id: &str) -> Result<(), Error> {
     // NOTE: id should be encoded to 8 bytes as i64
     let mut req = BytesMessage::new();
-    let id_hex = format!("{:016x}", id.parse::<i64>()?);
-    req.set_value(Vec::from_hex(id_hex)?);
+    req.set_value((id.parse::<i64>()?.to_be_bytes()[..]).to_owned());
 
     let (_, payload, _) = client::GRPC_CLIENT.get_proposal_by_id(Default::default(), req).wait()?;
     if payload.get_proposal_id() == 0 {
@@ -201,7 +200,6 @@ fn get_proposal_by_id(id: &str) -> Result<(), Error> {
 }
 
 fn get_asset_by_id(id: &str) -> Result<(), Error> {
-    // NOTE: id should be encoded to 8 bytes as i64
     let mut req = BytesMessage::new();
     req.set_value(id.as_bytes().to_owned());
 
