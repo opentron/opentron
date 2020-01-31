@@ -204,7 +204,7 @@ fn get_asset_by_id(id: &str) -> Result<(), Error> {
     let (_, payload, _) = client::GRPC_CLIENT
         .get_asset_issue_by_id(Default::default(), req)
         .wait()?;
-    if payload.get_owner_address().is_empty() {
+    if payload.get_id().is_empty() {
         return Err(Error::Runtime("asset not found"));
     }
     let mut asset = serde_json::to_value(&payload)?;
