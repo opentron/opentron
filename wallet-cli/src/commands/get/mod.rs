@@ -169,7 +169,11 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
         .wait()?;
 
     println!("{}", serde_json::to_string_pretty(&payload)?);
-    Ok(())
+    if payload.get_freeNetLimit() == 0 {
+        Err(Error::Runtime("account not found on chain"))
+    } else {
+        Ok(())
+    }
 }
 
 fn get_proposal_by_id(id: &str) -> Result<(), Error> {
