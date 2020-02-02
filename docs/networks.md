@@ -73,6 +73,9 @@ Home page: <https://tron.network/sunnetwork/>
 
 Event Server: <https://sun.tronex.io/event>
 
+NOTE: event listening is via:
+> <https://sun.tronex.io/event/contract/{CONTRACT_ADDRESS}/{EVENT_NAME}>
+
 ### Cross Chain
 
 SideChainID
