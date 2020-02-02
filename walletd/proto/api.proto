@@ -20,6 +20,8 @@ service LocalWallet {
   rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {}
   rpc ImportZkey(ImportZkeyRequest) returns (StatusResponse) {}
   rpc ImportNote(ImportNoteRequest) returns (StatusResponse) {}
+  rpc GetExpandedSpendingKey(GetExpandedSpendingKeyRequest)
+      returns (GetExpandedSpendingKeyResponse) {}
 }
 
 message KeyPair {
@@ -132,11 +134,19 @@ message ListNotesResponse {
   repeated Note notes = 3;
 }
 
-message ImportNoteRequest {
-  Note note = 1;
-}
+message ImportNoteRequest { Note note = 1; }
 
 message ImportZkeyRequest {
   string address = 1;
   bytes sk = 2;
+}
+
+message GetExpandedSpendingKeyRequest { string address = 1; }
+
+message GetExpandedSpendingKeyResponse {
+  int32 code = 1;
+  string message = 2;
+  bytes ask = 3;
+  bytes nsk = 4;
+  bytes ovk = 5;
 }

@@ -5,14 +5,16 @@ use std::sync::{Arc, RwLock};
 use tokio::runtime::Builder;
 use tonic::{transport::Server, Request, Response, Status};
 use wallet::Wallet;
+use ztron_primitives::prelude::PaymentAddress;
 
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::{sign_digest_request::PrivateKeyOf, KeyPair};
 use api::{
-    CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse, ImportKeyRequest,
-    ImportNoteRequest, ImportZkeyRequest, ListKeysRequest, ListKeysResponse, ListNotesRequest, ListNotesResponse,
-    ListPrivateKeysRequest, ListPrivateKeysResponse, ListZkeysRequest, ListZkeysResponse, LockRequest, OpenRequest,
-    SignDigestRequest, SignDigestResponse, StatusResponse, UnlockRequest,
+    CreateKeyRequest, CreateKeyResponse, CreateRequest, CreateZkeyRequest, CreateZkeyResponse,
+    GetExpandedSpendingKeyRequest, GetExpandedSpendingKeyResponse, ImportKeyRequest, ImportNoteRequest,
+    ImportZkeyRequest, ListKeysRequest, ListKeysResponse, ListNotesRequest, ListNotesResponse, ListPrivateKeysRequest,
+    ListPrivateKeysResponse, ListZkeysRequest, ListZkeysResponse, LockRequest, OpenRequest, SignDigestRequest,
+    SignDigestResponse, StatusResponse, UnlockRequest,
 };
 
 pub mod api {
@@ -330,6 +332,38 @@ impl LocalWallet for LocalWalletService {
 
     async fn import_note(&self, _request: Request<ImportNoteRequest>) -> Result<Response<StatusResponse>, Status> {
         unimplemented!()
+    }
+
+    async fn get_expanded_spending_key(
+        &self,
+        request: Request<GetExpandedSpendingKeyRequest>,
+    ) -> Result<Response<GetExpandedSpendingKeyResponse>, Status> {
+        println!("INFO request {:?} {:?}", request.remote_addr(), request.get_ref());
+        let address = &request.get_ref().address.parse::<PaymentAddress>()?;
+
+        let reply = match *(*self.wallet).read().unwrap() {
+            Some(ref wallet) => wallet
+                .get_expanded_spending_key(&address)
+                .map(|esk| GetExpandedSpendingKeyResponse {
+                    code: 200,
+                    message: "OK".to_owned(),
+                    ask: esk.ask.to_bytes(),
+                    nsk: esk.nsk.to_bytes(),
+                    ovk: esk.ovk.as_bytes().to_owned(),
+                })
+                .map_err(|e| GetExpandedSpendingKeyResponse {
+                    code: 500,
+                    message: e.to_string(),
+                    ..Default::default()
+                })
+                .unwrap_or_else(|e| e),
+            None => GetExpandedSpendingKeyResponse {
+                code: 500,
+                message: "No wallet opened".to_owned(),
+                ..Default::default()
+            },
+        };
+        Ok(Response::new(reply))
     }
 }
 
