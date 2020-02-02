@@ -2,6 +2,7 @@ use hex::ToHex;
 use keys::Address;
 use proto::api::BytesMessage;
 use proto::api_grpc::Wallet;
+use protobuf::ProtobufEnum;
 use serde_json::json;
 
 use crate::error::Error;
@@ -14,7 +15,7 @@ pub fn run(addr: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value(address.as_bytes().to_owned());
 
-    let (_, payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
+    let (_, mut payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
     if payload.get_contract_address().is_empty() {
         return Err(Error::Runtime("contract not found on chain"));
     }
@@ -26,7 +27,10 @@ pub fn run(addr: &str) -> Result<(), Error> {
     contract["code_hash"] = json!(jsont::bytes_to_hex_string(&contract["code_hash"]));
 
     println!("{}", serde_json::to_string_pretty(&contract)?);
-    pprint_abi_entries(payload.get_abi())?;
+    // re-order abi entry by types
+    let mut abi = payload.take_abi();
+    abi.entrys.sort_by_key(|entry| entry.get_field_type().value());
+    pprint_abi_entries(&abi)?;
     Ok(())
 }
 
