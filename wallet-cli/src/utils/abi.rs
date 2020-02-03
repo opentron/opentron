@@ -87,6 +87,13 @@ pub fn entry_to_method_name_pretty(entry: &AbiEntry) -> Result<String, Error> {
         ::proto::core::SmartContract_ABI_Entry_EntryType::Function => "function".to_owned(),
         ::proto::core::SmartContract_ABI_Entry_EntryType::Event => "event".to_owned(),
         ::proto::core::SmartContract_ABI_Entry_EntryType::Constructor => "constructor".to_owned(),
+        ::proto::core::SmartContract_ABI_Entry_EntryType::Fallback => {
+            if entry.get_payable() {
+                "function".to_owned()
+            } else {
+                "".to_owned()
+            }
+        }
         _ => "".to_owned(),
     };
     write!(pretty, " {:}", entry.get_name())?;
