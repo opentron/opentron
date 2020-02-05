@@ -6,6 +6,7 @@ use ethabi::{decode, encode};
 use hex::FromHex;
 use keys::Address;
 use proto::core::SmartContract_ABI_Entry as AbiEntry;
+use proto::core::SmartContract_ABI_Entry_StateMutabilityType as StateMutabilityType;
 use std::fmt::Write as FmtWrite;
 
 use crate::error::Error;
@@ -113,6 +114,9 @@ pub fn entry_to_method_name_pretty(entry: &AbiEntry) -> Result<String, Error> {
     )?;
     if entry.payable {
         write!(pretty, " payable")?;
+    }
+    if entry.get_stateMutability() == StateMutabilityType::View {
+        write!(pretty, " view")?;
     }
 
     if !entry.get_outputs().is_empty() {
