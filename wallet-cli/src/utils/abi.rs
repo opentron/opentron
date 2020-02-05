@@ -66,6 +66,7 @@ fn pformat_abi_token(tok: &Token) -> String {
         Token::String(s) => format!("{:?}", s),
         Token::Uint(val) => val.to_string(),
         Token::Bool(val) => val.to_string(),
+        Token::Array(val) => format!("[{}]", val.iter().map(pformat_abi_token).collect::<Vec<_>>().join(", ")),
         ref t => format!("{:?}", t),
     }
 }
