@@ -71,6 +71,8 @@ Public Fullnode
 
 Home page: <https://tron.network/sunnetwork/>
 
+Explorer: <https://dappchain.tronscan.org/>
+
 Event Server: <https://sun.tronex.io/event>
 
 NOTE: event listening is via:
