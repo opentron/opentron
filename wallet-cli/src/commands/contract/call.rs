@@ -113,7 +113,10 @@ fn handle_contract_result(contract: &Address, method: &str, result: &[u8]) -> Re
             let types = abi::entry_to_output_types(&entry);
             let output = abi::decode_params(&types, &result.encode_hex::<String>())?;
             if !types.is_empty() {
-                eprintln!("! Parsed result:\n{:}", output);
+                eprintln!("! Parsed result:");
+                for (ty, param) in types.iter().zip(output.iter()) {
+                    eprintln!("  {}: {}", ty, param);
+                }
             }
             Ok(())
         })

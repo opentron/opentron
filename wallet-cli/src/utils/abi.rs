@@ -33,20 +33,14 @@ pub fn encode_params(types: &[&str], values: &[String]) -> Result<Vec<u8>, Error
     Ok(result.to_vec())
 }
 
-pub fn decode_params(types: &[&str], data: &str) -> Result<String, Error> {
+pub fn decode_params(types: &[&str], data: &str) -> Result<Vec<String>, Error> {
     let types: Vec<ParamType> = types.iter().map(|s| Reader::read(s)).collect::<Result<_, _>>()?;
     let data: Vec<u8> = Vec::from_hex(data)?;
     let tokens = decode(&types, &data)?;
 
     assert_eq!(types.len(), tokens.len());
 
-    let result = types
-        .iter()
-        .zip(tokens.iter())
-        .map(|(ty, tok)| format!("{}: {}", ty, pformat_abi_token(tok)))
-        .collect::<Vec<String>>()
-        .join("\n");
-    Ok(result)
+    Ok(tokens.iter().map(pformat_abi_token).collect())
 }
 
 fn parse_tokens(params: &[(ParamType, &str)], lenient: bool) -> Result<Vec<Token>, Error> {

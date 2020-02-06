@@ -73,9 +73,12 @@ fn pprint_contract_call_data(contract: &Address, data: &str) -> Result<(), Error
             );
             eprintln!("! {}", abi::entry_to_method_name_pretty(entry)?);
             let types = abi::entry_to_input_types(&entry);
-            let output = abi::decode_params(&types, &data[8..])?;
+            let params = abi::decode_params(&types, &data[8..])?;
             if !types.is_empty() {
-                eprintln!("! Arguments:\n{:}", output);
+                eprintln!("! Arguments:");
+                for (input, param) in entry.get_inputs().iter().zip(params.iter()) {
+                    eprintln!("  {}: {} = {}", input.get_name(), input.get_field_type(), param);
+                }
             }
             Ok(())
         })
