@@ -33,12 +33,15 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             // Fix tron base58checked addresses, remove 0x41
             let values = args
                 .zip(types.iter())
-                .map(|(arg, ty)| {
-                    if ty == &"address" {
+                .map(|(arg, &ty)| {
+                    if ty == "address" {
                         arg.parse::<Address>()
                             .map(|addr| addr.as_tvm_bytes().encode_hex::<String>())
                             .map_err(Error::from)
                     } else {
+                        if ty.starts_with("address[") {
+                            eprintln!("! array of address detected, TVM address should be converted by hand");
+                        }
                         Ok(arg.to_owned())
                     }
                 })
