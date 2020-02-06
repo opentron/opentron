@@ -1061,8 +1061,7 @@ subcommands:
                               long: energy-limit
                               takes_value: true
                               value_name: VALUE
-                              conflicts_with:
-                                  - user-resource-percent
+                              default_value: "1"  # must > 0
                         - libraries:
                               help: |
                                   Direct string or file containing library addresses
