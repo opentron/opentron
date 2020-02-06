@@ -11,6 +11,7 @@ use crate::utils::client;
 use crate::utils::jsont;
 
 mod contract;
+mod transaction;
 
 fn node_info() -> Result<(), Error> {
     let (_, payload, _) = client::GRPC_CLIENT
@@ -74,42 +75,6 @@ fn get_block(matches: &ArgMatches) -> Result<(), Error> {
 
     println!("{:}", serde_json::to_string_pretty(&block)?);
     Ok(())
-}
-
-fn get_transaction(id: &str) -> Result<(), Error> {
-    let mut req = BytesMessage::new();
-    req.value = Vec::from_hex(id)?;
-
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_transaction_by_id(Default::default(), req)
-        .wait()?;
-
-    let mut transaction = serde_json::to_value(&payload)?;
-    if transaction["raw_data"].is_null() {
-        Err(Error::Runtime("transaction not found"))
-    } else {
-        jsont::fix_transaction(&mut transaction)?;
-        println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
-        Ok(())
-    }
-}
-
-fn get_transaction_info(id: &str) -> Result<(), Error> {
-    let mut req = BytesMessage::new();
-    req.value = Vec::from_hex(id)?;
-
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_transaction_info_by_id(Default::default(), req)
-        .wait()?;
-
-    if !payload.get_id().is_empty() {
-        let mut json = serde_json::to_value(&payload)?;
-        jsont::fix_transaction_info(&mut json);
-        println!("{}", serde_json::to_string_pretty(&json)?);
-        Ok(())
-    } else {
-        Err(Error::Runtime("transaction not found"))
-    }
 }
 
 /// Get account infomation.
@@ -221,11 +186,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("block", Some(arg_matches)) => get_block(arg_matches),
         ("transaction", Some(tr_matches)) => {
             let id = tr_matches.value_of("ID").expect("required in cli.yml; qed");
-            get_transaction(id)
+            transaction::get_transaction(id)
         }
         ("transaction_info", Some(tr_matches)) => {
             let id = tr_matches.value_of("ID").expect("required in cli.yml; qed");
-            get_transaction_info(id)
+            transaction::get_transaction_info(id)
         }
         ("account", Some(arg_matches)) => {
             let name = arg_matches.value_of("NAME").expect("required is cli.yml; qed");

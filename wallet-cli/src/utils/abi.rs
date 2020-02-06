@@ -3,7 +3,7 @@
 use ethabi::param_type::{ParamType, Reader};
 use ethabi::token::{LenientTokenizer, StrictTokenizer, Token, Tokenizer};
 use ethabi::{decode, encode};
-use hex::FromHex;
+use hex::{FromHex, ToHex};
 use keys::Address;
 use proto::core::SmartContract_ABI_Entry as AbiEntry;
 use proto::core::SmartContract_ABI_Entry_StateMutabilityType as StateMutabilityType;
@@ -67,6 +67,7 @@ fn pformat_abi_token(tok: &Token) -> String {
         Token::Uint(val) => val.to_string(),
         Token::Bool(val) => val.to_string(),
         Token::Array(val) => format!("[{}]", val.iter().map(pformat_abi_token).collect::<Vec<_>>().join(", ")),
+        Token::Bytes(val) => val.encode_hex::<String>(),
         ref t => format!("{:?}", t),
     }
 }
@@ -138,6 +139,14 @@ pub fn entry_to_method_name_pretty(entry: &AbiEntry) -> Result<String, Error> {
 pub fn entry_to_output_types(entry: &AbiEntry) -> Vec<&str> {
     entry
         .get_outputs()
+        .iter()
+        .map(|arg| arg.get_field_type())
+        .collect::<Vec<_>>()
+}
+
+pub fn entry_to_input_types(entry: &AbiEntry) -> Vec<&str> {
+    entry
+        .get_inputs()
         .iter()
         .map(|arg| arg.get_field_type())
         .collect::<Vec<_>>()
