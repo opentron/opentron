@@ -115,7 +115,11 @@ fn handle_contract_result(contract: &Address, method: &str, result: &[u8]) -> Re
             if !types.is_empty() {
                 eprintln!("! Parsed result:");
                 for (ty, param) in types.iter().zip(output.iter()) {
-                    eprintln!("  {}: {}", ty, param);
+                    if param.len() >= 74 {
+                        eprintln!("  {}:\n{}", ty, param);
+                    } else {
+                        eprintln!("  {}: {}", ty, param);
+                    }
                 }
             }
             Ok(())
