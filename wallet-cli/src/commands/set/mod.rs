@@ -2,6 +2,7 @@ use clap::ArgMatches;
 use keys::Address;
 use proto::core::{AccountPermissionUpdateContract, AccountUpdateContract};
 use serde_json::json;
+use std::fs;
 use std::io;
 use std::io::Read;
 
@@ -21,6 +22,8 @@ fn set_account_permission(matches: &ArgMatches) -> Result<(), Error> {
         let mut buffer = String::new();
         io::stdin().read_to_string(&mut buffer)?;
         serde_json::from_str(&buffer)?
+    } else if permission.ends_with(".json") {
+        serde_json::from_str(&fs::read_to_string(permission)?)?
     } else {
         serde_json::from_str(permission)?
     };

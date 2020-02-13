@@ -143,7 +143,7 @@ subcommands:
                               help: The address of the account to set permisiion
                               required: true
                         - PERMISSION:
-                              help: Permission JSON returned from `get account_permission`, `-` for STDIN
+                              help: Permission JSON or JSON file returned from `get account_permission`, `-` for STDIN
                               required: true
                         - account:
                               help: The account address used for signing
@@ -1061,7 +1061,7 @@ subcommands:
                               long: energy-limit
                               takes_value: true
                               value_name: VALUE
-                              default_value: "1"  # must > 0
+                              default_value: "1" # must > 0
                         - libraries:
                               help: |
                                   Direct string or file containing library addresses
