@@ -5,6 +5,7 @@ use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
 use proto::api_grpc::Wallet;
 use proto::core::Account;
 use serde_json::json;
+use std::collections::HashSet;
 
 use crate::error::Error;
 use crate::utils::client;
@@ -18,6 +19,58 @@ fn node_info() -> Result<(), Error> {
         .get_node_info(Default::default(), EmptyMessage::new())
         .wait()?;
     println!("{}", serde_json::to_string_pretty(&payload)?);
+    Ok(())
+}
+
+fn visit_node(ip: &str, edges: &mut HashSet<(String, String)>) -> Result<(), Error> {
+    let mut stack = vec![ip.to_owned()];
+    let mut visited = HashSet::new();
+
+    while let Some(self_ip) = stack.pop() {
+        visited.insert(self_ip.clone());
+
+        eprintln!("({})visiting ... {}", edges.len(), self_ip);
+        if let Ok(grpc_client) = client::new_grpc_client(&format!("{}:50051", self_ip)) {
+            if let Ok((_, node_info, _)) = grpc_client
+                .get_node_info(Default::default(), EmptyMessage::new())
+                .wait()
+            {
+                eprintln!(
+                    "p2p version: {}, node version: {}",
+                    node_info.get_configNodeInfo().get_p2pVersion(),
+                    node_info.get_configNodeInfo().get_codeVersion()
+                );
+                for peer in node_info.get_peerInfoList() {
+                    let peer_ip = peer.get_host();
+                    let edge = (self_ip.to_owned(), peer_ip.to_owned());
+                    if !edges.contains(&edge) {
+                        edges.insert(edge);
+                    }
+                    if !visited.contains(peer_ip) {
+                        stack.push(peer_ip.to_owned());
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn get_node_graph() -> Result<(), Error> {
+    let mut edges: HashSet<(String, String)> = HashSet::new();
+    let (_, node_info, _) = client::GRPC_CLIENT
+        .get_node_info(Default::default(), EmptyMessage::new())
+        .wait()?;
+
+    for peer in node_info.get_peerInfoList() {
+        let ip = peer.get_host();
+        let _ = visit_node(ip, &mut edges);
+    }
+    println!("digraph G {{");
+    for (from, to) in edges {
+        println!("  {:?} -> {:?};", from, to);
+    }
+    println!("}}");
     Ok(())
 }
 
@@ -183,6 +236,7 @@ fn get_asset_by_id(id: &str) -> Result<(), Error> {
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => node_info(),
+        ("node_graph", _) => get_node_graph(),
         ("block", Some(arg_matches)) => get_block(arg_matches),
         ("transaction", Some(tr_matches)) => {
             let id = tr_matches.value_of("ID").expect("required in cli.yml; qed");

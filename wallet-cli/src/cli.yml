@@ -78,6 +78,8 @@ subcommands:
           subcommands:
               - node:
                     about: Get current connected node state information
+              - node_graph:
+                    about: Get part of current global node graph
               - block:
                     about: Retrieve a full block from the blockchain
                     args:
