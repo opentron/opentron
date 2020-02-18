@@ -1238,7 +1238,7 @@ subcommands:
                               takes_value: true
                               value_name: PERCENT
                         - energy-limit:
-                              help: Maximum energy consumed when triggering contract
+                              help: Maximum energy consumed when triggering contract (originEnergyLimit)
                               long: energy-limit
                               takes_value: true
                               value_name: VALUE
