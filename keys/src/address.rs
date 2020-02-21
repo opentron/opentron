@@ -158,6 +158,7 @@ fn b58decode_check(s: &str) -> Result<Vec<u8>, Error> {
 
 #[cfg(test)]
 mod tests {
+    use hex::ToHex;
     use super::*;
 
     #[test]
@@ -176,7 +177,7 @@ mod tests {
         );
 
         assert_eq!(
-            addr.as_ref().encode_hex::<String>(),
+            addr.as_bytes().encode_hex::<String>(),
             "4196a3bace5adacf637eb7cc79d5787f4247da4bbe"
         )
     }
