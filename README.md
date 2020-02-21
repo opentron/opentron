@@ -12,7 +12,7 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 > # install protoc
 > brew install protobuf  # macOS
 > sudo pacman -S protobuf  # ArchLinux
-> sudo apt install protobuf-compiler  # Ubuntu / Debian
+> sudo apt install protobuf-compiler libprotobuf-dev # Ubuntu / Debian
 
 > # get code
 > git clone --recurse-submodules https://github.com/andelf/rust-tron.git
