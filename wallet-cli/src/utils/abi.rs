@@ -145,11 +145,3 @@ pub fn entry_to_input_types(entry: &AbiEntry) -> Vec<&str> {
         .map(|arg| arg.get_field_type())
         .collect::<Vec<_>>()
 }
-
-#[test]
-fn test_encode_params() {
-    assert_eq!(
-        encode_params(&["address"], &["407d73d8a49eeb85d32cf465507dd71d507100c1".to_owned()]).unwrap(),
-        vec![0u8]
-    );
-}
