@@ -197,7 +197,6 @@ impl<E: JubjubEngine> FullViewingKey<E> {
 mod tests {
     use crate::jubjub::{edwards, FixedGenerators, JubjubParams, PrimeOrder};
     use pairing::bls12_381::Bls12;
-    use std::error::Error;
 
     use super::FullViewingKey;
     use crate::JUBJUB;
@@ -215,7 +214,7 @@ mod tests {
         assert_eq!(
             FullViewingKey::<Bls12>::read(&buf[..], &JUBJUB)
                 .unwrap_err()
-                .description(),
+                .to_string(),
             "ak not of prime order"
         );
 

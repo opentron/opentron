@@ -1288,6 +1288,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_vectors() {
         let test_vectors = crate::test_vectors::note_encryption::make_test_vectors();
 

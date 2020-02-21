@@ -546,6 +546,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn default_address() {
         let seed = [0; 32];
         let xsk_m = ExtendedSpendingKey::master(&seed);
@@ -576,6 +577,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_vectors() {
         struct TestVector {
             ask: Option<[u8; 32]>,

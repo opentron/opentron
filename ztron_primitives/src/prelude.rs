@@ -112,7 +112,7 @@ mod tests {
 
     #[test]
     fn generate_address() {
-        let (_, _) = generate_zkey_pair();
+        let _ = generate_zkey_pair();
     }
 
     #[test]
