@@ -243,6 +243,17 @@ fn get_reward_info(addr: &str) -> Result<(), Error> {
     Ok(())
 }
 
+fn get_brokerage_info(addr: &str) -> Result<(), Error> {
+    let addr = addr.parse::<Address>()?;
+    let mut req = BytesMessage::new();
+    req.set_value(addr.as_bytes().to_owned());
+
+    let (_, val, _) = client::GRPC_CLIENT.get_brokerage_info(Default::default(), req).wait()?;
+    println!("sharing percent = {}%", 100 - val.get_num());
+    println!("kept percent    = {}%", val.get_num());
+    Ok(())
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => node_info(),
@@ -283,6 +294,10 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("reward", Some(arg_matches)) => {
             let addr = arg_matches.value_of("ADDR").expect("required in cli.yml; qed");
             get_reward_info(&addr)
+        },
+        ("brokerage", Some(arg_matches)) => {
+            let addr = arg_matches.value_of("ADDR").expect("required in cli.yml; qed");
+            get_brokerage_info(&addr)
         },
         _ => {
             eprintln!("{}", matches.usage());

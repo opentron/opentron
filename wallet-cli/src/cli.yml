@@ -139,6 +139,12 @@ subcommands:
                         - ADDR:
                               help: The address to get reward info
                               required: true
+              - brokerage:
+                    about: Get brokerage info, voting sharing ratio
+                    args:
+                        - ADDR:
+                              help: The SR address to get brokerage info
+                              required: true
 
     - set:
           about: Set or update the blockchain state
