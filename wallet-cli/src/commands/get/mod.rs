@@ -233,6 +233,16 @@ fn get_asset_by_id(id: &str) -> Result<(), Error> {
     Ok(())
 }
 
+fn get_reward_info(addr: &str) -> Result<(), Error> {
+    let addr = addr.parse::<Address>()?;
+    let mut req = BytesMessage::new();
+    req.set_value(addr.as_bytes().to_owned());
+
+    let (_, val, _) = client::GRPC_CLIENT.get_reward_info(Default::default(), req).wait()?;
+    println!("value = {}", val.get_num());
+    Ok(())
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("node", _) => node_info(),
@@ -270,6 +280,10 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             let id = arg_matches.value_of("ID").expect("required in cli.yml; qed");
             get_asset_by_id(&id)
         }
+        ("reward", Some(arg_matches)) => {
+            let addr = arg_matches.value_of("ADDR").expect("required in cli.yml; qed");
+            get_reward_info(&addr)
+        },
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))

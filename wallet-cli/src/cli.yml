@@ -133,6 +133,12 @@ subcommands:
                         - ID:
                               help: Token id
                               required: true
+              - reward:
+                    about: Get reward info, the unwithdrawn voting reward
+                    args:
+                        - ADDR:
+                              help: The address to get reward info
+                              required: true
 
     - set:
           about: Set or update the blockchain state
