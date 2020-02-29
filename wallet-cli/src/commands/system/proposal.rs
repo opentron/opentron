@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::error::Error;
 use crate::utils::trx;
 
-pub fn create_proposal(matches: &ArgMatches) -> Result<(), Error> {
+pub fn create(matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
         .value_of("SENDER")
         .and_then(|s| s.parse::<Address>().ok())
@@ -32,7 +32,7 @@ pub fn create_proposal(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(create_contract, matches).run()
 }
 
-pub fn approve_proposal(approve: bool, matches: &ArgMatches) -> Result<(), Error> {
+pub fn approve(approve: bool, matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
         .value_of("SENDER")
         .and_then(|s| s.parse::<Address>().ok())
@@ -48,7 +48,7 @@ pub fn approve_proposal(approve: bool, matches: &ArgMatches) -> Result<(), Error
     trx::TransactionHandler::handle(approve_contract, matches).run()
 }
 
-pub fn delete_proposal(matches: &ArgMatches) -> Result<(), Error> {
+pub fn delete(matches: &ArgMatches) -> Result<(), Error> {
     let sender = matches
         .value_of("SENDER")
         .and_then(|s| s.parse::<Address>().ok())
