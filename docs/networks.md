@@ -10,6 +10,8 @@ Explorer
 
 Full Node / Solidity Node HTTP API / Event API: <https://api.trongrid.io>
 
+Tronscan API: <https://apilist.tronscan.org>
+
 gRPC
 
 - grpc.trongrid.io:50051 (full node)
@@ -24,6 +26,8 @@ Faucet: <https://www.trongrid.io/faucet>
 Explorer: <https://shasta.tronscan.org/>
 
 Full Node / Solidity Node / Event HTTP API: <https://api.shasta.trongrid.io>
+
+Tronscan API: <https://api.shasta.tronscan.org>
 
 gRPC
 
@@ -43,6 +47,8 @@ Status: <http://nileex.io/status/getStatusPage>
 Full Node / Solidity Node HTTP API: <https://api.nileex.io/>
 
 Event API: <https://event.nileex.io/>
+
+Tronscan API: <https://nileapi.tronscan.org>
 
 Public Fullnode
 
