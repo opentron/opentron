@@ -4,8 +4,8 @@ use clap::ArgMatches;
 use itertools::Itertools;
 use keys::Address;
 use proto::core::{
-    VoteWitnessContract, VoteWitnessContract_Vote as Vote, WithdrawBalanceContract, WitnessCreateContract,
-    WitnessUpdateContract,
+    UpdateBrokerageContract, VoteWitnessContract, VoteWitnessContract_Vote as Vote, WithdrawBalanceContract,
+    WitnessCreateContract, WitnessUpdateContract,
 };
 
 use crate::error::Error;
@@ -91,12 +91,31 @@ pub fn withdraw_reward(matches: &ArgMatches) -> Result<(), Error> {
     trx::TransactionHandler::handle(withdraw_contract, matches).run()
 }
 
+pub fn update_brokerage(matches: &ArgMatches) -> Result<(), Error> {
+    let sender = matches
+        .value_of("SENDER")
+        .and_then(|s| s.parse::<Address>().ok())
+        .ok_or(Error::Runtime("wrong from address format"))?;
+    let brokerage = matches
+        .value_of("BROKERAGE")
+        .expect("required in cli.yml; qed")
+        .parse()?;
+
+    let withdraw_contract = UpdateBrokerageContract {
+        owner_address: sender.as_bytes().to_owned(),
+        brokerage: brokerage,
+        ..Default::default()
+    };
+    trx::TransactionHandler::handle(withdraw_contract, matches).run()
+}
+
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     match matches.subcommand() {
         ("vote_witness", Some(arg_matches)) => vote_witnesses(arg_matches),
         ("create_witness", Some(arg_matches)) => create_witness(arg_matches),
         ("update_witness", Some(arg_matches)) => update_witness(arg_matches),
         ("withdraw_reward", Some(arg_matches)) => withdraw_reward(arg_matches),
+        ("update_brokerage", Some(arg_matches)) => update_brokerage(arg_matches),
         ("create_proposal", Some(arg_matches)) => proposal::create_proposal(arg_matches),
         ("approve_proposal", Some(arg_matches)) => proposal::approve_proposal(true, arg_matches),
         ("disapprove_proposal", Some(arg_matches)) => proposal::approve_proposal(false, arg_matches),
