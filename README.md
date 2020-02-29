@@ -70,6 +70,7 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - WitnessCreateContract: `system create_witness`
   - WitnessUpdateContract: `system update_witness`
   - WithdrawBalanceContract: `system withdraw_reward` - withdraw SR rewards
+  - UpdateBrokerageContract: `system update_brokerage`
 - Proposal
   - ProposalCreateContract: `system create_proposal`
   - ProposalApproveContract: `system approve_proposal` `system disapprove_proposal`
@@ -89,7 +90,6 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - Deprecated account
     - SetAccountIdContract - id useless?
     - AccountCreateContract - transfering creates account
-  - UpdateBrokerageContract
   - VoteAssetContract
 
 ### Chain Lookup
@@ -101,9 +101,11 @@ get subcommand
     account_resource      Retrieve energy and bandwidth usage of an account
     asset                 Get details of a TRC10 token
     block                 Retrieve a full block from the blockchain
+    brokerage             Get brokerage info, voting sharing ratio
     contract              Get details of a smart contract
     node                  Get current connected node state information
     proposal              Get details of a proposal
+    reward                Get reward info, the unwithdrawn voting reward
     transaction           Retrieve a transaction from the blockchain
     transaction_info      Retrieve receipt of atransaction
 
