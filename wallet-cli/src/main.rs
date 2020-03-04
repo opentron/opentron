@@ -19,11 +19,11 @@ fn main() -> Result<(), Error> {
 
     unsafe {
         RPC_HOST = match (matches.value_of("network"), matches.value_of("rpc-host")) {
-            (_, Some(host)) => host,
+            (_, Some(host)) => Box::leak(host.to_owned().into_boxed_str()), // FIXME: leaks
             (Some("mainnet"), _) => "grpc.trongrid.io:50051",
             (Some("shasta"), _) => "grpc.shasta.trongrid.io:50051",
             (Some("nile"), _) => "47.252.3.238:50051",
-            (Some("testnet"), _) => "47.252.87.110:50051",
+            (Some("testnet"), _) => "47.252.87.28:50051",
             (Some("dappchain"), _) => "47.90.245.159:50051",
             (Some("dappchain-testnet"), _) => "47.252.85.90:50051",
             _ => unreachable!(),
