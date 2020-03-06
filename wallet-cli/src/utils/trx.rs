@@ -34,6 +34,9 @@ use crate::utils::crypto;
 use crate::utils::jsont;
 use crate::CHAIN_ID;
 
+// To calculate bandwidth
+const MAX_RESULT_SIZE_IN_TX: usize = 64;
+
 pub fn timestamp_millis() -> i64 {
     Utc::now().timestamp_millis()
 }
@@ -284,6 +287,8 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
             Ok(())
         } else {
+            eprintln!("! Bandwidth: {}", req.write_to_bytes()?.len() + MAX_RESULT_SIZE_IN_TX);
+
             let (_, payload, _) = client::GRPC_CLIENT
                 .broadcast_transaction(Default::default(), req)
                 .wait()?;
