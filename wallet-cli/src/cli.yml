@@ -262,7 +262,7 @@ subcommands:
               - witness:
                     about: Query the list of Super Representatives
               - node:
-                    about: List the nodes which is connecting to the network
+                    about: List the nodes which is know to your RPC host
               - asset:
                     about: Retrieve list of all tokens
               - proposal:
