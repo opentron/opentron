@@ -64,9 +64,9 @@ args:
           takes_value: true
           possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
           default_value: mainnet
-    - rpc-host:
-          help: Raw RPC host to connect
-          long: rpc-host
+    - rpc-addr:
+          help: Raw RPC address to connect
+          long: rpc-addr
           conflicts_with: network
           takes_value: true
           value_name: "HOST:PORT"

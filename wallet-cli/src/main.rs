@@ -7,7 +7,7 @@ mod utils;
 use error::Error;
 
 // FIXME: should use AppConfig, for now, use static var
-static mut RPC_HOST: &str = "grpc.trongrid.io:50051";
+static mut RPC_ADDR: &str = "grpc.trongrid.io:50051";
 /// Used for sun-network
 static mut CHAIN_ID: Option<&str> = None;
 
@@ -18,8 +18,9 @@ fn main() -> Result<(), Error> {
     let matches = clap::App::from_yaml(yaml).get_matches();
 
     unsafe {
-        RPC_HOST = match (matches.value_of("network"), matches.value_of("rpc-host")) {
-            (_, Some(host)) => Box::leak(host.to_owned().into_boxed_str()), // FIXME: leaks
+        RPC_ADDR = match (matches.value_of("network"), matches.value_of("rpc-addr")) {
+            // NOTE: matches lasts till main() ends, which is OK to use `leak`.
+            (_, Some(host)) => Box::leak(host.to_owned().into_boxed_str()),
             (Some("mainnet"), _) => "grpc.trongrid.io:50051",
             (Some("shasta"), _) => "grpc.shasta.trongrid.io:50051",
             (Some("nile"), _) => "47.252.3.238:50051",
