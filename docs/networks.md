@@ -8,14 +8,34 @@ Explorer
 - <https://tronscan.io/>
 - <https://www.trxplorer.io/>
 
-Full Node / Solidity Node HTTP API / Event API: <https://api.trongrid.io>
+Full Node HTTP API / Event API: <https://api.trongrid.io>
 
 Tronscan API: <https://apilist.tronscan.org>
 
 gRPC
 
-- grpc.trongrid.io:50051 (full node)
-- grpc.trongrid.io:50052 (solidity node)
+- grpc.trongrid.io:50051
+
+Public Full Node:
+
+```text
+3.225.171.164
+52.53.189.99
+18.196.99.16
+34.253.187.192
+52.56.56.149
+35.180.51.163
+54.252.224.209
+18.228.15.36
+52.15.93.92
+34.220.77.106
+13.127.47.162
+13.124.62.58
+35.182.229.162
+18.209.42.127
+3.218.137.187
+34.237.210.82
+```
 
 ## Shasta Testnet
 
@@ -25,14 +45,13 @@ Faucet: <https://www.trongrid.io/faucet>
 
 Explorer: <https://shasta.tronscan.org/>
 
-Full Node / Solidity Node / Event HTTP API: <https://api.shasta.trongrid.io>
+Full Node / Event HTTP API: <https://api.shasta.trongrid.io>
 
 Tronscan API: <https://api.shasta.tronscan.org>
 
 gRPC
 
-- grpc.shasta.trongrid.io:50051 (full node)
-- grpc.shasta.trongrid.io:50052 (solidity node)
+- grpc.shasta.trongrid.io:50051
 
 ## Nile Testnet
 
@@ -44,7 +63,7 @@ Explorer: <https://nile.tronscan.org/>
 
 Status: <http://nileex.io/status/getStatusPage>
 
-Full Node / Solidity Node HTTP API: <https://api.nileex.io/>
+Full Node HTTP API: <https://api.nileex.io/>
 
 Event API: <https://event.nileex.io/>
 
