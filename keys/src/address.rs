@@ -121,7 +121,7 @@ impl AsRef<[u8]> for Address {
     }
 }
 
-fn b58encode_check<T: AsRef<[u8]>>(raw: T) -> String {
+pub fn b58encode_check<T: AsRef<[u8]>>(raw: T) -> String {
     let mut hasher = Sha256::new();
     hasher.input(raw.as_ref());
     let digest1 = hasher.result();
@@ -136,7 +136,7 @@ fn b58encode_check<T: AsRef<[u8]>>(raw: T) -> String {
 }
 
 // FIXME: better isolated to a crate
-fn b58decode_check(s: &str) -> Result<Vec<u8>, Error> {
+pub fn b58decode_check(s: &str) -> Result<Vec<u8>, Error> {
     let mut result = s.from_base58().map_err(|_| Error::InvalidAddress)?;
 
     let check = result.split_off(result.len() - 4);

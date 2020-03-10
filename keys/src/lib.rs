@@ -7,7 +7,7 @@ mod private;
 mod public;
 mod signature;
 
-pub use address::Address;
+pub use address::{b58decode_check, b58encode_check, Address};
 pub use error::Error;
 pub use keypair::KeyPair;
 pub use private::Private;
