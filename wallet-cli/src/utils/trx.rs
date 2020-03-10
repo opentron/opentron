@@ -287,7 +287,7 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
             Ok(())
         } else {
-            eprintln!("! Bandwidth: {}", req.write_to_bytes()?.len() + MAX_RESULT_SIZE_IN_TX);
+            eprintln!("! Bandwidth: {}", req.compute_size() as usize + MAX_RESULT_SIZE_IN_TX);
 
             let (_, payload, _) = client::GRPC_CLIENT
                 .broadcast_transaction(Default::default(), req)
