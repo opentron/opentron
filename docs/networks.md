@@ -39,6 +39,8 @@ Public Full Node:
 
 ## Shasta Testnet
 
+NOTE: You can NOT join the Shasta testnet.
+
 Home page: <https://www.trongrid.io/shasta>
 
 Faucet: <https://www.trongrid.io/faucet>
@@ -74,7 +76,7 @@ Public Fullnode
 - 47.252.19.181
 - 47.252.3.238
 
-## Testnet
+## Tronex Testnet
 
 Home page: <http://testnet.tronex.io/>
 
@@ -88,9 +90,10 @@ Event API: <https://testapi.tronex.io>
 
 Public Fullnode
 
-- 47.252.85.111
-- 47.252.87.110
 - 47.252.87.28
+- 47.252.85.13
+
+NOTE: This testnet has a dappchain testnet side-chain.
 
 ## DAppChain (SUN Network)
 
