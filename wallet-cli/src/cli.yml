@@ -62,7 +62,7 @@ args:
           help: Connect to which Tron network
           long: network
           takes_value: true
-          possible_values: [mainnet, shasta, nile, testnet, dappchain, dappchain-testnet]
+          possible_values: [mainnet, shasta, nile, tronex, dappchain, dappchain-testnet]
           default_value: mainnet
     - rpc-addr:
           help: Raw RPC address to connect
