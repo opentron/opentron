@@ -25,8 +25,11 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
     jsont::fix_transaction(&mut transaction)?;
     println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
 
-    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract &&
-        payload.get_ret()[0].get_ret() == ResultCode::SUCESS
+    let sender = trx::extract_owner_address_from_parameter(payload.get_raw_data().get_contract()[0].get_parameter())?;
+    eprintln!("! Sender Address(base58check):   {}", sender);
+
+    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract
+        && payload.get_ret()[0].get_ret() == ResultCode::SUCESS
     {
         let contract_address = transaction["raw_data"]["contract"][0]["parameter"]["value"]["contract_address"]
             .as_str()
