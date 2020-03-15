@@ -3,7 +3,6 @@ fn main() {
         &[
             "proto/common.proto",
             "proto/discover.proto",
-            "proto/handshake.proto",
             "proto/chain.proto",
             "proto/channel.proto",
             "proto/contract.proto",
