@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package proto.common;
+
+// for discover, handshake, channel
+
+message Endpoint {
+  bytes address = 1;
+  int32 port = 2;
+  bytes node_id = 3;
+}
+
+message BlockId {
+  bytes hash = 1;
+  int64 number = 2;
+}
+
+// for contract
+
+enum AccountType {
+  Normal = 0;
+  AssetIssue = 1;
+  Contract = 2;
+}
+
+message SmartContract {
+  message ABI {
+    message Entry {
+      enum EntryType {
+        UnknownEntryType = 0;
+        Constructor = 1;
+        Function = 2;
+        Event = 3;
+        Fallback = 4;
+      }
+      message Param {
+        bool indexed = 1;
+        string name = 2;
+        string type = 3;
+        // SolidityType type = 3;
+      }
+      enum StateMutabilityType {
+        UnknownMutabilityType = 0;
+        Pure = 1;
+        View = 2;
+        Nonpayable = 3;
+        Payable = 4;
+      }
+
+      bool anonymous = 1;
+      bool constant = 2;
+      string name = 3;
+      repeated Param inputs = 4;
+      repeated Param outputs = 5;
+      EntryType type = 6;
+      bool payable = 7;
+      StateMutabilityType stateMutability = 8;
+    }
+    // renamed: entrys
+    repeated Entry entries = 1;
+  }
+
+  bytes origin_address = 1;
+  bytes contract_address = 2;
+  ABI abi = 3;
+  bytes bytecode = 4;
+  int64 call_value = 5;
+  int64 consume_user_resource_percent = 6;
+  string name = 7;
+  int64 origin_energy_limit = 8;
+  bytes code_hash = 9;
+  bytes trx_hash = 10;
+}
+
+message Permission {
+  enum PermissionType {
+    Owner = 0;
+    Witness = 1;
+    Active = 2;
+  }
+  message Key {
+    bytes address = 1;
+    int64 weight = 2;
+  }
+
+  PermissionType type = 1;
+  // Owner id=0, Witness id=1, Active id starts by 2
+  int32 id = 2;
+  string permission_name = 3;
+  int64 threshold = 4;
+  int32 parent_id = 5;
+  // 1 bit for 1 contract type
+  bytes operations = 6;
+  repeated Key keys = 7;
+}

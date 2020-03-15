@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package proto.channel;
+
+import "common.proto";
+import "chain.proto";
+
+message HelloMessage {
+  proto.common.Endpoint from = 1;
+  int32 version = 2;
+  int64 timestamp = 3;
+  proto.common.BlockId genesisBlockId = 4;
+  proto.common.BlockId solidBlockId = 5;
+  proto.common.BlockId headBlockId = 6;
+  bytes address = 7;
+  bytes signature = 8;
+}
+
+enum ReasonCode {
+  REQUESTED = 0x00;
+  BAD_PROTOCOL = 0x02;
+  TOO_MANY_PEERS = 0x04;
+  DUPLICATE_PEER = 0x05;
+  INCOMPATIBLE_PROTOCOL = 0x06;
+  NULL_IDENTITY = 0x07;
+  PEER_QUITING = 0x08;
+  UNEXPECTED_IDENTITY = 0x09;
+  LOCAL_IDENTITY = 0x0A;
+  PING_TIMEOUT = 0x0B;
+  USER_REASON = 0x10;
+  RESET = 0x11;
+  SYNC_FAIL = 0x12;
+  FETCH_FAIL = 0x13;
+  BAD_TX = 0x14;
+  BAD_BLOCK = 0x15;
+  FORKED = 0x16;
+  UNLINKABLE = 0x17;
+  INCOMPATIBLE_VERSION = 0x18;
+  INCOMPATIBLE_CHAIN = 0x19;
+  TIME_OUT = 0x20;
+  CONNECT_FAIL = 0x21;
+  TOO_MANY_PEERS_WITH_SAME_IP = 0x22;
+  UNKNOWN = 0xFF;
+}
+
+message DisconnectMessage {
+  ReasonCode reason = 1;
+}
+
+/**
+# Channel Messages
+
+BLOCK: BlockMessage (syncService)
+    Block
+TRXS: TransactionsMessage (trxHandlePool)
+    Transactions
+INVENTORY: InventoryMessage (AdvService)
+    Inventory
+FETCH_INV_DATA: FetchInvDataMessage
+    Inventory(type=BLOCK) <= [Block]
+    Inventory(type=TRX) <= [Transactions] MAX_SIZE=1_000_000
+SYNC_BLOCK_CHAIN: SyncBlockChainMessage
+    BlockInventory(type=SYNC) <= ChainInventory(ids, remain_num: 17420239)
+
+    //len(ids) ==
+BLOCK_CHAIN_INVENTORY: ChainInventoryMessage (syncService)
+    ChainInventory
+TRX: TransactionMessage, not used
+    Transaction
+BLOCKS: BlocksMessage, not used
+    Items
+ITEM_NOT_FOUND: not used
+    Items(type=ERR)
+FETCH_BLOCK_HEADERS: FetchBlockHeadersMessage, not used
+    Inventory
+TRX_INVENTORY: TransactionInventoryMessage, not used
+    Inventory
+
+# Net Message that is using
+case SYNC_BLOCK_CHAIN:
+  syncBlockChainMsgHandler.processMessage(peer, msg);
+case BLOCK_CHAIN_INVENTORY:
+  chainInventoryMsgHandler.processMessage(peer, msg);
+case INVENTORY:
+  inventoryMsgHandler.processMessage(peer, msg);
+case FETCH_INV_DATA:
+  fetchInvDataMsgHandler.processMessage(peer, msg);
+case BLOCK:
+  blockMsgHandler.processMessage(peer, msg);
+case TRXS:
+  transactionsMsgHandler.processMessage(peer, msg);
+*/
+
+message ChainInventory {
+  repeated proto.common.BlockId ids = 1;
+  int64 remain_num = 2;
+}
+
+message BlockInventory {
+  enum Type {
+    SYNC = 0;
+    ADVTISE = 1;  // unused
+    FETCH = 2;    // unused
+  }
+  repeated proto.common.BlockId ids = 1;
+  Type type = 2;
+}
+
+message Inventory {
+  enum Type {
+    TRX = 0;
+    BLOCK = 1;
+  }
+  Type type = 1;
+  repeated bytes ids = 2;
+}
+
+message Transactions {
+  repeated proto.chain.Transaction transactions = 1;
+}
+
+/*
+message Items {
+  enum ItemType {
+    ERR = 0;
+    TRX = 1;
+    BLOCK = 2;
+    BLOCKHEADER = 3;
+  }
+
+  ItemType type = 1;
+  repeated Block blocks = 2;
+  repeated BlockHeader block_headers = 3;
+  repeated Transaction transactions = 4;
+}
+*/

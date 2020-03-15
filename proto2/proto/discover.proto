@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package proto.discover;
+
+import "common.proto";
+
+message Ping {
+  proto.common.Endpoint from = 1;
+  proto.common.Endpoint to = 2;
+  int32 version = 3;
+  int64 timestamp = 4;
+}
+
+message Pong {
+  proto.common.Endpoint from = 1;
+  int32 echo_version = 2;
+  int64 timestamp = 3;
+}
+
+message FindNeighbours {
+  proto.common.Endpoint from = 1;
+  bytes target_id = 2;
+  int64 timestamp = 3;
+}
+
+message Neighbours {
+  proto.common.Endpoint from = 1;
+  repeated proto.common.Endpoint neighbours = 2;
+  int64 timestamp = 3;
+}

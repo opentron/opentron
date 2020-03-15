@@ -1,0 +1,163 @@
+
+syntax = "proto3";
+
+package proto.chain;
+
+import "google/protobuf/any.proto";
+
+message Block {
+  repeated Transaction transactions = 1;
+  BlockHeader block_header = 2;
+}
+
+message BlockHeader {
+  message raw {
+    reserved 4, 5;
+    reserved "nonce", "difficulty";
+
+    int64 timestamp = 1;
+    // renamed: txTrieRoot
+    // the root hash of merkle tree
+    bytes merkle_root = 2;
+    // renamed: parentHash
+    bytes parent_hash = 3;
+    // bytes nonce = 5;
+    // bytes difficulty = 6;
+    int64 number = 7;
+    int64 witness_id = 8;
+    bytes witness_address = 9;
+    int32 version = 10;
+    // renamed: accountStateRoot
+    bytes account_state_root = 11;
+  }
+  raw raw_data = 1;
+  bytes witness_signature = 2;
+}
+
+// (name, address) use name, (null, address) use address, (name, null) use name
+message AccountId {
+  bytes name = 1;
+  bytes address = 2;
+}
+
+message Authority {
+  AccountId account = 1;
+  bytes permission_name = 2;
+}
+
+message Transaction {
+  message Contract {
+    enum ContractType {
+      reserved 21, 22, 23;
+      reserved "BuyStorageContract", "BuyStorageBytesContract", "SellStorageContract";
+      AccountCreateContract = 0;
+      TransferContract = 1;
+      TransferAssetContract = 2;
+      VoteAssetContract = 3;
+      VoteWitnessContract = 4;
+      WitnessCreateContract = 5;
+      AssetIssueContract = 6;
+      WitnessUpdateContract = 8;
+      ParticipateAssetIssueContract = 9;
+      AccountUpdateContract = 10;
+      FreezeBalanceContract = 11;
+      UnfreezeBalanceContract = 12;
+      WithdrawBalanceContract = 13;
+      UnfreezeAssetContract = 14;
+      UpdateAssetContract = 15;
+      ProposalCreateContract = 16;
+      ProposalApproveContract = 17;
+      ProposalDeleteContract = 18;
+      SetAccountIdContract = 19;
+      CustomContract = 20;
+      // BuyStorageContract = 21;
+      // BuyStorageBytesContract = 22;
+      // SellStorageContract = 23;
+      CreateSmartContract = 30;
+      TriggerSmartContract = 31;
+      GetContract = 32;
+      UpdateSettingContract = 33;
+      ExchangeCreateContract = 41;
+      ExchangeInjectContract = 42;
+      ExchangeWithdrawContract = 43;
+      ExchangeTransactionContract = 44;
+      UpdateEnergyLimitContract = 45;
+      AccountPermissionUpdateContract = 46;
+      ClearABIContract = 48;
+      UpdateBrokerageContract = 49;
+      ShieldedTransferContract = 51;
+    }
+    ContractType type = 1;
+    google.protobuf.Any parameter = 2;
+    bytes provider = 3;
+    // renamed: ContractName
+    bytes contract_name = 4;
+    // renamed: Permission_id
+    int32 permission_id = 5;
+  }
+
+  message Result {
+    // renamed: code
+    enum Status {
+      SUCESS = 0;
+      FAILED = 1;
+    }
+    // renamed: contractResult
+    enum ReasonCode {
+      DEFAULT = 0;
+      SUCCESS = 1;
+      REVERT = 2;
+      BAD_JUMP_DESTINATION = 3;
+      OUT_OF_MEMORY = 4;
+      PRECOMPILED_CONTRACT = 5;
+      STACK_TOO_SMALL = 6;
+      STACK_TOO_LARGE = 7;
+      ILLEGAL_OPERATION = 8;
+      STACK_OVERFLOW = 9;
+      OUT_OF_ENERGY = 10;
+      OUT_OF_TIME = 11;
+      JVM_STACK_OVER_FLOW = 12;
+      UNKNOWN = 13;
+      TRANSFER_FAILED = 14;
+    }
+
+    int64 fee = 1;
+    // renamed: ret
+    Status status = 2;
+    // renamed: contractRet
+    ReasonCode reason = 3;
+
+    // renamed: assetIssueID
+    string asset_issue_id = 14;
+    int64 withdraw_amount = 15;
+    int64 unfreeze_amount = 16;
+    int64 exchange_received_amount = 18;
+    int64 exchange_inject_another_amount = 19;
+    int64 exchange_withdraw_another_amount = 20;
+    int64 exchange_id = 21;
+    int64 shielded_transaction_fee = 22;
+  }
+
+  message raw {
+    bytes ref_block_bytes = 1;
+    int64 ref_block_num = 3;
+    bytes ref_block_hash = 4;
+    int64 expiration = 8;
+    repeated Authority auths = 9;
+    // used as transaction memo
+    bytes data = 10;
+    // only support size = 1, repeated list here for extension
+    // changed: from repeated to optional
+    Contract contract = 11;
+    // scripts not used
+    bytes scripts = 12;
+    int64 timestamp = 14;
+    int64 fee_limit = 18;
+  }
+
+  raw raw_data = 1;
+  // normally size = 1, repeated list here for multi-sig extension
+  repeated bytes signature = 2;
+  // renamed: ret
+  repeated Result result = 5;
+}
