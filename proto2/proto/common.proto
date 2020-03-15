@@ -5,7 +5,8 @@ package proto.common;
 // for discover, handshake, channel
 
 message Endpoint {
-  bytes address = 1;
+  // changed: bytes
+  string address = 1;
   int32 port = 2;
   bytes node_id = 3;
 }

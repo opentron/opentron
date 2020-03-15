@@ -5,7 +5,7 @@ package proto.channel;
 import "common.proto";
 import "chain.proto";
 
-message HelloMessage {
+message HandshakeHello {
   proto.common.Endpoint from = 1;
   int32 version = 2;
   int64 timestamp = 3;
@@ -43,7 +43,7 @@ enum ReasonCode {
   UNKNOWN = 0xFF;
 }
 
-message DisconnectMessage {
+message HandshakeDisconnect {
   ReasonCode reason = 1;
 }
 

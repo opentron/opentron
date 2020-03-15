@@ -11,7 +11,8 @@ message Block {
 }
 
 message BlockHeader {
-  message raw {
+  // renamed: raw
+  message Raw {
     reserved 4, 5;
     reserved "nonce", "difficulty";
 
@@ -30,7 +31,8 @@ message BlockHeader {
     // renamed: accountStateRoot
     bytes account_state_root = 11;
   }
-  raw raw_data = 1;
+
+  Raw raw_data = 1;
   bytes witness_signature = 2;
 }
 
@@ -45,48 +47,49 @@ message Authority {
   bytes permission_name = 2;
 }
 
+enum ContractType {
+  reserved 21, 22, 23;
+  reserved "BuyStorageContract", "BuyStorageBytesContract", "SellStorageContract";
+  AccountCreateContract = 0;
+  TransferContract = 1;
+  TransferAssetContract = 2;
+  VoteAssetContract = 3;
+  VoteWitnessContract = 4;
+  WitnessCreateContract = 5;
+  AssetIssueContract = 6;
+  WitnessUpdateContract = 8;
+  ParticipateAssetIssueContract = 9;
+  AccountUpdateContract = 10;
+  FreezeBalanceContract = 11;
+  UnfreezeBalanceContract = 12;
+  WithdrawBalanceContract = 13;
+  UnfreezeAssetContract = 14;
+  UpdateAssetContract = 15;
+  ProposalCreateContract = 16;
+  ProposalApproveContract = 17;
+  ProposalDeleteContract = 18;
+  SetAccountIdContract = 19;
+  CustomContract = 20;
+  // BuyStorageContract = 21;
+  // BuyStorageBytesContract = 22;
+  // SellStorageContract = 23;
+  CreateSmartContract = 30;
+  TriggerSmartContract = 31;
+  GetContract = 32;
+  UpdateSettingContract = 33;
+  ExchangeCreateContract = 41;
+  ExchangeInjectContract = 42;
+  ExchangeWithdrawContract = 43;
+  ExchangeTransactionContract = 44;
+  UpdateEnergyLimitContract = 45;
+  AccountPermissionUpdateContract = 46;
+  ClearABIContract = 48;
+  UpdateBrokerageContract = 49;
+  ShieldedTransferContract = 51;
+}
+
 message Transaction {
   message Contract {
-    enum ContractType {
-      reserved 21, 22, 23;
-      reserved "BuyStorageContract", "BuyStorageBytesContract", "SellStorageContract";
-      AccountCreateContract = 0;
-      TransferContract = 1;
-      TransferAssetContract = 2;
-      VoteAssetContract = 3;
-      VoteWitnessContract = 4;
-      WitnessCreateContract = 5;
-      AssetIssueContract = 6;
-      WitnessUpdateContract = 8;
-      ParticipateAssetIssueContract = 9;
-      AccountUpdateContract = 10;
-      FreezeBalanceContract = 11;
-      UnfreezeBalanceContract = 12;
-      WithdrawBalanceContract = 13;
-      UnfreezeAssetContract = 14;
-      UpdateAssetContract = 15;
-      ProposalCreateContract = 16;
-      ProposalApproveContract = 17;
-      ProposalDeleteContract = 18;
-      SetAccountIdContract = 19;
-      CustomContract = 20;
-      // BuyStorageContract = 21;
-      // BuyStorageBytesContract = 22;
-      // SellStorageContract = 23;
-      CreateSmartContract = 30;
-      TriggerSmartContract = 31;
-      GetContract = 32;
-      UpdateSettingContract = 33;
-      ExchangeCreateContract = 41;
-      ExchangeInjectContract = 42;
-      ExchangeWithdrawContract = 43;
-      ExchangeTransactionContract = 44;
-      UpdateEnergyLimitContract = 45;
-      AccountPermissionUpdateContract = 46;
-      ClearABIContract = 48;
-      UpdateBrokerageContract = 49;
-      ShieldedTransferContract = 51;
-    }
     ContractType type = 1;
     google.protobuf.Any parameter = 2;
     bytes provider = 3;
@@ -138,7 +141,7 @@ message Transaction {
     int64 shielded_transaction_fee = 22;
   }
 
-  message raw {
+  message Raw {
     bytes ref_block_bytes = 1;
     int64 ref_block_num = 3;
     bytes ref_block_hash = 4;
@@ -155,7 +158,7 @@ message Transaction {
     int64 fee_limit = 18;
   }
 
-  raw raw_data = 1;
+  Raw raw_data = 1;
   // normally size = 1, repeated list here for multi-sig extension
   repeated bytes signature = 2;
   // renamed: ret

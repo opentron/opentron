@@ -17,14 +17,16 @@ message Pong {
   int64 timestamp = 3;
 }
 
-message FindNeighbours {
+// renamed: FindNeighbours
+message FindPeers {
   proto.common.Endpoint from = 1;
   bytes target_id = 2;
   int64 timestamp = 3;
 }
 
-message Neighbours {
+// renamed: Neighbours
+message Peers {
   proto.common.Endpoint from = 1;
-  repeated proto.common.Endpoint neighbours = 2;
+  repeated proto.common.Endpoint peers = 2;
   int64 timestamp = 3;
 }
