@@ -1467,10 +1467,12 @@ subcommands:
                     possible_values: ["0", "2", "1"]
 
     - sign:
-          about: Sign and broadcast a transaction
+          about: Sign a transaction, optionally broadcase. Or sign a message.
           args:
               - TRANSACTION:
-                    help: The JSON string or filename defining the transaction to sign
+                    help: |
+                        The JSON string or filename defining the transaction to sign.
+                        Or the raw message. Use 0x prefix for binary.
                     required: true
               - account:
                     help: The account address used for signing
