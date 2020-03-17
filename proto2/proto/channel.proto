@@ -47,50 +47,6 @@ message HandshakeDisconnect {
   ReasonCode reason = 1;
 }
 
-/**
-# Channel Messages
-
-BLOCK: BlockMessage (syncService)
-    Block
-TRXS: TransactionsMessage (trxHandlePool)
-    Transactions
-INVENTORY: InventoryMessage (AdvService)
-    Inventory
-FETCH_INV_DATA: FetchInvDataMessage
-    Inventory(type=BLOCK) <= [Block]
-    Inventory(type=TRX) <= [Transactions] MAX_SIZE=1_000_000
-SYNC_BLOCK_CHAIN: SyncBlockChainMessage
-    BlockInventory(type=SYNC) <= ChainInventory(ids, remain_num: 17420239)
-
-    //len(ids) ==
-BLOCK_CHAIN_INVENTORY: ChainInventoryMessage (syncService)
-    ChainInventory
-TRX: TransactionMessage, not used
-    Transaction
-BLOCKS: BlocksMessage, not used
-    Items
-ITEM_NOT_FOUND: not used
-    Items(type=ERR)
-FETCH_BLOCK_HEADERS: FetchBlockHeadersMessage, not used
-    Inventory
-TRX_INVENTORY: TransactionInventoryMessage, not used
-    Inventory
-
-# Net Message that is using
-case SYNC_BLOCK_CHAIN:
-  syncBlockChainMsgHandler.processMessage(peer, msg);
-case BLOCK_CHAIN_INVENTORY:
-  chainInventoryMsgHandler.processMessage(peer, msg);
-case INVENTORY:
-  inventoryMsgHandler.processMessage(peer, msg);
-case FETCH_INV_DATA:
-  fetchInvDataMsgHandler.processMessage(peer, msg);
-case BLOCK:
-  blockMsgHandler.processMessage(peer, msg);
-case TRXS:
-  transactionsMsgHandler.processMessage(peer, msg);
-*/
-
 message ChainInventory {
   repeated proto.common.BlockId ids = 1;
   int64 remain_num = 2;

@@ -5,6 +5,13 @@ package proto.chain;
 
 import "google/protobuf/any.proto";
 
+// ref: https://github.com/paritytech/parity-bitcoin/blob/master/chain/README.md
+
+// A blockchain is a chain of blocks.
+//
+// A block is a data structure with two fields:
+// - Block header: a data structure containing the block's metadata
+// - Transactions: an array (vector in rust) of transactions
 message Block {
   repeated Transaction transactions = 1;
   BlockHeader block_header = 2;
@@ -19,7 +26,7 @@ message BlockHeader {
     int64 timestamp = 1;
     // renamed: txTrieRoot
     // the root hash of merkle tree
-    bytes merkle_root = 2;
+    bytes merkle_root_hash = 2;
     // renamed: parentHash
     bytes parent_hash = 3;
     // bytes nonce = 5;
