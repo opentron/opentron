@@ -9,9 +9,9 @@ message HandshakeHello {
   proto.common.Endpoint from = 1;
   int32 version = 2;
   int64 timestamp = 3;
-  proto.common.BlockId genesisBlockId = 4;
-  proto.common.BlockId solidBlockId = 5;
-  proto.common.BlockId headBlockId = 6;
+  proto.common.BlockId genesis_block_id = 4;  // number=0
+  proto.common.BlockId solid_block_id = 5;
+  proto.common.BlockId head_block_id = 6;
   bytes address = 7;
   bytes signature = 8;
 }
