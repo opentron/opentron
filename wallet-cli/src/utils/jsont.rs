@@ -379,6 +379,7 @@ pub fn fix_transaction_ext(transaction_ext: &mut serde_json::Value) -> Result<()
 pub fn fix_account(account: &mut serde_json::Value) {
     account["address"] = json!(bytes_to_hex_string(&account["address"]));
     account["account_name"] = json!(bytes_to_string(&account["account_name"]));
+    account["account_id"] = json!(bytes_to_string(&account["account_id"]));
     account["asset_issued_ID"] = json!(bytes_to_string(&account["asset_issued_ID"]));
     account["asset_issued_name"] = json!(bytes_to_string(&account["asset_issued_name"]));
     account["votes"]
