@@ -222,7 +222,17 @@ exchange 只支持 allow 之前的
 
 StorageRowCapsule
 
-rowKey => Row
+For EVM, Storage is a persistent associative map, with uint256s as keys and uint256s as values.
+
+index = '0000000000000000000000000000000000000000000000000000000000000005'
+key =  '00000000000000000000000xbccc714d56bc0da0fd33d96d2a87b680dd6d0df6'
+let newKey =  web3.sha3(key + index, {"encoding":"hex"})
+
+The variables are generally sequential, the first variable declared is in position 0, the second in position 1, etc.
+
+For dynamic arrays, their position contains the length of the array, and the data starts at sha3(position)
+
+ref: https://medium.com/aigang-network/how-to-read-ethereum-contract-storage-44252c8af925
 
 ```text
 DataWord: key => value
