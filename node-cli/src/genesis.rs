@@ -148,6 +148,7 @@ mod tests {
     use std::fs;
 
     #[test]
+    #[ignore]
     fn load_genesis_json() {
         let content = fs::read_to_string("./genesis.json").unwrap();
         let conf: GenesisConfig = serde_json::from_str(&content).unwrap();
