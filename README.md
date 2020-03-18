@@ -1,6 +1,56 @@
 # rust-tron
 
-Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
+Rust implementation of the Tron whitepaper.
+
+This project is under active development.
+
+- [x] wallet-cli (the full feature wallet/rpc client)
+  - [x] walletd (the wallet daemon)
+- [ ] tron (the default bin)
+  - [x] vanity account gen
+- [ ] node-cli, under active development
+
+## TODOs
+
+- [x] wallet-cli
+  - [ ] shielded transaction
+    - [x] demo works
+    - [ ] shielded notes management
+    - [ ] real subcommand
+
+- [ ] full Tron Protocol implementation
+  - [x] ~~joking~~
+  - [x] proto2: refactor the protobuf / ~~gRPC~~
+    - your protobuf and gRPC definition sucks
+  - [x] primitives
+    - [x] H265
+    - [x] Address, PublicKey, PrivateKey, Signature
+  - [ ] config file
+    - your config file sucks
+    - [x] genesis block parsing
+    - [ ] toml config file parsing
+  - [ ] discover protocol
+    - [x] demo works
+  - [ ] channel protocol
+    - [x] demo works
+    - [ ] sync
+  - [ ] chain
+    - [x] Block / Transaction
+  - [ ] chainbase
+    - your original chainbase design sucks
+    - [ ] memory
+    - [ ] RocksDB
+  - [ ] mempool
+  - [ ] consensus
+  - [ ] EVM / TVM
+  - [ ] RPC replacement
+    - will not support gRPC
+    - might have json-rpc support
+  - [ ] shielded transaction
+    - [ ] ztron
+  - [ ] SM2 / SM3 support
+    - [x] [sm2](https://docs.rs/sm2/)
+    - [x] [sm3](https://docs.rs/sm3/)
 
 ## quickstart
 
@@ -27,17 +77,6 @@ Rust implementation of ~~the Tron whitepaper~~(wallet-cli only).
 > # or use testnet toolset
 > ./nile-wallet-cli.sh
 ```
-
-## TODOs
-
-- wallet-cli
-  - [ ] shielded transaction
-    - [x] demo works
-    - [ ] shielded notes management
-    - [ ] real subcommand
-
-- [ ] full Tron Protocol implementation
-  - [x] joking
 
 ## wallet-cli
 
