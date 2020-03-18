@@ -40,11 +40,9 @@ name = "tron"
 # in the dependency tree in any other way
 # (i.e. pretty much only standalone CLI tools)
 
-# members = ["proto"]
 members = [
+    "node-cli",
     "wallet-cli",
-    "wallet",
     "walletd",
-    "ztron_primitives",
     # "ztron_proofs",
 ]
