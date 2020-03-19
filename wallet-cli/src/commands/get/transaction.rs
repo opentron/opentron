@@ -1,3 +1,4 @@
+use chrono::{Local, TimeZone};
 use hex::{FromHex, ToHex};
 use keys::Address;
 use proto::api::BytesMessage;
@@ -25,11 +26,19 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
     jsont::fix_transaction(&mut transaction)?;
     println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
 
+    eprintln!(
+        "! Timestamp: {}",
+        Local.timestamp(
+            payload.get_raw_data().timestamp / 1_000,
+            (payload.get_raw_data().timestamp % 1_000 * 1_000_000) as _
+        )
+    );
+
     let sender = trx::extract_owner_address_from_parameter(payload.get_raw_data().get_contract()[0].get_parameter())?;
     eprintln!("! Sender Address(base58check):   {}", sender);
 
-    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract
-        && payload.get_ret()[0].get_ret() == ResultCode::SUCESS
+    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract &&
+        payload.get_ret()[0].get_ret() == ResultCode::SUCESS
     {
         let contract_address = transaction["raw_data"]["contract"][0]["parameter"]["value"]["contract_address"]
             .as_str()
@@ -69,12 +78,12 @@ fn pprint_contract_call_data(contract: &Address, data: &str) -> Result<(), Error
         .find(|entry| abi::fnhash(&abi::entry_to_method_name(entry)) == fnhash[..])
         .ok_or(Error::Runtime("ABI not found, can not parse result"))
         .and_then(|entry| {
-            eprintln!(
-                "! fnhash={} {}",
-                fnhash.encode_hex::<String>(),
-                abi::entry_to_method_name(entry)
-            );
             eprintln!("! {}", abi::entry_to_method_name_pretty(entry)?);
+            eprintln!(
+                "!          {} [{}]",
+                abi::entry_to_method_name(entry),
+                fnhash.encode_hex::<String>(),
+            );
             let types = abi::entry_to_input_types(&entry);
             let params = abi::decode_params(&types, &data[8..])?;
             if !types.is_empty() {
