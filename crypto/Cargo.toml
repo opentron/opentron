@@ -1,0 +1,11 @@
+[package]
+name = "crypto"
+version = "0.1.0"
+authors = ["andelf <andelf@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+sha2 = "0.8.1"
+sha3 = "0.8.2"
+digest = "0.8.1"
+primitives = { path = '../primitives' }
