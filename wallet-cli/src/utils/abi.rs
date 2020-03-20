@@ -103,6 +103,9 @@ pub fn entry_to_method_name_pretty(entry: &AbiEntry) -> Result<String, Error> {
             .iter()
             .map(|arg| if arg.get_name().is_empty() {
                 arg.get_field_type().to_owned()
+            } else if arg.get_indexed() {
+                // used in event
+                format!("{:} indexed {:}", arg.get_field_type(), arg.get_name())
             } else {
                 format!("{:} {:}", arg.get_field_type(), arg.get_name())
             })
