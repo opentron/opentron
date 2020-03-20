@@ -8,6 +8,7 @@ use serde_json::json;
 use crate::error::Error;
 use crate::utils::abi;
 use crate::utils::client;
+use crate::utils::crypto;
 use crate::utils::jsont;
 
 pub fn run(addr: &str) -> Result<(), Error> {
@@ -38,13 +39,21 @@ pub fn run(addr: &str) -> Result<(), Error> {
 fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Error> {
     for entry in abi.entrys.iter() {
         let method = abi::entry_to_method_name(entry);
-        let fnhash = abi::fnhash(&method);
         if entry.get_field_type() == ::proto::core::SmartContract_ABI_Entry_EntryType::Function {
+            let fnhash = abi::fnhash(&method);
             eprintln!(
                 "{:}\n    => {:}: {:}",
                 abi::entry_to_method_name_pretty(entry)?,
                 (&fnhash[..]).encode_hex::<String>(),
                 method
+            );
+        } else if entry.get_field_type() == ::proto::core::SmartContract_ABI_Entry_EntryType::Event {
+            // will show in `topic` field
+            let event_hash = crypto::keccak256(method.as_bytes());
+            eprintln!(
+                "{:}\n    => {}",
+                abi::entry_to_method_name_pretty(entry)?,
+                hex::encode(&event_hash)
             );
         } else {
             eprintln!("{:}", abi::entry_to_method_name_pretty(entry)?,);
