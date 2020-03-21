@@ -75,6 +75,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     }
 
     if matches.is_present("const") {
+        // Note: view function can acquire `msg.sender`.
         let (_, trx_ext, _) = client::GRPC_CLIENT
             .trigger_constant_contract(Default::default(), trigger_contract)
             .wait()?;
@@ -85,9 +86,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
             "constant_result": json["constant_result"],
         });
         println!("{:}", serde_json::to_string_pretty(&ret)?);
-        if !trx_ext.get_constant_result().is_empty() && !trx_ext.get_constant_result()[0].is_empty() {
-            handle_contract_result(&contract, method, &trx_ext.get_constant_result()[0])?;
-        }
+        trx_ext
+            .get_constant_result()
+            .first()
+            .map(|result| handle_contract_result(&contract, method, result))
+            .transpose()?;
         Ok(())
     } else {
         let mut handler = trx::TransactionHandler::handle(trigger_contract, matches);
