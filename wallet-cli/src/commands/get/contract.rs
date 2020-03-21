@@ -1,4 +1,3 @@
-use hex::ToHex;
 use keys::Address;
 use proto::api::BytesMessage;
 use proto::api_grpc::Wallet;
@@ -37,26 +36,32 @@ pub fn run(addr: &str) -> Result<(), Error> {
 
 // NOTE: there is a typo in pb: abi.`entrys`
 fn pprint_abi_entries(abi: &::proto::core::SmartContract_ABI) -> Result<(), Error> {
+    use proto::core::SmartContract_ABI_Entry_EntryType as AbiEntryType;
+
     for entry in abi.entrys.iter() {
         let method = abi::entry_to_method_name(entry);
-        if entry.get_field_type() == ::proto::core::SmartContract_ABI_Entry_EntryType::Function {
-            let fnhash = abi::fnhash(&method);
-            eprintln!(
-                "{:}\n    => {:}: {:}",
-                abi::entry_to_method_name_pretty(entry)?,
-                (&fnhash[..]).encode_hex::<String>(),
-                method
-            );
-        } else if entry.get_field_type() == ::proto::core::SmartContract_ABI_Entry_EntryType::Event {
-            // will show in `topic` field
-            let event_hash = crypto::keccak256(method.as_bytes());
-            eprintln!(
-                "{:}\n    => {}",
-                abi::entry_to_method_name_pretty(entry)?,
-                hex::encode(&event_hash)
-            );
-        } else {
-            eprintln!("{:}", abi::entry_to_method_name_pretty(entry)?,);
+        match entry.get_field_type() {
+            AbiEntryType::Function => {
+                let fnhash = abi::fnhash(&method);
+                eprintln!(
+                    "{}\n    => {} [{}]",
+                    abi::entry_to_method_name_pretty(entry)?,
+                    method,
+                    hex::encode(fnhash)
+                );
+            }
+            AbiEntryType::Event => {
+                // will be the first in `log.topics` field
+                let event_hash = crypto::keccak256(method.as_bytes());
+                eprintln!(
+                    "{}\n    => {}",
+                    abi::entry_to_method_name_pretty(entry)?,
+                    hex::encode(event_hash)
+                );
+            }
+            _ => {
+                eprintln!("{:}", abi::entry_to_method_name_pretty(entry)?);
+            }
         }
     }
     Ok(())

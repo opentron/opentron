@@ -105,7 +105,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
     handler.run()?;
     handler.watch(|info| {
         println!(
-            "! Contract Address(Base58Check) = {}",
+            "! Created Contract Address(Base58Check) = {}",
             Address::try_from(info.get_contract_address())?
         );
         Ok(())
@@ -114,11 +114,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 
 #[inline]
 fn translate_state_mutablility(val: &serde_json::Value) -> AbiEntryStateMutabilityType {
-    match val.as_str().unwrap_or_default() {
-        "view" | "View" => AbiEntryStateMutabilityType::View,
-        "nonpayable" | "Nonpayable" => AbiEntryStateMutabilityType::Nonpayable,
-        "payable" | "Payable" => AbiEntryStateMutabilityType::Payable,
-        "pure" | "Pure" => AbiEntryStateMutabilityType::Pure,
+    match val.as_str().unwrap_or_default().to_ascii_lowercase().as_ref() {
+        "view" => AbiEntryStateMutabilityType::View,
+        "nonpayable" => AbiEntryStateMutabilityType::Nonpayable,
+        "payable" => AbiEntryStateMutabilityType::Payable,
+        "pure" => AbiEntryStateMutabilityType::Pure,
         "" => AbiEntryStateMutabilityType::UnknownMutabilityType,
         x => {
             println!("unknown => {:?}", x);
@@ -129,10 +129,11 @@ fn translate_state_mutablility(val: &serde_json::Value) -> AbiEntryStateMutabili
 
 #[inline]
 fn translate_abi_type(val: &serde_json::Value) -> AbiEntryType {
-    match val.as_str().unwrap_or("") {
-        "function" | "Function" => AbiEntryType::Function,
-        "event" | "Event" => AbiEntryType::Event,
-        "constructor" | "Constructor" => AbiEntryType::Constructor,
+    match val.as_str().unwrap_or("").to_ascii_lowercase().as_ref() {
+        "function" => AbiEntryType::Function,
+        "event" => AbiEntryType::Event,
+        "constructor" => AbiEntryType::Constructor,
+        "fallback" => AbiEntryType::Fallback,
         _ => unimplemented!(),
     }
 }
