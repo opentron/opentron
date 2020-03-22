@@ -117,6 +117,9 @@ impl ::std::fmt::Debug for DiscoveryMessage {
 }
 
 fn format_node_id(node_id: &[u8]) -> String {
+    if node_id.len() != 64 {
+        eprintln!("!! error, wrong node id={:?}", hex::encode(&node_id));
+    }
     format!("{}...", hex::encode(&node_id[..8]))
 }
 
