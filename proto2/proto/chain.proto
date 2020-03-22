@@ -20,7 +20,7 @@ message Block {
 message BlockHeader {
   // renamed: raw
   message Raw {
-    reserved 4, 5;
+    reserved 4, 5, 8, 11;
     reserved "nonce", "difficulty";
 
     int64 timestamp = 1;
@@ -32,11 +32,13 @@ message BlockHeader {
     // bytes nonce = 5;
     // bytes difficulty = 6;
     int64 number = 7;
-    int64 witness_id = 8;
+    // seemed unused
+    // int64 witness_id = 8;
     bytes witness_address = 9;
     int32 version = 10;
     // renamed: accountStateRoot
-    bytes account_state_root = 11;
+    // seemed unused
+    // bytes account_state_root = 11;
   }
 
   Raw raw_data = 1;

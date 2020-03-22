@@ -5,7 +5,7 @@ package proto.common;
 // for discover, handshake, channel
 
 message Endpoint {
-  // changed: bytes
+  // type changed: bytes
   string address = 1;
   int32 port = 2;
   bytes node_id = 3;
@@ -32,30 +32,41 @@ message SmartContract {
         Constructor = 1;
         Function = 2;
         Event = 3;
+        // Fallback functions are executed whenever a particular contract receives
+        // plain Ether without any other data associated with the transaction.
         Fallback = 4;
       }
       message Param {
+        // This will cause the respective arguments to be searched for.
+        // If arrays (including string and bytes) are used as indexed arguments,
+        // the Keccak-256 hash of it is stored as topic instead.
         bool indexed = 1;
         string name = 2;
         string type = 3;
         // SolidityType type = 3;
       }
       enum StateMutabilityType {
-        UnknownMutabilityType = 0;
+        UnknownStateMutabilityType = 0;
+        // With pure you cannot access the contract storage.
+        // e.g. utility libraries.
         Pure = 1;
+        // With view you cannot modify the contract storage, but you can access the storage.
+        // e.g. contract getters.
         View = 2;
         Nonpayable = 3;
         Payable = 4;
       }
 
+      // The event was declared as `anonymous`
       bool anonymous = 1;
+      // Replaced by view and pure.
       bool constant = 2;
       string name = 3;
       repeated Param inputs = 4;
       repeated Param outputs = 5;
       EntryType type = 6;
       bool payable = 7;
-      StateMutabilityType stateMutability = 8;
+      StateMutabilityType state_mutability = 8;
     }
     // renamed: entrys
     repeated Entry entries = 1;
@@ -70,7 +81,9 @@ message SmartContract {
   string name = 7;
   int64 origin_energy_limit = 8;
   bytes code_hash = 9;
-  bytes trx_hash = 10;
+  // When smart contract is created by a trigger smart contract call.
+  // renamed: trx_hash
+  bytes txn_id = 10;
 }
 
 message Permission {
