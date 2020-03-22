@@ -1,10 +1,12 @@
 use chrono::Utc;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
-// use hex_literal::hex;
 use node_cli::channel::{ChannelMessage, ChannelMessageCodec};
 use proto2::chain::Block;
-use proto2::channel::{BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, Transactions};
+use proto2::channel::{
+    BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
+    Transactions,
+};
 use proto2::common::{BlockId, Endpoint};
 use std::error::Error;
 use tokio::net::{TcpListener, TcpStream};
@@ -95,12 +97,35 @@ async fn channel_handler(
             Ok(ChannelMessage::Ping) => {
                 transport.send(ChannelMessage::Pong).await?;
             }
+            Ok(ChannelMessage::TransactionInventory(inv)) => {
+                // |ids| = 1, 2
+                let Inventory { ids, .. } = inv;
+                for id in &ids {
+                    println!("  ! txn id = {:?}", hex::encode(&id));
+                }
+            }
+            Ok(ChannelMessage::BlockInventory(inv)) => {
+                let Inventory { ref ids, .. } = inv;
+                for id in ids {
+                    println!("  ! blk id = {:?}", hex::encode(&id));
+                }
+                println!("  ! fetch block inventory");
+                transport.send(ChannelMessage::FetchBlockInventory(inv)).await?;
+            }
+
+            Ok(ChannelMessage::Block(block)) => {
+                println!("  ! block => {}", &block);
+            }
+            Ok(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect { reason })) => {
+                println!("  ! disconnect = {:?}", DisconnectReasonCode::from_i32(reason));
+                return Ok(());
+            }
             Err(e) => {
                 println!("! error {} {:?}", peer_addr, e);
                 return Err(e).map_err(From::from);
             }
             _ => {
-                println!("unhandled got => {:?}", payload);
+                println!("unhandled => {:?}", payload);
             }
         }
     }
