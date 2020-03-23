@@ -1,5 +1,5 @@
 use chrono::{Local, TimeZone};
-use hex::{FromHex, ToHex};
+use hex::FromHex;
 use keys::Address;
 use proto::api::BytesMessage;
 use proto::api_grpc::Wallet;
@@ -73,7 +73,7 @@ pub fn get_transaction_info(id: &str) -> Result<(), Error> {
 
 fn pprint_contract_call_data(contract: &Address, data: &str) -> Result<(), Error> {
     let abi = trx::get_contract_abi(contract)?;
-    let fnhash = Vec::from_hex(&data[..8])?;
+    let fnhash = hex::decode(&data[..8])?;
     abi.iter()
         .find(|entry| abi::fnhash(&abi::entry_to_method_name(entry)) == fnhash[..])
         .ok_or(Error::Runtime("ABI not found, can not parse result"))
@@ -82,7 +82,7 @@ fn pprint_contract_call_data(contract: &Address, data: &str) -> Result<(), Error
             eprintln!(
                 "!          {} [{}]",
                 abi::entry_to_method_name(entry),
-                fnhash.encode_hex::<String>(),
+                hex::encode(fnhash)
             );
             let types = abi::entry_to_input_types(&entry);
             let params = abi::decode_params(&types, &data[8..])?;
