@@ -8,11 +8,8 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
-            - name: Checkout submodules
-              shell: bash
-              run: |
-                git submodule sync --recursive
-                git submodule update --init --force --recursive --depth=1
+              with:
+                  submodules: true
             - name: Install protobuf
               run: sudo apt-get install protobuf-compiler libprotobuf-dev
             - name: Build
