@@ -1,21 +1,23 @@
 //! Structs for core Zcash primitives.
 
-use bech32::{self, FromBase32, ToBase32};
-use blake2s_simd::Params as Blake2sParams;
-use byteorder::{LittleEndian, WriteBytesExt};
 use ff::{Field, PrimeField, PrimeFieldRepr};
-use hex::ToHex;
-use pairing::bls12_381::Bls12;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::io;
-use std::str::FromStr;
 
 use crate::constants;
+
 use crate::group_hash::group_hash;
-use crate::jubjub::{edwards, FixedGenerators, JubjubEngine, JubjubParams, PrimeOrder};
+
 use crate::pedersen_hash::{pedersen_hash, Personalization};
+
+use byteorder::{LittleEndian, WriteBytesExt};
+
+use crate::jubjub::{edwards, FixedGenerators, JubjubEngine, JubjubParams, PrimeOrder};
+
 use crate::JUBJUB;
+use std::io;
+use pairing::bls12_381::Bls12;
+use bech32::{FromBase32, ToBase32};
+
+use blake2s_simd::Params as Blake2sParams;
 
 #[derive(Clone)]
 pub struct ValueCommitment<E: JubjubEngine> {
@@ -63,7 +65,9 @@ pub struct ViewingKey<E: JubjubEngine> {
 impl<E: JubjubEngine> ViewingKey<E> {
     pub fn rk(&self, ar: E::Fs, params: &E::Params) -> edwards::Point<E, PrimeOrder> {
         self.ak.add(
-            &params.generator(FixedGenerators::SpendingKeyGenerator).mul(ar, params),
+            &params
+                .generator(FixedGenerators::SpendingKeyGenerator)
+                .mul(ar, params),
             params,
         )
     }
@@ -92,7 +96,11 @@ impl<E: JubjubEngine> ViewingKey<E> {
         E::Fs::from_repr(e).expect("should be a valid scalar")
     }
 
-    pub fn to_payment_address(&self, diversifier: Diversifier, params: &E::Params) -> Option<PaymentAddress<E>> {
+    pub fn to_payment_address(
+        &self,
+        diversifier: Diversifier,
+        params: &E::Params,
+    ) -> Option<PaymentAddress<E>> {
         diversifier.g_d(params).and_then(|g_d| {
             let pk_d = g_d.mul(self.ivk(), params);
 
@@ -101,22 +109,23 @@ impl<E: JubjubEngine> ViewingKey<E> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Diversifier(pub [u8; 11]);
 
-impl fmt::Debug for Diversifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Diversifier(0x{})", (&self.0[..]).encode_hex::<String>())
-    }
-}
-
 impl Diversifier {
-    pub fn g_d<E: JubjubEngine>(&self, params: &E::Params) -> Option<edwards::Point<E, PrimeOrder>> {
-        group_hash::<E>(&self.0, constants::KEY_DIVERSIFICATION_PERSONALIZATION, params)
-    }
-
     pub fn as_bytes(&self) -> &[u8] {
         return &self.0[..]
+    }
+
+    pub fn g_d<E: JubjubEngine>(
+        &self,
+        params: &E::Params,
+    ) -> Option<edwards::Point<E, PrimeOrder>> {
+        group_hash::<E>(
+            &self.0,
+            constants::KEY_DIVERSIFICATION_PERSONALIZATION,
+            params,
+        )
     }
 }
 
@@ -140,8 +149,8 @@ impl<E: JubjubEngine> PartialEq for PaymentAddress<E> {
 
 impl<E: JubjubEngine> Eq for PaymentAddress<E> {}
 
-impl<E: JubjubEngine> fmt::Display for PaymentAddress<E> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl<E: JubjubEngine> std::fmt::Display for PaymentAddress<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
@@ -150,13 +159,13 @@ impl<E: JubjubEngine> fmt::Display for PaymentAddress<E> {
     }
 }
 
-impl<E: JubjubEngine> Hash for PaymentAddress<E> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
+impl<E: JubjubEngine> std::hash::Hash for PaymentAddress<E> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.to_bytes().hash(state);
     }
 }
 
-impl FromStr for PaymentAddress<Bls12> {
+impl std::str::FromStr for PaymentAddress<Bls12> {
     type Err = io::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -177,7 +186,10 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     /// Constructs a PaymentAddress from a diversifier and a Jubjub point.
     ///
     /// Returns None if `pk_d` is the identity.
-    pub fn from_parts(diversifier: Diversifier, pk_d: edwards::Point<E, PrimeOrder>) -> Option<Self> {
+    pub fn from_parts(
+        diversifier: Diversifier,
+        pk_d: edwards::Point<E, PrimeOrder>,
+    ) -> Option<Self> {
         if pk_d == edwards::Point::zero() {
             None
         } else {
@@ -189,15 +201,15 @@ impl<E: JubjubEngine> PaymentAddress<E> {
     ///
     /// Only for test code, as this explicitly bypasses the invariant.
     #[cfg(test)]
-    pub(crate) fn from_parts_unchecked(diversifier: Diversifier, pk_d: edwards::Point<E, PrimeOrder>) -> Self {
+    pub(crate) fn from_parts_unchecked(
+        diversifier: Diversifier,
+        pk_d: edwards::Point<E, PrimeOrder>,
+    ) -> Self {
         PaymentAddress { pk_d, diversifier }
     }
 
     /// Parses a PaymentAddress from bytes.
     pub fn from_bytes(bytes: &[u8], params: &E::Params) -> Option<Self> {
-        if bytes.len() != 43 {
-            return None;
-        }
         let diversifier = {
             let mut tmp = [0; 11];
             tmp.copy_from_slice(&bytes[0..11]);
@@ -236,7 +248,12 @@ impl<E: JubjubEngine> PaymentAddress<E> {
         self.diversifier.g_d(params)
     }
 
-    pub fn create_note(&self, value: u64, randomness: E::Fs, params: &E::Params) -> Option<Note<E>> {
+    pub fn create_note(
+        &self,
+        value: u64,
+        randomness: E::Fs,
+        params: &E::Params,
+    ) -> Option<Note<E>> {
         self.g_d(params).map(|g_d| Note {
             value,
             r: randomness,
@@ -260,7 +277,10 @@ pub struct Note<E: JubjubEngine> {
 
 impl<E: JubjubEngine> PartialEq for Note<E> {
     fn eq(&self, other: &Self) -> bool {
-        self.value == other.value && self.g_d == other.g_d && self.pk_d == other.pk_d && self.r == other.r
+        self.value == other.value
+            && self.g_d == other.g_d
+            && self.pk_d == other.pk_d
+            && self.r == other.r
     }
 }
 
@@ -280,7 +300,9 @@ impl<E: JubjubEngine> Note<E> {
         let mut note_contents = vec![];
 
         // Writing the value in little endian
-        (&mut note_contents).write_u64::<LittleEndian>(self.value).unwrap();
+        (&mut note_contents)
+            .write_u64::<LittleEndian>(self.value)
+            .unwrap();
 
         // Write g_d
         self.g_d.write(&mut note_contents).unwrap();

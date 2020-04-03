@@ -22,19 +22,19 @@ use crate::{keys::OutgoingViewingKey, JUBJUB};
 pub const KDF_SAPLING_PERSONALIZATION: &[u8; 16] = b"Ztron_SaplingKDF";
 pub const PRF_OCK_PERSONALIZATION: &[u8; 16] = b"Ztron_Derive_ock";
 
-const COMPACT_NOTE_SIZE: usize = (
+const COMPACT_NOTE_SIZE: usize =
     1  + // version
     11 + // diversifier
     8  + // value
     32
     // rcv
-);
+;
 const NOTE_PLAINTEXT_SIZE: usize = COMPACT_NOTE_SIZE + 512;
-const OUT_PLAINTEXT_SIZE: usize = (
+const OUT_PLAINTEXT_SIZE: usize =
     32 + // pk_d
     32
     // esk
-);
+;
 const ENC_CIPHERTEXT_SIZE: usize = NOTE_PLAINTEXT_SIZE + 16;
 const OUT_CIPHERTEXT_SIZE: usize = OUT_PLAINTEXT_SIZE + 16;
 
@@ -248,7 +248,6 @@ fn prf_ock(
 /// let encCiphertext = enc.encrypt_note_plaintext();
 /// let outCiphertext = enc.encrypt_outgoing_plaintext(&cv.cm(&JUBJUB).into(), &cmu);
 /// ```
-#[derive(Debug)]
 pub struct SaplingNoteEncryption {
     epk: edwards::Point<Bls12, PrimeOrder>,
     esk: Fs,

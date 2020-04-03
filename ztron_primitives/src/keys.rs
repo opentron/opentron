@@ -36,13 +36,13 @@ pub fn prf_expand_vec(sk: &[u8], ts: &[&[u8]]) -> Blake2bHash {
 pub struct OutgoingViewingKey(pub [u8; 32]);
 
 impl OutgoingViewingKey {
-    pub fn as_bytes(&self) -> Vec<u8> {
-        (&self.0[..]).to_owned()
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.0[..]
     }
 }
 
 /// A Sapling expanded spending key
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ExpandedSpendingKey<E: JubjubEngine> {
     pub ask: E::Fs,
     pub nsk: E::Fs,
@@ -197,6 +197,7 @@ impl<E: JubjubEngine> FullViewingKey<E> {
 mod tests {
     use crate::jubjub::{edwards, FixedGenerators, JubjubParams, PrimeOrder};
     use pairing::bls12_381::Bls12;
+    use std::error::Error;
 
     use super::FullViewingKey;
     use crate::JUBJUB;
@@ -214,7 +215,7 @@ mod tests {
         assert_eq!(
             FullViewingKey::<Bls12>::read(&buf[..], &JUBJUB)
                 .unwrap_err()
-                .to_string(),
+                .description(),
             "ak not of prime order"
         );
 
