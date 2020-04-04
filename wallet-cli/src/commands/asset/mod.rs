@@ -97,7 +97,6 @@ pub fn transfer_asset(matches: &ArgMatches) -> Result<(), Error> {
         .and_then(|s| s.parse::<Address>().ok())
         .ok_or(Error::Runtime("wrong recipient address format"))?;
     let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
-    let memo = matches.value_of("MEMO").unwrap_or("").as_bytes().to_owned();
     let assert_id = matches.value_of("token-id").expect("required in cli.yml; qed");
 
     let transfer_contract = TransferAssetContract {
@@ -111,9 +110,7 @@ pub fn transfer_asset(matches: &ArgMatches) -> Result<(), Error> {
     eprintln!("sender:    {:}", sender);
     eprintln!("recipient: {:}", recipient);
 
-    trx::TransactionHandler::handle(transfer_contract, matches)
-        .map_raw_transaction(move |raw| raw.set_data(memo.clone()))
-        .run()
+    trx::TransactionHandler::handle(transfer_contract, matches).run()
 }
 
 pub fn update_asset_settings(matches: &ArgMatches) -> Result<(), Error> {

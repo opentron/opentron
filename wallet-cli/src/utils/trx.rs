@@ -199,6 +199,11 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 
         let mut raw = TransactionRaw::new();
         raw.set_contract(vec![contract].into());
+
+        if let Some(memo) = matches.value_of("memo") {
+            raw.set_data(memo.as_bytes().to_owned())
+        }
+
         if let Some(f) = self.raw_trx_fn.as_mut() {
             f(&mut raw);
         }

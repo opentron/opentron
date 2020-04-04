@@ -9,6 +9,11 @@ settings: &default_settings
 
 # FIXME: YAML does not support merge array
 common_transaction_args: &common_transaction_args
+    - memo:
+          help: The memo for the transaction
+          long: memo
+          takes_value: true
+          required: false
     - account:
           help: The account address used for signing
           short: k
@@ -159,6 +164,11 @@ subcommands:
                         - PERMISSION:
                               help: Permission JSON or JSON file returned from `get account_permission`, `-` for STDIN
                               required: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -211,6 +221,11 @@ subcommands:
                         - NAME:
                               help: Name of the account
                               required: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -288,6 +303,11 @@ subcommands:
                               value_names:
                                   - ADDR
                                   - COUNT
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -342,6 +362,11 @@ subcommands:
                               help: The URL of the witness
                               required: true
                               takes_value: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -395,6 +420,11 @@ subcommands:
                         - SENDER:
                               help: The account to of the witness
                               required: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -450,6 +480,11 @@ subcommands:
                               multiple: true
                               required: true
                               value_name: "ID=VALUE"
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -503,6 +538,11 @@ subcommands:
                         - ID:
                               help: Proposal id
                               required: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -579,6 +619,11 @@ subcommands:
                               long: energy
                               conflicts_with:
                                   - bandwidth
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -640,6 +685,11 @@ subcommands:
                               long: energy
                               conflicts_with:
                                   - bandwidth
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -692,6 +742,11 @@ subcommands:
                         - BROKERAGE:
                               help: Brokerage ratio, 0-100
                               required: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -803,6 +858,11 @@ subcommands:
                               long: bandwidth-limit-for-issuer
                               takes_value: true
                               value_name: LIMIT
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -858,15 +918,17 @@ subcommands:
                         - AMOUNT:
                               help: Amount of tokens to send
                               required: true
-                        - MEMO:
-                              help: Memo for the transfer
-                              required: false
                         - token-id:
                               help: TRC10 token id of transaction
                               long: token-id
                               required: true
                               takes_value: true
                               value_name: ID
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -928,6 +990,11 @@ subcommands:
                               required: true
                               takes_value: true
                               value_name: ID
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -977,6 +1044,11 @@ subcommands:
                         - SENDER:
                               help: TRC10 token issuer
                               required: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -1047,6 +1119,11 @@ subcommands:
                               long: bandwidth-limit-for-issuer
                               takes_value: true
                               value_name: LIMIT
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -1146,6 +1223,11 @@ subcommands:
                               takes_value: true
                               conflicts_with:
                                   - ARGS
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -1245,6 +1327,11 @@ subcommands:
                               value_name: AMOUNT
                               requires:
                                   - token-id
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -1309,6 +1396,11 @@ subcommands:
                               value_name: VALUE
                               conflicts_with:
                                   - user-resource-percent
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -1361,6 +1453,11 @@ subcommands:
                         - CONTRACT:
                               help: Contract address
                               required: true
+                        - memo:
+                              help: The memo for the transaction
+                              long: memo
+                              takes_value: true
+                              required: false
                         - account:
                               help: The account address used for signing
                               short: k
@@ -1419,8 +1516,10 @@ subcommands:
               - AMOUNT:
                     help: The amount of tokens to send and the token symbol
                     required: true
-              - MEMO:
-                    help: The memo for the transfer
+              - memo:
+                    help: The memo for the transaction
+                    long: memo
+                    takes_value: true
                     required: false
               - account:
                     help: The account address used for signing
@@ -1474,6 +1573,11 @@ subcommands:
                         The JSON string or filename defining the transaction to sign.
                         Or the raw message. Use 0x prefix for binary.
                     required: true
+              - memo:
+                    help: The memo for the transaction
+                    long: memo
+                    takes_value: true
+                    required: false
               - account:
                     help: The account address used for signing
                     short: k

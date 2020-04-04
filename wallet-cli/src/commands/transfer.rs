@@ -16,7 +16,6 @@ pub fn main<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
         .and_then(|s| s.parse::<Address>().ok())
         .ok_or(Error::Runtime("wrong recipient address format"))?;
     let amount = matches.value_of("AMOUNT").expect("required in cli.yml; qed");
-    let memo = matches.value_of("MEMO").unwrap_or("").as_bytes().to_owned();
 
     let transfer_contract = TransferContract {
         owner_address: sender.as_bytes().to_owned(),
@@ -28,7 +27,5 @@ pub fn main<'a>(matches: &'a ArgMatches<'a>) -> Result<(), Error> {
     eprintln!("sender:    {:}", sender);
     eprintln!("recipient: {:}", recipient);
 
-    TransactionHandler::handle(transfer_contract, matches)
-        .map_raw_transaction(move |raw| raw.set_data(memo.clone()))
-        .run()
+    TransactionHandler::handle(transfer_contract, matches).run()
 }
