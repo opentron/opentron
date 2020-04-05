@@ -105,6 +105,18 @@ impl ChannelMessage {
     }
 }
 
+impl From<HandshakeHello> for ChannelMessage {
+    fn from(inner: HandshakeHello) -> ChannelMessage {
+        ChannelMessage::HandshakeHello(inner)
+    }
+}
+
+impl From<HandshakeDisconnect> for ChannelMessage {
+    fn from(inner: HandshakeDisconnect) -> ChannelMessage {
+        ChannelMessage::HandshakeDisconnect(inner)
+    }
+}
+
 impl ::std::fmt::Debug for ChannelMessage {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         use ChannelMessage::*;

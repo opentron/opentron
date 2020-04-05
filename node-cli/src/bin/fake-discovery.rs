@@ -2,10 +2,12 @@ use chrono::Utc;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
 use node_cli::discovery::{DiscoveryMessage, DiscoveryMessageTransport};
+use node_cli::util::{get_my_ip, Peer};
 use proto2::common::Endpoint;
 use proto2::discovery::{FindPeers, Peers, Ping, Pong};
 use rand::Rng;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::error::Error;
 use tokio::net::UdpSocket;
 
@@ -15,14 +17,16 @@ const P2P_VERSION: i32 = 11111;
 // seed list
 const TO_IP: &str = "18.196.99.16";
 
-#[derive(Deserialize)]
-struct Ip {
-    origin: String,
-}
-
-async fn get_my_ip() -> Result<String, Box<dyn Error>> {
-    let ip = reqwest::get("http://httpbin.org/ip").await?.json::<Ip>().await?;
-    Ok(ip.origin)
+fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
+    let mut acc = 0;
+    for (&lhs, &rhs) in a.iter().zip(b.iter()) {
+        if lhs != rhs {
+            return acc + (lhs ^ rhs).leading_zeros();
+        } else {
+            acc += 8;
+        }
+    }
+    acc
 }
 
 #[tokio::main]
@@ -33,10 +37,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let my_ip = get_my_ip().await?;
     println!("! detect my ip {}", my_ip);
 
+    let mut peers_db: HashSet<Peer> = serde_json::from_str(&std::fs::read_to_string("./peers.json")?)?;
+
     let my_endpoint = Endpoint {
         address: my_ip.clone(),
         port: 18888,
-        node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD".to_vec(),
+        node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2".to_vec(),
     };
 
     let ping = Ping {
@@ -88,15 +94,38 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     target_id: random_id,
                 };
                 transport.send((find.into(), peer_addr)).await?;
+
+                let reply_ping = Ping {
+                    from: Some(my_endpoint.clone()),
+                    to: ping.from.clone(),
+                    version: P2P_VERSION,
+                    timestamp: Utc::now().timestamp_millis(),
+                };
+                transport.send((reply_ping.into(), peer_addr)).await?;
             }
-            Ok((DiscoveryMessage::FindPeers(_find), peer_addr)) => {
+            Ok((DiscoveryMessage::FindPeers(find), peer_addr)) => {
+                let target = &find.target_id;
+                let mut known_peers = peers_db.iter().collect::<Vec<_>>();
+                known_peers.sort_by(|a, b| {
+                    common_prefix_bits(&hex::decode(&b.id).unwrap(), target)
+                        .cmp(&common_prefix_bits(&hex::decode(&a.id).unwrap(), target))
+                });
+
+                let nearby_peers = known_peers.into_iter().take(10).map(Endpoint::from).collect::<Vec<_>>();
                 let peers = Peers {
                     from: Some(my_endpoint.clone()),
                     timestamp: Utc::now().timestamp_millis(),
-                    peers: vec![my_endpoint.clone()],
+                    peers: nearby_peers,
                 };
                 transport.send((peers.into(), peer_addr)).await?;
-                // println!("  => Peers");
+
+                let ping = Ping {
+                    from: Some(my_endpoint.clone()),
+                    to: find.from.clone(),
+                    version: P2P_VERSION,
+                    timestamp: Utc::now().timestamp_millis(),
+                };
+                transport.send((ping.into(), peer_addr)).await?;
             }
             Ok((DiscoveryMessage::Peers(peers), _)) => {
                 for peer in &peers.peers {
@@ -119,7 +148,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     transport.send((ping.into(), peer_addr)).await?;
                 }
             }
-            Ok((DiscoveryMessage::Pong(_pong), _peer_addr)) => {}
+            Ok((DiscoveryMessage::Pong(pong), peer_addr)) => {
+                let ep = pong.from.as_ref().unwrap();
+                let peer = Peer {
+                    id: hex::encode(&ep.node_id),
+                    version: pong.echo_version,
+                    advertised_ip: ep.address.clone(),
+                    advertised_port: ep.port as _,
+                    received_ip: peer_addr.ip().to_string(),
+                    received_port: peer_addr.port(),
+                };
+
+                if !peers_db.contains(&peer) {
+                    peers_db.insert(peer);
+                    std::fs::write("./peers.json", serde_json::to_string_pretty(&peers_db)?.as_bytes())?;
+                }
+            }
             Err(e) => {
                 eprintln!("error: {:?}", e);
                 return Err(e).map_err(From::from);
