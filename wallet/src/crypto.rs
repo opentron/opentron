@@ -4,7 +4,6 @@ use cfb_mode::Cfb;
 use sha2::{Digest, Sha512};
 use std::mem;
 
-
 use crate::error::Error;
 
 type AesCfb = Cfb<Aes256>;
@@ -45,7 +44,5 @@ pub fn sha512(input: &[u8]) -> [u8; 64] {
     let mut hasher = Sha512::new();
     hasher.input(input);
     // NOTE: From<GenericArray<u8, 64>> is not impl-ed for [u8; 64]
-    unsafe {
-        mem::transmute(hasher.result())
-    }
+    unsafe { mem::transmute(hasher.result()) }
 }
