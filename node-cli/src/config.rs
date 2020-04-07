@@ -58,6 +58,7 @@ impl Config {
 mod tests {
     use super::*;
     #[test]
+    #[ignore]
     fn test_config_parse() {
         let content = fs::read_to_string(CONFIG_FILE).unwrap();
         let config: Config = toml::from_str(&content).unwrap();
