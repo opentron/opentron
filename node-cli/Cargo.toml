@@ -36,5 +36,4 @@ slog-async = "2.5"
 proto2 = { path = '../proto2' }
 keys = { path = '../keys' }
 primitives = { path = '../primitives' }
-merkle-tree = { path = '../merkle-tree' }
 chain = { path = '../chain' }

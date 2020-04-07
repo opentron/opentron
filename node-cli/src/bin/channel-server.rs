@@ -26,7 +26,7 @@ const P2P_VERSION: i32 = 11111;
 const MY_IP: &str = "0.0.0.0";
 
 pub struct AppContext {
-    inboud_ip: Some(SocketAddr),
+    inboud_ip: Option<SocketAddr>,
     genesis_block_id: BlockId,
     config: Config,
 }
