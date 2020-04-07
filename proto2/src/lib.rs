@@ -24,6 +24,12 @@ pub mod channel {
     include!(concat!(env!("OUT_DIR"), "/proto.channel.rs"));
 
     pub use crate::chain::{Block, Transaction};
+
+    impl ::std::fmt::Display for ReasonCode {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            write!(f, "{:?}", self)
+        }
+    }
 }
 
 pub mod contract {
