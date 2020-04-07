@@ -6,16 +6,12 @@ use node_cli::util::{get_my_ip, Peer};
 use proto2::common::Endpoint;
 use proto2::discovery::{FindPeers, Peers, Ping, Pong};
 use rand::Rng;
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::error::Error;
 use tokio::net::UdpSocket;
 
 const P2P_VERSION: i32 = 11111;
 // const P2P_VERSION: i32 = 1;
-
-// seed list
-const TO_IP: &str = "18.196.99.16";
 
 fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
     let mut acc = 0;
@@ -45,22 +41,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
         node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2".to_vec(),
     };
 
-    let ping = Ping {
-        from: Some(my_endpoint.clone()),
-        to: Some(Endpoint {
-            address: TO_IP.into(),
-            port: 18888,
-            node_id: vec![63u8; 64],
-        }),
-        version: P2P_VERSION,
-        timestamp: Utc::now().timestamp_millis(),
-    };
-
     let mut transport = DiscoveryMessageTransport::new(socket);
 
-    transport
-        .send((ping.into(), format!("{}:18888", TO_IP).parse().unwrap()))
-        .await?;
+    for peer in &peers_db {
+        let to_ip = &peer.received_ip;
+        let to_port = peer.received_port;
+
+        let ping = Ping {
+            from: Some(my_endpoint.clone()),
+            to: Some(Endpoint {
+                address: to_ip.clone(),
+                port: to_port as _,
+                node_id: vec![63u8; 64],
+            }),
+            version: P2P_VERSION,
+            timestamp: Utc::now().timestamp_millis(),
+        };
+        transport
+            .send((ping.into(), format!("{}:{}", to_ip, to_port).parse().unwrap()))
+            .await?;
+        println!("! pinging {}", to_ip);
+    }
 
     while let Some(payload) = transport.next().await {
         if let Ok((ref frame, ref peer_addr)) = payload {

@@ -18,7 +18,7 @@ futures = '0.3'
 prost = '0.6'
 prost-types = '0.6'
 serde = { version = '1.0', features = ['derive'] }
-tokio = { version = '0.2.16', default-features = false, features = [
+tokio = { version = '0.2', default-features = false, features = [
     'rt-threaded',
     'macros',
     'tcp',
@@ -32,15 +32,9 @@ reqwest = { version = '0.10', default-features = false, features = ['json'] }
 slog = "2.5"
 slog-term = "2.5"
 slog-async = "2.5"
-
-[dependencies.proto2]
-path = '../proto2'
-
-[dependencies.keys]
-path = '../keys'
-
-[dependencies.primitives]
-path = '../primitives'
-
-[dependencies.merkle-tree]
-path = '../merkle-tree'
+# workspace
+proto2 = { path = '../proto2' }
+keys = { path = '../keys' }
+primitives = { path = '../primitives' }
+merkle-tree = { path = '../merkle-tree' }
+chain = { path = '../chain' }

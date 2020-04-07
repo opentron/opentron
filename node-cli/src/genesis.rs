@@ -1,19 +1,16 @@
-use byteorder::{ByteOrder, BE};
+use chain::IndexedBlock;
 use keys::Address;
-use primitives::H256;
 use prost::Message;
 use prost_types::Any;
 use proto2::chain::{
-    block_header::Raw as BlockHeaderRaw, transaction::Contract, transaction::Raw as TransactionRaw, Block, BlockHeader,
+    block_header::Raw as BlockHeaderRaw, transaction::Contract, transaction::Raw as TransactionRaw, BlockHeader,
     ContractType, Transaction,
 };
 use proto2::contract::TransferContract;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::error::Error;
-use std::mem;
 
-use crate::merkle_tree::MerkleTree;
+// use crate::merkle_tree::MerkleTree;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Witness {
@@ -73,7 +70,22 @@ pub struct GenesisConfig {
 }
 
 impl GenesisConfig {
-    pub fn to_block(&self) -> Result<Block, Box<dyn Error>> {
+    fn to_block_header(&self) -> BlockHeader {
+        let raw_header = BlockHeaderRaw {
+            number: 0,
+            timestamp: self.timestamp,
+            witness_address: self.mantra.as_bytes().to_owned(),
+            parent_hash: parse_hex(&self.parent_hash),
+            // merkle_root_hash: tree.root_hash().as_bytes().to_owned(),
+            ..Default::default()
+        };
+        BlockHeader {
+            raw_data: Some(raw_header).into(),
+            ..Default::default()
+        }
+    }
+
+    pub fn to_indexed_block(&self) -> Result<IndexedBlock, Box<dyn Error>> {
         let sender = keys::b58decode_check(&self.creator)?;
         let transactions = self
             .allocs
@@ -81,36 +93,7 @@ impl GenesisConfig {
             .map(|alloc| alloc.to_transaction(&sender))
             .collect::<Result<Vec<Transaction>, Box<dyn Error>>>()?;
 
-        let hashes = transactions
-            .iter()
-            .map(|trx| get_transaction_hash(trx))
-            .collect::<Vec<_>>();
-        let tree = MerkleTree::from_vec(hashes);
-
-        // mainnet: "8ef446bf3f395af929c218014f6101ec86576c5f61b2ae3236bf3a2ab5e2fecd"
-        // nile:    "6556a96828248d6b89cfd0487d4cef82b134b5544dc428c8a218beb2db85ab24"
-        // shasta:  "ea97ca7ac977cf2765093fa0e4732e561dc4ff8871c17e35fd2bcabb8b5f821d"
-        println!("txTrieRoot => {:?}", tree.root_hash());
-
-        let raw_header = BlockHeaderRaw {
-            number: 0,
-            timestamp: self.timestamp,
-            witness_address: self.mantra.as_bytes().to_owned(),
-            parent_hash: parse_hex(&self.parent_hash),
-            merkle_root_hash: tree.root_hash().as_bytes().to_owned(),
-            ..Default::default()
-        };
-        let header = BlockHeader {
-            raw_data: Some(raw_header).into(),
-            ..Default::default()
-        };
-        let block = Block {
-            block_header: Some(header).into(),
-            transactions: transactions.into(),
-            ..Default::default()
-        };
-
-        Ok(block)
+        Ok(IndexedBlock::from_header_and_txns(self.to_block_header(), transactions))
     }
 }
 
@@ -122,25 +105,17 @@ fn parse_hex(encoded: &str) -> Vec<u8> {
     }
 }
 
-pub fn get_transaction_hash(transaction: &Transaction) -> H256 {
-    let mut sha256 = Sha256::new();
-    let mut buf: Vec<u8> = Vec::with_capacity(255);
-    transaction.encode(&mut buf).unwrap();
-    sha256.input(&buf);
-    unsafe { mem::transmute(sha256.result()) }
-}
-
-pub fn calculate_block_id(block: &Block) -> H256 {
-    let mut sha256 = Sha256::new();
-    let mut buf: Vec<u8> = Vec::with_capacity(255);
-    let raw_header = &block.block_header.as_ref().unwrap().raw_data.as_ref().unwrap();
-    let block_numer = raw_header.number;
-    raw_header.encode(&mut buf).unwrap();
-    sha256.input(&buf);
-    let mut block_hash: H256 = unsafe { mem::transmute(sha256.result()) };
-    BE::write_i64(&mut block_hash[..8], block_numer);
-    block_hash
-}
+// pub fn calculate_block_id(block: &Block) -> H256 {
+// let mut sha256 = Sha256::new();
+// let mut buf: Vec<u8> = Vec::with_capacity(255);
+// let raw_header = &block.block_header.as_ref().unwrap().raw_data.as_ref().unwrap();
+// let block_numer = raw_header.number;
+// raw_header.encode(&mut buf).unwrap();
+// sha256.input(&buf);
+// let mut block_hash: H256 = unsafe { mem::transmute(sha256.result()) };
+// BE::write_i64(&mut block_hash[..8], block_numer);
+// block_hash
+// }
 
 #[cfg(test)]
 mod tests {
@@ -152,9 +127,13 @@ mod tests {
     fn load_genesis_json() {
         let content = fs::read_to_string("./genesis.json").unwrap();
         let conf: GenesisConfig = serde_json::from_str(&content).unwrap();
-        // println!("got =>\n{:?}", conf);
-        let block = conf.to_block().unwrap();
+
+        let block = conf.to_indexed_block().unwrap();
         println!("block => {:?}", block);
-        println!("block_id => {:?}", calculate_block_id(&block));
+        // mainnet: "8ef446bf3f395af929c218014f6101ec86576c5f61b2ae3236bf3a2ab5e2fecd"
+        // nile:    "6556a96828248d6b89cfd0487d4cef82b134b5544dc428c8a218beb2db85ab24"
+        // shasta:  "ea97ca7ac977cf2765093fa0e4732e561dc4ff8871c17e35fd2bcabb8b5f821d"
+
+        println!("block_id => {:?}", hex::encode(block.merkle_root_hash()));
     }
 }

@@ -3,6 +3,7 @@ use futures::sink::{Sink, SinkExt};
 use futures::stream::Stream;
 // use futures::stream::StreamExt;
 use node_cli::channel::{ChannelMessage, ChannelMessageCodec};
+use node_cli::config::Config;
 use node_cli::util::get_my_ip;
 use proto2::chain::Block;
 use proto2::channel::{
@@ -17,9 +18,22 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::stream::StreamExt;
 use tokio::time::timeout;
 use tokio::time::Duration;
+use std::net::SocketAddr;
 // use tokio_util::codec::{Framed, FramedRead, FramedWrite};
 
+const P2P_VERSION: i32 = 11111;
+
 const MY_IP: &str = "0.0.0.0";
+
+pub struct AppContext {
+    inboud_ip: Some(SocketAddr),
+    genesis_block_id: BlockId,
+    config: Config,
+}
+
+impl AppContext {
+
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -66,6 +80,18 @@ async fn incoming_handshake_handler(logger: slog::Logger, mut sock: TcpStream) -
     let mut reader = ChannelMessageCodec::new_read(reader);
     let mut writer = ChannelMessageCodec::new_write(writer);
     // let mut transport = ChannelMessageCodec::new_framed(sock); //.timeout(Duration::from_secs(10));
+
+    //
+    let hello = HandshakeHello {
+        from: Some(Endpoint {
+            address: MY_IP.into(),
+            port: 18888,
+            node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC".to_vec(),
+        }),
+        version: P2P_VERSION,
+        timestamp: Utc::now().timestamp_millis(),
+        ..Default::default()
+    };
 
     while let Ok(payload) = timeout(Duration::from_secs(10), reader.next()).await {
         if payload.is_none() {
@@ -124,13 +150,18 @@ async fn incoming_handshake_handler(logger: slog::Logger, mut sock: TcpStream) -
 async fn channel_handler(
     logger: slog::Logger,
     peer_addr: ::std::net::SocketAddr,
-    mut reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
+    reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
     mut writer: impl Sink<ChannelMessage, Error = io::Error> + Unpin,
 ) -> Result<(), Box<dyn Error>> {
+    let mut reader = reader.timeout(Duration::from_secs(20));
 
     while let Some(payload) = reader.next().await {
         debug!(logger, "receive message"; "payload" => format!("{:?}", payload));
-        match payload {
+        if payload.is_err() {
+            error!(logger, "timeout");
+            return Ok(());
+        }
+        match payload.unwrap() {
             Ok(ChannelMessage::Ping) => {
                 info!(logger, "ping");
                 writer.send(ChannelMessage::Pong).await?;
@@ -170,8 +201,8 @@ async fn channel_handler(
                 error!(logger, "{:?}", e);
                 return Err(e).map_err(From::from);
             }
-            _ => {
-                error!(logger, "unhandled => {:?}", payload);
+            Ok(msg) => {
+                error!(logger, "unhandled => {:?}", msg);
             }
         }
     }

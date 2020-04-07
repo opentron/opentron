@@ -4,12 +4,12 @@ use std::error::Error;
 
 #[derive(Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Peer {
-    id: String,
-    version: i32,
-    advertised_ip: String,
-    advertised_port: u16,
-    received_ip: String,
-    received_port: u16,
+    pub id: String,
+    pub version: i32,
+    pub advertised_ip: String,
+    pub advertised_port: u16,
+    pub received_ip: String,
+    pub received_port: u16,
 }
 
 impl From<&Peer> for Endpoint {
