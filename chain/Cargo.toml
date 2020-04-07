@@ -1,0 +1,14 @@
+[package]
+name = "chain"
+version = "0.1.0"
+authors = ["andelf <andelf@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+prost = "0.6"
+byteorder = '1.3'
+sha2 = '0.8'
+proto2 = { path = '../proto2' }
+primitives = { path = '../primitives' }
+crypto = { path = "../crypto" }
+merkle-tree = { path = '../merkle-tree' }
