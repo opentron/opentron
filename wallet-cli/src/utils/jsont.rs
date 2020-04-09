@@ -23,11 +23,13 @@ pub fn bytes_to_hex_string(val: &serde_json::Value) -> String {
 }
 
 pub fn bytes_to_string(val: &serde_json::Value) -> String {
-    val.as_array()
+    let buf = val
+        .as_array()
         .unwrap()
         .iter()
-        .map(|v| v.as_i64().unwrap() as u8 as char)
-        .collect::<String>()
+        .map(|v| v.as_i64().unwrap() as u8)
+        .collect::<Vec<_>>();
+    String::from_utf8_lossy(&buf).into()
 }
 
 // pb: TransferContract
