@@ -26,6 +26,13 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
     jsont::fix_transaction(&mut transaction)?;
     println!("{}", serde_json::to_string_pretty(&transaction).unwrap());
 
+    if !payload.get_raw_data().get_data().is_empty() {
+        eprintln!(
+            "! Data: {:?}",
+            String::from_utf8_lossy(payload.get_raw_data().get_data())
+        );
+    }
+
     eprintln!(
         "! Timestamp: {}",
         Local.timestamp(

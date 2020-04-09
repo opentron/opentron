@@ -341,7 +341,7 @@ pub fn fix_transaction_raw(transaction: &mut serde_json::Value) -> Result<(), Er
 
     transaction["ref_block_hash"] = json!(bytes_to_hex_string(&transaction["ref_block_hash"]));
     transaction["ref_block_bytes"] = json!(bytes_to_hex_string(&transaction["ref_block_bytes"]));
-    transaction["data"] = json!(bytes_to_string(&transaction["data"]));
+    transaction["data"] = json!(bytes_to_hex_string(&transaction["data"]));
     Ok(())
 }
 
