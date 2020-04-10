@@ -37,6 +37,39 @@ Public Full Node:
 34.237.210.82
 ```
 
+Data backup:
+
+- <https://backups.trongrid.io/> LevelDB with internalTx, old backups deleted more frequently
+- <http://47.89.178.46/> LevelDB
+- <http://47.89.178.46:18811/> RocksDB
+
+## Nile Testnet
+
+NOTE: Nile uses newer test branch than the Mainnet.
+
+Home page: <http://nileex.io/>
+
+Faucet: <http://nileex.io/join/getJoinPage>
+
+Explorer: <https://nile.tronscan.org/>
+
+Status: <http://nileex.io/status/getStatusPage>
+
+Full Node HTTP API: <https://api.nileex.io/>
+
+Event API: <https://event.nileex.io/>
+
+Tronscan API: <https://nileapi.tronscan.org>
+
+Public Fullnode:
+
+- 47.252.19.181
+- 47.252.3.238
+
+Data backup:
+
+- <http://47.90.243.177/>
+
 ## Shasta Testnet
 
 NOTE: You can NOT join the Shasta testnet.
@@ -54,27 +87,6 @@ Tronscan API: <https://api.shasta.tronscan.org>
 gRPC
 
 - grpc.shasta.trongrid.io:50051
-
-## Nile Testnet
-
-Home page: <http://nileex.io/>
-
-Faucet: <http://nileex.io/join/getJoinPage>
-
-Explorer: <https://nile.tronscan.org/>
-
-Status: <http://nileex.io/status/getStatusPage>
-
-Full Node HTTP API: <https://api.nileex.io/>
-
-Event API: <https://event.nileex.io/>
-
-Tronscan API: <https://nileapi.tronscan.org>
-
-Public Fullnode
-
-- 47.252.19.181
-- 47.252.3.238
 
 ## Tronex Testnet
 
