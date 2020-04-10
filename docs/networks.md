@@ -2,13 +2,13 @@
 
 ## Mainnet
 
-Explorer
+🔍Explorer:
 
 - <https://tronscan.org/>
 - <https://tronscan.io/>
 - <https://www.trxplorer.io/>
 
-Full Node HTTP API / Event API: <https://api.trongrid.io>
+TronGrid API / Full Node API / Event API: <https://api.trongrid.io>
 
 Tronscan API: <https://apilist.tronscan.org>
 
@@ -39,9 +39,27 @@ Public Full Node:
 
 Data backup:
 
-- <https://backups.trongrid.io/> LevelDB with internalTx, old backups deleted more frequently
+- <https://backups.trongrid.io/> LevelDB with internalTx, old backups will be deleted more frequently
 - <http://47.89.178.46/> LevelDB
 - <http://47.89.178.46:18811/> RocksDB
+
+## Shasta Testnet
+
+NOTE: You can NOT join the Shasta testnet.
+
+Home page: <https://www.trongrid.io/shasta>
+
+🚰Faucet: <https://www.trongrid.io/faucet>
+
+🔍Explorer: <https://shasta.tronscan.org/>
+
+TronGrid API / Full Node API / Event API: <https://api.shasta.trongrid.io>
+
+Tronscan API: <https://api.shasta.tronscan.org>
+
+gRPC
+
+- grpc.shasta.trongrid.io:50051
 
 ## Nile Testnet
 
@@ -49,13 +67,13 @@ NOTE: Nile uses newer test branch than the Mainnet.
 
 Home page: <http://nileex.io/>
 
-Faucet: <http://nileex.io/join/getJoinPage>
+🚰Faucet: <http://nileex.io/join/getJoinPage>
 
-Explorer: <https://nile.tronscan.org/>
+🔍Explorer: <https://nile.tronscan.org/>
 
-Status: <http://nileex.io/status/getStatusPage>
+🩺Status: <http://nileex.io/status/getStatusPage>
 
-Full Node HTTP API: <https://api.nileex.io/>
+Full Node API: <https://api.nileex.io/>
 
 Event API: <https://event.nileex.io/>
 
@@ -70,33 +88,19 @@ Data backup:
 
 - <http://47.90.243.177/>
 
-## Shasta Testnet
-
-NOTE: You can NOT join the Shasta testnet.
-
-Home page: <https://www.trongrid.io/shasta>
-
-Faucet: <https://www.trongrid.io/faucet>
-
-Explorer: <https://shasta.tronscan.org/>
-
-Full Node / Event HTTP API: <https://api.shasta.trongrid.io>
-
-Tronscan API: <https://api.shasta.tronscan.org>
-
-gRPC
-
-- grpc.shasta.trongrid.io:50051
-
 ## Tronex Testnet
+
+NOTE: This testnet MUST be synced from backup data.
+
+NOTE: This testnet has a dappchain testnet side-chain.
 
 Home page: <http://testnet.tronex.io/>
 
-Faucet: <http://testnet.tronex.io/join/getJoinPage>
+🚰Faucet: <http://testnet.tronex.io/join/getJoinPage>
 
-Explorer: <http://3.14.14.175:9000/>
+🔍Explorer: <http://3.14.14.175:9000/>
 
-Status: <http://testnet.tronex.io/status/getStatusPage>
+🩺Status: <http://testnet.tronex.io/status/getStatusPage>
 
 Event API: <https://testapi.tronex.io>
 
@@ -105,13 +109,15 @@ Public Fullnode
 - 47.252.87.28
 - 47.252.85.13
 
-NOTE: This testnet has a dappchain testnet side-chain.
+Data backup:
+
+- <http://47.252.81.247>
 
 ## DAppChain (SUN Network)
 
 Home page: <https://tron.network/sunnetwork/>
 
-Explorer: <https://dappchain.tronscan.org/>
+🔍Explorer: <https://dappchain.tronscan.org/>
 
 Event Server: <https://sun.tronex.io/event>
 
