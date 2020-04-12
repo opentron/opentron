@@ -63,6 +63,7 @@ fn pformat_abi_token(tok: &Token) -> String {
         Token::Array(val) => format!("[{}]", val.iter().map(pformat_abi_token).collect::<Vec<_>>().join(", ")),
         Token::Bytes(val) => val.encode_hex::<String>(),
         Token::FixedBytes(val) => hex::encode(&val),
+        Token::Tuple(_) => "tuple(...)".into(),
         ref t => format!("{:?}", t),
     }
 }
