@@ -28,12 +28,13 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         _ => unreachable!("required in cli.yml; qed"),
     };
     if matches.is_present("libraries") {
+        eprintln!("For now, library addresses should be filled by hand.");
         return Err(Error::Runtime("--libraries unimplemented"));
     }
     let mut bytecode: Vec<u8> = match matches.value_of("code") {
         Some(fname) if Path::new(fname).exists() => {
             let bytecode_hex = fs::read_to_string(fname)?;
-            Vec::from_hex(bytecode_hex)?
+            hex::decode(bytecode_hex.chars().filter(|c| !c.is_ascii_whitespace()).collect::<String>())?
         }
         Some(bytecode_hex) => {
             Vec::from_hex(bytecode_hex).map_err(|_| Error::Runtime("can not determine bytecode format"))?
