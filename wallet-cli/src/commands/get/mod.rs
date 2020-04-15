@@ -190,6 +190,14 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
     if payload.get_freeNetLimit() == 0 {
         Err(Error::Runtime("account not found on chain"))
     } else {
+        eprintln!(
+            "! Energy By Freezing    1_TRX = {:.5}",
+            payload.TotalEnergyLimit as f64 / payload.TotalEnergyWeight as f64
+        );
+        eprintln!(
+            "! Bandwidth By Freezing 1_TRX = {:.5}",
+            payload.TotalNetLimit as f64 / payload.TotalNetWeight as f64
+        );
         Ok(())
     }
 }
@@ -294,11 +302,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("reward", Some(arg_matches)) => {
             let addr = arg_matches.value_of("ADDR").expect("required in cli.yml; qed");
             get_reward_info(&addr)
-        },
+        }
         ("brokerage", Some(arg_matches)) => {
             let addr = arg_matches.value_of("ADDR").expect("required in cli.yml; qed");
             get_brokerage_info(&addr)
-        },
+        }
         _ => {
             eprintln!("{}", matches.usage());
             Err(Error::Runtime("error parsing command line"))
