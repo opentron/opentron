@@ -4,8 +4,7 @@
 
 ```console
 > # compile contract
-> solc -o . --bin Contract.sol
-> solc -o . --abi Contract.sol
+> solc -o . --abi --bin Contract.sol
 
 > # create contract
 > ./target/debug/wallet-cli contract create TGQgfK497YXmjdgvun9Bg5Zu3xE15v17cu \
