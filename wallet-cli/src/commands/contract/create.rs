@@ -15,32 +15,14 @@ use crate::utils::abi;
 use crate::utils::trx;
 
 pub fn main(matches: &ArgMatches) -> Result<(), Error> {
-    let owner_address: Address = matches.value_of("OWNER").expect("required in cli.yml; qed").parse()?;
-    let abi = match matches.value_of("abi") {
-        Some(fname) if Path::new(fname).exists() => {
-            let raw_json = fs::read_to_string(Path::new(fname))?;
-            json_to_abi(&serde_json::from_str(&raw_json)?)
-        }
-        Some(raw_json) if raw_json.trim_start().starts_with("[") => json_to_abi(&serde_json::from_str(&raw_json)?),
-        Some(_) => {
-            return Err(Error::Runtime("can not determine ABI format"));
-        }
-        _ => unreachable!("required in cli.yml; qed"),
-    };
     if matches.is_present("libraries") {
         eprintln!("For now, library addresses should be filled by hand.");
         return Err(Error::Runtime("--libraries unimplemented"));
     }
-    let mut bytecode: Vec<u8> = match matches.value_of("code") {
-        Some(fname) if Path::new(fname).exists() => {
-            let bytecode_hex = fs::read_to_string(fname)?;
-            hex::decode(bytecode_hex.chars().filter(|c| !c.is_ascii_whitespace()).collect::<String>())?
-        }
-        Some(bytecode_hex) => {
-            Vec::from_hex(bytecode_hex).map_err(|_| Error::Runtime("can not determine bytecode format"))?
-        }
-        _ => unreachable!("required in cli.yml; qed"),
-    };
+
+    let owner_address: Address = matches.value_of("OWNER").expect("required in cli.yml; qed").parse()?;
+    let abi = load_abi_from_param(matches.value_of("abi").expect("has default in cli.yml; qed"))?;
+    let mut bytecode: Vec<u8> = load_code_from_param(matches.value_of("code").expect("required in cli.yml; qed"))?;
 
     let types = abi
         .get_entrys()
@@ -111,6 +93,44 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         );
         Ok(())
     })
+}
+
+fn load_abi_from_param(param: &str) -> Result<Abi, Error> {
+    match param {
+        fname if Path::new(fname).exists() => {
+            let raw_json = fs::read_to_string(Path::new(fname))?;
+            Ok(json_to_abi(&serde_json::from_str(&raw_json)?))
+        }
+        fname if fname.starts_with('@') => {
+            let raw_json = fs::read_to_string(Path::new(&fname[1..]))?;
+            Ok(json_to_abi(&serde_json::from_str(&raw_json)?))
+        }
+        raw_json if raw_json.trim_start().starts_with("[") => Ok(json_to_abi(&serde_json::from_str(&raw_json)?)),
+        _ => Err(Error::Runtime("can not determine ABI format")),
+    }
+}
+
+fn load_code_from_param(param: &str) -> Result<Vec<u8>, Error> {
+    let maybe_fname = if Path::new(param).exists() {
+        Some(param)
+    } else if param.starts_with('@') {
+        Some(&param[1..])
+    } else {
+        None
+    };
+    match maybe_fname {
+        Some(fname) => {
+            let code_hex = fs::read_to_string(fname)?;
+            hex::decode(
+                code_hex
+                    .chars()
+                    .filter(|c| !c.is_ascii_whitespace())
+                    .collect::<String>(),
+            )
+            .map_err(|_| Error::Runtime("can not parse code file as hex"))
+        }
+        None => hex::decode(param).map_err(|_| Error::Runtime("can not determine code format")),
+    }
 }
 
 #[inline]
