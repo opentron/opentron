@@ -1567,7 +1567,7 @@ subcommands:
                     possible_values: ["0", "2", "1"]
 
     - sign:
-          about: Sign a transaction, optionally broadcase. Or sign a message.
+          about: Sign a transaction, optionally broadcast
           args:
               - TRANSACTION:
                     help: |
