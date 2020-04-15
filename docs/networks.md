@@ -10,6 +10,8 @@
 
 TronGrid API / Full Node API / Event API: <https://api.trongrid.io>
 
+Full Node API: <http://api.tronstack.io>
+
 Tronscan API: <https://apilist.tronscan.org>
 
 gRPC
@@ -101,6 +103,8 @@ Home page: <http://testnet.tronex.io/>
 🔍Explorer: <http://3.14.14.175:9000/>
 
 🩺Status: <http://testnet.tronex.io/status/getStatusPage>
+
+Full Node API: <https://testhttpapi.tronex.io>
 
 Event API: <https://testapi.tronex.io>
 
