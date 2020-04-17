@@ -188,18 +188,18 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
 
     println!("{}", serde_json::to_string_pretty(&payload)?);
     if payload.get_freeNetLimit() == 0 {
-        Err(Error::Runtime("account not found on chain"))
-    } else {
-        eprintln!(
-            "! Energy By Freezing    1_TRX = {:.5}",
-            payload.TotalEnergyLimit as f64 / payload.TotalEnergyWeight as f64
-        );
-        eprintln!(
-            "! Bandwidth By Freezing 1_TRX = {:.5}",
-            payload.TotalNetLimit as f64 / payload.TotalNetWeight as f64
-        );
-        Ok(())
+        return Err(Error::Runtime("account not found on chain"));
     }
+    eprintln!("! Free Bandwith: {}/{}", payload.freeNetUsed, payload.freeNetLimit);
+    eprintln!(
+        "! Energy By Freezing    1_TRX = {:.5}",
+        payload.TotalEnergyLimit as f64 / payload.TotalEnergyWeight as f64
+    );
+    eprintln!(
+        "! Bandwidth By Freezing 1_TRX = {:.5}",
+        payload.TotalNetLimit as f64 / payload.TotalNetWeight as f64
+    );
+    Ok(())
 }
 
 fn get_proposal_by_id(id: &str) -> Result<(), Error> {
