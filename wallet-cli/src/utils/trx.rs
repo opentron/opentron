@@ -156,6 +156,11 @@ pub fn parse_amount_with_surfix(amount: &str, surfix: &str, precision: u32) -> R
     }
 }
 
+#[inline]
+pub fn format_amount_with_surfix(amount: i64, surfix: &str, precision: u32) -> String {
+    format!("{} {}", amount as f64 / (10 as f64).powf(precision as f64), surfix)
+}
+
 pub struct TransactionHandler<'a, C> {
     contract: C,
     arg_matches: &'a ArgMatches<'a>,

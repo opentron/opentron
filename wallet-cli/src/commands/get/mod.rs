@@ -1,3 +1,4 @@
+use chrono::{Local, TimeZone};
 use clap::ArgMatches;
 use hex::FromHex;
 use keys::Address;
@@ -10,6 +11,7 @@ use std::collections::HashSet;
 use crate::error::Error;
 use crate::utils::client;
 use crate::utils::jsont;
+use crate::utils::trx;
 
 mod contract;
 mod transaction;
@@ -148,7 +150,28 @@ fn get_account(name: &str) -> Result<(), Error> {
     jsont::fix_account(&mut account);
 
     println!("{}", serde_json::to_string_pretty(&account)?);
+
+    eprintln!(
+        "! Type = {:?}{}",
+        payload.field_type,
+        if payload.is_witness { " | Witness" } else { "" }
+    );
     eprintln!("! Address(Base58Check) = {:}", addr);
+    eprintln!("! Created At: {}", Local.timestamp(payload.create_time / 1_000, 0));
+
+    if payload.balance != 0 {
+        eprintln!(
+            "! Balance = {}",
+            trx::format_amount_with_surfix(payload.balance, "TRX", 6)
+        );
+    }
+    if payload.allowance != 0 {
+        eprintln!(
+            "! Unwithdrawn SR Reward = {}",
+            trx::format_amount_with_surfix(payload.allowance, "TRX", 6)
+        );
+    }
+
     Ok(())
 }
 
