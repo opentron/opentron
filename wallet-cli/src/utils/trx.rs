@@ -35,7 +35,7 @@ use crate::utils::jsont;
 use crate::CHAIN_ID;
 
 // To calculate bandwidth
-const MAX_RESULT_SIZE_IN_TX: usize = 64;
+pub const MAX_RESULT_SIZE_IN_TX: usize = 64;
 
 pub fn timestamp_millis() -> i64 {
     Utc::now().timestamp_millis()

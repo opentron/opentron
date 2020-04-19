@@ -4,6 +4,7 @@ use keys::Address;
 use proto::api::BytesMessage;
 use proto::api_grpc::Wallet;
 use proto::core::{Transaction_Contract_ContractType as ContractType, Transaction_Result_code as ResultCode};
+use protobuf::Message;
 
 use crate::error::Error;
 use crate::utils::abi;
@@ -15,7 +16,7 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.value = Vec::from_hex(id)?;
 
-    let (_, payload, _) = client::GRPC_CLIENT
+    let (_, mut payload, _) = client::GRPC_CLIENT
         .get_transaction_by_id(Default::default(), req)
         .wait()?;
 
@@ -44,8 +45,8 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
     let sender = trx::extract_owner_address_from_parameter(payload.get_raw_data().get_contract()[0].get_parameter())?;
     eprintln!("! Sender Address(base58check):   {}", sender);
 
-    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract &&
-        payload.get_ret()[0].get_ret() == ResultCode::SUCESS
+    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract
+        && payload.get_ret()[0].get_ret() == ResultCode::SUCESS
     {
         let contract_address = transaction["raw_data"]["contract"][0]["parameter"]["value"]["contract_address"]
             .as_str()
@@ -57,6 +58,14 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
         eprintln!("! Contract Address(base58check): {}", contract_address);
         pprint_contract_call_data(&contract_address, data)?;
     }
+
+    // NOTE: when calculate bandwidth, `Transaction.ret` must be excluded.
+    payload.clear_ret();
+    eprintln!(
+        "! Bandwidth: {}",
+        payload.compute_size() as usize + trx::MAX_RESULT_SIZE_IN_TX
+    );
+
     Ok(())
 }
 
