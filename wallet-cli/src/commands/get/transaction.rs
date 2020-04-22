@@ -59,7 +59,7 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
         pprint_contract_call_data(&contract_address, data)?;
     }
 
-    // NOTE: when calculate bandwidth, `Transaction.ret` must be excluded.
+    // NOTE: when calculating bandwidth, `Transaction.ret` must be excluded.
     payload.clear_ret();
     eprintln!(
         "! Bandwidth: {}",
