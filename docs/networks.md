@@ -8,7 +8,12 @@
 - <https://tronscan.io/>
 - <https://www.trxplorer.io/>
 
-TronGrid API / Full Node API / Event API: <https://api.trongrid.io>
+TronGrid API / Full Node API / Event API:
+
+- <https://api.trongrid.io> (load balanced of following)
+- <https://api.oregon.trongrid.io>
+- <https://api.singapore.trongrid.io>
+- <https://api.frankfurt.trongrid.io>
 
 Full Node API: <http://api.tronstack.io>
 
