@@ -10,6 +10,7 @@ pub mod chain {
             let raw_header = &self.block_header.as_ref().unwrap().raw_data.as_ref().unwrap();
             f.debug_struct("Block")
                 .field("number", &raw_header.number)
+                .field("timestamp", &raw_header.timestamp)
                 .field("txns", &self.transactions.len())
                 .finish()
         }
