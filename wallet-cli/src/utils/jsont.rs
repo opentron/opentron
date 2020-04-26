@@ -519,6 +519,35 @@ pub fn fix_transaction_info(info: &mut serde_json::Value) {
         .last();
 }
 
+// pb: Block / BlockExtention
+pub fn fix_block(block: &mut serde_json::Value) -> Result<(), Error> {
+    if block["blockid"].is_array() {
+        block["blockid"] = json!(bytes_to_hex_string(&block["blockid"]));
+    }
+
+    for key in &["parentHash", "txTrieRoot", "witness_address"] {
+        block["block_header"]["raw_data"][key] = json!(bytes_to_hex_string(&block["block_header"]["raw_data"][key]));
+    }
+    block["block_header"]["witness_signature"] =
+        json!(bytes_to_hex_string(&block["block_header"]["witness_signature"]));
+
+    block["transactions"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .map(|mut transaction| {
+            // NOTE: structual difference of get_block requests
+            if transaction["txid"].is_array() {
+                transaction["txid"] = json!(bytes_to_hex_string(&transaction["txid"]));
+                transaction = &mut transaction["transaction"];
+            }
+            fix_transaction(transaction)?;
+            Ok(())
+        })
+        .collect::<Result<Vec<_>, Error>>()
+        .map(|_| ())
+}
+
 // revert for serializing to pb
 pub fn revert_permission_info(permission: &mut serde_json::Value) {
     if !permission["owner"].is_null() {

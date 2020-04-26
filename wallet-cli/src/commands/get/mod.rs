@@ -101,34 +101,30 @@ fn get_block(matches: &ArgMatches) -> Result<(), Error> {
         return Err(Error::Runtime("block not found on chain"));
     }
 
-    // get_block_by_id won't return blockid
-    if block["blockid"].is_array() {
-        block["blockid"] = json!(jsont::bytes_to_hex_string(&block["blockid"]));
-    }
-
-    for key in &["parentHash", "txTrieRoot", "witness_address"] {
-        block["block_header"]["raw_data"][key] =
-            json!(jsont::bytes_to_hex_string(&block["block_header"]["raw_data"][key]));
-    }
-    block["block_header"]["witness_signature"] =
-        json!(jsont::bytes_to_hex_string(&block["block_header"]["witness_signature"]));
-
-    block["transactions"]
-        .as_array_mut()
-        .unwrap()
-        .iter_mut()
-        .map(|mut transaction| {
-            // NOTE: structual difference of get_block requests
-            if transaction["txid"].is_array() {
-                transaction["txid"] = json!(jsont::bytes_to_hex_string(&transaction["txid"]));
-                transaction = &mut transaction["transaction"];
-            }
-            jsont::fix_transaction(transaction)?;
-            Ok(())
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
+    jsont::fix_block(&mut block)?;
 
     println!("{:}", serde_json::to_string_pretty(&block)?);
+    eprintln!("! Block Number: {}", block["block_header"]["raw_data"]["number"]);
+    eprintln!(
+        "! Number of Transactions: {}",
+        block["transactions"].as_array().unwrap().len()
+    );
+    eprintln!(
+        "! Generated At: {}",
+        Local.timestamp(
+            block["block_header"]["raw_data"]["timestamp"].as_i64().unwrap() / 1_000,
+            0
+        )
+    );
+    eprintln!(
+        "! Witness: {}",
+        block["block_header"]["raw_data"]["witness_address"]
+            .as_str()
+            .unwrap()
+            .parse::<Address>()
+            .unwrap()
+    );
+
     Ok(())
 }
 
