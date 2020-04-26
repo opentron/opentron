@@ -116,14 +116,13 @@ fn get_block(matches: &ArgMatches) -> Result<(), Error> {
             0
         )
     );
-    eprintln!(
-        "! Witness: {}",
-        block["block_header"]["raw_data"]["witness_address"]
-            .as_str()
-            .unwrap()
-            .parse::<Address>()
-            .unwrap()
-    );
+    let _ = block["block_header"]["raw_data"]["witness_address"]
+        .as_str()
+        .unwrap()
+        .parse::<Address>()
+        .map(|addr| {
+            eprintln!("! Witness: {}", addr);
+        });
 
     Ok(())
 }
