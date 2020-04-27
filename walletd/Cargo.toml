@@ -7,7 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tonic = "0.1"
+tonic = "0.2"
 bytes = "0.5"
 prost = "0.6"
 daemonize = "0.4"
@@ -20,4 +20,4 @@ wallet = { path = "../wallet" }
 ztron_primitives = { path = "../ztron_primitives" }
 
 [build-dependencies]
-tonic-build = "0.1"
+tonic-build = "0.2"

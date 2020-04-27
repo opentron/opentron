@@ -2,10 +2,10 @@
 
 use chrono::Utc;
 use clap::ArgMatches;
+use futures::executor;
 use hex::{FromHex, ToHex};
 use keys::{Address, Private};
 use proto::api::{BytesMessage, NumberMessage};
-use proto::api_grpc::Wallet;
 use proto::core::SmartContract_ABI_Entry as AbiEntry;
 use proto::core::{
     AccountCreateContract, AccountPermissionUpdateContract, AccountUpdateContract, AssetIssueContract,
@@ -226,13 +226,19 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             Some(num) => {
                 let mut req = NumberMessage::new();
                 req.set_num(num.parse()?);
-                let (_, block, _) = client::GRPC_CLIENT.get_block_by_num2(Default::default(), req).wait()?;
+                let block = executor::block_on(
+                    client::GRPC_CLIENT
+                        .get_block_by_num2(Default::default(), req)
+                        .drop_metadata(),
+                )?;
                 block
             }
             None => {
-                let (_, block, _) = client::GRPC_CLIENT
-                    .get_now_block2(Default::default(), Default::default())
-                    .wait()?;
+                let block = executor::block_on(
+                    client::GRPC_CLIENT
+                        .get_now_block2(Default::default(), Default::default())
+                        .drop_metadata(),
+                )?;
                 block
             }
         };
@@ -299,9 +305,11 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
         } else {
             eprintln!("! Bandwidth: {}", req.compute_size() as usize + MAX_RESULT_SIZE_IN_TX);
 
-            let (_, payload, _) = client::GRPC_CLIENT
-                .broadcast_transaction(Default::default(), req)
-                .wait()?;
+            let payload = executor::block_on(
+                client::GRPC_CLIENT
+                    .broadcast_transaction(Default::default(), req)
+                    .drop_metadata(),
+            )?;
             let mut result = serde_json::to_value(&payload)?;
             jsont::fix_api_return(&mut result);
             eprintln!("got => {:}", serde_json::to_string_pretty(&result)?);
@@ -332,9 +340,11 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
             thread::sleep(Duration::from_secs(4));
             let mut req = BytesMessage::new();
             req.set_value(txid[..].to_owned());
-            let (_, trx_info, _) = client::GRPC_CLIENT
-                .get_transaction_info_by_id(Default::default(), req)
-                .wait()?;
+            let trx_info = executor::block_on(
+                client::GRPC_CLIENT
+                    .get_transaction_info_by_id(Default::default(), req)
+                    .drop_metadata(),
+            )?;
             let mut json = serde_json::to_value(&trx_info)?;
             jsont::fix_transaction_info(&mut json);
 
@@ -350,7 +360,11 @@ impl<'a, C: ContractPbExt> TransactionHandler<'a, C> {
 pub fn get_contract_abi(address: &Address) -> Result<Vec<AbiEntry>, Error> {
     let mut req = BytesMessage::new();
     req.set_value(address.as_bytes().to_owned());
-    let (_, mut payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
+    let mut payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_contract(Default::default(), req)
+            .drop_metadata(),
+    )?;
     Ok(payload.mut_abi().take_entrys().into())
 }
 

@@ -1,8 +1,8 @@
 use chrono::{Local, TimeZone};
+use futures::executor;
 use hex::FromHex;
 use keys::Address;
 use proto::api::BytesMessage;
-use proto::api_grpc::Wallet;
 use proto::core::{
     Transaction_Contract_ContractType as ContractType, Transaction_Result_code as ResultCode,
     Transaction_Result_contractResult as ContractResult,
@@ -19,9 +19,11 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.value = Vec::from_hex(id)?;
 
-    let (_, mut payload, _) = client::GRPC_CLIENT
-        .get_transaction_by_id(Default::default(), req)
-        .wait()?;
+    let mut payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_transaction_by_id(Default::default(), req)
+            .drop_metadata(),
+    )?;
 
     let mut transaction = serde_json::to_value(&payload)?;
     if transaction["raw_data"].is_null() {
@@ -48,8 +50,8 @@ pub fn get_transaction(id: &str) -> Result<(), Error> {
     let sender = trx::extract_owner_address_from_parameter(payload.get_raw_data().get_contract()[0].get_parameter())?;
     eprintln!("! Sender Address(base58check):   {}", sender);
 
-    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract
-        && payload.get_ret()[0].get_ret() == ResultCode::SUCESS
+    if payload.get_raw_data().get_contract()[0].get_field_type() == ContractType::TriggerSmartContract &&
+        payload.get_ret()[0].get_ret() == ResultCode::SUCESS
     {
         let contract_address = transaction["raw_data"]["contract"][0]["parameter"]["value"]["contract_address"]
             .as_str()
@@ -76,9 +78,11 @@ pub fn get_transaction_info(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.value = Vec::from_hex(id)?;
 
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_transaction_info_by_id(Default::default(), req)
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_transaction_info_by_id(Default::default(), req)
+            .drop_metadata(),
+    )?;
 
     if payload.get_id().is_empty() {
         return Err(Error::Runtime("transaction not found"));

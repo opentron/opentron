@@ -1,6 +1,6 @@
 use clap::ArgMatches;
+use futures::executor;
 use proto::api::EmptyMessage;
-use proto::api_grpc::Wallet;
 use serde_json::json;
 
 use crate::error::Error;
@@ -9,7 +9,7 @@ use crate::utils::jsont;
 
 fn list_nodes() -> Result<(), Error> {
     let req = EmptyMessage::new();
-    let (_, payload, _) = client::GRPC_CLIENT.list_nodes(Default::default(), req).wait()?;
+    let payload = executor::block_on(client::GRPC_CLIENT.list_nodes(Default::default(), req).drop_metadata())?;
 
     let mut nodes = serde_json::to_value(&payload)?;
     nodes["nodes"]
@@ -26,7 +26,11 @@ fn list_nodes() -> Result<(), Error> {
 
 fn list_witnesses() -> Result<(), Error> {
     let req = EmptyMessage::new();
-    let (_, payload, _) = client::GRPC_CLIENT.list_witnesses(Default::default(), req).wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .list_witnesses(Default::default(), req)
+            .drop_metadata(),
+    )?;
     let mut witnesses = serde_json::to_value(&payload)?;
     witnesses["witnesses"]
         .as_array_mut()
@@ -42,7 +46,11 @@ fn list_witnesses() -> Result<(), Error> {
 
 fn list_assets() -> Result<(), Error> {
     let req = EmptyMessage::new();
-    let (_, payload, _) = client::GRPC_CLIENT.get_asset_issue_list(Default::default(), req).wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_asset_issue_list(Default::default(), req)
+            .drop_metadata(),
+    )?;
     let mut assets = serde_json::to_value(&payload)?;
 
     assets["assetIssue"]
@@ -57,9 +65,11 @@ fn list_assets() -> Result<(), Error> {
 }
 
 pub fn list_proposals() -> Result<(), Error> {
-    let (_, payload, _) = client::GRPC_CLIENT
-        .list_proposals(Default::default(), EmptyMessage::new())
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .list_proposals(Default::default(), EmptyMessage::new())
+            .drop_metadata(),
+    )?;
     let mut proposals = serde_json::to_value(&payload)?;
 
     proposals["proposals"]
@@ -83,18 +93,22 @@ pub fn list_proposals() -> Result<(), Error> {
 }
 
 pub fn list_parameters() -> Result<(), Error> {
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_chain_parameters(Default::default(), EmptyMessage::new())
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_chain_parameters(Default::default(), EmptyMessage::new())
+            .drop_metadata(),
+    )?;
     let parameters = serde_json::to_value(&payload)?;
     println!("{}", serde_json::to_string_pretty(&parameters["chainParameter"])?);
     Ok(())
 }
 
 pub fn list_exchanges() -> Result<(), Error> {
-    let (_, payload, _) = client::GRPC_CLIENT
-        .list_exchanges(Default::default(), EmptyMessage::new())
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .list_exchanges(Default::default(), EmptyMessage::new())
+            .drop_metadata(),
+    )?;
     let mut exchanges = serde_json::to_value(&payload)?;
     exchanges["exchanges"]
         .as_array_mut()

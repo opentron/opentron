@@ -1,39 +1,38 @@
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/lib.rs");
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: "src",
-        includes: &["protocol", "include"],
-        input: &[
+
+    protoc_rust::Codegen::new()
+        .out_dir("src")
+        .includes(&["protocol", "include"])
+        .inputs(&[
             "protocol/core/Tron.proto",
             "protocol/core/Contract.proto",
             "protocol/core/Discover.proto",
-        ],
-        #[cfg(feature = "with-serde")]
-        customize: protoc_rust::Customize {
+        ])
+        .customize(protoc_rust::Customize {
             serde_derive: Some(true),
             ..Default::default()
-        },
-    })
-    .expect("protoc-rust");
+        })
+        .run()
+        .expect("protoc-rust");
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: "src",
-        includes: &["protocol", "include"],
-        input: &["protocol/api/api.proto"],
-        #[cfg(feature = "with-serde")]
-        customize: protoc_rust::Customize {
+    protoc_rust::Codegen::new()
+        .out_dir("src")
+        .includes(&["protocol", "include"])
+        .input("protocol/api/api.proto")
+        .customize(protoc_rust::Customize {
             serde_derive: Some(true),
             ..Default::default()
-        },
-    })
-    .expect("protoc-rust");
+        })
+        .run()
+        .expect("protoc-rust");
 
-    protoc_rust_grpc::run(protoc_rust_grpc::Args {
-        out_dir: "src",
-        includes: &["protocol", "include"],
-        input: &["protocol/api/api.proto"],
-        rust_protobuf: false,
-    })
-    .expect("protoc-rust-grpc");
+    protoc_rust_grpc::Codegen::new()
+        .out_dir("src")
+        .includes(&["protocol", "include"])
+        .input("protocol/api/api.proto")
+        .rust_protobuf(false)
+        .run()
+        .expect("protoc-rust-grpc");
 }

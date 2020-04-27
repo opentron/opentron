@@ -446,6 +446,7 @@ pub fn fix_asset_issue_contract(asset: &mut serde_json::Value) {
 }
 
 // pb: IncrementalMerkleVoucherInfo
+#[allow(dead_code)]
 pub fn fix_voucher_info(voucher_info: &mut serde_json::Value) {
     voucher_info["paths"]
         .as_array_mut()

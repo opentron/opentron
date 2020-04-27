@@ -1,9 +1,9 @@
 //! Sign a transaction, for multisig or save for broadcast later
 
 use clap::ArgMatches;
+use futures::executor;
 use hex::{FromHex, ToHex};
 use keys::{Address, Private, Public};
-use proto::api_grpc::Wallet;
 use proto::core::{Transaction, Transaction_raw as TransactionRaw};
 use protobuf::Message;
 use serde_json::json;
@@ -184,9 +184,11 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
                 .into(),
         );
 
-        let (_, payload, _) = client::GRPC_CLIENT
-            .broadcast_transaction(Default::default(), req)
-            .wait()?;
+        let payload = executor::block_on(
+            client::GRPC_CLIENT
+                .broadcast_transaction(Default::default(), req)
+                .drop_metadata(),
+        )?;
         let mut result = serde_json::to_value(&payload)?;
         jsont::fix_api_return(&mut result);
         eprintln!("got => {:}", serde_json::to_string_pretty(&result)?);

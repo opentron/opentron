@@ -1,6 +1,6 @@
+use futures::executor;
 use keys::Address;
 use proto::api::BytesMessage;
-use proto::api_grpc::Wallet;
 use protobuf::ProtobufEnum;
 use serde_json::json;
 
@@ -15,7 +15,11 @@ pub fn run(addr: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value(address.as_bytes().to_owned());
 
-    let (_, mut payload, _) = client::GRPC_CLIENT.get_contract(Default::default(), req).wait()?;
+    let mut payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_contract(Default::default(), req)
+            .drop_metadata(),
+    )?;
     if payload.get_contract_address().is_empty() {
         return Err(Error::Runtime("contract not found on chain"));
     }

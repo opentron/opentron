@@ -1,12 +1,10 @@
 use clap::ArgMatches;
+use futures::executor;
 use hex::ToHex;
 use keys::KeyPair;
 use proto::api::EmptyMessage;
-use proto::api_grpc::Wallet;
 use serde_json::json;
-use ztron_primitives::prelude::{
-    generate_zkey_pair,
-};
+use ztron_primitives::prelude::generate_zkey_pair;
 
 use crate::error::Error;
 use crate::utils::client;
@@ -28,9 +26,11 @@ pub fn create_zkey(matches: &ArgMatches) -> Result<(), Error> {
         return create_zkey_offline();
     }
 
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_new_shielded_address(Default::default(), EmptyMessage::new())
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_new_shielded_address(Default::default(), EmptyMessage::new())
+            .drop_metadata(),
+    )?;
     let mut addr_info = serde_json::to_value(&payload)?;
 
     // sk: spending key => ask, nsk, ovk

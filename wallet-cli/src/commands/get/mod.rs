@@ -1,9 +1,9 @@
 use chrono::{Local, TimeZone};
 use clap::ArgMatches;
+use futures::executor;
 use hex::FromHex;
 use keys::Address;
 use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
-use proto::api_grpc::Wallet;
 use proto::core::Account;
 use serde_json::json;
 use std::collections::HashSet;
@@ -17,9 +17,11 @@ mod contract;
 mod transaction;
 
 fn node_info() -> Result<(), Error> {
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_node_info(Default::default(), EmptyMessage::new())
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_node_info(Default::default(), EmptyMessage::new())
+            .drop_metadata(),
+    )?;
     println!("{}", serde_json::to_string_pretty(&payload)?);
     Ok(())
 }
@@ -33,10 +35,11 @@ fn visit_node(ip: &str, edges: &mut HashSet<(String, String)>) -> Result<(), Err
 
         eprintln!("({})visiting ... {}", edges.len(), self_ip);
         if let Ok(grpc_client) = client::new_grpc_client(&format!("{}:50051", self_ip)) {
-            if let Ok((_, node_info, _)) = grpc_client
-                .get_node_info(Default::default(), EmptyMessage::new())
-                .wait()
-            {
+            if let Ok(node_info) = executor::block_on(
+                grpc_client
+                    .get_node_info(Default::default(), EmptyMessage::new())
+                    .drop_metadata(),
+            ) {
                 eprintln!(
                     "p2p version: {}, node version: {}",
                     node_info.get_configNodeInfo().get_p2pVersion(),
@@ -60,9 +63,11 @@ fn visit_node(ip: &str, edges: &mut HashSet<(String, String)>) -> Result<(), Err
 
 fn get_node_graph() -> Result<(), Error> {
     let mut edges: HashSet<(String, String)> = HashSet::new();
-    let (_, node_info, _) = client::GRPC_CLIENT
-        .get_node_info(Default::default(), EmptyMessage::new())
-        .wait()?;
+    let node_info = executor::block_on(
+        client::GRPC_CLIENT
+            .get_node_info(Default::default(), EmptyMessage::new())
+            .drop_metadata(),
+    )?;
 
     for peer in node_info.get_peerInfoList() {
         let ip = peer.get_host();
@@ -81,19 +86,29 @@ fn get_block(matches: &ArgMatches) -> Result<(), Error> {
         Some(id) if id.starts_with("0000") => {
             let mut req = BytesMessage::new();
             req.value = Vec::from_hex(id)?;
-            let (_, payload, _) = client::GRPC_CLIENT.get_block_by_id(Default::default(), req).wait()?;
+            let payload = executor::block_on(
+                client::GRPC_CLIENT
+                    .get_block_by_id(Default::default(), req)
+                    .drop_metadata(),
+            )?;
             serde_json::to_value(&payload)?
         }
         Some(num) => {
             let mut req = NumberMessage::new();
             req.num = num.parse()?;
-            let (_, payload, _) = client::GRPC_CLIENT.get_block_by_num2(Default::default(), req).wait()?;
+            let payload = executor::block_on(
+                client::GRPC_CLIENT
+                    .get_block_by_num2(Default::default(), req)
+                    .drop_metadata(),
+            )?;
             serde_json::to_value(&payload)?
         }
         None => {
-            let (_, payload, _) = client::GRPC_CLIENT
-                .get_now_block(Default::default(), EmptyMessage::new())
-                .wait()?;
+            let payload = executor::block_on(
+                client::GRPC_CLIENT
+                    .get_now_block(Default::default(), EmptyMessage::new())
+                    .drop_metadata(),
+            )?;
             serde_json::to_value(&payload)?
         }
     };
@@ -135,7 +150,7 @@ fn get_account(name: &str) -> Result<(), Error> {
     // FIXME: account name not supported
     // req.set_account_name(name.as_bytes().to_owned());
 
-    let (_, payload, _) = client::GRPC_CLIENT.get_account(Default::default(), req).wait()?;
+    let payload = executor::block_on(client::GRPC_CLIENT.get_account(Default::default(), req).drop_metadata())?;
     if payload.get_address().is_empty() {
         println!("{}", serde_json::to_string_pretty(&payload)?);
         return Err(Error::Runtime("account not found on chain"));
@@ -176,7 +191,7 @@ fn get_account_permission(name: &str) -> Result<(), Error> {
     let addr = name.parse::<Address>()?;
     req.set_address(addr.as_bytes().to_owned());
 
-    let (_, payload, _) = client::GRPC_CLIENT.get_account(Default::default(), req).wait()?;
+    let payload = executor::block_on(client::GRPC_CLIENT.get_account(Default::default(), req).drop_metadata())?;
     if payload.get_address().is_empty() {
         println!("{}", serde_json::to_string_pretty(&payload)?);
         return Err(Error::Runtime("account not found on chain"));
@@ -200,15 +215,20 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
     let addr = name.parse::<Address>()?;
     req.set_address(addr.as_bytes().to_owned());
 
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_account_resource(Default::default(), req)
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_account_resource(Default::default(), req)
+            .drop_metadata(),
+    )?;
 
     println!("{}", serde_json::to_string_pretty(&payload)?);
     if payload.get_freeNetLimit() == 0 {
         return Err(Error::Runtime("account not found on chain"));
     }
-    eprintln!("! Free Bandwith Usage: {}/{}", payload.freeNetUsed, payload.freeNetLimit);
+    eprintln!(
+        "! Free Bandwith Usage: {}/{}",
+        payload.freeNetUsed, payload.freeNetLimit
+    );
     eprintln!(
         "! Energy By Freezing    1_TRX = {:.5}",
         payload.TotalEnergyLimit as f64 / payload.TotalEnergyWeight as f64
@@ -225,7 +245,11 @@ fn get_proposal_by_id(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value((id.parse::<i64>()?.to_be_bytes()[..]).to_owned());
 
-    let (_, payload, _) = client::GRPC_CLIENT.get_proposal_by_id(Default::default(), req).wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_proposal_by_id(Default::default(), req)
+            .drop_metadata(),
+    )?;
     if payload.get_proposal_id() == 0 {
         return Err(Error::Runtime("proposal not found on chain"));
     }
@@ -247,9 +271,11 @@ fn get_asset_by_id(id: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value(id.as_bytes().to_owned());
 
-    let (_, payload, _) = client::GRPC_CLIENT
-        .get_asset_issue_by_id(Default::default(), req)
-        .wait()?;
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_asset_issue_by_id(Default::default(), req)
+            .drop_metadata(),
+    )?;
     if payload.get_id().is_empty() {
         return Err(Error::Runtime("asset not found"));
     }
@@ -264,8 +290,12 @@ fn get_reward_info(addr: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value(addr.as_bytes().to_owned());
 
-    let (_, val, _) = client::GRPC_CLIENT.get_reward_info(Default::default(), req).wait()?;
-    println!("value = {}", val.get_num());
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_reward_info(Default::default(), req)
+            .drop_metadata(),
+    )?;
+    println!("value = {}", payload.get_num());
     Ok(())
 }
 
@@ -274,9 +304,13 @@ fn get_brokerage_info(addr: &str) -> Result<(), Error> {
     let mut req = BytesMessage::new();
     req.set_value(addr.as_bytes().to_owned());
 
-    let (_, val, _) = client::GRPC_CLIENT.get_brokerage_info(Default::default(), req).wait()?;
-    println!("sharing percent = {}%", 100 - val.get_num());
-    println!("kept percent    = {}%", val.get_num());
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_brokerage_info(Default::default(), req)
+            .drop_metadata(),
+    )?;
+    println!("sharing percent = {}%", 100 - payload.get_num());
+    println!("kept percent    = {}%", payload.get_num());
     Ok(())
 }
 

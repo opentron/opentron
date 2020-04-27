@@ -3,9 +3,9 @@
 use clap::ArgMatches;
 use hex::{FromHex, ToHex};
 use keys::Address;
-use proto::api_grpc::Wallet;
 use proto::core::TriggerSmartContract;
 use serde_json::json;
+use futures::executor;
 
 use crate::error::Error;
 use crate::utils::abi;
@@ -76,17 +76,19 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
 
     if matches.is_present("const") {
         // Note: view function can acquire `msg.sender`.
-        let (_, trx_ext, _) = client::GRPC_CLIENT
-            .trigger_constant_contract(Default::default(), trigger_contract)
-            .wait()?;
-        let mut json = serde_json::to_value(&trx_ext)?;
+        let payload = executor::block_on(
+            client::GRPC_CLIENT
+                .trigger_constant_contract(Default::default(), trigger_contract)
+                .drop_metadata(),
+        )?;
+        let mut json = serde_json::to_value(&payload)?;
         jsont::fix_transaction_ext(&mut json)?;
         let ret = json!({
             "result": json["result"],
             "constant_result": json["constant_result"],
         });
         println!("{:}", serde_json::to_string_pretty(&ret)?);
-        trx_ext
+        payload
             .get_constant_result()
             .first()
             .map(|result| handle_contract_result(&contract, method, result))
