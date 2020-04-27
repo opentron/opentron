@@ -208,7 +208,7 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
     if payload.get_freeNetLimit() == 0 {
         return Err(Error::Runtime("account not found on chain"));
     }
-    eprintln!("! Free Bandwith: {}/{}", payload.freeNetUsed, payload.freeNetLimit);
+    eprintln!("! Free Bandwith Usage: {}/{}", payload.freeNetUsed, payload.freeNetLimit);
     eprintln!(
         "! Energy By Freezing    1_TRX = {:.5}",
         payload.TotalEnergyLimit as f64 / payload.TotalEnergyWeight as f64
