@@ -34,5 +34,5 @@ mod test_vectors;
 use crate::jubjub::JubjubBls12;
 
 lazy_static! {
-    pub static ref JUBJUB: JubjubBls12 = { JubjubBls12::new() };
+    pub static ref JUBJUB: JubjubBls12 = JubjubBls12::new();
 }
