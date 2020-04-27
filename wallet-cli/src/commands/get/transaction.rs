@@ -101,9 +101,6 @@ pub fn get_transaction_info(id: &str) -> Result<(), Error> {
         );
     }
 
-    if payload.get_receipt().energy_usage_total > 0 {
-        eprintln!("! Total Energy: {}", payload.get_receipt().energy_usage_total);
-    }
     if payload.get_receipt().energy_usage > 0 {
         eprintln!("! Frozen Energy Used: {}", payload.get_receipt().energy_usage);
     }
@@ -118,6 +115,9 @@ pub fn get_transaction_info(id: &str) -> Result<(), Error> {
             "! Contract Owner's Energy Used: {}",
             payload.get_receipt().origin_energy_usage
         );
+    }
+    if payload.get_receipt().energy_usage_total > 0 {
+        eprintln!("! Total Energy: {}", payload.get_receipt().energy_usage_total);
     }
 
     if payload.fee > 0 {
