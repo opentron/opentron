@@ -9,6 +9,8 @@ use proto2::chain::{
 use proto2::contract::TransferContract;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 
 // use crate::merkle_tree::MerkleTree;
 
@@ -70,6 +72,11 @@ pub struct GenesisConfig {
 }
 
 impl GenesisConfig {
+    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let content = fs::read_to_string(path)?;
+        Ok(serde_json::from_str(&content)?)
+    }
+
     fn to_block_header(&self) -> BlockHeader {
         let raw_header = BlockHeaderRaw {
             number: 0,
@@ -120,7 +127,6 @@ fn parse_hex(encoded: &str) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     #[ignore]
