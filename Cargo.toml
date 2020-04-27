@@ -41,6 +41,5 @@ members = [
     "node-cli",
     "wallet-cli",
     "walletd",
-    "chain",
     # "ztron_proofs",
 ]
