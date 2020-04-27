@@ -3,7 +3,10 @@ use hex::FromHex;
 use keys::Address;
 use proto::api::BytesMessage;
 use proto::api_grpc::Wallet;
-use proto::core::{Transaction_Contract_ContractType as ContractType, Transaction_Result_code as ResultCode};
+use proto::core::{
+    Transaction_Contract_ContractType as ContractType, Transaction_Result_code as ResultCode,
+    Transaction_Result_contractResult as ContractResult,
+};
 use protobuf::Message;
 
 use crate::error::Error;
@@ -77,14 +80,51 @@ pub fn get_transaction_info(id: &str) -> Result<(), Error> {
         .get_transaction_info_by_id(Default::default(), req)
         .wait()?;
 
-    if !payload.get_id().is_empty() {
-        let mut json = serde_json::to_value(&payload)?;
-        jsont::fix_transaction_info(&mut json);
-        println!("{}", serde_json::to_string_pretty(&json)?);
-        Ok(())
-    } else {
-        Err(Error::Runtime("transaction not found"))
+    if payload.get_id().is_empty() {
+        return Err(Error::Runtime("transaction not found"));
     }
+    let mut json = serde_json::to_value(&payload)?;
+    jsont::fix_transaction_info(&mut json);
+
+    println!("{}", serde_json::to_string_pretty(&json)?);
+    if payload.get_receipt().net_usage > 0 {
+        eprintln!("! Free/Frozen Bandwidth Used: {}", payload.get_receipt().net_usage);
+    }
+    if payload.get_receipt().net_fee > 0 {
+        eprintln!(
+            "! Burnt for Bandwidth: {} TRX",
+            payload.get_receipt().net_fee as f64 / 1_000_000.0
+        );
+    }
+
+    if payload.get_receipt().energy_usage_total > 0 {
+        eprintln!("! Total Energy: {}", payload.get_receipt().energy_usage_total);
+    }
+    if payload.get_receipt().energy_usage > 0 {
+        eprintln!("! Frozen Energy Used: {}", payload.get_receipt().energy_usage);
+    }
+    if payload.get_receipt().energy_fee > 0 {
+        eprintln!(
+            "! Burnt for Energy: {} TRX",
+            payload.get_receipt().energy_fee as f64 / 1_000_000.0
+        );
+    }
+    if payload.get_receipt().origin_energy_usage > 0 {
+        eprintln!(
+            "! Contract Owner's Energy Used: {}",
+            payload.get_receipt().origin_energy_usage
+        );
+    }
+
+    if payload.fee > 0 {
+        eprintln!("! Total Fee: {} TRX", payload.fee as f64 / 1_000_000.0);
+    }
+
+    if [ContractResult::OUT_OF_TIME, ContractResult::JVM_STACK_OVER_FLOW].contains(&payload.get_receipt().result) {
+        eprintln!("!! All of Fee Limit Spent!");
+    }
+
+    Ok(())
 }
 
 fn pprint_contract_call_data(contract: &Address, data: &str) -> Result<(), Error> {
