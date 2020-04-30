@@ -6,9 +6,9 @@ pub mod api;
 #[allow(unused_variables)]
 pub mod api_grpc;
 
-pub mod Contract;
-pub mod Discover;
-pub mod Tron;
+mod Contract;
+mod Discover;
+mod Tron;
 
 pub mod core {
     pub use super::Contract::*;
