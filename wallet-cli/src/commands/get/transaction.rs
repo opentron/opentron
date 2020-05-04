@@ -8,6 +8,7 @@ use proto::core::{
     Transaction_Result_contractResult as ContractResult,
 };
 use protobuf::Message;
+use std::convert::TryFrom;
 
 use crate::error::Error;
 use crate::utils::abi;
@@ -91,6 +92,14 @@ pub fn get_transaction_info(id: &str) -> Result<(), Error> {
     jsont::fix_transaction_info(&mut json);
 
     println!("{}", serde_json::to_string_pretty(&json)?);
+
+    if !payload.get_contract_address().is_empty() {
+        eprintln!(
+            "! Contract Address: {}",
+            Address::try_from(payload.get_contract_address())?
+        );
+    }
+
     if payload.get_receipt().net_usage > 0 {
         eprintln!("! Free/Frozen Bandwidth Used: {}", payload.get_receipt().net_usage);
     }
