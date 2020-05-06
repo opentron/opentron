@@ -1,4 +1,5 @@
 use byteorder::{ByteOrder, BE};
+use crypto::sha256;
 use primitives::H256;
 use prost::Message;
 use proto2::chain::{Block, BlockHeader, Transaction};
@@ -81,7 +82,16 @@ impl IndexedBlock {
 }
 
 fn merkle_root(transactions: &[IndexedTransaction]) -> H256 {
-    let hashes = transactions.iter().map(|trx| trx.hash).collect::<Vec<_>>();
+    let hashes = transactions
+        .iter()
+        .map(|txn| get_transaction_hash_for_merkle_root(&txn.raw))
+        .collect::<Vec<_>>();
     let tree = MerkleTree::from_vec(hashes);
     *tree.root_hash()
+}
+
+fn get_transaction_hash_for_merkle_root(transaction: &Transaction) -> H256 {
+    let mut buf = Vec::with_capacity(255);
+    transaction.encode(&mut buf).unwrap(); // won't fail?
+    sha256(&buf)
 }

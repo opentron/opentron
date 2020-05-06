@@ -39,6 +39,6 @@ impl cmp::PartialEq for IndexedTransaction {
 
 fn get_transaction_hash(transaction: &Transaction) -> H256 {
     let mut buf = Vec::with_capacity(255);
-    transaction.encode(&mut buf).unwrap(); // won't fail?
+    transaction.raw_data.as_ref().unwrap().encode(&mut buf).unwrap(); // won't fail?
     sha256(&buf)
 }
