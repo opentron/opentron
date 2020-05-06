@@ -6,8 +6,6 @@ This project is under active development.
 
 - [x] wallet-cli (the full feature wallet/rpc client)
   - [x] walletd (the wallet daemon)
-- [ ] tron (the default bin)
-  - [x] vanity account gen
 - [ ] node-cli, under active development
 
 ## TODOs
