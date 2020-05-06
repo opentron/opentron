@@ -1,5 +1,14 @@
 pub mod common {
     include!(concat!(env!("OUT_DIR"), "/proto.common.rs"));
+
+    impl ::std::fmt::Display for BlockId {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+            f.debug_struct("BlockId")
+                .field("number", &self.number)
+                .field("hash", &hex::encode(&self.hash))
+                .finish()
+        }
+    }
 }
 
 pub mod chain {

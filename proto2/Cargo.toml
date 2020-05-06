@@ -9,6 +9,7 @@ bytes = "0.5"
 prost = "0.6"
 # Any
 prost-types = "0.6"
+hex = "0.4"
 
 [build-dependencies]
 prost-build = "0.6"
