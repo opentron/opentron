@@ -115,7 +115,7 @@ message Transaction {
       FAILED = 1;
     }
     // renamed: contractResult
-    enum ReasonCode {
+    enum ContractStatus {
       DEFAULT = 0;
       SUCCESS = 1;
       REVERT = 2;
@@ -137,7 +137,7 @@ message Transaction {
     // renamed: ret
     Status status = 2;
     // renamed: contractRet
-    ReasonCode reason = 3;
+    ContractStatus contract_status = 3;
 
     // renamed: assetIssueID
     string asset_issue_id = 14;
