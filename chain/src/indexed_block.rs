@@ -1,3 +1,4 @@
+use byteorder::{ByteOrder, BE};
 use primitives::H256;
 use prost::Message;
 use proto2::chain::{Block, BlockHeader, Transaction};
@@ -57,6 +58,10 @@ impl IndexedBlock {
 
     pub fn hash(&self) -> &H256 {
         &self.header.hash
+    }
+
+    pub fn number(&self) -> u64 {
+        BE::read_u64(&self.header.hash.as_bytes()[..8])
     }
 
     pub fn into_raw_block(self) -> Block {
