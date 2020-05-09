@@ -14,6 +14,13 @@ pub mod common {
 pub mod chain {
     include!(concat!(env!("OUT_DIR"), "/proto.chain.rs"));
 
+    impl Block {
+        pub fn number(&self) -> i64 {
+            let raw_header = &self.block_header.as_ref().unwrap().raw_data.as_ref().unwrap();
+            raw_header.number
+        }
+    }
+
     impl ::std::fmt::Display for Block {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
             let raw_header = &self.block_header.as_ref().unwrap().raw_data.as_ref().unwrap();
