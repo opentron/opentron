@@ -3,6 +3,7 @@ use crypto::sha256;
 use primitives::H256;
 use prost::Message;
 use proto2::chain::{Block, BlockHeader, Transaction};
+use proto2::common::BlockId;
 use std::cmp;
 
 use crate::merkle_root::MerkleTree;
@@ -61,8 +62,15 @@ impl IndexedBlock {
         &self.header.hash
     }
 
-    pub fn number(&self) -> u64 {
-        BE::read_u64(&self.header.hash.as_bytes()[..8])
+    pub fn number(&self) -> i64 {
+        BE::read_u64(&self.header.hash.as_bytes()[..8]) as i64
+    }
+
+    pub fn block_id(&self) -> BlockId {
+        BlockId {
+            number: self.number(),
+            hash: self.hash().as_bytes().to_vec(),
+        }
     }
 
     pub fn into_raw_block(self) -> Block {
