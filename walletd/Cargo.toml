@@ -10,7 +10,6 @@ edition = "2018"
 tonic = "0.2"
 bytes = "0.5"
 prost = "0.6"
-daemonize = "0.4"
 
 tokio = { version = "0.2", features = ["rt-threaded", "time", "stream", "fs", "macros", "uds"] }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
@@ -21,3 +20,6 @@ ztron_primitives = { path = "../ztron_primitives" }
 
 [build-dependencies]
 tonic-build = "0.2"
+
+[target.'cfg(unix)'.dependencies]
+daemonize = "0.4"

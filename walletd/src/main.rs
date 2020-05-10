@@ -1,6 +1,6 @@
+#[cfg(unix)]
 use daemonize::Daemonize;
 use std::convert::TryFrom;
-use std::fs::File;
 use std::sync::{Arc, RwLock};
 use tokio::runtime::Builder;
 use tonic::{transport::Server, Request, Response, Status};
@@ -401,7 +401,10 @@ async fn tokio_main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(unix)]
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs::File;
+
     let stdout = File::create("/tmp/walletd.out").unwrap();
     let stderr = File::create("/tmp/walletd.err").unwrap();
 
@@ -414,6 +417,13 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => eprintln!("Error, {}", e),
     }
 
+    let fut = tokio_main();
+    let mut rt = Builder::new().basic_scheduler().enable_all().build()?;
+    rt.block_on(fut)
+}
+
+#[cfg(windows)]
+pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fut = tokio_main();
     let mut rt = Builder::new().basic_scheduler().enable_all().build()?;
     rt.block_on(fut)
