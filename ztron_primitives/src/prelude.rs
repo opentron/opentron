@@ -1,6 +1,6 @@
 //! Remove generics from basic type.
 
-use ff::{PrimeField, PrimeFieldRepr};
+use ff::PrimeField;
 use pairing::bls12_381::Bls12;
 
 use crate::jubjub::JubjubEngine;
@@ -66,9 +66,7 @@ pub fn generate_zkey_pair() -> (PaymentAddress, [u8; 32], ExpandedSpendingKey, F
 }
 
 pub fn rcm_to_bytes(rcm: <Bls12 as JubjubEngine>::Fs) -> Vec<u8> {
-    let mut raw = vec![];
-    rcm.into_repr().write_le(&mut raw).expect("write ok");
-    raw
+    rcm.into_repr().as_ref().to_vec()
 }
 
 /// value, r
@@ -78,12 +76,9 @@ pub type ValueCommitment = primitives::ValueCommitment<Bls12>;
 pub type Note = primitives::Note<Bls12>;
 
 pub fn compute_note_commitment(note: &Note) -> Vec<u8> {
-    let mut result = vec![];
     note.cm(&JUBJUB)
         .into_repr()
-        .write_le(&mut result)
-        .expect("length is 32 bytes");
-    result
+        .as_ref().to_vec()
 }
 
 #[cfg(test)]
@@ -91,7 +86,6 @@ mod tests {
     use super::*;
     use crate::JUBJUB;
     use ff::PrimeField; // into_repr()
-    use ff::PrimeFieldRepr;
     use hex::{FromHex, ToHex};
 
     #[test]
@@ -126,15 +120,13 @@ mod tests {
 
         let esk = ExpandedSpendingKey::from_spending_key(&sk);
 
-        let mut buf: Vec<u8> = vec![];
-        esk.ask.into_repr().write_le(&mut buf).unwrap();
+        let buf = esk.ask.into_repr().as_ref().to_vec();
         assert_eq!(
             buf.encode_hex::<String>(),
             "8c893dfa38956290f2a1df9e6019b4a6c5f670613583948d8d975dcbccf03407"
         );
 
-        buf.clear();
-        esk.nsk.into_repr().write_le(&mut buf).unwrap();
+        let buf = esk.nsk.into_repr().as_ref().to_vec();
         assert_eq!(
             buf.encode_hex::<String>(),
             "560832b298c76f021126b35bfdd3d4bb62ec0d632029674b3e9157f1bff6b208"
@@ -147,22 +139,21 @@ mod tests {
 
         let fvk = FullViewingKey::from_expanded_spending_key(&esk, &JUBJUB);
 
-        buf.clear();
+        let mut buf = vec![];
         fvk.vk.ak.write(&mut buf).unwrap();
         assert_eq!(
             buf.encode_hex::<String>(),
             "3255f7f2280657560a271f5b15e14ff9cfeae7b16e7f5910f904f8fe0ce45db6"
         );
 
-        buf.clear();
+        let mut buf = vec![];
         fvk.vk.nk.write(&mut buf).unwrap();
         assert_eq!(
             buf.encode_hex::<String>(),
             "c10e516acb4a2da828c0d31da54d9441f88f4d5713630c1809b9ebb3f7c4fbd4"
         );
 
-        buf.clear();
-        fvk.vk.ivk().into_repr().write_le(&mut buf).unwrap();
+        let buf = fvk.vk.ivk().into_repr().as_ref().to_vec();
         assert_eq!(
             buf.encode_hex::<String>(),
             "b0456583f7a43c05ae2ec72905575ff5737fb2f652d4c0b4bc93849217481006"

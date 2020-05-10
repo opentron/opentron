@@ -1,6 +1,6 @@
 //! Structs for core Zcash primitives.
 
-use ff::{Field, PrimeField, PrimeFieldRepr};
+use ff::{Field, PrimeField};
 
 use crate::constants;
 
@@ -29,7 +29,7 @@ impl<E: JubjubEngine> ValueCommitment<E> {
     pub fn cm(&self, params: &E::Params) -> edwards::Point<E, PrimeOrder> {
         params
             .generator(FixedGenerators::ValueCommitmentValue)
-            .mul(self.value, params)
+            .mul(E::Fs::from(self.value), params)
             .add(
                 &params
                     .generator(FixedGenerators::ValueCommitmentRandomness)
@@ -91,7 +91,7 @@ impl<E: JubjubEngine> ViewingKey<E> {
         h[31] &= 0b0000_0111;
 
         let mut e = <E::Fs as PrimeField>::Repr::default();
-        e.read_le(&h[..]).unwrap();
+        e.as_mut().copy_from_slice(&h[..]);
 
         E::Fs::from_repr(e).expect("should be a valid scalar")
     }
@@ -335,7 +335,7 @@ impl<E: JubjubEngine> Note<E> {
         let rho = self.cm_full_point(params).add(
             &params
                 .generator(FixedGenerators::NullifierPosition)
-                .mul(position, params),
+                .mul(E::Fs::from(position), params),
             params,
         );
 
