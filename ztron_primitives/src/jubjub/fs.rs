@@ -544,6 +544,9 @@ impl Field for Fs {
 }
 
 impl Fs {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.into_repr().as_ref().to_vec()
+    }
     /// Compares two elements in native representation. This is only used
     /// internally.
     #[inline(always)]

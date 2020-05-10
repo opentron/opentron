@@ -180,6 +180,12 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
         writer.write_all(y_repr.as_ref())
     }
 
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut raw = vec![];
+        self.write(&mut raw).expect("edwards::Point to bytes");
+        raw
+    }
+
     /// Convert from a Montgomery point
     pub fn from_montgomery(m: &montgomery::Point<E, Subgroup>, params: &E::Params) -> Self {
         match m.to_xy() {
