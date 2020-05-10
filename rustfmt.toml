@@ -5,6 +5,6 @@ reorder_imports = true
 binop_separator = "Back"
 edition = "2018"
 newline_style = "Unix"
-normalize_comments = true
+normalize_comments = false
 # trailing_comma = "Never"
 tab_spaces = 4
