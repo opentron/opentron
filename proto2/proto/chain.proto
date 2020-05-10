@@ -37,8 +37,7 @@ message BlockHeader {
     bytes witness_address = 9;
     int32 version = 10;
     // renamed: accountStateRoot
-    // seemed unused
-    // bytes account_state_root = 11;
+    bytes account_state_root = 11;
   }
 
   Raw raw_data = 1;
