@@ -26,6 +26,11 @@ impl IndexedBlockHeader {
     pub fn from_raw(header: BlockHeader) -> Self {
         IndexedBlockHeader::new(get_block_header_hash(&header), header)
     }
+
+    pub fn number(&self) -> i64 {
+        BE::read_u64(&self.hash.as_bytes()[..8]) as i64
+    }
+
 }
 
 impl cmp::PartialEq for IndexedBlockHeader {
