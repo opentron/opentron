@@ -526,7 +526,7 @@ pub fn fix_block(block: &mut serde_json::Value) -> Result<(), Error> {
         block["blockid"] = json!(bytes_to_hex_string(&block["blockid"]));
     }
 
-    for key in &["parentHash", "txTrieRoot", "witness_address"] {
+    for key in &["parentHash", "txTrieRoot", "witness_address", "accountStateRoot"] {
         block["block_header"]["raw_data"][key] = json!(bytes_to_hex_string(&block["block_header"]["raw_data"][key]));
     }
     block["block_header"]["witness_signature"] =
