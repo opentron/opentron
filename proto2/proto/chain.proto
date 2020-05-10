@@ -20,7 +20,7 @@ message Block {
 message BlockHeader {
   // renamed: raw
   message Raw {
-    reserved 4, 5, 8, 11;
+    reserved 4, 5, 8;
     reserved "nonce", "difficulty";
 
     int64 timestamp = 1;
