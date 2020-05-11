@@ -109,6 +109,9 @@ pub fn get_transaction_info(id: &str) -> Result<(), Error> {
             payload.get_receipt().net_fee as f64 / 1_000_000.0
         );
     }
+    if payload.get_receipt().net_fee == 100000 {
+        eprintln!("! Might be an account creation");
+    }
 
     if payload.get_receipt().energy_usage > 0 {
         eprintln!("! Frozen Energy Used: {}", payload.get_receipt().energy_usage);

@@ -122,6 +122,9 @@ pub fn extract_owner_address_from_parameter(any: &Any) -> Result<Address, Error>
         "type.googleapis.com/protocol.UpdateBrokerageContract" => Ok(Address::try_from(
             parse_from_bytes::<UpdateBrokerageContract>(any.get_value())?.get_owner_address(),
         )?),
+        "type.googleapis.com/protocol.AccountCreateContract" => Ok(Address::try_from(
+            parse_from_bytes::<AccountCreateContract>(any.get_value())?.get_owner_address(),
+        )?),
         _ => unimplemented!(),
     }
 }
