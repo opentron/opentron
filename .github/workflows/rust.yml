@@ -12,7 +12,7 @@ jobs:
                   submodules: true
             - name: Install protobuf
               run: sudo apt-get install protobuf-compiler libprotobuf-dev
-            - name: Build
-              run: cargo build --all
-            - name: Run tests
-              run: cargo test --all
+            - name: Build walletd
+              run: cargo build -p walletd
+            - name: Build wallet-cli
+              run: cargo build -p wallet-cli
