@@ -40,26 +40,32 @@ impl ChainDB {
                 ColumnFamilyOptions::default()
                     .optimize_for_small_db()
                     .optimize_for_point_lookup(32)
+                    .num_levels(2)
                     .compression(CompressionType::NoCompression),
             ),
-            ColumnFamilyDescriptor::new("block-header", ColumnFamilyOptions::default()),
+            ColumnFamilyDescriptor::new(
+                "block-header",
+                ColumnFamilyOptions::default().max_write_buffer_number(6),
+            ),
             ColumnFamilyDescriptor::new(
                 "block-transactions",
-                ColumnFamilyOptions::default().optimize_for_point_lookup(128),
+                ColumnFamilyOptions::default()
+                    .optimize_for_point_lookup(128)
+                    .max_write_buffer_number(6),
             ),
             ColumnFamilyDescriptor::new(
                 "transaction",
                 ColumnFamilyOptions::default()
                     .optimize_level_style_compaction(512 * 1024 * 1024)
                     .optimize_for_point_lookup(256)
-                    .max_write_buffer_number(8),
+                    .max_write_buffer_number(6),
             ),
             ColumnFamilyDescriptor::new(
                 "transaction-block",
                 ColumnFamilyOptions::default()
                     .optimize_level_style_compaction(512 * 1024 * 1024)
                     .optimize_for_point_lookup(32)
-                    .max_write_buffer_number(8),
+                    .max_write_buffer_number(6),
             ),
         ];
 
@@ -97,6 +103,7 @@ impl ChainDB {
                 ColumnFamilyOptions::default()
                     .optimize_for_small_db()
                     .optimize_for_point_lookup(32)
+                    .num_levels(2)
                     .compression(CompressionType::NoCompression),
             ),
             ColumnFamilyDescriptor::new("block-header", ColumnFamilyOptions::from_options(&options)),
@@ -106,15 +113,11 @@ impl ChainDB {
             ),
             ColumnFamilyDescriptor::new(
                 "transaction",
-                ColumnFamilyOptions::from_options(&options)
-                    .optimize_for_point_lookup(256)
-                    .max_write_buffer_number(8),
+                ColumnFamilyOptions::from_options(&options).optimize_for_point_lookup(256),
             ),
             ColumnFamilyDescriptor::new(
                 "transaction-block",
-                ColumnFamilyOptions::from_options(&options)
-                    .optimize_for_point_lookup(32)
-                    .max_write_buffer_number(8),
+                ColumnFamilyOptions::from_options(&options).optimize_for_point_lookup(32),
             ),
         ];
 
@@ -134,6 +137,22 @@ impl ChainDB {
             block_transactions: blk_txns,
             transaction: txn,
             transaction_block: txn_blk,
+        }
+    }
+
+    pub fn get_block_height(&self) -> i64 {
+        self.default
+            .get(ReadOptions::default_instance(), b"BLOCK_HEIGHT")
+            .map(|val| BE::read_u64(&*val) as i64)
+            .unwrap_or(0)
+    }
+
+    pub fn update_block_height(&self, height: i64) {
+        assert!(height >= 0);
+        if height > self.get_block_height() {
+            let mut val = [0u8; 8];
+            BE::write_u64(&mut val, height as u64);
+            self.default.put(WriteOptions::default_instance(), b"BLOCK_HEIGHT", &val).unwrap();
         }
     }
 

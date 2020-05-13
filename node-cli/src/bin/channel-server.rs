@@ -48,9 +48,15 @@ pub enum PeerStatus {
     BackingUp,
 }
 
+pub enum Direction {
+    Inbound,
+    Outbound,
+}
+
 pub struct PeerConneContext {
     peer_addr: SocketAddr,
     done: oneshot::Receiver<()>,
+    syncing: RwLock<bool>,
 }
 
 pub struct AppContext {
@@ -60,6 +66,7 @@ pub struct AppContext {
     db: ChainDB,
     running: Arc<AtomicBool>,
     recent_blk_ids: RwLock<HashSet<H256>>,
+    syncing: RwLock<bool>,
 }
 
 impl AppContext {
@@ -95,6 +102,7 @@ impl AppContext {
             db,
             running: Arc::new(AtomicBool::new(true)),
             recent_blk_ids: RwLock::new(HashSet::new()),
+            syncing: RwLock::new(true),
         })
     }
 }
@@ -185,8 +193,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
     */
 
-    // Fix: account state root
-    // First appares in 8222293
+    // Fix: account state root First appares in 8222293
     /*
     for num in 8222293..8230846 {
         if let Some(blk) = ctx.db.get_block_by_number(num) {
@@ -215,7 +222,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 warn!("connect {} failed: {}", peer_addr, e);
             }
         }
-
     }
 
     server.await;
@@ -237,7 +243,7 @@ async fn incoming_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -
         from: Some(Endpoint {
             address: MY_IP.into(),
             port: 18888,
-            node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFE".to_vec(),
+            node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACFE".to_vec(),
         }),
         version: p2p_version,
         timestamp: Utc::now().timestamp_millis(),
@@ -402,7 +408,20 @@ async fn sync_channel_handler(
     reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
     mut writer: impl Sink<ChannelMessage, Error = io::Error> + Unpin,
 ) -> Result<(), Box<dyn Error>> {
+    /*
     let highest_block = ctx.db.highest_block(0);
+    let highest_block_id = highest_block
+        .as_ref()
+        .map(|blk| blk.block_id())
+        .unwrap_or(ctx.genesis_block_id.clone());
+        */
+    /*
+    let highest_block_id = BlockId {
+        number: 19700000,
+        hash: hex::decode("00000000012c9920aff706bae73f632b72eb74deb557d44feed35dd48470fcf9").unwrap(),
+    };*/
+    // 19700001); //
+    let highest_block = ctx.db.get_block_by_number(ctx.db.get_block_height() as u64);
     let highest_block_id = highest_block
         .as_ref()
         .map(|blk| blk.block_id())
@@ -440,8 +459,29 @@ async fn sync_channel_handler(
             Ok(ChannelMessage::Pong) => {
                 info!("<= pong");
             }
-            Ok(ChannelMessage::TransactionInventory(_)) => {}
-            Ok(ChannelMessage::BlockInventory(_)) => {}
+            Ok(ChannelMessage::TransactionInventory(_)) => {
+                info!("fuck");
+            }
+            Ok(ChannelMessage::BlockInventory(inv)) => {
+                let Inventory { ids, r#type } = inv;
+                let ids: Vec<_> = ids
+                    .into_iter()
+                    .filter(|blk_id| {
+                        info!("block inventory, blk_id={}", hex::encode(&blk_id));
+                        if ctx.recent_blk_ids.read().unwrap().contains(&H256::from_slice(blk_id)) {
+                            warn!("block in recent blocks, skip fetch");
+                            false
+                        } else {
+                            true
+                        }
+                    })
+                    .collect();
+                if !ids.is_empty() {
+                    writer
+                        .send(ChannelMessage::FetchBlockInventory(Inventory { ids, r#type }))
+                        .await?;
+                }
+            }
 
             Ok(ChannelMessage::BlockchainInventory(mut chain_inv)) => {
                 info!("remains = {}", chain_inv.remain_num);
@@ -462,6 +502,11 @@ async fn sync_channel_handler(
                     vec![]
                 };
 
+                if syncing_block_ids.len() < 500 {
+                    warn!("syning finished");
+                    *ctx.syncing.write().unwrap() = false;
+                }
+
                 let block_inv = Inventory {
                     r#type: 1, // BLOCK
                     ids: syncing_block_ids,
@@ -471,9 +516,9 @@ async fn sync_channel_handler(
             }
 
             Ok(ChannelMessage::Block(block)) => {
-                if block.number() % 20 == 0 {
-                    info!("receive {}", block.to_string());
-                }
+                // if block.number() % 20 == 0 {
+                info!("receive {}", block.to_string());
+                // }
                 let block = IndexedBlock::from_raw(block);
                 if ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
                     warn!("block in recent blocks");
@@ -483,33 +528,35 @@ async fn sync_channel_handler(
                 ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
                 if !ctx.db.has_block(&block) {
                     ctx.db.insert_block(&block)?;
+                    ctx.db.update_block_height(block.number());
                 } else {
                     warn!("block exists in db");
                 }
 
-                if block.number() == last_block_id {
-                    let highest_block = ctx.db.highest_block(start_block_number).unwrap();
-                    let highest_block_id = BlockId {
-                        number: highest_block.number() as _,
-                        hash: highest_block.hash().as_bytes().to_vec(),
-                    };
-                    ctx.db.report_status();
-                    info!("sync next bulk of blocks from {}", highest_block.number());
-                    let inv = BlockInventory {
-                        ids: vec![highest_block_id.clone()],
-                        ..Default::default()
-                    };
-                    writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
-                } else if block.number() == last_block_id - 1000 {
-                    info!("sync next bulk of blocks from {}", block.number());
-
-                    if !syncing_block_ids.is_empty() {
-                        let block_inv = Inventory {
-                            r#type: 1, // BLOCK
-                            ids: syncing_block_ids,
+                if *ctx.syncing.read().unwrap() {
+                    if block.number() == last_block_id {
+                        let highest_block = ctx.db.highest_block(start_block_number).unwrap();
+                        let highest_block_id = BlockId {
+                            number: highest_block.number() as _,
+                            hash: highest_block.hash().as_bytes().to_vec(),
                         };
-                        syncing_block_ids = vec![];
-                        writer.send(ChannelMessage::FetchBlockInventory(block_inv)).await?;
+                        ctx.db.report_status();
+                        info!("sync next bulk of blocks from {}", highest_block.number());
+                        let inv = BlockInventory {
+                            ids: vec![highest_block_id.clone()],
+                            ..Default::default()
+                        };
+                        writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
+                    } else if block.number() == last_block_id - 1000 {
+                        info!("sync next bulk of blocks from {}", block.number());
+                        if !syncing_block_ids.is_empty() {
+                            let block_inv = Inventory {
+                                r#type: 1, // BLOCK
+                                ids: syncing_block_ids,
+                            };
+                            syncing_block_ids = vec![];
+                            writer.send(ChannelMessage::FetchBlockInventory(block_inv)).await?;
+                        }
                     }
                 }
             }
