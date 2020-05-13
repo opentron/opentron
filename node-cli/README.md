@@ -60,8 +60,8 @@ TRXS(0x03),
 BLOCKHEADERS(0x05),
 
 # sync a new block
-<= INVENTORY(0x06),
-=> FETCH_INV_DATA(0x07),
+<= INVENTORY(0x06, type=BLOCK),
+=> FETCH_INV_DATA(0x07, type=BLOCK),
 <= BLOCK(0x02)
 => others INVENTORY(0x06)
 

@@ -3,6 +3,7 @@ name = 'node-cli'
 version = '0.1.0'
 authors = ['andelf <andelf@gmail.com>']
 edition = '2018'
+default-run = "channel-server"
 
 [dependencies]
 rand = '0.7'
@@ -36,6 +37,9 @@ slog-async = "2.5"
 slog-stdlog = "4.0"
 slog-scope = "4.3"
 slog-scope-futures = "0.1"
+ctrlc = { version = "3", features = ["termination"] }
+#rocks = { version = "0.1.7", git = "https://github.com/bh1xuw/rust-rocks.git" }
+rocks = "0.1.7"
 # workspace
 proto2 = { path = '../proto2' }
 keys = { path = '../keys' }

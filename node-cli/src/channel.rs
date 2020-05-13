@@ -313,6 +313,21 @@ impl Decoder for ChannelMessageCodec {
             None => Ok(None),
         }
     }
+
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        match self.decode(buf)? {
+            Some(frame) => Ok(Some(frame)),
+            None => {
+                if buf.is_empty() {
+                    Ok(None)
+                } else {
+                    // println!("remain => {:?}", hex::encode(buf));
+                    Err(io::Error::new(io::ErrorKind::Other,
+                                       "bytes remaining on stream").into())
+                }
+            }
+        }
+    }
 }
 
 impl Encoder<ChannelMessage> for ChannelMessageCodec {
