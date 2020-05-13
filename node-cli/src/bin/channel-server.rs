@@ -516,9 +516,14 @@ async fn sync_channel_handler(
             }
 
             Ok(ChannelMessage::Block(block)) => {
-                // if block.number() % 20 == 0 {
-                info!("receive {}", block.to_string());
-                // }
+                if *ctx.syncing.read().unwrap() {
+                    if block.number() % 100 == 0 {
+                        info!("syncing {}", block.to_string());
+                    }
+                } else {
+                    info!("receive {}", block.to_string());
+                }
+
                 let block = IndexedBlock::from_raw(block);
                 if ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
                     warn!("block in recent blocks");
