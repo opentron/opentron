@@ -526,12 +526,12 @@ async fn sync_channel_handler(
                 }
 
                 ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
-                if !ctx.db.has_block(&block) {
-                    ctx.db.insert_block(&block)?;
-                    ctx.db.update_block_height(block.number());
-                } else {
-                    warn!("block exists in db");
-                }
+                // if !ctx.db.has_block(&block) {
+                ctx.db.insert_block(&block)?;
+                ctx.db.update_block_height(block.number());
+                // } else {
+                //    warn!("block exists in db");
+                //}
 
                 if *ctx.syncing.read().unwrap() {
                     if block.number() == last_block_id {
