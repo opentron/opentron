@@ -1,0 +1,118 @@
+log-level = 'info'
+log-file = ''
+
+[server]
+sync-check = false
+
+[chain]
+genesis = './genesis.json'
+p2p-version = 11111
+maintenance-interval = '6h'
+proposal-expire-time = '3d'
+
+[storage]
+data-dir = './data'
+engine = 'memory'
+
+[chain.tvm]
+save-internal-tx = true
+
+[chain.proposal]
+# should enable on private net
+allow-creation-of-contracts = false
+allow-multi-sign = false
+# should enable on private net
+allow-adaptive-energy = false
+allow-delegate-resource = false
+allow-same-token-name = false
+allow-tvm-transfer-trc10 = false
+# The Constantinople upgrade
+allow-tvm-constantinople = false
+allow-tvm-solidity-059 = false
+forbid-transfer-to-contract = false
+
+[protocol]
+seed-nodes = [
+    '54.236.37.243:18888',
+    '52.53.189.99:18888',
+    '18.196.99.16:18888',
+    '34.253.187.192:18888',
+    '52.56.56.149:18888',
+    '35.180.51.163:18888',
+    '54.252.224.209:18888',
+    '18.228.15.36:18888',
+    '52.15.93.92:18888',
+    '34.220.77.106:18888',
+    '13.127.47.162:18888',
+    '13.124.62.58:18888',
+    '13.229.128.108:18888',
+    '35.182.37.246:18888',
+    '34.200.228.125:18888',
+    '18.220.232.201:18888',
+    '13.57.30.186:18888',
+    '35.165.103.105:18888',
+    '18.184.238.21:18888',
+    '34.250.140.143:18888',
+    '35.176.192.130:18888',
+    '52.47.197.188:18888',
+    '52.62.210.100:18888',
+    '13.231.4.243:18888',
+    '18.231.76.29:18888',
+    '35.154.90.144:18888',
+    '13.125.210.234:18888',
+    '13.250.40.82:18888',
+    '35.183.101.48:18888',
+]
+
+[protocol.discovery]
+enable = true
+persist = true
+# udp discovery
+endpoint = '0.0.0.0:18888'
+#
+# advertise-endpoint = ''
+active-nodes = []
+
+[protocol.channel]
+# tcp channel
+endpoint = '0.0.0.0:18888'
+advertised-endpoint = ''
+# connect in any case
+active-nodes = []
+# accept in any case
+passive-nodes = [
+    "47.75.249.4:18888",
+    "47.75.128.222:18888",
+    "47.52.59.134:18888",
+    "47.75.38.234:18888",
+    "47.52.23.94:18888",
+    "47.52.72.180:18888",
+    "47.75.74.31:18888",
+    "47.75.77.31:18888",
+    "47.75.65.115:18888",
+]
+min-active-peers = 8
+max-active-peers = 50
+
+[witness]
+private-key = ""
+
+[prometheus]
+endpoint = '0.0.0.0:23333'
+
+[rocksdb]
+# create-if-missing = true
+max-open-files = 40960
+
+# max-background-jobs = 8
+# max-sub-compactions = 3
+# max-manifest-file-size = "128MB"
+# wal-recovery-mode = 2
+# wal-dir = "/tmp/tron/store"
+# wal-ttl-seconds = 0
+# wal-size-limit = 0
+# enable-statistics = true
+# stats-dump-period = "10m"
+# compaction-readahead-size = 0
+[rocksdb.defaultcf]
+compression-per-level = ["no", "no", "lz4", "lz4", "lz4", "zstd", "zstd"]
