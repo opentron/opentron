@@ -28,7 +28,7 @@ impl Drop for ChainDB {
 
 impl ChainDB {
     pub fn new<P: AsRef<Path>>(db_path: P) -> ChainDB {
-        let options = DBOptions::default()
+        let db_options = DBOptions::default()
             .create_if_missing(true)
             .create_missing_column_families(true)
             .increase_parallelism(6)
@@ -63,7 +63,62 @@ impl ChainDB {
             ),
         ];
 
-        let (db, mut handles) = DB::open_with_column_families(&options, db_path, column_families).unwrap();
+        let (db, mut handles) = DB::open_with_column_families(&db_options, db_path, column_families).unwrap();
+        let txn_blk = handles.pop().unwrap();
+        let txn = handles.pop().unwrap();
+        let blk_txns = handles.pop().unwrap();
+        let blk = handles.pop().unwrap();
+        let default = handles.pop().unwrap();
+
+        assert!(handles.is_empty());
+
+        ChainDB {
+            db: db,
+            default: default,
+            block_header: blk,
+            block_transactions: blk_txns,
+            transaction: txn,
+            transaction_block: txn_blk,
+        }
+    }
+
+    pub fn new_for_sync<P: AsRef<Path>>(db_path: P) -> ChainDB {
+        let options = Options::default().prepare_for_bulk_load();
+
+        let db_options = DBOptions::default()
+            .create_if_missing(true)
+            .create_missing_column_families(true)
+            .increase_parallelism(6)
+            .max_open_files(1024);
+
+        let column_families = vec![
+            ColumnFamilyDescriptor::new(
+                DEFAULT_COLUMN_FAMILY_NAME,
+                ColumnFamilyOptions::default()
+                    .optimize_for_small_db()
+                    .optimize_for_point_lookup(32)
+                    .compression(CompressionType::NoCompression),
+            ),
+            ColumnFamilyDescriptor::new("block-header", ColumnFamilyOptions::from_options(&options)),
+            ColumnFamilyDescriptor::new(
+                "block-transactions",
+                ColumnFamilyOptions::from_options(&options).optimize_for_point_lookup(128),
+            ),
+            ColumnFamilyDescriptor::new(
+                "transaction",
+                ColumnFamilyOptions::from_options(&options)
+                    .optimize_for_point_lookup(256)
+                    .max_write_buffer_number(8),
+            ),
+            ColumnFamilyDescriptor::new(
+                "transaction-block",
+                ColumnFamilyOptions::from_options(&options)
+                    .optimize_for_point_lookup(32)
+                    .max_write_buffer_number(8),
+            ),
+        ];
+
+        let (db, mut handles) = DB::open_with_column_families(&db_options, db_path, column_families).unwrap();
         let txn_blk = handles.pop().unwrap();
         let txn = handles.pop().unwrap();
         let blk_txns = handles.pop().unwrap();
