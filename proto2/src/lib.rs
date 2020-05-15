@@ -1,5 +1,18 @@
 pub mod common {
+    use byteorder::{ByteOrder, BE};
+
     include!(concat!(env!("OUT_DIR"), "/proto.common.rs"));
+
+    impl From<Vec<u8>> for BlockId {
+        fn from(block_hash: Vec<u8>) -> Self {
+            assert_eq!(block_hash.len(), 32);
+            let block_number = BE::read_u64(&block_hash[..8]);
+            BlockId {
+                hash: block_hash,
+                number: block_number as i64
+            }
+        }
+    }
 
     impl ::std::fmt::Display for BlockId {
         fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
