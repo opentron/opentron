@@ -123,8 +123,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let ctx = AppContext::from_config("./conf.toml")?;
     let ctx = Arc::new(ctx);
 
+    // Fix: account state root First appares in 8222293
+    // 19729824..19729826
+
+    /*
+    for num in 19729824..19729840 {
+        if let Some(blk) = ctx.db.get_block_by_number(num) {
+          //   println!("delete {} => {:?}", num, ctx.db.delete_block(&blk));
+        } else {
+            println!("done");
+            return Ok(());
+        }
+    }
+
+    return Ok(());
+    */
+
     // FIX gap
-    // ctx.db.force_update_block_height(19722237);
+    // ctx.db.force_update_block_height(19729824);
 
     {
         let ctx = ctx.clone();
@@ -194,18 +210,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         });
     });
 
-    // Fix: account state root First appares in 8222293
-    /*
-    for num in 8222293..8230846 {
-        if let Some(blk) = ctx.db.get_block_by_number(num) {
-            println!("delete {} => {:?}", num, ctx.db.delete_block(&blk));
-        } else {
-            println!("done");
-            return Ok(());
-        }
-    }
-    */
-
     /*
     for peer_addr in passive_nodes.into_iter().cycle() {
         // ctx.db.await_background_jobs();
@@ -230,8 +234,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     server.await;
     Ok(())
 }
-
-
 
 async fn outgoing_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> Result<(), Box<dyn Error>> {
     info!("connected");
@@ -338,7 +340,6 @@ async fn outgoing_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -
     Ok(())
 }
 
-
 async fn sync_channel_handler(
     ctx: Arc<AppContext>,
     reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
@@ -365,12 +366,11 @@ async fn sync_channel_handler(
 
     let start_block_number = highest_block_id.number;
 
-    info!("sync block from {}", highest_block_id);
-
     // info!("delete => {:?}", ctx.db.delete_block(&highest_block.unwrap()));
     // return Ok(());
 
     if *ctx.syncing.read().unwrap() {
+        info!("sync block from {}", highest_block_id);
         let inv = BlockInventory {
             ids: vec![highest_block_id],
             ..Default::default()
@@ -516,11 +516,21 @@ async fn sync_channel_handler(
                 return Ok(());
             }
             Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
-                info!("sync blockchain: {:?}", blk_inv);
-                let BlockInventory { ids, .. } = blk_inv;
+                info!("peer wants to sync blockchain: {:?}", blk_inv);
+                let BlockInventory { mut ids, .. } = blk_inv;
+                let last_block_id = ids.pop().unwrap();
+
+                let block_ids: Vec<BlockId> = ctx
+                    .db
+                    .block_hashes_from(&last_block_id.hash, 200)
+                    .into_iter()
+                    .map(|block_hash| BlockId::from(block_hash))
+                    .collect();
+                let remain_num = block_ids.last().unwrap().number - last_block_id.number;
+
                 let chain_inv = ChainInventory {
-                    ids: ids,
-                    remain_num: 20,
+                    ids: block_ids,
+                    remain_num: remain_num,
                 };
                 writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
             }

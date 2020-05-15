@@ -3,12 +3,12 @@ extern crate byteorder;
 use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
-use log::{debug, error, info, warn};
+use log::{debug, info};
 use primitives::H256;
 use prost::Message;
 use proto2::chain::ContractType;
 use rocks::prelude::*;
-use std::collections::{HashMap, HashSet, LinkedList};
+use std::collections::{HashSet, LinkedList};
 use std::error::Error;
 use std::iter::FromIterator;
 use std::path::Path;
@@ -250,7 +250,10 @@ impl ChainDB {
             })
             .collect::<Option<Vec<_>>>();
 
-        Some(IndexedBlock::new(header, transactions.unwrap_or_default()))
+        let transactions = transactions.unwrap_or_default();
+        assert_eq!(txn_ids.len(), transactions.len());
+
+        Some(IndexedBlock::new(header, transactions))
     }
 
     /// handles fork
@@ -338,9 +341,36 @@ impl ChainDB {
         wb.delete_cf(&self.block_transactions, header.hash.as_bytes());
     }
 
-    fn delete_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) {
+    pub fn delete_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) {
         wb.delete_cf(&self.transaction, txn.hash.as_bytes());
         wb.delete_cf(&self.transaction_block, txn.hash.as_bytes());
+    }
+
+    fn delete_orphan_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> bool {
+        if let Ok(block_hash) = self
+            .transaction_block
+            .get(ReadOptions::default_instance(), txn.hash.as_bytes())
+        {
+            if self
+                .block_header
+                .get(ReadOptions::default_instance(), &*block_hash)
+                .is_ok()
+            {
+                eprintln!(
+                    "! txn not orphan {:?} => block {}",
+                    txn.hash,
+                    BE::read_u64(&block_hash[..8])
+                );
+                false
+            } else {
+                wb.delete_cf(&self.transaction, txn.hash.as_bytes());
+                wb.delete_cf(&self.transaction_block, txn.hash.as_bytes());
+                true
+            }
+        } else {
+            eprintln!("Not Found");
+            false
+        }
     }
 
     fn relink_transactions_to_block(&self, block: &IndexedBlock, wb: &mut WriteBatch) {
@@ -362,6 +392,15 @@ impl ChainDB {
                 wb.put_cf(&self.transaction_block, txn_hash, correct_block_hash);
             }
         }
+    }
+
+    pub fn block_hashes_from(&self, start_block_hash: &[u8], count: usize) -> Vec<Vec<u8>> {
+        self.block_header
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(start_block_hash))
+            .keys()
+            .take(count)
+            .map(|key| key.to_vec())
+            .collect()
     }
 
     pub fn handle_chain_fork_at(&self, mut num: u64) -> Result<(), BoxError> {
@@ -406,6 +445,7 @@ impl ChainDB {
         let mut wb = WriteBatch::with_reserved_bytes(1024);
 
         let mut txn_whitelist = HashSet::new();
+        let mut orphan_txns = HashSet::new();
         for header in longest_fork.iter() {
             let block = self.get_block_from_header(header.clone()).unwrap();
             // link to the right block
@@ -421,21 +461,23 @@ impl ChainDB {
                 let block = self.get_block_from_header(header.clone()).unwrap();
                 for txn in block.transactions {
                     if !txn_whitelist.contains(&txn) {
-                        println!("delete orphan txn: {:?}", txn.hash);
-                        self.delete_transaction(&txn, &mut wb);
+                        orphan_txns.insert(txn);
                     }
                 }
             }
         }
-
-        /*
-        let mut handler = rocks::write_batch::WriteBatchIteratorHandler::default();
-        wb.iterate(&mut handler).unwrap();
-        for entry in handler.entries {
-            println!("{:?}", entry);
-        }
-        */
         self.db.write(WriteOptions::default_instance(), &wb)?;
+
+        if !orphan_txns.is_empty() {
+            wb.clear();
+            for txn in &orphan_txns {
+                if self.delete_orphan_transaction(&txn, &mut wb) {
+                    println!("! delete orphan txn: {:?}", txn.hash);
+                }
+            }
+            self.db.write(WriteOptions::default_instance(), &wb)?;
+        }
+
         Ok(())
     }
 
@@ -459,14 +501,27 @@ impl ChainDB {
         Ok(())
     }
 
-    pub fn verify_parent_hashes(&self) -> Result<bool, Box<dyn Error>> {
-        let mut parent_hash = hex::decode("e58f33f9baf9305dc6f82b9f1934ea8f0ade2defb951258d50167028c780351f").unwrap();
+    pub fn verify_parent_hashes_from(&self, num: u64) -> Result<bool, BoxError> {
+        let start_block = self.get_block_by_number(num).unwrap();
+        let mut parent_hash = start_block.header.raw.raw_data.as_ref().unwrap().parent_hash.to_vec();
 
-        for (blk_id, raw_header) in self.block_header.new_iterator(ReadOptions::default_instance()) {
+        println!("start from parent hash = {}", hex::encode(&parent_hash));
+
+        let mut lower_bound = [0u8; 8];
+        BE::write_u64(&mut lower_bound, num);
+
+        for (blk_id, raw_header) in self
+            .block_header
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(&lower_bound))
+        {
             let header = IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap());
             if header.raw.raw_data.as_ref().unwrap().parent_hash != parent_hash {
                 eprintln!("❌ parent_hash verification error");
-                eprintln!("parent => {}", hex::encode(parent_hash));
+                eprintln!(
+                    "parent block {} => {}",
+                    BE::read_u64(&parent_hash[..8]),
+                    hex::encode(parent_hash)
+                );
                 eprintln!("current block {} => {:?}", header.number(), header);
                 return Ok(false);
             }
@@ -475,22 +530,14 @@ impl ChainDB {
             }
             parent_hash = blk_id.to_vec();
         }
-        /*
 
-        let last_block_number = BE::read_u64(&parent_hash[..8]);
-        println!(
-            "last block => {} hash => {}",
-            last_block_number,
-            hex::encode(parent_hash)
-        );
-        if last_block_number as i64 != self.get_block_height() {
-            println!("❌ block height in db is {}", self.get_block_height());
-            println!("There is missing blocks!");
-        } else {
-            */
         println!("✅ verification all passed!");
-
         Ok(true)
+    }
+
+    pub fn verify_parent_hashes(&self) -> Result<bool, Box<dyn Error>> {
+        // genesis parent_hash: e58f33f9baf9305dc6f82b9f1934ea8f0ade2defb951258d50167028c780351f
+        self.verify_parent_hashes_from(0)
     }
 
     /*
@@ -507,7 +554,7 @@ impl ChainDB {
     pub fn verify_merkle_tree(&self) -> Result<(), Box<dyn Error>> {
         for (blk_id, raw_header) in self.block_header.new_iterator(ReadOptions::default_instance()) {
             let header = IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap());
-            let block = self.get_block_from_header(header);
+            let _block = self.get_block_from_header(header);
         }
         Ok(())
     }
@@ -594,7 +641,9 @@ mod tests {
         let db = ChainDB::new("./data");
         println!("db opened!");
         db.report_status();
-        assert!(db.verify_parent_hashes().unwrap());
+        //assert!(db.verify_parent_hashes().unwrap());
+
+        assert!(db.verify_parent_hashes_from(0).unwrap());
     }
 
     #[test]
@@ -605,7 +654,7 @@ mod tests {
         println!("db opened!");
         db.report_status();
 
-        let num = 19720484;
+        let num = 19752249;
 
         if let Some(block) = db.get_block_by_number(num) {
             println!("block found and is unique: {:?}", block.hash());

@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let my_endpoint = Endpoint {
         address: my_ip.clone(),
         port: 18888,
-        node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA2".to_vec(),
+        node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFE".to_vec(),
     };
 
     let mut transport = DiscoveryMessageTransport::new(socket);
