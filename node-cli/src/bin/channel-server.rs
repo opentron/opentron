@@ -13,7 +13,7 @@ use node_cli::util::get_my_ip;
 use proto2::chain::Block;
 use proto2::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
-    Transactions,
+    ReasonCode, Transactions,
 };
 use proto2::common::{BlockId, Endpoint};
 // use slog::{debug, error, info, o, warn, Drain};
@@ -61,7 +61,7 @@ pub struct PeerConneContext {
 
 pub struct AppContext {
     inbound_ip: Option<SocketAddr>,
-    genesis_block_id: BlockId,
+    genesis_block_id: Option<BlockId>,
     config: Config,
     db: ChainDB,
     running: Arc<AtomicBool>,
@@ -97,7 +97,7 @@ impl AppContext {
         info!("genesis block id => {:?}", hex::encode(&genesis_block_id.hash));
         Ok(AppContext {
             inbound_ip: None,
-            genesis_block_id: genesis_block_id,
+            genesis_block_id: Some(genesis_block_id),
             config: config,
             db,
             running: Arc::new(AtomicBool::new(true)),
@@ -123,7 +123,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let ctx = AppContext::from_config("./conf.toml")?;
     let ctx = Arc::new(ctx);
 
-    // return Ok(());
+    // FIX gap
+    // ctx.db.force_update_block_height(19722237);
 
     {
         let ctx = ctx.clone();
@@ -159,7 +160,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             ));
                             let ctx = ctx.clone();
                             tokio::spawn(async move {
-                                let _ = incoming_handshake_handler(ctx, sock).with_logger(logger).await;
+                                let _ = outgoing_handshake_handler(ctx, sock).with_logger(logger).await;
                             });
                         }
                         Err(e) => error!("accept failed = {:?}", e),
@@ -172,26 +173,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // active coonections
     let passive_nodes = ctx.config.protocol.channel.passive_nodes.clone();
 
-    /*
-    passive_nodes.into_iter().take(1).for_each(|peer_addr| {
-        info!("active connection to {}", peer_addr);
-        let ctx = ctx.clone();
-        tokio::spawn(async move {
-            match TcpStream::connect(&peer_addr).await {
-                Ok(sock) => {
-                    let logger = slog_scope::logger().new(o!(
-                    "peer_addr" => sock.peer_addr().unwrap(),
-                    "connection" => "active",
-                    ));
-                    let _ = incoming_handshake_handler(ctx, sock).with_logger(logger).await;
+    tokio::spawn(async move {
+        passive_nodes.into_iter().take(1).for_each(|peer_addr| {
+            info!("active connection to {}", peer_addr);
+            let ctx = ctx.clone();
+            tokio::spawn(async move {
+                match TcpStream::connect(&peer_addr).await {
+                    Ok(sock) => {
+                        let logger = slog_scope::logger().new(o!(
+                        "peer_addr" => sock.peer_addr().unwrap(),
+                        "connection" => "active",
+                        ));
+                        let _ = outgoing_handshake_handler(ctx, sock).with_logger(logger).await;
+                    }
+                    Err(e) => {
+                        warn!("connect {} failed: {}", peer_addr, e);
+                    }
                 }
-                Err(e) => {
-                    warn!("connect {} failed: {}", peer_addr, e);
-                }
-            }
+            });
         });
     });
-    */
 
     // Fix: account state root First appares in 8222293
     /*
@@ -205,8 +206,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
     */
 
+    /*
     for peer_addr in passive_nodes.into_iter().cycle() {
-        ctx.db.await_background_jobs();
+        // ctx.db.await_background_jobs();
 
         info!("active connection to {}", peer_addr);
         let ctx = ctx.clone();
@@ -223,33 +225,51 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
+    */
 
     server.await;
     Ok(())
 }
 
-async fn incoming_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> Result<(), Box<dyn Error>> {
+
+
+async fn outgoing_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> Result<(), Box<dyn Error>> {
     info!("connected");
 
     let (reader, writer) = sock.split();
 
     let mut reader = ChannelMessageCodec::new_read(reader);
     let mut writer = ChannelMessageCodec::new_write(writer);
-    // let mut transport = ChannelMessageCodec::new_framed(sock); //.timeout(Duration::from_secs(10));
 
     let p2p_version = ctx.config.chain.p2p_version;
-    //
+
+    let block_height = ctx.db.get_block_height();
+    let head_block_id = ctx
+        .db
+        .get_block_by_number(block_height as u64)
+        .map(|blk| blk.block_id());
+
+    info!("my head block id {}", head_block_id.as_ref().unwrap());
+
+    let _solid_block_id = if block_height > 27 {
+        ctx.db
+            .get_block_by_number(block_height as u64 - 20)
+            .map(|blk| blk.block_id())
+    } else {
+        ctx.genesis_block_id.clone()
+    };
+
     let hello = HandshakeHello {
         from: Some(Endpoint {
             address: MY_IP.into(),
             port: 18888,
-            node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACFE".to_vec(),
+            node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF0".to_vec(),
         }),
         version: p2p_version,
         timestamp: Utc::now().timestamp_millis(),
-        genesis_block_id: Some(ctx.genesis_block_id.clone()),
-        head_block_id: Some(ctx.genesis_block_id.clone()),
-        solid_block_id: Some(ctx.genesis_block_id.clone()),
+        genesis_block_id: ctx.genesis_block_id.clone(),
+        head_block_id: head_block_id.clone(),
+        solid_block_id: ctx.genesis_block_id.clone(), // solid_block_id.clone(),
         ..Default::default()
     };
 
@@ -264,30 +284,28 @@ async fn incoming_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -
         match payload.unwrap() {
             Ok(ChannelMessage::HandshakeHello(HandshakeHello {
                 version,
-                genesis_block_id,
-                head_block_id,
-                solid_block_id,
+                genesis_block_id: peer_genesis_block_id,
+                head_block_id: peer_head_block_id,
+                solid_block_id: peer_solid_block_id,
                 ..
             })) => {
                 slog_info!(slog_scope::logger(), "handshake";
                     "version" => version,
-                    "genesis_block" => hex::encode(&genesis_block_id.as_ref().unwrap().hash),
+                    "genesis_block" => hex::encode(&peer_genesis_block_id.as_ref().unwrap().hash),
                     "head_block" => head_block_id.as_ref().unwrap().number,
                 );
-                let _hello_reply = HandshakeHello {
-                    from: Some(Endpoint {
-                        address: MY_IP.into(),
-                        port: 18888,
-                        node_id: b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC".to_vec(),
-                    }),
-                    timestamp: Utc::now().timestamp_millis(),
-                    version,
-                    genesis_block_id: genesis_block_id.clone(),
-                    solid_block_id: solid_block_id.clone(),
-                    head_block_id: head_block_id.clone(),
-                    ..Default::default()
-                };
-                // writer.send(ChannelMessage::HandshakeHello(hello_reply)).await?;
+
+                assert_eq!(version, p2p_version);
+                if peer_genesis_block_id != ctx.genesis_block_id {
+                    writer
+                        .send(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect {
+                            reason: ReasonCode::IncompatibleChain as i32,
+                        }))
+                        .await?;
+                    warn!("incompatible chain, disconnect");
+                    return Ok(());
+                }
+
                 info!("handshake finished");
                 let logger = slog_scope::logger().new(o!(
                     "protocol" => "channel"
@@ -320,88 +338,6 @@ async fn incoming_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -
     Ok(())
 }
 
-async fn channel_handler(
-    ctx: Arc<AppContext>,
-    reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
-    mut writer: impl Sink<ChannelMessage, Error = io::Error> + Unpin,
-) -> Result<(), Box<dyn Error>> {
-    let mut reader = reader.timeout(Duration::from_secs(20));
-
-    while let Some(payload) = reader.next().await {
-        debug!("receive message, payload={}", format!("{:?}", payload));
-        if payload.is_err() {
-            error!("timeout");
-            return Ok(());
-        }
-        match payload.unwrap() {
-            Ok(ChannelMessage::Ping) => {
-                info!("ping");
-                writer.send(ChannelMessage::Pong).await?;
-            }
-            Ok(ChannelMessage::TransactionInventory(inv)) => {
-                let Inventory { ids, .. } = inv;
-                for id in &ids {
-                    debug!("transaction inventory, txn_id={}", hex::encode(&id));
-                }
-                // warn!(logger, "will disconnect");
-                // let _disconn = HandshakeDisconnect {
-                // reason: DisconnectReasonCode::UserReason as _,
-                // };
-                // writer.send(disconn.into()).await?;
-            }
-            Ok(ChannelMessage::BlockInventory(inv)) => {
-                let Inventory { ids, r#type } = inv;
-                let ids: Vec<_> = ids
-                    .into_iter()
-                    .filter(|blk_id| {
-                        info!("block inventory, blk_id={}", hex::encode(&blk_id));
-                        if ctx.recent_blk_ids.read().unwrap().contains(&H256::from_slice(blk_id)) {
-                            warn!("block in recent blocks, skip fetch");
-                            false
-                        } else {
-                            true
-                        }
-                    })
-                    .collect();
-                if !ids.is_empty() {
-                    writer
-                        .send(ChannelMessage::FetchBlockInventory(Inventory { ids, r#type }))
-                        .await?;
-                }
-            }
-
-            Ok(ChannelMessage::Block(block)) => {
-                info!("receive block, block={}", block.to_string());
-                let block = IndexedBlock::from_raw(block);
-                if ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
-                    warn!("block in recent blocks");
-                    continue;
-                }
-                ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
-                if !ctx.db.has_block(&block) {
-                    ctx.db.insert_block(&block)?;
-                } else {
-                    warn!("block exists in db");
-                }
-            }
-            Ok(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect { reason })) => {
-                warn!(
-                    "disconnect, reason={}",
-                    DisconnectReasonCode::from_i32(reason).unwrap().to_string()
-                );
-                return Ok(());
-            }
-            Err(e) => {
-                error!("{:?}", e);
-                return Err(e).map_err(From::from);
-            }
-            Ok(msg) => {
-                error!("unhandled => {:?}", msg);
-            }
-        }
-    }
-    Ok(())
-}
 
 async fn sync_channel_handler(
     ctx: Arc<AppContext>,
@@ -425,7 +361,7 @@ async fn sync_channel_handler(
     let highest_block_id = highest_block
         .as_ref()
         .map(|blk| blk.block_id())
-        .unwrap_or(ctx.genesis_block_id.clone());
+        .unwrap_or(ctx.genesis_block_id.clone().unwrap());
 
     let start_block_number = highest_block_id.number;
 
@@ -433,12 +369,15 @@ async fn sync_channel_handler(
 
     // info!("delete => {:?}", ctx.db.delete_block(&highest_block.unwrap()));
     // return Ok(());
-    let inv = BlockInventory {
-        ids: vec![highest_block_id],
-        ..Default::default()
-    };
 
-    writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
+    if *ctx.syncing.read().unwrap() {
+        let inv = BlockInventory {
+            ids: vec![highest_block_id],
+            ..Default::default()
+        };
+
+        writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
+    }
 
     let mut syncing_block_ids = vec![];
     let mut last_block_id = start_block_number;
@@ -459,10 +398,11 @@ async fn sync_channel_handler(
             Ok(ChannelMessage::Pong) => {
                 info!("<= pong");
             }
-            Ok(ChannelMessage::TransactionInventory(_)) => {
-                info!("fuck");
-            }
+            Ok(ChannelMessage::TransactionInventory(_)) => {}
             Ok(ChannelMessage::BlockInventory(inv)) => {
+                if *ctx.syncing.read().unwrap() {
+                    continue;
+                }
                 let Inventory { ids, r#type } = inv;
                 let ids: Vec<_> = ids
                     .into_iter()
@@ -502,8 +442,9 @@ async fn sync_channel_handler(
                     vec![]
                 };
 
-                if syncing_block_ids.len() < 500 {
+                if syncing_block_ids.len() == 0 {
                     warn!("syning finished");
+                    // remore: peer.setNeedSyncFromUs = false
                     *ctx.syncing.write().unwrap() = false;
                 }
 
@@ -531,24 +472,26 @@ async fn sync_channel_handler(
                 }
 
                 ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
-                // if !ctx.db.has_block(&block) {
-                ctx.db.insert_block(&block)?;
-                ctx.db.update_block_height(block.number());
-                // } else {
-                //    warn!("block exists in db");
-                //}
+                if !ctx.db.has_block(&block) {
+                    ctx.db.insert_block(&block)?;
+                    ctx.db.update_block_height(block.number());
+                } else {
+                    warn!("block exists in db");
+                }
 
                 if *ctx.syncing.read().unwrap() {
                     if block.number() == last_block_id {
+                        /*
                         let highest_block = ctx.db.highest_block(start_block_number).unwrap();
                         let highest_block_id = BlockId {
                             number: highest_block.number() as _,
                             hash: highest_block.hash().as_bytes().to_vec(),
-                        };
+                        };*/
+
                         ctx.db.report_status();
-                        info!("sync next bulk of blocks from {}", highest_block.number());
+                        info!("sync next bulk of blocks from {}", block.number());
                         let inv = BlockInventory {
-                            ids: vec![highest_block_id.clone()],
+                            ids: vec![block.block_id()],
                             ..Default::default()
                         };
                         writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
@@ -571,6 +514,15 @@ async fn sync_channel_handler(
                     DisconnectReasonCode::from_i32(reason).unwrap().to_string()
                 );
                 return Ok(());
+            }
+            Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
+                info!("sync blockchain: {:?}", blk_inv);
+                let BlockInventory { ids, .. } = blk_inv;
+                let chain_inv = ChainInventory {
+                    ids: ids,
+                    remain_num: 20,
+                };
+                writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
             }
             Err(e) => {
                 error!("error disconnect, {:?}", e);
