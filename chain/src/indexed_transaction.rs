@@ -2,6 +2,7 @@ use crypto::sha256;
 use primitives::H256;
 use prost::Message;
 use std::cmp;
+use std::hash::{Hash, Hasher};
 
 use proto2::chain::Transaction;
 
@@ -34,6 +35,14 @@ impl IndexedTransaction {
 impl cmp::PartialEq for IndexedTransaction {
     fn eq(&self, other: &Self) -> bool {
         self.hash == other.hash
+    }
+}
+
+impl cmp::Eq for IndexedTransaction {}
+
+impl Hash for IndexedTransaction {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.hash.hash(state);
     }
 }
 
