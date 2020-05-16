@@ -89,6 +89,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                 println!("  => FindPeers target={}", hex::encode(&random_id));
 
+                if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer_addr.ip().to_string())  {
+                    println!("    my ip, ignore");
+                    continue;
+                }
                 let find = FindPeers {
                     from: Some(my_endpoint.clone()),
                     timestamp: Utc::now().timestamp_millis(),
@@ -96,6 +100,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 };
                 transport.send((find.into(), peer_addr)).await?;
 
+                /*
                 let reply_ping = Ping {
                     from: Some(my_endpoint.clone()),
                     to: ping.from.clone(),
@@ -103,6 +108,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     timestamp: Utc::now().timestamp_millis(),
                 };
                 transport.send((reply_ping.into(), peer_addr)).await?;
+                */
             }
             Ok((DiscoveryMessage::FindPeers(find), peer_addr)) => {
                 let target = &find.target_id;
@@ -130,23 +136,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             Ok((DiscoveryMessage::Peers(peers), _)) => {
                 for peer in &peers.peers {
-                    if peer.address == my_ip {
+                    if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer.address)  {
                         println!("    my ip, ignore");
                         continue;
                     }
-                    let peer_addr = format!("{}:{}", peer.address, peer.port).parse().unwrap();
-                    println!("  => ping peer {}", peer_addr);
-                    let ping = Ping {
-                        from: Some(my_endpoint.clone()),
-                        to: Some(Endpoint {
-                            address: peer.address.clone(),
-                            port: peer.port,
-                            node_id: vec![63u8; 64],
-                        }),
-                        version: P2P_VERSION,
-                        timestamp: Utc::now().timestamp_millis(),
-                    };
-                    transport.send((ping.into(), peer_addr)).await?;
+                    if let Ok(peer_addr) = format!("{}:{}", peer.address, peer.port).parse() {
+                        println!("  => ping peer {}", peer_addr);
+                        let ping = Ping {
+                            from: Some(my_endpoint.clone()),
+                            to: Some(Endpoint {
+                                address: peer.address.clone(),
+                                port: peer.port,
+                                node_id: vec![63u8; 64],
+                            }),
+                            version: P2P_VERSION,
+                            timestamp: Utc::now().timestamp_millis(),
+                        };
+                        transport.send((ping.into(), peer_addr)).await?;
+                    } else {
+                        eprintln!("unable to parse address {}:{}", peer.address, peer.port);
+                    }
                 }
             }
             Ok((DiscoveryMessage::Pong(pong), peer_addr)) => {
