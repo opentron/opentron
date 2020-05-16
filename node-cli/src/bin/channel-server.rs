@@ -66,6 +66,7 @@ pub struct PeerConnectionContext {
 }
 
 pub struct AppContext {
+    outbound_ip: String,
     genesis_block_id: Option<BlockId>,
     config: Config,
     db: ChainDB,
@@ -103,9 +104,10 @@ impl AppContext {
         info!("version => {}", config.chain.p2p_version);
         info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
         Ok(AppContext {
-            genesis_block_id: Some(genesis_block_id),
-            config,
             db,
+            config,
+            outbound_ip: String::new(),
+            genesis_block_id: Some(genesis_block_id),
             running: Arc::new(AtomicBool::new(true)),
             recent_blk_ids: RwLock::new(HashSet::new()),
             syncing: RwLock::new(true),
@@ -137,7 +139,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // NOTE: #[tokio::main] conflicts with slog_scope, cause data race in global static resource release.
 async fn tokio_main() -> Result<(), Box<dyn Error>> {
-    let ctx = AppContext::from_config("./conf.toml")?;
+    let mut ctx = AppContext::from_config("./conf.toml")?;
+    ctx.outbound_ip = get_my_ip().await?;
+    info!("outbound ip address: {}", ctx.outbound_ip);
     let ctx = Arc::new(ctx);
 
     // Fix: account state root First appares in 8222293
@@ -264,6 +268,25 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
 
     let p2p_version = ctx.config.chain.p2p_version;
 
+    let channel_conf = &ctx.config.protocol.channel;
+    let advertised_endpoint = channel_conf
+        .advertised_endpoint
+        .parse::<SocketAddr>()
+        .map(|addr| Endpoint {
+            address: addr.ip().to_string(),
+            port: addr.port() as _,
+            node_id: NODE_ID.to_vec(),
+        })
+        .unwrap_or_else(|_| Endpoint {
+            address: ctx.outbound_ip.clone(),
+            port: channel_conf
+                .endpoint
+                .parse::<SocketAddr>()
+                .map(|addr| addr.port())
+                .unwrap_or(18888) as _,
+            node_id: NODE_ID.to_vec(),
+        });
+
     let block_height = ctx.db.get_block_height();
     let head_block_id = ctx
         .db
@@ -281,11 +304,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
     };
 
     let hello = HandshakeHello {
-        from: Some(Endpoint {
-            address: MY_IP.into(),
-            port: 18888,
-            node_id: NODE_ID.to_vec(),
-        }),
+        from: Some(advertised_endpoint),
         version: p2p_version,
         timestamp: Utc::now().timestamp_millis(),
         genesis_block_id: ctx.genesis_block_id.clone(),
@@ -546,7 +565,7 @@ async fn sync_channel_handler(
                             ids: block_ids,
                             remain_num: remain_num,
                         };
-                        writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
+                        // writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
                     }
                     Ok(msg) => {
                         error!("unhandled message {:?}", msg);
