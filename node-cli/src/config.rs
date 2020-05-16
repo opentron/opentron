@@ -29,7 +29,7 @@ pub struct DiscoveryProtoConfig {
 pub struct ChannelProtoConfig {
     pub endpoint: String,
     pub advertised_endpoint: String,
-    pub passive_nodes: Vec<String>,
+    pub active_nodes: Vec<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

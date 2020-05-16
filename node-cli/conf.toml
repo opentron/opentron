@@ -78,9 +78,7 @@ active-nodes = []
 endpoint = '0.0.0.0:18888'
 advertised-endpoint = ''
 # connect in any case
-active-nodes = []
-# accept in any case
-passive-nodes = [
+active-nodes = [
     "47.75.249.4:18888",
     "47.75.128.222:18888",
     "47.52.59.134:18888",
@@ -91,8 +89,10 @@ passive-nodes = [
     "47.75.77.31:18888",
     "47.75.65.115:18888",
 ]
-min-active-peers = 8
-max-active-peers = 50
+# accept in any case
+passive-nodes = [
+]
+max-active-peers = 2
 
 [witness]
 private-key = ""

@@ -26,7 +26,7 @@ pub struct ChainDB {
 
 impl Drop for ChainDB {
     fn drop(&mut self) {
-        println!("db closed");
+        info!("db closed successfully");
     }
 }
 
@@ -622,11 +622,12 @@ impl ChainDB {
         }
     }
 
-    pub unsafe fn close(&self) {
-        eprintln!("Flush ... {:?}", self.db.flush(&FlushOptions::default()));
+    pub unsafe fn prepare_close(&self) {
+        info!("flush db ... {:?}", self.db.flush(&FlushOptions::default()));
         self.db.cancel_background_work(/* wait: */ true);
-        eprintln!("Syncing WAL ... {:?}", self.db.sync_wal());
-        eprintln!("Close DB ... {:?}", self.db.close());
+        info!("cancel background work");
+        info!("syncing WAL ... {:?}", self.db.sync_wal());
+        // eprintln!("Close DB ... {:?}", self.db.close());
     }
 }
 
@@ -643,7 +644,7 @@ mod tests {
         db.report_status();
         //assert!(db.verify_parent_hashes().unwrap());
 
-        assert!(db.verify_parent_hashes_from(0).unwrap());
+        assert!(db.verify_parent_hashes_from(19750000).unwrap());
     }
 
     #[test]
