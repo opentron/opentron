@@ -17,10 +17,9 @@ use node_cli::db::ChainDB;
 use node_cli::genesis::GenesisConfig;
 use node_cli::util::get_my_ip;
 use primitives::H256;
-use proto2::chain::Block;
 use proto2::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
-    ReasonCode, Transactions,
+    ReasonCode,
 };
 use proto2::common::{BlockId, Endpoint};
 use slog::{o, slog_info, Drain};
@@ -44,7 +43,6 @@ use tokio::time::{delay_for, timeout};
 // use tokio_util::codec::{Framed, FramedRead, FramedWrite};
 // const P2P_VERSION: i32 = 11111;
 
-const MY_IP: &str = "0.0.0.0";
 const NODE_ID: &[u8] = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF0";
 
 pub enum PeerStatus {
@@ -59,11 +57,13 @@ pub enum Direction {
     Outbound,
 }
 
+/*
 pub struct PeerConnectionContext {
     peer_addr: SocketAddr,
     done: oneshot::Receiver<()>,
     syncing: RwLock<bool>,
 }
+*/
 
 pub struct AppContext {
     outbound_ip: String,
@@ -147,7 +147,7 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
     // Fix: account state root First appares in 8222293
 
     /*
-    for num in 19729824..19729840 {
+    for num in 1102553..1135973 {
         if let Some(blk) = ctx.db.get_block_by_number(num) {
             println!("delete {} => {:?}", num, ctx.db.delete_block(&blk));
         } else {
@@ -158,7 +158,8 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
     */
 
     // FIX gap
-    // ctx.db.force_update_block_height(19729824);
+    // ctx.db.get_block_by_number(2999)
+    // ctx.db.force_update_block_height(2998);
 
     let my_addr = &ctx.config.protocol.channel.endpoint;
 
@@ -515,7 +516,8 @@ async fn sync_channel_handler(
                             continue;
                         }
                         ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
-                        if !ctx.db.has_block(&block) {
+                        // || block.number() == 2999
+                        if !ctx.db.has_block(&block)  {
                             ctx.db.insert_block(&block)?;
                             ctx.db.update_block_height(block.number());
                         } else {
