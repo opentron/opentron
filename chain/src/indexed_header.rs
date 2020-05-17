@@ -31,6 +31,9 @@ impl IndexedBlockHeader {
         BE::read_u64(&self.hash.as_bytes()[..8]) as i64
     }
 
+    pub fn verify(&self) -> bool {
+        get_block_header_hash(&self.raw) == self.hash
+    }
 }
 
 impl cmp::PartialEq for IndexedBlockHeader {

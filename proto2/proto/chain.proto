@@ -36,7 +36,7 @@ message BlockHeader {
     // int64 witness_id = 8;
     bytes witness_address = 9;
     int32 version = 10;
-    // renamed: accountStateRoot
+    // renamed: accountStateRoot, First appares in block=8222293
     bytes account_state_root = 11;
   }
 
@@ -108,6 +108,8 @@ message Transaction {
   }
 
   message Result {
+    reserved 4;
+    reserved "receipt", "constant_result";
     // renamed: code
     enum Status {
       SUCESS = 0;
@@ -137,6 +139,10 @@ message Transaction {
     Status status = 2;
     // renamed: contractRet
     ContractStatus contract_status = 3;
+
+    // NOTE: 2018/08/02 block=1102553
+    // Then it was wrongly deleted, and wrongly used
+    // ResourceReceipt OBSOLETE_resource_receipt = 4;
 
     // renamed: assetIssueID
     string asset_issue_id = 14;

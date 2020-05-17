@@ -289,11 +289,11 @@ impl ChainDB {
         // FIXME: iterator key lifetime leaks, key might becomes same key
         // ref: https://github.com/bh1xuw/rust-rocks/issues/15
         let found = it.map(|(key, val)| (key.to_vec(), val.to_vec())).collect::<Vec<_>>();
-        if found.len() != 1 {
+        if found.len() > 1 {
             eprintln!("multiple blocks found for same number: {}", num);
             for item in &found {
-                println!("  => {}", hex::encode(&item.0));
-                println!("  => {}", hex::encode(&item.1));
+                eprintln!("  => {}", hex::encode(&item.0));
+                eprintln!("  => {}", hex::encode(&item.1));
             }
             return None;
         }
@@ -551,10 +551,27 @@ impl ChainDB {
     }
     */
 
+    /**
+     * From block 1102553, 1103364, 1103650, 1135972
+    */
     pub fn verify_merkle_tree(&self) -> Result<(), Box<dyn Error>> {
-        for (blk_id, raw_header) in self.block_header.new_iterator(ReadOptions::default_instance()) {
+        let start_block = hex::decode("000000000010f41ae36cf8db21bff1fa0c84451559c549ff7566d75f977b6d14").unwrap();
+        let ropt = ReadOptions::default().iterate_lower_bound(&start_block);
+
+        for (blk_id, raw_header) in self.block_header.new_iterator(&ropt) {
             let header = IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap());
-            let _block = self.get_block_from_header(header);
+            let block = self.get_block_from_header(header).unwrap();
+            if !block.verify_merkle_root_hash() {
+                println!(
+                    "! mismatch block => {} {:?}\n  merkle tree={}",
+                    block.number(),
+                    block.hash(),
+                    hex::encode(block.merkle_root_hash())
+                );
+                for (i, txn) in block.transactions.iter().enumerate() {
+                    println!("  txn {} {:?} verify={}", i, txn.hash, txn.verify());
+                }
+            }
         }
         Ok(())
     }
@@ -584,21 +601,6 @@ impl ChainDB {
                 .get_int_property("rocksdb.mem-table-flush-pending")
                 .unwrap_or_default()
         );
-        // info!("threads = {:?}", Env::default_instance().get_thread_list());
-        /*
-        println!(
-            "[block-header] rocksdb.estimate-num-keys = {:?}",
-            self.block_header
-                .get_int_property("rocksdb.estimate-num-keys")
-                .unwrap_or_default()
-        );
-        println!(
-            "[transactions] rocksdb.estimate-num-keys = {:?}",
-            self.transaction
-                .get_int_property("rocksdb.estimate-num-keys")
-                .unwrap_or_default()
-        );
-        */
     }
 
     pub fn await_background_jobs(&self) {

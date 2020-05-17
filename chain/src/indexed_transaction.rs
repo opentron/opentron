@@ -30,6 +30,10 @@ impl IndexedTransaction {
         let transaction = Transaction::from(transaction);
         Self::new(get_transaction_hash(&transaction), transaction)
     }
+
+    pub fn verify(&self) -> bool {
+        get_transaction_hash(&self.raw) == self.hash
+    }
 }
 
 impl cmp::PartialEq for IndexedTransaction {
