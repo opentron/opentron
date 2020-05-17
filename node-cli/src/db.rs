@@ -10,6 +10,7 @@ use proto2::chain::ContractType;
 use rocks::prelude::*;
 use std::collections::{HashSet, LinkedList};
 use std::error::Error;
+use std::io;
 use std::iter::FromIterator;
 use std::path::Path;
 
@@ -140,10 +141,18 @@ impl ChainDB {
             let mut idx_key = [0u8; 8];
             BE::write_u64(&mut idx_key[..], index as u64);
 
-            batch.putv_cf(&self.transaction, &[block.hash().as_bytes(), &idx_key, txn.hash.as_bytes()], &[&buf]);
+            batch.putv_cf(
+                &self.transaction,
+                &[block.hash().as_bytes(), &idx_key, txn.hash.as_bytes()],
+                &[&buf],
+            );
             // reverse index
             // transaction_hash => [block_hash, transaction_index: u64]
-            batch.putv_cf(&self.transaction_block, &[txn.hash.as_bytes()], &[block.hash().as_bytes(), &idx_key]);
+            batch.putv_cf(
+                &self.transaction_block,
+                &[txn.hash.as_bytes()],
+                &[block.hash().as_bytes(), &idx_key],
+            );
         }
 
         self.db.write(WriteOptions::default_instance(), &batch)?;
@@ -155,6 +164,7 @@ impl ChainDB {
             .get(ReadOptions::default_instance(), id.as_bytes())
             .is_ok()
     }
+
     pub fn has_block(&self, block: &IndexedBlock) -> bool {
         self.has_block_id(&block.header.hash)
     }
@@ -261,6 +271,51 @@ impl ChainDB {
         self.get_block_by_number(0)
     }
 
+    pub fn get_transaction_by_id(&self, id: &H256) -> Result<IndexedTransaction, BoxError> {
+        let mut key = self
+            .transaction_block
+            .get(ReadOptions::default_instance(), id.as_bytes())?
+            .to_vec();
+        key.extend_from_slice(id.as_bytes());
+        let txn = self
+            .transaction
+            .get(ReadOptions::default_instance(), &key)
+            .map(|raw| Transaction::decode(&*raw).unwrap())
+            .map(|txn| IndexedTransaction::new(id.clone(), txn))?;
+        Ok(txn)
+    }
+
+    pub fn get_block_header_by_transaction(&self, txn: &IndexedTransaction) -> Result<IndexedBlockHeader, BoxError> {
+        let block_key = self
+            .transaction_block
+            .get(ReadOptions::default_instance(), txn.hash.as_bytes())?;
+        let header = self
+            .block_header
+            .get(ReadOptions::default_instance(), &block_key[..32])
+            .map(|raw| BlockHeader::decode(&*raw).unwrap())
+            .map(|header| IndexedBlockHeader::new(H256::from_slice(&block_key[..32]), header))?;
+        Ok(header)
+    }
+
+    pub fn delete_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> Result<(), BoxError> {
+        let block_key = self
+            .transaction_block
+            .get(ReadOptions::default_instance(), txn.hash.as_bytes())?;
+
+        if let Err(e) = self.block_header.get(ReadOptions::default_instance(), &block_key[..32]) {
+            if e.is_not_found() {
+                wb.deletev_cf(&self.transaction, &[&*block_key, txn.hash.as_bytes()]);
+                wb.delete_cf(&self.transaction_block, txn.hash.as_bytes());
+                return Ok(());
+            }
+        }
+
+        Err(Box::new(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "transaction is linked to a block, please delete the block first",
+        )))
+    }
+
     pub fn delete_block(&self, block: &IndexedBlock) -> bool {
         let mut wb = WriteBatch::with_reserved_bytes(1024);
 
@@ -282,16 +337,6 @@ impl ChainDB {
     // leaves dangling transactions
     fn delete_block_header(&self, header: &IndexedBlockHeader, wb: &mut WriteBatch) {
         wb.delete_cf(&self.block_header, header.hash.as_bytes());
-    }
-
-    pub fn delete_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> Result<(), BoxError> {
-        let block_pos = self
-            .transaction_block
-            .get(ReadOptions::default_instance(), txn.hash.as_bytes())?;
-
-        wb.deletev_cf(&self.transaction, &[&*block_pos, txn.hash.as_bytes()]);
-        wb.delete_cf(&self.transaction_block, txn.hash.as_bytes());
-        Ok(())
     }
 
     fn delete_orphan_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> bool {
@@ -322,6 +367,10 @@ impl ChainDB {
     }
 
     fn relink_transactions_to_block(&self, block: &IndexedBlock, wb: &mut WriteBatch) {
+        if !block.verify_merkle_root_hash() {
+            eprintln!("error while checking block merkle root hash");
+            return;
+        }
         let correct_block_hash = block.hash().as_bytes();
         let txn_hashes: Vec<_> = block.transactions.iter().map(|txn| txn.hash.as_bytes()).collect();
         let block_hashes = self
