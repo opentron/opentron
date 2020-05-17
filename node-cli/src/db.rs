@@ -555,12 +555,15 @@ impl ChainDB {
      * From block 1102553, 1103364, 1103650, 1135972
     */
     pub fn verify_merkle_tree(&self) -> Result<(), Box<dyn Error>> {
-        let start_block = hex::decode("000000000010f41ae36cf8db21bff1fa0c84451559c549ff7566d75f977b6d14").unwrap();
-        let ropt = ReadOptions::default().iterate_lower_bound(&start_block);
+        let ropt = ReadOptions::default();
 
         for (blk_id, raw_header) in self.block_header.new_iterator(&ropt) {
             let header = IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap());
             let block = self.get_block_from_header(header).unwrap();
+
+            if block.number() % 10000 == 0 {
+                println!("block {} {:?}", block.number(), block.hash());
+            }
             if !block.verify_merkle_root_hash() {
                 println!(
                     "! mismatch block => {} {:?}\n  merkle tree={}",
