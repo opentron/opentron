@@ -34,7 +34,7 @@ impl ChainDB {
         let db_options = DBOptions::default()
             .create_if_missing(true)
             .create_missing_column_families(true)
-            .increase_parallelism(6)
+            .increase_parallelism(num_cpus::get() as _)
             .allow_mmap_reads(true) // for Cuckoo table
             .max_open_files(1024);
 
@@ -137,14 +137,13 @@ impl ChainDB {
             txn.raw.encode(&mut buf)?;
 
             // [block_hash, transaction_index: u64, transaction_hash] => Transaction
-            let mut key = [0u8; 32 + 8 + 32];
-            (&mut key[..32]).copy_from_slice(block.hash().as_bytes());
-            BE::write_u64(&mut key[32..32 + 8], index as u64);
-            (&mut key[32 + 8..]).copy_from_slice(txn.hash.as_bytes());
+            let mut idx_key = [0u8; 8];
+            BE::write_u64(&mut idx_key[..], index as u64);
 
-            batch.put_cf(&self.transaction, &key, &buf);
+            batch.putv_cf(&self.transaction, &[block.hash().as_bytes(), &idx_key, txn.hash.as_bytes()], &[&buf]);
             // reverse index
-            batch.put_cf(&self.transaction_block, txn.hash.as_bytes(), &key[..32 + 8]);
+            // transaction_hash => [block_hash, transaction_index: u64]
+            batch.putv_cf(&self.transaction_block, &[txn.hash.as_bytes()], &[block.hash().as_bytes(), &idx_key]);
         }
 
         self.db.write(WriteOptions::default_instance(), &batch)?;
