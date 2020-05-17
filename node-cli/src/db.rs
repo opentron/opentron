@@ -58,13 +58,15 @@ impl ChainDB {
                     .optimize_for_point_lookup(128)
                     .max_write_buffer_number(6),
             ),*/
-            // [block_number, transaction_index, transaction_hash]
+            // [block_hash, transaction_index: u64, transaction_hash] => Transaction
             ColumnFamilyDescriptor::new(
                 "transaction",
                 ColumnFamilyOptions::default()
                     .optimize_level_style_compaction(512 * 1024 * 1024)
                     .max_write_buffer_number(6),
             ),
+            // transaction_hash => [block_hash, transaction_index: u64]
+            // Key and value lengths are fixed
             ColumnFamilyDescriptor::new(
                 "transaction-block",
                 ColumnFamilyOptions::default()
@@ -91,60 +93,6 @@ impl ChainDB {
             transaction_block: txn_blk,
         }
     }
-
-    /*
-    pub fn new_for_sync<P: AsRef<Path>>(db_path: P) -> ChainDB {
-        let options = Options::default().prepare_for_bulk_load();
-
-        let db_options = DBOptions::default()
-            .create_if_missing(true)
-            .create_missing_column_families(true)
-            .increase_parallelism(6)
-            .max_open_files(1024);
-
-        let column_families = vec![
-            ColumnFamilyDescriptor::new(
-                DEFAULT_COLUMN_FAMILY_NAME,
-                ColumnFamilyOptions::default()
-                    .optimize_for_small_db()
-                    .optimize_for_point_lookup(32)
-                    .num_levels(2)
-                    .compression(CompressionType::NoCompression),
-            ),
-            ColumnFamilyDescriptor::new("block-header", ColumnFamilyOptions::from_options(&options)),
-            ColumnFamilyDescriptor::new(
-                "block-transactions",
-                ColumnFamilyOptions::from_options(&options).optimize_for_point_lookup(128),
-            ),
-            ColumnFamilyDescriptor::new(
-                "transaction",
-                ColumnFamilyOptions::from_options(&options).optimize_for_point_lookup(256),
-            ),
-            ColumnFamilyDescriptor::new(
-                "transaction-block",
-                ColumnFamilyOptions::from_options(&options).optimize_for_point_lookup(32),
-            ),
-        ];
-
-        let (db, mut handles) = DB::open_with_column_families(&db_options, db_path, column_families).unwrap();
-        let txn_blk = handles.pop().unwrap();
-        let txn = handles.pop().unwrap();
-        let blk_txns = handles.pop().unwrap();
-        let blk = handles.pop().unwrap();
-        let default = handles.pop().unwrap();
-
-        assert!(handles.is_empty());
-
-        ChainDB {
-            db: db,
-            default: default,
-            block_header: blk,
-            block_transactions: blk_txns,
-            transaction: txn,
-            transaction_block: txn_blk,
-        }
-    }
-    */
 
     pub fn get_block_height(&self) -> i64 {
         self.default
@@ -188,14 +136,15 @@ impl ChainDB {
             buf.clear();
             txn.raw.encode(&mut buf)?;
 
-            let mut key = [0u8; 8 + 8 + 32];
-            BE::write_u64(&mut key[..8], block.number() as u64);
-            BE::write_u64(&mut key[8..16], index as u64);
-            (&mut key[16..]).copy_from_slice(txn.hash.as_bytes());
+            // [block_hash, transaction_index: u64, transaction_hash] => Transaction
+            let mut key = [0u8; 32 + 8 + 32];
+            (&mut key[..32]).copy_from_slice(block.hash().as_bytes());
+            BE::write_u64(&mut key[32..32 + 8], index as u64);
+            (&mut key[32 + 8..]).copy_from_slice(txn.hash.as_bytes());
 
             batch.put_cf(&self.transaction, &key, &buf);
             // reverse index
-            batch.put_cf(&self.transaction_block, txn.hash.as_bytes(), &key[..16]);
+            batch.put_cf(&self.transaction_block, txn.hash.as_bytes(), &key[..32 + 8]);
         }
 
         self.db.write(WriteOptions::default_instance(), &batch)?;
@@ -226,13 +175,18 @@ impl ChainDB {
     }
 
     pub fn get_block_from_header(&self, header: IndexedBlockHeader) -> Option<IndexedBlock> {
+        let mut upper_bound = [0u8; 8];
+        BE::write_u64(&mut upper_bound, header.number() as u64 + 1);
         let transactions = self
             .transaction
-            .new_iterator(&ReadOptions::default().iterate_lower_bound(&header.hash.as_bytes()[..8]))
-            .take_while(|(key, _)| &key[..8] == &header.hash.as_bytes()[..8])
+            .new_iterator(
+                &ReadOptions::default()
+                    .iterate_lower_bound(&header.hash.as_bytes())
+                    .iterate_upper_bound(&upper_bound),
+            )
             .map(|(key, val)| {
                 let txn = Transaction::decode(val).unwrap();
-                IndexedTransaction::new(H256::from_slice(&key[16..]), txn)
+                IndexedTransaction::new(H256::from_slice(&key[32 + 8..]), txn)
             })
             .collect();
 
@@ -315,12 +269,12 @@ impl ChainDB {
 
         let header = &block.header;
         self.transaction
-            .new_iterator(&ReadOptions::default().iterate_lower_bound(&header.hash.as_bytes()[..8]))
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(&header.hash.as_bytes()))
             .keys()
-            .take_while(|key| &key[..8] == &header.hash.as_bytes()[..8])
+            .take_while(|key| &key[..32] == header.hash.as_bytes())
             .for_each(|key| {
                 wb.delete_cf(&self.transaction, &key);
-                wb.delete_cf(&self.transaction_block, &key[16..]);
+                wb.delete_cf(&self.transaction_block, &key[32 + 8..]);
             });
 
         self.db.write(WriteOptions::default_instance(), &wb).is_ok()
