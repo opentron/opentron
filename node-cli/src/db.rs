@@ -19,7 +19,6 @@ pub struct ChainDB {
     db: DB,
     default: ColumnFamily,
     block_header: ColumnFamily,
-    block_transactions: ColumnFamily,
     transaction: ColumnFamily,
     transaction_block: ColumnFamily,
 }
@@ -36,6 +35,7 @@ impl ChainDB {
             .create_if_missing(true)
             .create_missing_column_families(true)
             .increase_parallelism(6)
+            .allow_mmap_reads(true) // for Cuckoo table
             .max_open_files(1024);
 
         let column_families = vec![
@@ -51,24 +51,26 @@ impl ChainDB {
                 "block-header",
                 ColumnFamilyOptions::default().max_write_buffer_number(6),
             ),
+            /*
             ColumnFamilyDescriptor::new(
                 "block-transactions",
                 ColumnFamilyOptions::default()
                     .optimize_for_point_lookup(128)
                     .max_write_buffer_number(6),
-            ),
+            ),*/
+            // [block_number, transaction_index, transaction_hash]
             ColumnFamilyDescriptor::new(
                 "transaction",
                 ColumnFamilyOptions::default()
                     .optimize_level_style_compaction(512 * 1024 * 1024)
-                    .optimize_for_point_lookup(256)
                     .max_write_buffer_number(6),
             ),
             ColumnFamilyDescriptor::new(
                 "transaction-block",
                 ColumnFamilyOptions::default()
-                    .optimize_level_style_compaction(512 * 1024 * 1024)
-                    .optimize_for_point_lookup(32)
+                    .table_factory_cuckoo(CuckooTableOptions::default())
+                    // .optimize_level_style_compaction(512 * 1024 * 1024)
+                    // .optimize_for_point_lookup(32)
                     .max_write_buffer_number(6),
             ),
         ];
@@ -76,7 +78,6 @@ impl ChainDB {
         let (db, mut handles) = DB::open_with_column_families(&db_options, db_path, column_families).unwrap();
         let txn_blk = handles.pop().unwrap();
         let txn = handles.pop().unwrap();
-        let blk_txns = handles.pop().unwrap();
         let blk = handles.pop().unwrap();
         let default = handles.pop().unwrap();
 
@@ -86,12 +87,12 @@ impl ChainDB {
             db: db,
             default: default,
             block_header: blk,
-            block_transactions: blk_txns,
             transaction: txn,
             transaction_block: txn_blk,
         }
     }
 
+    /*
     pub fn new_for_sync<P: AsRef<Path>>(db_path: P) -> ChainDB {
         let options = Options::default().prepare_for_bulk_load();
 
@@ -143,6 +144,7 @@ impl ChainDB {
             transaction_block: txn_blk,
         }
     }
+    */
 
     pub fn get_block_height(&self) -> i64 {
         self.default
@@ -182,25 +184,18 @@ impl ChainDB {
         block.header.raw.encode(&mut buf)?;
         batch.put_cf(&self.block_header, block.header.hash.as_bytes(), &buf);
 
-        if block.transactions.is_empty() {
-            batch.put_cf(&self.block_transactions, block.header.hash.as_bytes(), b"");
-        } else {
-            for txn in &block.transactions {
-                buf.clear();
-                txn.raw.encode(&mut buf)?;
-                batch.put_cf(&self.transaction, txn.hash.as_bytes(), &buf);
-                batch.put_cf(
-                    &self.transaction_block,
-                    txn.hash.as_bytes(),
-                    block.header.hash.as_bytes(),
-                );
-            }
-            let txn_ids: Vec<_> = block
-                .transactions
-                .iter()
-                .map(|txn| txn.hash.as_bytes())
-                .collect::<Vec<_>>();
-            batch.putv_cf(&self.block_transactions, &[block.header.hash.as_bytes()], &txn_ids);
+        for (index, txn) in block.transactions.iter().enumerate() {
+            buf.clear();
+            txn.raw.encode(&mut buf)?;
+
+            let mut key = [0u8; 8 + 8 + 32];
+            BE::write_u64(&mut key[..8], block.number() as u64);
+            BE::write_u64(&mut key[8..16], index as u64);
+            (&mut key[16..]).copy_from_slice(txn.hash.as_bytes());
+
+            batch.put_cf(&self.transaction, &key, &buf);
+            // reverse index
+            batch.put_cf(&self.transaction_block, txn.hash.as_bytes(), &key[..16]);
         }
 
         self.db.write(WriteOptions::default_instance(), &batch)?;
@@ -231,27 +226,15 @@ impl ChainDB {
     }
 
     pub fn get_block_from_header(&self, header: IndexedBlockHeader) -> Option<IndexedBlock> {
-        let raw_txn_ids = self
-            .block_transactions
-            .get(ReadOptions::default_instance(), header.hash.as_bytes())
-            .unwrap_or_default();
-        let txn_ids: Vec<&[u8]> = raw_txn_ids.chunks_exact(32).collect();
-
         let transactions = self
             .transaction
-            .multi_get(ReadOptions::default_instance(), &txn_ids)
-            .into_iter()
-            .zip(txn_ids.iter())
-            .map(|(maybe_raw, txn_id)| {
-                maybe_raw
-                    .ok()
-                    .and_then(|raw| Transaction::decode(&*raw).ok())
-                    .map(|txn| IndexedTransaction::new(H256::from_slice(txn_id), txn))
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(&header.hash.as_bytes()[..8]))
+            .take_while(|(key, _)| &key[..8] == &header.hash.as_bytes()[..8])
+            .map(|(key, val)| {
+                let txn = Transaction::decode(val).unwrap();
+                IndexedTransaction::new(H256::from_slice(&key[16..]), txn)
             })
-            .collect::<Option<Vec<_>>>();
-
-        let transactions = transactions.unwrap_or_default();
-        assert_eq!(txn_ids.len(), transactions.len());
+            .collect();
 
         Some(IndexedBlock::new(header, transactions))
     }
@@ -289,6 +272,9 @@ impl ChainDB {
         // FIXME: iterator key lifetime leaks, key might becomes same key
         // ref: https://github.com/bh1xuw/rust-rocks/issues/15
         let found = it.map(|(key, val)| (key.to_vec(), val.to_vec())).collect::<Vec<_>>();
+        if found.is_empty() {
+            return None;
+        }
         if found.len() > 1 {
             eprintln!("multiple blocks found for same number: {}", num);
             for item in &found {
@@ -326,11 +312,16 @@ impl ChainDB {
         let mut wb = WriteBatch::with_reserved_bytes(1024);
 
         wb.delete_cf(&self.block_header, block.hash().as_bytes());
-        wb.delete_cf(&self.block_transactions, block.hash().as_bytes());
-        for txn in &block.transactions {
-            wb.delete_cf(&self.transaction, txn.hash.as_bytes());
-            wb.delete_cf(&self.transaction_block, txn.hash.as_bytes());
-        }
+
+        let header = &block.header;
+        self.transaction
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(&header.hash.as_bytes()[..8]))
+            .keys()
+            .take_while(|key| &key[..8] == &header.hash.as_bytes()[..8])
+            .for_each(|key| {
+                wb.delete_cf(&self.transaction, &key);
+                wb.delete_cf(&self.transaction_block, &key[16..]);
+            });
 
         self.db.write(WriteOptions::default_instance(), &wb).is_ok()
     }
@@ -338,12 +329,16 @@ impl ChainDB {
     // leaves dangling transactions
     fn delete_block_header(&self, header: &IndexedBlockHeader, wb: &mut WriteBatch) {
         wb.delete_cf(&self.block_header, header.hash.as_bytes());
-        wb.delete_cf(&self.block_transactions, header.hash.as_bytes());
     }
 
-    pub fn delete_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) {
-        wb.delete_cf(&self.transaction, txn.hash.as_bytes());
+    pub fn delete_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> Result<(), BoxError> {
+        let block_pos = self
+            .transaction_block
+            .get(ReadOptions::default_instance(), txn.hash.as_bytes())?;
+
+        wb.deletev_cf(&self.transaction, &[&*block_pos, txn.hash.as_bytes()]);
         wb.delete_cf(&self.transaction_block, txn.hash.as_bytes());
+        Ok(())
     }
 
     fn delete_orphan_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> bool {
@@ -553,7 +548,7 @@ impl ChainDB {
 
     /**
      * From block 1102553, 1103364, 1103650, 1135972
-    */
+     */
     pub fn verify_merkle_tree(&self) -> Result<(), Box<dyn Error>> {
         let ropt = ReadOptions::default();
 
@@ -561,7 +556,7 @@ impl ChainDB {
             let header = IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap());
             let block = self.get_block_from_header(header).unwrap();
 
-            if block.number() % 10000 == 0 {
+            if block.number() % 1000 == 0 {
                 println!("block {} {:?}", block.number(), block.hash());
             }
             if !block.verify_merkle_root_hash() {
