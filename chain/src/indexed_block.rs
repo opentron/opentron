@@ -117,7 +117,11 @@ impl IndexedBlock {
 
     pub fn verify_merkle_root_hash(&self) -> bool {
         if BLOCK_WHITELIST.contains(&self.number()) {
-            eprintln!("block {} in whitelist", self.number());
+            eprintln!(
+                "block {} in whitelist, merkle tree match={}",
+                self.number(),
+                self.merkle_root_hash() == merkle_root(&self.transactions).as_bytes()
+            );
             return true;
         }
         if self.merkle_root_hash() == merkle_root(&self.transactions).as_bytes() {
@@ -142,7 +146,8 @@ fn merkle_root(transactions: &[IndexedTransaction]) -> H256 {
 
 fn get_transaction_hash_for_merkle_root(transaction: &Transaction) -> H256 {
     let mut buf = Vec::with_capacity(255);
-    transaction.encode(&mut buf).unwrap(); // won't fail?
+    // won't fail?
+    transaction.encode(&mut buf).unwrap();
     // println!("raw => {:?}", buf);
     sha256(&buf)
 }
