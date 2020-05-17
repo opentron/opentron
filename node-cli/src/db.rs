@@ -622,6 +622,14 @@ impl ChainDB {
         }
     }
 
+    pub fn compact_db(&self) -> Result<(), BoxError> {
+        self.default.compact_range(&Default::default(), ..)?;
+        self.block_header.compact_range(&Default::default(), ..)?;
+        self.transaction.compact_range(&Default::default(), ..)?;
+        self.transaction_block.compact_range(&Default::default(), ..)?;
+        Ok(())
+    }
+
     pub unsafe fn prepare_close(&self) {
         info!("flush db ... {:?}", self.db.flush(&FlushOptions::default()));
         self.db.cancel_background_work(/* wait: */ true);
@@ -690,7 +698,7 @@ mod tests {
 
         // db.visit();
         println!("==================================");
-        db.verify_parent_hashes();
+        db.verify_parent_hashes().unwrap();
         // db.verify_merkle_tree();
     }
 }
