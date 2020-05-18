@@ -86,6 +86,8 @@ impl juniper::Context for Context {}
 struct NodeInfo {
     /// Running code version.
     code_version: String,
+    /// Is node syncing.
+    syncing: bool,
     /// Number of currently running compactions.
     num_running_compactions: i32,
     /// Number of currently running flushes.
@@ -112,6 +114,7 @@ impl Query {
         let db = &ctx.app.db;
         NodeInfo {
             code_version: "0.1.0".to_owned(),
+            syncing: *ctx.app.syncing.read().unwrap(),
             num_running_compactions: db.get_db_property("rocksdb.num-running-compactions") as _,
             num_running_flushes: db.get_db_property("rocksdb.num-running-flushes") as _,
             num_immutable_mem_table: db.get_accumulated_db_property("rocksdb.num-immutable-mem-table") as _,
