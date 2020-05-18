@@ -95,7 +95,7 @@ struct NodeInfo {
     /// If write has been stopped.
     is_write_stopped: bool,
     /// Total size (bytes) of all SST files belong to the latest LSM tree.
-    total_size: i32,
+    total_size: f64,
 }
 
 pub(crate) struct Query;
