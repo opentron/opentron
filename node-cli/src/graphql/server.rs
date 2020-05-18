@@ -14,7 +14,7 @@ pub async fn graphql_server<F>(ctx: Arc<AppContext>, shutdown_signal: F)
 where
     F: Future<Output = ()>,
 {
-    let addr = ([127, 0, 0, 1], 3001).into();
+    let addr = ([0, 0, 0, 0], 3000).into();
 
     let root_node: Arc<Schema> = Arc::new(RootNode::new(Query, EmptyMutation::new(), EmptySubscription::new()));
     let ctx = Arc::new(Context { app: ctx });

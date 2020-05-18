@@ -208,7 +208,7 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
         server.with_logger(logger)
     };
 
-    join!(graphql_service, incomming_service, active_service);
+    let _ = join!(graphql_service, incomming_service, active_service);
 
     Ok(termination_done.await?)
 }
