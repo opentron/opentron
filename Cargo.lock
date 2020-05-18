@@ -228,6 +228,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5988cb1d626264ac94100be357308f29ff7cbdd3b36bda27f450a4ee3f713426"
 
 [[package]]
+name = "bson"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c177ed0122f24ce5e0f05bf9b29e79f3ac1a359bc504e0e14c3b34896c71c00"
+dependencies = [
+ "byteorder",
+ "chrono",
+ "hex 0.3.2",
+ "libc",
+ "linked-hash-map",
+ "md5",
+ "rand 0.7.3",
+ "serde",
+ "serde_json",
+ "time",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -285,6 +303,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "crypto",
+ "lazy_static",
  "merkle-tree",
  "primitives",
  "prost",
@@ -851,6 +870,12 @@ dependencies = [
 
 [[package]]
 name = "hex"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
+
+[[package]]
+name = "hex"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
@@ -998,6 +1023,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "076f042c5b7b98f31d205f1249267e12a6518c1481e9dae9764af19b707d2292"
 dependencies = [
  "autocfg",
+ "serde",
 ]
 
 [[package]]
@@ -1043,6 +1069,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "juniper"
+version = "0.14.2"
+source = "git+https://github.com/graphql-rust/juniper.git#5021ae80e1fe8ba680d019913fd341cb21605e25"
+dependencies = [
+ "bson",
+ "chrono",
+ "fnv",
+ "futures",
+ "indexmap",
+ "juniper_codegen",
+ "serde",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "juniper_codegen"
+version = "0.14.2"
+source = "git+https://github.com/graphql-rust/juniper.git#5021ae80e1fe8ba680d019913fd341cb21605e25"
+dependencies = [
+ "futures",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "juniper_hyper"
+version = "0.5.2"
+source = "git+https://github.com/graphql-rust/juniper.git#5021ae80e1fe8ba680d019913fd341cb21605e25"
+dependencies = [
+ "futures",
+ "hyper",
+ "juniper",
+ "serde_json",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "keccak"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1063,7 +1130,7 @@ name = "keys"
 version = "0.1.0"
 dependencies = [
  "base58",
- "hex",
+ "hex 0.4.2",
  "parity-secp256k1",
  "rand 0.7.3",
  "sha2",
@@ -1081,6 +1148,12 @@ name = "libc"
 version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
+
+[[package]]
+name = "linked-hash-map"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8dd5a6d5999d9907cda8ed67bbd137d3af8085216c2ac62de5be860bd41f304a"
 
 [[package]]
 name = "log"
@@ -1111,6 +1184,12 @@ name = "maybe-uninit"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
+
+[[package]]
+name = "md5"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e6bcd6433cff03a4bfc3d9834d504467db1f1cf6d0ea765d37d330249ed629d"
 
 [[package]]
 name = "memchr"
@@ -1233,10 +1312,14 @@ dependencies = [
  "chrono",
  "ctrlc",
  "futures",
- "hex",
+ "hex 0.4.2",
  "hex-literal",
+ "hyper",
+ "juniper",
+ "juniper_hyper",
  "keys",
  "log",
+ "num_cpus",
  "primitives",
  "prost",
  "prost-types",
@@ -1423,7 +1506,33 @@ dependencies = [
 name = "primitives"
 version = "0.1.0"
 dependencies = [
- "hex",
+ "hex 0.4.2",
+]
+
+[[package]]
+name = "proc-macro-error"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "98e9e4b82e0ef281812565ea4751049f1bdcdfccda7d3f459f2e138a40c08678"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f5444ead4e9935abd7f27dc51f7e852a0569ac888096d5ec2499470794e2e53"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+ "syn-mid",
+ "version_check",
 ]
 
 [[package]]
@@ -1517,7 +1626,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "bytes",
- "hex",
+ "hex 0.4.2",
  "prost",
  "prost-build",
  "prost-types",
@@ -1884,6 +1993,7 @@ version = "1.0.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "993948e75b189211a9b31a7528f950c6adc21f9720b6438ff80a7fa2f864cea2"
 dependencies = [
+ "indexmap",
  "itoa",
  "ryu",
  "serde",
@@ -2038,6 +2148,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-xid",
+]
+
+[[package]]
+name = "syn-mid"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7be3539f6c128a931cf19dcee741c1af532c7fd387baa739c03dd2e96479338a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -2565,6 +2686,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "uuid"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
+
+[[package]]
 name = "vcpkg"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2594,7 +2721,7 @@ version = "0.1.0"
 dependencies = [
  "aes",
  "cfb-mode",
- "hex",
+ "hex 0.4.2",
  "keys",
  "rand 0.7.3",
  "serde_json",
@@ -2612,7 +2739,7 @@ dependencies = [
  "ethabi",
  "futures",
  "grpc",
- "hex",
+ "hex 0.4.2",
  "itertools 0.9.0",
  "keys",
  "lazy_static",
@@ -2820,7 +2947,7 @@ dependencies = [
  "crypto_api_chachapoly",
  "ff",
  "fpe",
- "hex",
+ "hex 0.4.2",
  "hex-literal",
  "lazy_static",
  "log",
