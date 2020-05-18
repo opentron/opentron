@@ -184,6 +184,7 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
                     warn!("active connection service closed");
                     break;
                 }
+                ctx.db.await_background_jobs();
                 info!("active connection to {}", peer_addr);
                 let ctx = ctx.clone();
                 match TcpStream::connect(&peer_addr).await {
