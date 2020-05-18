@@ -48,6 +48,7 @@ impl ChainDB {
                     .num_levels(2)
                     .compression(CompressionType::NoCompression),
             ),
+            // block_hash => BlockHeader
             ColumnFamilyDescriptor::new(
                 "block-header",
                 ColumnFamilyOptions::default().max_write_buffer_number(6),

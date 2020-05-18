@@ -30,6 +30,11 @@ tokio = { version = '0.2', default-features = false, features = [
 ] }
 tokio-util = { version = '0.3', features = ['codec'] }
 reqwest = { version = '0.10', default-features = false, features = ['json'] }
+# graphql
+juniper = { version = "0.14",  git = "https://github.com/graphql-rust/juniper.git" }
+juniper_hyper = { version = "0.5.2", git = "https://github.com/graphql-rust/juniper.git" }
+hyper = "0.13"
+# logger
 log = "0.4"
 slog = "2.5"
 slog-term = "2.5"
@@ -37,6 +42,7 @@ slog-async = "2.5"
 slog-stdlog = "4.0"
 slog-scope = "4.3"
 slog-scope-futures = "0.1"
+# misc
 num_cpus = "1.13.0"
 ctrlc = { version = "3", features = ["termination"] }
 #rocks = { version = "0.1.7", git = "https://github.com/bh1xuw/rust-rocks.git" }

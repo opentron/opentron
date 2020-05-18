@@ -4,6 +4,7 @@ extern crate node_cli;
 
 use chrono::Utc;
 use futures::future::FutureExt;
+use futures::join;
 use futures::sink::{Sink, SinkExt};
 use futures::stream::Stream;
 // use futures::stream::StreamExt;
@@ -12,9 +13,8 @@ use futures::channel::oneshot;
 use futures::select;
 use log::{debug, error, info, warn};
 use node_cli::channel::{ChannelMessage, ChannelMessageCodec};
-use node_cli::config::Config;
-use node_cli::db::ChainDB;
-use node_cli::genesis::GenesisConfig;
+use node_cli::context::AppContext;
+use node_cli::graphql::server::graphql_server;
 use node_cli::util::get_my_ip;
 use primitives::H256;
 use proto2::channel::{
@@ -24,15 +24,12 @@ use proto2::channel::{
 use proto2::common::{BlockId, Endpoint};
 use slog::{o, slog_info, Drain};
 use slog_scope_futures::FutureExt as SlogFutureExt;
-use std::collections::HashSet;
 use std::error::Error;
 use std::io;
 use std::net::SocketAddr;
-use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::RwLock;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::stream::StreamExt;
 // use tokio::sync::oneshot;
@@ -64,57 +61,6 @@ pub struct PeerConnectionContext {
     syncing: RwLock<bool>,
 }
 */
-
-pub struct AppContext {
-    outbound_ip: String,
-    genesis_block_id: Option<BlockId>,
-    config: Config,
-    db: ChainDB,
-    running: Arc<AtomicBool>,
-    recent_blk_ids: RwLock<HashSet<H256>>,
-    syncing: RwLock<bool>,
-    peers: RwLock<Vec<oneshot::Sender<()>>>,
-}
-
-impl AppContext {
-    pub fn from_config<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
-        let config = Config::load_from_file(path)?;
-
-        let genesis_config = GenesisConfig::load_from_file(&config.chain.genesis)?;
-        let genesis_blk = genesis_config.to_indexed_block()?;
-
-        let db = ChainDB::new(&config.storage.data_dir);
-
-        if !db.has_block(&genesis_blk) {
-            if let Some(_) = db.get_genesis_block() {
-                panic!("genesis block is inconsistent with db");
-            }
-            info!("insert genesis block to db");
-            db.insert_block(&genesis_blk)?;
-        } else {
-            info!("genesis block check passed");
-        }
-        db.report_status();
-
-        let genesis_block_id = BlockId {
-            number: 0,
-            hash: genesis_blk.header.hash.as_ref().to_owned(),
-        };
-
-        info!("version => {}", config.chain.p2p_version);
-        info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
-        Ok(AppContext {
-            db,
-            config,
-            outbound_ip: String::new(),
-            genesis_block_id: Some(genesis_block_id),
-            running: Arc::new(AtomicBool::new(true)),
-            recent_blk_ids: RwLock::new(HashSet::new()),
-            syncing: RwLock::new(true),
-            peers: RwLock::default(),
-        })
-    }
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use tokio::runtime::Builder;
@@ -165,11 +111,11 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
 
     // passive connections
     let mut listener = TcpListener::bind(my_addr).await?;
-    info!("server start listening at {}", listener.local_addr().unwrap());
     let (server_tx, rx) = oneshot::channel::<()>();
     let server = {
         let ctx = ctx.clone();
         async move {
+            info!("listening on grpc://{}", listener.local_addr().unwrap());
             let mut incoming = listener.incoming();
             let mut rx_fut = rx.fuse();
             loop {
@@ -200,10 +146,12 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
     };
 
     let (termination_tx, termination_done) = oneshot::channel::<()>();
+    let (graphql_tx, graphql_done) = oneshot::channel::<()>();
     let termination_handler = {
         let ctx = ctx.clone();
         move || {
             let _ = server_tx.send(());
+            let _ = graphql_tx.send(());
             while let Some(done) = ctx.peers.write().unwrap().pop() {
                 let _ = done.send(());
             }
@@ -227,28 +175,40 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
     .expect("Error setting Ctrl-C handler");
 
     // active coonections
-    let active_nodes = ctx.config.protocol.channel.active_nodes.clone();
-    let active_service = tokio::spawn(async move {
-        for peer_addr in active_nodes.into_iter().cycle() {
-            if !ctx.running.load(Ordering::Relaxed) {
-                warn!("active connection service closed");
-                break;
-            }
-            info!("active connection to {}", peer_addr);
-            let ctx = ctx.clone();
-            match TcpStream::connect(&peer_addr).await {
-                Ok(sock) => {
-                    let _ = handshake_handler(ctx, sock).await;
+    let active_service = {
+        let ctx = ctx.clone();
+        let active_nodes = ctx.config.protocol.channel.active_nodes.clone();
+        tokio::spawn(async move {
+            for peer_addr in active_nodes.into_iter().cycle() {
+                if !ctx.running.load(Ordering::Relaxed) {
+                    warn!("active connection service closed");
+                    break;
                 }
-                Err(e) => {
-                    warn!("connect {} failed: {}", peer_addr, e);
+                info!("active connection to {}", peer_addr);
+                let ctx = ctx.clone();
+                match TcpStream::connect(&peer_addr).await {
+                    Ok(sock) => {
+                        let _ = handshake_handler(ctx, sock).await;
+                    }
+                    Err(e) => {
+                        warn!("connect {} failed: {}", peer_addr, e);
+                    }
                 }
             }
-        }
-    });
+        })
+    };
 
-    server.await;
-    let _ = active_service.await;
+    let graphql_service = {
+        let logger = slog_scope::logger().new(o!("service" => "graphql"));
+        graphql_server(ctx, graphql_done.map(|_| ())).with_logger(logger)
+    };
+
+    let incomming_service = {
+        let logger = slog_scope::logger().new(o!("service" => "channel"));
+        server.with_logger(logger)
+    };
+
+    join!(graphql_service, incomming_service, active_service);
 
     Ok(termination_done.await?)
 }
@@ -396,6 +356,12 @@ async fn sync_channel_handler(
         .as_ref()
         .map(|blk| blk.block_id())
         .unwrap_or(ctx.genesis_block_id.clone().unwrap());
+    /*
+    let highest_block_id = BlockId {
+        number: 19822000,
+        hash: hex::decode("00000000012e75b0c3dcb528f9bc31a43f7098d97b59f618387b958b4180bf8d").unwrap(),
+    };
+    */
 
     let mut last_block_id = highest_block_id.number;
 
