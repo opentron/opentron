@@ -109,13 +109,14 @@ impl Query {
 
     /// Current Node info
     fn node_info(ctx: &Context) -> NodeInfo {
+        let db = &ctx.app.db;
         NodeInfo {
             code_version: "0.1.0".to_owned(),
-            num_running_compactions: ctx.app.db.get_db_property("rocksdb.num-running-compactions") as _,
-            num_running_flushes: ctx.app.db.get_db_property("rocksdb.num-running-flushes") as _,
-            num_immutable_mem_table: ctx.app.db.get_accumulated_db_property("rocksdb.num-immutable-mem-table") as _,
-            is_write_stopped: ctx.app.db.get_accumulated_db_property("rocksdb.is-write-stopped") > 0,
-            total_size: ctx.app.db.get_accumulated_db_property("rocksdb.live-sst-files-size") as _,
+            num_running_compactions: db.get_db_property("rocksdb.num-running-compactions") as _,
+            num_running_flushes: db.get_db_property("rocksdb.num-running-flushes") as _,
+            num_immutable_mem_table: db.get_accumulated_db_property("rocksdb.num-immutable-mem-table") as _,
+            is_write_stopped: db.get_accumulated_db_property("rocksdb.is-write-stopped") > 0,
+            total_size: db.get_accumulated_db_property("rocksdb.live-sst-files-size") as _,
         }
     }
 
