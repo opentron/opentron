@@ -185,8 +185,9 @@ impl ChainDB {
     }
 
     pub fn get_block_from_header(&self, header: IndexedBlockHeader) -> Option<IndexedBlock> {
-        let mut upper_bound = [0u8; 8];
-        BE::write_u64(&mut upper_bound, header.number() as u64 + 1);
+        let mut upper_bound = header.hash.as_bytes().to_vec();
+        upper_bound.last_mut().map(|b| *b += 1);
+
         let transactions = self
             .transaction
             .new_iterator(
