@@ -15,7 +15,7 @@ use log::{debug, error, info, warn};
 use node_cli::channel::{ChannelMessage, ChannelMessageCodec};
 use node_cli::context::AppContext;
 use node_cli::graphql::server::graphql_server;
-use node_cli::util::get_my_ip;
+use node_cli::util::{block_hash_to_number, get_my_ip};
 use primitives::H256;
 use proto2::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
@@ -137,7 +137,7 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
                         }
                     },
                     _ = rx_fut => {
-                        warn!("passive connection service closed");
+                        warn!("incoming connection service closed");
                         break;
                     }
                 }
@@ -209,6 +209,7 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
     };
 
     let _ = join!(graphql_service, incomming_service, active_service);
+    // let _ = join!(graphql_service, incomming_service); //, active_service);
 
     Ok(termination_done.await?)
 }
@@ -344,6 +345,8 @@ async fn sync_channel_handler(
     mut reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
     mut writer: impl Sink<ChannelMessage, Error = io::Error> + Unpin,
 ) -> Result<(), Box<dyn Error>> {
+    const BATCH: usize = 500;
+
     let mut done = {
         let mut peers = ctx.peers.write().unwrap();
         let (tx, rx) = oneshot::channel::<()>();
@@ -363,8 +366,8 @@ async fn sync_channel_handler(
     };
     */
 
-    let mut last_block_id = highest_block_id.number;
-
+    let mut last_block_number = highest_block_id.number;
+    let mut last_block_number_in_this_batch = 0;
     if *ctx.syncing.read().unwrap() {
         info!("sync block from {}", highest_block_id);
         let inv = BlockInventory {
@@ -445,21 +448,19 @@ async fn sync_channel_handler(
                         syncing_block_ids = chain_inv.ids.iter().skip(1).map(|blk_id| blk_id.hash.clone()).collect();
                         let last_blk_id = chain_inv.ids.pop().unwrap();
                         info!("id[-1] = {}", last_blk_id);
-                        last_block_id = last_blk_id.number;
-                        // let inv = BlockInventory {
-                        // ids: vec![last_blk_id],
-                        // ..Default::default()
-                        // };
-                        // writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
-                        let tail = if syncing_block_ids.len() >= 1000 {
-                            syncing_block_ids.split_off(1000)
+                        last_block_number = last_blk_id.number;
+
+                        let tail = if syncing_block_ids.len() >= BATCH {
+                            syncing_block_ids.split_off(BATCH)
                         } else {
                             vec![]
                         };
-                        if syncing_block_ids.len() == 0 {
+                        if syncing_block_ids.is_empty() {
                             warn!("syning finished");
                             // remore: peer.setNeedSyncFromUs = false
                             *ctx.syncing.write().unwrap() = false;
+                        } else {
+                            last_block_number_in_this_batch = block_hash_to_number(syncing_block_ids.last().unwrap());
                         }
                         let block_inv = Inventory {
                             r#type: 1, // BLOCK
@@ -490,7 +491,7 @@ async fn sync_channel_handler(
                             warn!("block exists in db");
                         }
                         if *ctx.syncing.read().unwrap() {
-                            if block.number() == last_block_id {
+                            if block.number() == last_block_number {
                                 ctx.db.report_status();
                                 info!("sync next bulk of blocks from {}", block.number());
                                 let inv = BlockInventory {
@@ -498,15 +499,23 @@ async fn sync_channel_handler(
                                     ..Default::default()
                                 };
                                 writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
-                            } else if block.number() == last_block_id - 1000 {
-                                info!("sync next bulk of blocks from {}", block.number());
+                            } else if block.number() == last_block_number_in_this_batch {
+                                info!("sync next bulk of blocks from {} batch={}", block.number(), BATCH);
+                                let tail = if syncing_block_ids.len() >= BATCH {
+                                    syncing_block_ids.split_off(BATCH)
+                                } else {
+                                    vec![]
+                                };
+
                                 if !syncing_block_ids.is_empty() {
+                                    last_block_number_in_this_batch = block_hash_to_number(syncing_block_ids.last().unwrap());
+
                                     let block_inv = Inventory {
                                         r#type: 1, // BLOCK
                                         ids: syncing_block_ids,
                                     };
-                                    syncing_block_ids = vec![];
                                     writer.send(ChannelMessage::FetchBlockInventory(block_inv)).await?;
+                                    syncing_block_ids = tail;
                                 }
                             }
                         }

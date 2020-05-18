@@ -1,3 +1,4 @@
+use byteorder::{ByteOrder, BE};
 use proto2::common::Endpoint;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
@@ -30,4 +31,8 @@ struct Ip {
 pub async fn get_my_ip() -> Result<String, Box<dyn Error>> {
     let ip = reqwest::get("http://httpbin.org/ip").await?.json::<Ip>().await?;
     Ok(ip.origin)
+}
+
+pub fn block_hash_to_number(hash: &[u8]) -> i64 {
+    BE::read_u64(&hash[..8]) as _
 }

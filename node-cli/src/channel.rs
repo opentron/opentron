@@ -322,8 +322,7 @@ impl Decoder for ChannelMessageCodec {
                     Ok(None)
                 } else {
                     // println!("remain => {:?}", hex::encode(buf));
-                    Err(io::Error::new(io::ErrorKind::Other,
-                                       "bytes remaining on stream").into())
+                    Err(io::Error::new(io::ErrorKind::Other, "bytes remaining on stream").into())
                 }
             }
         }
