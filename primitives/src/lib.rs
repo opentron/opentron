@@ -239,7 +239,7 @@ macro_rules! impl_fixed_hash {
             ///
             /// If the length of `src` and the number of bytes in `Self` do not match.
             pub fn from_slice(src: &[u8]) -> Self {
-                assert_eq!(src.len(), $size);
+                assert_eq!(src.len(), $size, "size mismatch");
                 let mut ret = Self::zero();
                 ret.assign_from_slice(src);
                 ret
