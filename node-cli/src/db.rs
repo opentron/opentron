@@ -577,6 +577,22 @@ impl ChainDB {
         Ok(())
     }
 
+    pub fn get_db_property(&self, key: &str) -> u64 {
+        self.db.get_int_property(key).unwrap_or_default()
+    }
+
+    pub fn get_accumulated_db_property(&self, key: &str) -> u64 {
+        [
+            &self.default,
+            &self.block_header,
+            &self.transaction,
+            &self.transaction_block,
+        ]
+        .iter()
+        .map(|cf| cf.get_int_property(key).unwrap_or_default())
+        .sum()
+    }
+
     pub fn report_status(&self) {
         info!(
             "rocksdb.num-running-compactions = {:?}",
