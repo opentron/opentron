@@ -135,6 +135,16 @@ impl Query {
 
         let header = &blk.header;
         let raw_header = header.raw.raw_data.as_ref().unwrap();
+
+        let transactions = blk
+            .transactions
+            .iter()
+            .map(|txn| Transaction {
+                id: hex::encode(txn.hash.as_bytes()),
+                signatures: txn.raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
+            })
+            .collect();
+
         Some(Block {
             id: hex::encode(blk.hash().as_bytes()),
             number: blk.number() as _,
@@ -146,13 +156,18 @@ impl Query {
             merkle_root_hash: hex::encode(&raw_header.merkle_root_hash),
             version: raw_header.version,
             witness_signature: hex::encode(&header.raw.witness_signature),
-            transactions: vec![],
+            transactions: transactions,
         })
     }
 
     /// Get a transaction
     fn transaction(ctx: &Context, id: String) -> FieldResult<Transaction> {
-        Err("unimplemented".into())
+        let txn_id = H256::from_slice(&hex::decode(&id)?);
+        let txn = ctx.app.db.get_transaction_by_id(&txn_id).map(|txn| Transaction {
+            id: hex::encode(txn.hash.as_bytes()),
+            signatures: txn.raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
+        })?;
+        Ok(txn)
     }
 }
 

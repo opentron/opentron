@@ -174,7 +174,7 @@ message Transaction {
 
   Raw raw_data = 1;
   // normally size = 1, repeated list here for multi-sig extension
-  repeated bytes signature = 2;
+  repeated bytes signatures = 2;
   // renamed: ret
   // changed: from repeated to optional
   Result result = 5;
