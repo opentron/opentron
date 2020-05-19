@@ -185,6 +185,10 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
                     break;
                 }
                 ctx.db.await_background_jobs();
+                if !ctx.running.load(Ordering::Relaxed) {
+                    warn!("active connection service closed");
+                    break;
+                }
                 info!("active connection to {}", peer_addr);
                 let ctx = ctx.clone();
                 match TcpStream::connect(&peer_addr).await {
@@ -199,10 +203,10 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
         })
     };
 
-    let graphql_service = {
+    let graphql_service = tokio::spawn(async {
         let logger = slog_scope::logger().new(o!("service" => "graphql"));
-        graphql_server(ctx, graphql_done.map(|_| ())).with_logger(logger)
-    };
+        graphql_server(ctx, graphql_done.map(|_| ())).with_logger(logger).await
+    });
 
     let incomming_service = {
         let logger = slog_scope::logger().new(o!("service" => "channel"));
