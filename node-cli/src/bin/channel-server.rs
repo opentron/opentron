@@ -63,8 +63,6 @@ pub struct PeerConnectionContext {
 */
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use tokio::runtime::Builder;
-
     // ! init loggers
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();
@@ -77,9 +75,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _scope_guard = slog_scope::set_global_logger(logger);
     let _log_guard = slog_stdlog::init().unwrap();
 
-    // ! original #[tokio::main] runner
+    // ! #[tokio::main] runner
     let fut = tokio_main();
-    let mut rt = Builder::new().basic_scheduler().enable_all().build()?;
+    let mut rt = tokio::runtime::Builder::new()
+        .threaded_scheduler()
+        .core_threads(num_cpus::get_physical())
+        .thread_name("tokio-pool")
+        .enable_all()
+        .build()?;
     rt.block_on(fut)
 }
 
