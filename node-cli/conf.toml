@@ -79,6 +79,8 @@ active-nodes = []
 
 [protocol.channel]
 enable = true
+enable-passive = true
+enable-active = true
 # tcp channel
 endpoint = '0.0.0.0:18888'
 advertised-endpoint = ''
@@ -95,8 +97,7 @@ active-nodes = [
     "47.75.65.115:18888",
 ]
 # accept in any case
-passive-nodes = [
-]
+passive-nodes = []
 max-active-peers = 2
 
 [witness]

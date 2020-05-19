@@ -1,3 +1,5 @@
+#![recursion_limit = "1024"]
+
 pub mod channel;
 pub mod commands;
 pub mod config;

@@ -28,6 +28,8 @@ pub struct DiscoveryProtoConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct ChannelProtoConfig {
     pub enable: bool,
+    pub enable_passive: bool,
+    pub enable_active: bool,
     pub endpoint: String,
     pub advertised_endpoint: String,
     pub active_nodes: Vec<String>,

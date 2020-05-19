@@ -1,7 +1,6 @@
 //! The channel protocol.
 
 use bytes::{Buf, BufMut, BytesMut};
-// use chrono::Utc;
 use prost::Message;
 use proto2::chain::Block;
 use proto2::channel::{
