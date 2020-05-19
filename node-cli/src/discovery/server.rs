@@ -6,12 +6,12 @@ use proto2::discovery::{FindPeers, Peers, Ping, Pong};
 use rand::Rng;
 use std::collections::HashSet;
 use std::error::Error;
+use std::sync::Arc;
 use tokio::net::UdpSocket;
 
-use super::{DiscoveryMessage, DiscoveryMessageTransport};
-use crate::util::{get_my_ip, Peer};
-
-const P2P_VERSION: i32 = 11111;
+use super::protocol::{DiscoveryMessage, DiscoveryMessageTransport};
+use crate::context::AppContext;
+use crate::util::Peer;
 
 fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
     let mut acc = 0;
@@ -25,16 +25,18 @@ fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
     acc
 }
 
-#[tokio::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
-    let socket = UdpSocket::bind("0.0.0.0:18888").await?;
-    println!("! udp bind to sock => {:?}", socket);
+pub async fn discovery_server(ctx: Arc<AppContext>) -> Result<(), Box<dyn Error>> {
+    let p2p_version = ctx.config.chain.p2p_version;
+    let config = &ctx.config.protocol.discovery;
 
-    let my_ip = get_my_ip().await?;
-    println!("! detect my ip {}", my_ip);
+    let endpoint = &config.endpoint;
+
+    let socket = UdpSocket::bind(endpoint).await?;
+    println!("! udp bind to sock => {:?}", socket);
 
     let mut peers_db: HashSet<Peer> = serde_json::from_str(&std::fs::read_to_string("./peers.json")?)?;
 
+    let my_ip = &ctx.outbound_ip;
     let my_endpoint = Endpoint {
         address: my_ip.clone(),
         port: 18888,
@@ -54,7 +56,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 port: to_port as _,
                 node_id: vec![63u8; 64],
             }),
-            version: P2P_VERSION,
+            version: p2p_version,
             timestamp: Utc::now().timestamp_millis(),
         };
         transport
@@ -71,14 +73,14 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
         match payload {
             Ok((DiscoveryMessage::Ping(ping), peer_addr)) => {
-                if ping.version != P2P_VERSION {
+                if ping.version != p2p_version {
                     eprintln!("  ! <= {} version mismatch: version = {}", peer_addr, ping.version);
                     continue;
                 }
                 let pong = Pong {
                     from: Some(my_endpoint.clone()),
                     timestamp: Utc::now().timestamp_millis(),
-                    echo_version: P2P_VERSION,
+                    echo_version: p2p_version,
                 };
                 transport.send((pong.into(), peer_addr)).await?;
                 println!("  => Pong");
@@ -89,7 +91,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
                 println!("  => FindPeers target={}", hex::encode(&random_id));
 
-                if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer_addr.ip().to_string()) {
+                if ["127.0.0.1", my_ip, "192.168.1.1"].contains(&&*peer_addr.ip().to_string()) {
                     println!("    my ip, ignore");
                     continue;
                 }
@@ -104,7 +106,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 let reply_ping = Ping {
                     from: Some(my_endpoint.clone()),
                     to: ping.from.clone(),
-                    version: P2P_VERSION,
+                    version: p2p_version,
                     timestamp: Utc::now().timestamp_millis(),
                 };
                 transport.send((reply_ping.into(), peer_addr)).await?;
@@ -129,14 +131,14 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                 let ping = Ping {
                     from: Some(my_endpoint.clone()),
                     to: find.from.clone(),
-                    version: P2P_VERSION,
+                    version: p2p_version,
                     timestamp: Utc::now().timestamp_millis(),
                 };
                 transport.send((ping.into(), peer_addr)).await?;
             }
             Ok((DiscoveryMessage::Peers(peers), _)) => {
                 for peer in &peers.peers {
-                    if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer.address) {
+                    if ["127.0.0.1", my_ip, "192.168.1.1"].contains(&&*peer.address) {
                         println!("    my ip, ignore");
                         continue;
                     }
@@ -149,7 +151,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
                                 port: peer.port,
                                 node_id: vec![63u8; 64],
                             }),
-                            version: P2P_VERSION,
+                            version: p2p_version,
                             timestamp: Utc::now().timestamp_millis(),
                         };
                         transport.send((ping.into(), peer_addr)).await?;
