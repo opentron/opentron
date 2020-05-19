@@ -1,10 +1,10 @@
-extern crate node_cli;
+use std::path::Path;
 
-use node_cli::config::Config;
-use node_cli::db::ChainDB;
+use crate::config::Config;
+use crate::db::ChainDB;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = Config::load_from_file("./conf.toml")?;
+pub async fn main<P: AsRef<Path>>(config_path: P) -> Result<(), Box<dyn std::error::Error>> {
+    let config = Config::load_from_file(config_path)?;
     let db = ChainDB::new(&config.storage.data_dir);
     println!("db opened");
 
@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.await_background_jobs();
 
     db.verify_parent_hashes()?;
-    db.verify_merkle_tree()?;
+    // db.verify_merkle_tree()?;
 
     Ok(())
 }

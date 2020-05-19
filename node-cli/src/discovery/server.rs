@@ -1,8 +1,6 @@
 use chrono::Utc;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
-use node_cli::discovery::{DiscoveryMessage, DiscoveryMessageTransport};
-use node_cli::util::{get_my_ip, Peer};
 use proto2::common::Endpoint;
 use proto2::discovery::{FindPeers, Peers, Ping, Pong};
 use rand::Rng;
@@ -10,8 +8,10 @@ use std::collections::HashSet;
 use std::error::Error;
 use tokio::net::UdpSocket;
 
+use super::{DiscoveryMessage, DiscoveryMessageTransport};
+use crate::util::{get_my_ip, Peer};
+
 const P2P_VERSION: i32 = 11111;
-// const P2P_VERSION: i32 = 1;
 
 fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
     let mut acc = 0;
@@ -26,7 +26,7 @@ fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+pub async fn main() -> Result<(), Box<dyn Error>> {
     let socket = UdpSocket::bind("0.0.0.0:18888").await?;
     println!("! udp bind to sock => {:?}", socket);
 
@@ -89,7 +89,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
                 println!("  => FindPeers target={}", hex::encode(&random_id));
 
-                if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer_addr.ip().to_string())  {
+                if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer_addr.ip().to_string()) {
                     println!("    my ip, ignore");
                     continue;
                 }
@@ -136,7 +136,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
             Ok((DiscoveryMessage::Peers(peers), _)) => {
                 for peer in &peers.peers {
-                    if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer.address)  {
+                    if ["127.0.0.1", &my_ip, "192.168.1.1"].contains(&&*peer.address) {
                         println!("    my ip, ignore");
                         continue;
                     }

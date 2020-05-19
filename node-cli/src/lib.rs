@@ -1,4 +1,5 @@
 pub mod channel;
+pub mod commands;
 pub mod config;
 pub mod context;
 pub mod db;

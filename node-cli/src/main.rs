@@ -1,16 +1,13 @@
 #![recursion_limit = "1024"]
 
-extern crate node_cli;
-
+use chain::IndexedBlock;
 use chrono::Utc;
+use futures::channel::oneshot;
 use futures::future::FutureExt;
 use futures::join;
+use futures::select;
 use futures::sink::{Sink, SinkExt};
 use futures::stream::Stream;
-// use futures::stream::StreamExt;
-use chain::IndexedBlock;
-use futures::channel::oneshot;
-use futures::select;
 use log::{debug, error, info, warn};
 use node_cli::channel::{ChannelMessage, ChannelMessageCodec};
 use node_cli::context::AppContext;
@@ -27,18 +24,14 @@ use slog_scope_futures::FutureExt as SlogFutureExt;
 use std::error::Error;
 use std::io;
 use std::net::SocketAddr;
+use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::stream::StreamExt;
-// use tokio::sync::oneshot;
 use tokio::time::Duration;
 use tokio::time::{delay_for, timeout};
-// use slog::{debug, error, info, o, warn, Drain};
-
-// use tokio_util::codec::{Framed, FramedRead, FramedWrite};
-// const P2P_VERSION: i32 = 11111;
 
 const NODE_ID: &[u8] = b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF0";
 
@@ -63,6 +56,10 @@ pub struct PeerConnectionContext {
 */
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // ! init app command line arguments
+    let yaml = clap::load_yaml!("cli.yml");
+    let matches = clap::App::from_yaml(yaml).get_matches();
+
     // ! init loggers
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::CompactFormat::new(decorator).build().fuse();
@@ -75,20 +72,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _scope_guard = slog_scope::set_global_logger(logger);
     let _log_guard = slog_stdlog::init().unwrap();
 
+    let config_file = matches.value_of("config").expect("has default in cli.yml; qed");
+
     // ! #[tokio::main] runner
-    let fut = tokio_main();
     let mut rt = tokio::runtime::Builder::new()
         .threaded_scheduler()
         .core_threads(num_cpus::get_physical())
         .thread_name("tokio-pool")
         .enable_all()
         .build()?;
-    rt.block_on(fut)
+
+    match matches.subcommand() {
+        ("check-db", _) => {
+            let fut = node_cli::commands::check_db::main(config_file);
+            rt.block_on(fut)
+        }
+        _ => {
+            let fut = tokio_main(config_file);
+
+            rt.block_on(fut)
+        }
+    }
 }
 
 // NOTE: #[tokio::main] conflicts with slog_scope, cause data race in global static resource release.
-async fn tokio_main() -> Result<(), Box<dyn Error>> {
-    let mut ctx = AppContext::from_config("./conf.toml")?;
+async fn tokio_main<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
+    let mut ctx = AppContext::from_config(config_file)?;
     ctx.outbound_ip = get_my_ip().await?;
     info!("outbound ip address: {}", ctx.outbound_ip);
     let ctx = Arc::new(ctx);
@@ -206,10 +215,10 @@ async fn tokio_main() -> Result<(), Box<dyn Error>> {
         })
     };
 
-    let graphql_service = tokio::spawn(async {
+    let graphql_service = {
         let logger = slog_scope::logger().new(o!("service" => "graphql"));
-        graphql_server(ctx, graphql_done.map(|_| ())).with_logger(logger).await
-    });
+        graphql_server(ctx, graphql_done.map(|_| ())).with_logger(logger)
+    };
 
     let incomming_service = {
         let logger = slog_scope::logger().new(o!("service" => "channel"));

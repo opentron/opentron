@@ -1,0 +1,22 @@
+name: node-cli
+version: "0.1.0"
+author: Shuyu WANG <andelf@gmail.com>
+about: Tron Protocol node command line util
+settings: &default_settings
+    - DisableHelpSubcommand
+    - VersionlessSubcommands
+
+args:
+    - config:
+          help: Path to config file
+          short: c
+          long: config
+          default_value: "./conf.toml"
+
+subcommands:
+    - run:
+          about: Run the node
+          settings: *default_settings
+
+    - check-db:
+          about: Check db consistency

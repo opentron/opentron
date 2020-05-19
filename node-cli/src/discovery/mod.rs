@@ -12,8 +12,9 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::net::UdpSocket;
 use tokio::stream::Stream;
-
 use futures::ready;
+
+pub mod server;
 
 pub enum DiscoveryMessage {
     Ping(Ping),
