@@ -186,7 +186,7 @@ impl ChainDB {
 
     pub fn get_block_from_header(&self, header: IndexedBlockHeader) -> Option<IndexedBlock> {
         let mut upper_bound = header.hash.as_bytes().to_vec();
-        upper_bound.last_mut().map(|b| *b += 1);
+        upper_bound.push(0xFF); // [0xcafebabe00 .. 0xcafebabeff]
 
         let transactions = self
             .transaction
