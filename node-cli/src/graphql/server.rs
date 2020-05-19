@@ -3,7 +3,7 @@ use hyper::{
     Body, Method, Response, Server, StatusCode,
 };
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
-use log::info;
+use log::{info, warn};
 use std::future::Future;
 use std::sync::Arc;
 
@@ -14,7 +14,14 @@ pub async fn graphql_server<F>(ctx: Arc<AppContext>, shutdown_signal: F)
 where
     F: Future<Output = ()>,
 {
-    let addr = ([0, 0, 0, 0], 3000).into();
+    let config = &ctx.config.graphql;
+
+    if !config.enable {
+        warn!("graphql server disabled");
+        return;
+    }
+
+    let addr = config.endpoint.parse().expect("malformed endpoint address");
 
     let root_node: Arc<Schema> = Arc::new(RootNode::new(Query, EmptyMutation::new(), EmptySubscription::new()));
     let ctx = Arc::new(Context { app: ctx });

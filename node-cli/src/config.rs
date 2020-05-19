@@ -27,6 +27,7 @@ pub struct DiscoveryProtoConfig {
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ChannelProtoConfig {
+    pub enable: bool,
     pub endpoint: String,
     pub advertised_endpoint: String,
     pub active_nodes: Vec<String>,
@@ -42,10 +43,18 @@ pub struct ProtocolConfig {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
+pub struct GraphQLConfig {
+    pub enable: bool,
+    pub endpoint: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub chain: ChainConfig,
     pub storage: StorageConfig,
     pub protocol: ProtocolConfig,
+    pub graphql: GraphQLConfig,
 }
 
 impl Config {
