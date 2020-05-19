@@ -171,17 +171,17 @@ impl ChainDB {
     }
 
     pub fn has_block_number(&self, num: u64) -> bool {
-        let mut lower_bound = [0u8; 8];
-        BE::write_u64(&mut lower_bound, num);
-        let mut upper_bound = [0u8; 8];
-        BE::write_u64(&mut upper_bound, num + 1);
+        let mut lower_bound = [0u8; 32];
+        BE::write_u64(&mut lower_bound[..8], num);
+        let mut upper_bound = [0xffu8; 32];
+        BE::write_u64(&mut upper_bound[..8], num);
 
         let it = self.block_header.new_iterator(
             &ReadOptions::default()
                 .iterate_lower_bound(&lower_bound[..])
                 .iterate_upper_bound(&upper_bound[..]),
         );
-        it.count() == 1
+        it.count() > 0
     }
 
     pub fn get_block_from_header(&self, header: IndexedBlockHeader) -> Option<IndexedBlock> {
@@ -206,10 +206,10 @@ impl ChainDB {
 
     /// handles fork
     pub fn get_block_headers_by_number(&self, num: u64) -> Vec<IndexedBlockHeader> {
-        let mut lower_bound = [0u8; 8];
-        BE::write_u64(&mut lower_bound, num);
-        let mut upper_bound = [0u8; 8];
-        BE::write_u64(&mut upper_bound, num + 1);
+        let mut lower_bound = [0u8; 32];
+        BE::write_u64(&mut lower_bound[..8], num);
+        let mut upper_bound = [0xff_u8; 32];
+        BE::write_u64(&mut upper_bound[..8], num);
         let ropt = ReadOptions::default()
             .iterate_lower_bound(&lower_bound[..])
             .iterate_upper_bound(&upper_bound[..])
@@ -222,10 +222,10 @@ impl ChainDB {
     }
 
     pub fn get_block_by_number(&self, num: u64) -> Option<IndexedBlock> {
-        let mut lower_bound = [0u8; 8];
-        BE::write_u64(&mut lower_bound, num);
-        let mut upper_bound = [0u8; 8];
-        BE::write_u64(&mut upper_bound, num + 1);
+        let mut lower_bound = [0u8; 32];
+        BE::write_u64(&mut lower_bound[..8], num);
+        let mut upper_bound = [0xff_u8; 32];
+        BE::write_u64(&mut upper_bound[..8], num);
 
         let it = self.block_header.new_iterator(
             &ReadOptions::default()
@@ -236,7 +236,10 @@ impl ChainDB {
 
         // FIXME: iterator key lifetime leaks, key might becomes same key
         // ref: https://github.com/bh1xuw/rust-rocks/issues/15
-        let found = it.map(|(key, val)| (key.to_vec(), val.to_vec())).collect::<Vec<_>>();
+        let found = it
+            // .take_while(|(key, _)| &key[..8] == lower_bound)
+            .map(|(key, val)| (key.to_vec(), val.to_vec()))
+            .collect::<Vec<_>>();
         if found.is_empty() {
             return None;
         }
@@ -665,14 +668,37 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn check_parent_hash() {
+    fn dummy() {
         println!("opening db ...");
-        let db = ChainDB::new("./data");
+        let db = ChainDB::new("./data.nile");
         println!("db opened!");
         db.report_status();
         //assert!(db.verify_parent_hashes().unwrap());
 
-        assert!(db.verify_parent_hashes_from(19750000).unwrap());
+        let blk = db.get_block_by_number(5633889).unwrap();
+        println!("txns => {}", blk.transactions.len());
+        println!("what => {}", blk.verify_merkle_root_hash());
+
+        // return;
+
+        /*
+        (0..db.get_block_height() + 2).for_each(|num| {
+            if let Some(blk) = db.get_block_by_number(num as _) {
+                if blk.transactions.len() > 100 {
+                    println!("blk {} txns = {}", blk.number(), blk.transactions.len());
+                }
+            } else {
+                println!("notfound num => {}", num);
+            }
+        });
+        let num_txns = db.transaction.new_iterator(ReadOptions::default_instance()).count();
+        */
+        //  println!("num of blocks => {}", num_blocks);
+        // println!("num of txns => {}", num_txns);
+
+        // let _ = db.verify_merkle_tree();
+
+        // assert!(db.verify_parent_hashes_from(0).unwrap());
     }
 
     #[test]
@@ -690,35 +716,5 @@ mod tests {
         } else {
             db.handle_chain_fork_at(num).unwrap();
         }
-    }
-
-    #[test]
-    #[ignore]
-    fn create_db() {
-        let db = ChainDB::new("./data");
-
-        println!("ok");
-
-        db.report_status();
-
-        assert!(db.highest_block().is_some());
-
-        assert!(db.has_block_id(&H256::from_slice(
-            b"\x00\x00\x00\x00\x00\x00\x00\x00\x1e\xbf\x88P\x8a\x03\x86\\q\xd4R\xe2_MQ\x19A\x96\xa1\xd2+fS\xdc"
-        )));
-
-        // let blk = db.get_block_by_number(0).unwrap();
-        let blk = db.get_genesis_block().unwrap();
-        // println!("blk => {:?}", blk.header.hash);
-
-        for txn in blk.transactions {
-            println!("=> {:?}", txn.hash);
-            println!("{:?}", txn.raw.raw_data.unwrap().contract.unwrap().parameter);
-        }
-
-        // db.visit();
-        println!("==================================");
-        db.verify_parent_hashes().unwrap();
-        // db.verify_merkle_tree();
     }
 }
