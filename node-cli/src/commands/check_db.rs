@@ -15,7 +15,9 @@ pub async fn main<P: AsRef<Path>>(config_path: P) -> Result<(), Box<dyn std::err
     db.await_background_jobs();
 
     db.verify_parent_hashes()?;
-    // db.verify_merkle_tree()?;
+    db.verify_merkle_tree()?;
+
+    println!("height = {}", db.get_block_height());
 
     Ok(())
 }
