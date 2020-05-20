@@ -114,11 +114,11 @@ impl Context {
         }
     }
 
-    pub fn get_block(&self, id: Option<String>, num: Option<i32>) -> Option<Block> {
+    pub fn get_block(&self, id: Option<String>, num: Option<i32>) -> FieldResult<Block> {
         let block = match (id, num) {
-            (Some(_), Some(_)) => return None,
+            (Some(_), Some(_)) => return Err("either query by id or block num".into()),
             (Some(id), _) => {
-                let block_id = H256::from_slice(&hex::decode(&id).ok()?);
+                let block_id = H256::from_slice(&hex::decode(&id)?);
                 self.app.db.get_block_by_hash(&block_id)?
             }
             (_, Some(num)) => self.app.db.get_block_by_number(num as _)?,
@@ -137,7 +137,7 @@ impl Context {
             })
             .collect();
 
-        Some(Block {
+        Ok(Block {
             id: hex::encode(block.hash().as_bytes()),
             number: block.number() as _,
             timestamp: Utc.timestamp(raw_header.timestamp / 1_000, 0),

@@ -34,7 +34,7 @@ impl AppContext {
         let db = ChainDB::new(&config.storage.data_dir);
 
         if !db.has_block(&genesis_blk) {
-            if let Some(_) = db.get_genesis_block() {
+            if let Ok(_) = db.get_genesis_block() {
                 panic!("genesis block is inconsistent with db");
             }
             info!("insert genesis block to db");

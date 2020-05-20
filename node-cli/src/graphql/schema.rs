@@ -18,7 +18,7 @@ impl Query {
 
     /// Get a block
     #[graphql(arguments(id(description = "hash of the block"), num(description = "block height")))]
-    fn block(ctx: &Context, id: Option<String>, num: Option<i32>) -> Option<Block> {
+    fn block(ctx: &Context, id: Option<String>, num: Option<i32>) -> FieldResult<Block> {
         ctx.get_block(id, num)
     }
 

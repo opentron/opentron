@@ -123,7 +123,7 @@ impl ChainDB {
     }
 
     /// Highest block id, counted from 0
-    pub fn highest_block(&self) -> Option<IndexedBlock> {
+    pub fn highest_block(&self) -> Result<IndexedBlock, BoxError> {
         self.get_block_by_number(self.get_block_height() as u64)
     }
 
@@ -184,7 +184,7 @@ impl ChainDB {
         it.count() > 0
     }
 
-    pub fn get_block_from_header(&self, header: IndexedBlockHeader) -> Option<IndexedBlock> {
+    pub fn get_block_from_header(&self, header: IndexedBlockHeader) -> Result<IndexedBlock, BoxError> {
         let mut upper_bound = header.hash.as_bytes().to_vec();
         upper_bound.push(0xFF); // [0xcafebabe00 .. 0xcafebabeff]
 
@@ -196,12 +196,12 @@ impl ChainDB {
                     .iterate_upper_bound(&upper_bound),
             )
             .map(|(key, val)| {
-                let txn = Transaction::decode(val).unwrap();
-                IndexedTransaction::new(H256::from_slice(&key[32 + 8..]), txn)
+                let txn = Transaction::decode(val)?;
+                Ok(IndexedTransaction::new(H256::from_slice(&key[32 + 8..]), txn))
             })
-            .collect();
+            .collect::<Result<Vec<_>, BoxError>>();
 
-        Some(IndexedBlock::new(header, transactions))
+        transactions.map(|txns| IndexedBlock::new(header, txns))
     }
 
     /// handles fork
@@ -221,7 +221,7 @@ impl ChainDB {
             .collect()
     }
 
-    pub fn get_block_by_number(&self, num: u64) -> Option<IndexedBlock> {
+    pub fn get_block_by_number(&self, num: u64) -> Result<IndexedBlock, BoxError> {
         let mut lower_bound = [0u8; 32];
         BE::write_u64(&mut lower_bound[..8], num);
         let mut upper_bound = [0xff_u8; 32];
@@ -241,7 +241,7 @@ impl ChainDB {
             .map(|(key, val)| (key.to_vec(), val.to_vec()))
             .collect::<Vec<_>>();
         if found.is_empty() {
-            return None;
+            return Err(Box::new(io::Error::new(io::ErrorKind::NotFound, "bock not found")));
         }
         if found.len() > 1 {
             eprintln!("multiple blocks found for same number: {}", num);
@@ -249,30 +249,27 @@ impl ChainDB {
                 eprintln!("  => {}", hex::encode(&item.0));
                 eprintln!("  => {}", hex::encode(&item.1));
             }
-            return None;
+            return Err(Box::new(io::Error::new(io::ErrorKind::Other, "fork found")));
         }
 
-        let header = IndexedBlockHeader::new(
-            H256::from_slice(&found[0].0),
-            BlockHeader::decode(&*found[0].1).unwrap(),
-        );
+        let header = IndexedBlockHeader::new(H256::from_slice(&found[0].0), BlockHeader::decode(&*found[0].1)?);
         self.get_block_from_header(header)
     }
 
-    pub fn get_block_by_hash(&self, hash: &H256) -> Option<IndexedBlock> {
+    pub fn get_block_by_hash(&self, hash: &H256) -> Result<IndexedBlock, BoxError> {
         self.get_block_by_id(hash)
     }
 
-    pub fn get_block_by_id(&self, id: &H256) -> Option<IndexedBlock> {
+    pub fn get_block_by_id(&self, id: &H256) -> Result<IndexedBlock, BoxError> {
         self.block_header
             .get(ReadOptions::default_instance(), id.as_bytes())
-            .map(|raw_header| BlockHeader::decode(&*raw_header).unwrap())
+            .map_err(From::from)
+            .and_then(|raw_header| BlockHeader::decode(&*raw_header).map_err(From::from))
             .map(|header| IndexedBlockHeader::new(id.clone(), header))
-            .ok()
             .and_then(|header| self.get_block_from_header(header))
     }
 
-    pub fn get_genesis_block(&self) -> Option<IndexedBlock> {
+    pub fn get_genesis_block(&self) -> Result<IndexedBlock, BoxError> {
         self.get_block_by_number(0)
     }
 

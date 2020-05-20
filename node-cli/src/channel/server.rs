@@ -190,7 +190,8 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
     let head_block_id = ctx
         .db
         .get_block_by_number(block_height as u64)
-        .map(|blk| blk.block_id());
+        .map(|blk| blk.block_id())
+        .ok();
 
     info!("my head block id {}", head_block_id.as_ref().unwrap());
 
@@ -198,6 +199,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
         ctx.db
             .get_block_by_number(block_height as u64 - 20)
             .map(|blk| blk.block_id())
+            .ok()
     } else {
         ctx.genesis_block_id.clone()
     };
@@ -291,7 +293,7 @@ async fn sync_channel_handler(
         rx.fuse()
     };
 
-    let highest_block = ctx.db.get_block_by_number(ctx.db.get_block_height() as u64);
+    let highest_block = ctx.db.get_block_by_number(ctx.db.get_block_height() as u64).ok();
     let highest_block_id = highest_block
         .as_ref()
         .map(|blk| blk.block_id())
