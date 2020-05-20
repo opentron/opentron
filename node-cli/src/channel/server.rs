@@ -131,13 +131,17 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
                 }
                 info!("active connection to {}", peer_addr);
                 let ctx = ctx.clone();
-                match TcpStream::connect(&peer_addr).await {
-                    Ok(sock) => {
-                        let _ = handshake_handler(ctx, sock).await;
+                if let Ok(conn) = timeout(Duration::from_secs(10), TcpStream::connect(&peer_addr)).await {
+                    match conn {
+                        Ok(sock) => {
+                            let _ = handshake_handler(ctx, sock).await;
+                        }
+                        Err(e) => {
+                            warn!("connect {} failed: {}", peer_addr, e);
+                        }
                     }
-                    Err(e) => {
-                        warn!("connect {} failed: {}", peer_addr, e);
-                    }
+                } else {
+                    warn!("connect timeout");
                 }
             }
         })
