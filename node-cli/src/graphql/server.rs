@@ -7,7 +7,8 @@ use log::{info, warn};
 use std::future::Future;
 use std::sync::Arc;
 
-use super::schema::{Context, Query, Schema};
+use super::model::Context;
+use super::schema::{Query, Schema};
 use crate::context::AppContext;
 
 pub async fn graphql_server<F>(ctx: Arc<AppContext>, shutdown_signal: F)
