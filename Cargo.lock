@@ -1310,6 +1310,7 @@ dependencies = [
  "bytes",
  "chain",
  "chrono",
+ "clap",
  "ctrlc",
  "futures",
  "hex 0.4.2",
