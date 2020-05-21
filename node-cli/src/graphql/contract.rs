@@ -47,8 +47,15 @@ pub enum ResourceCode {
 pub struct FreezeBalanceContract {
     owner_address: String,
     receiver_address: String,
+    resource: ResourceCode,
     frozen_balance: f64,
     frozen_duration: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct UnfreezeBalanceContract {
+    owner_address: String,
+    receiver_address: String,
     resource: ResourceCode,
 }
 
@@ -113,6 +120,7 @@ pub enum Contract {
     WitnessCreateContract(WitnessCreateContract),
     VoteWitnessContract(VoteWitnessContract),
     FreezeBalanceContract(FreezeBalanceContract),
+    UnfreezeBalanceContract(UnfreezeBalanceContract),
     ProposalCreateContract(ProposalCreateContract),
     ProposalApproveContract(ProposalApproveContract),
     CreateSmartContract(CreateSmartContract),
@@ -125,7 +133,7 @@ pub enum Contract {
     /*
     ParticipateAssetIssueContract = 9,
     AccountUpdateContract = 10, */
-    /*UnfreezeBalanceContract = 12,
+    /* = 12,
     WithdrawBalanceContract = 13,
     UnfreezeAssetContract = 14,
     UpdateAssetContract = 15,
@@ -189,6 +197,19 @@ impl From<ContractPb> for Contract {
                     },
                 };
                 Contract::FreezeBalanceContract(inner)
+            }
+            Some(ContractType::UnfreezeBalanceContract) => {
+                let cntr = contract_pb::UnfreezeBalanceContract::decode(raw).unwrap();
+                let inner = UnfreezeBalanceContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    receiver_address: b58encode_check(&cntr.receiver_address),
+                    resource: if cntr.resource == 0 {
+                        ResourceCode::Bandwidth
+                    } else {
+                        ResourceCode::Energy
+                    },
+                };
+                Contract::UnfreezeBalanceContract(inner)
             }
             Some(ContractType::WitnessCreateContract) => {
                 let cntr = contract_pb::WitnessCreateContract::decode(raw).unwrap();
