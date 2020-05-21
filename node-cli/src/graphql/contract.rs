@@ -135,6 +135,12 @@ pub struct ProposalApproveContract {
 }
 
 #[derive(juniper::GraphQLObject)]
+pub struct ProposalDeleteContract {
+    owner_address: String,
+    proposal_id: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
 pub struct SmartContract {
     name: String,
     origin_address: String,
@@ -250,22 +256,18 @@ pub enum Contract {
     UnfreezeBalanceContract(UnfreezeBalanceContract),
     ProposalCreateContract(ProposalCreateContract),
     ProposalApproveContract(ProposalApproveContract),
+    ProposalDeleteContract(ProposalDeleteContract),
     CreateSmartContract(CreateSmartContract),
     TriggerSmartContract(TriggerSmartContract),
     AccountPermissionUpdateContract(AccountPermissionUpdateContract),
     // AccountCreateContract = 0,
     // VoteAssetContract = 3,
-    //  = 6,
     // WitnessUpdateContract = 8,
+    // AccountUpdateContract = 10,
     /*
-    AccountUpdateContract = 10, */
-    /* = 12,
     WithdrawBalanceContract = 13,
     UnfreezeAssetContract = 14,
     UpdateAssetContract = 15,
-    */
-    /*
-    ProposalDeleteContract = 18,
     SetAccountIdContract = 19,
     UpdateSettingContract = 33,
     ExchangeCreateContract = 41,
@@ -488,6 +490,14 @@ impl From<ContractPb> for Contract {
                     is_approve: cntr.is_approval,
                 };
                 Contract::ProposalApproveContract(inner)
+            }
+            Some(ContractType::ProposalDeleteContract) => {
+                let cntr = contract_pb::ProposalDeleteContract::decode(raw).unwrap();
+                let inner = ProposalDeleteContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    proposal_id: cntr.proposal_id as _,
+                };
+                Contract::ProposalDeleteContract(inner)
             }
             Some(ContractType::AccountPermissionUpdateContract) => {
                 let contract_pb::AccountPermissionUpdateContract {
