@@ -1,3 +1,4 @@
+use chain::{IndexedBlock, IndexedTransaction};
 use chrono::{DateTime, TimeZone, Utc};
 use juniper::meta::MetaType;
 use juniper::FieldResult;
@@ -7,6 +8,7 @@ use primitives::H256;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
+use super::contract::Contract;
 use crate::context::AppContext;
 
 #[derive(juniper::GraphQLObject)]
@@ -29,6 +31,19 @@ pub struct Transaction {
     signatures: Vec<String>,
     // raw: String,
     // result: String,
+    contract: Contract,
+}
+
+impl From<IndexedTransaction> for Transaction {
+    fn from(txn: IndexedTransaction) -> Self {
+        let IndexedTransaction { hash, mut raw } = txn;
+        let origin_contract = raw.raw_data.as_mut().unwrap().contract.take().unwrap();
+        Transaction {
+            id: hex::encode(hash.as_bytes()),
+            signatures: raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
+            contract: origin_contract.into(),
+        }
+    }
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -125,21 +140,14 @@ impl Context {
             (None, None) => self.app.db.highest_block()?,
         };
 
-        let header = &block.header;
+        let IndexedBlock { header, transactions } = block;
         let raw_header = header.raw.raw_data.as_ref().unwrap();
 
-        let transactions = block
-            .transactions
-            .iter()
-            .map(|txn| Transaction {
-                id: hex::encode(txn.hash.as_bytes()),
-                signatures: txn.raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
-            })
-            .collect();
+        let transactions = transactions.into_iter().map(From::from).collect();
 
         Ok(Block {
-            id: hex::encode(block.hash().as_bytes()),
-            number: block.number() as _,
+            id: hex::encode(header.hash.as_bytes()),
+            number: header.number() as _,
             timestamp: Utc.timestamp(raw_header.timestamp / 1_000, 0),
             witness: Address::try_from(&raw_header.witness_address)
                 .map(|addr| addr.to_string())
@@ -154,10 +162,7 @@ impl Context {
 
     pub fn get_transaction(&self, id: String) -> FieldResult<Transaction> {
         let txn_id = H256::from_slice(&hex::decode(&id)?);
-        let txn = self.app.db.get_transaction_by_id(&txn_id).map(|txn| Transaction {
-            id: hex::encode(txn.hash.as_bytes()),
-            signatures: txn.raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
-        })?;
+        let txn = self.app.db.get_transaction_by_id(&txn_id).map(From::from)?;
         Ok(txn)
     }
 }

@@ -83,7 +83,7 @@ enum ContractType {
   // SellStorageContract = 23;
   CreateSmartContract = 30;
   TriggerSmartContract = 31;
-  GetContract = 32;
+  // GetContract = 32;
   UpdateSettingContract = 33;
   ExchangeCreateContract = 41;
   ExchangeInjectContract = 42;
