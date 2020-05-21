@@ -1,3 +1,4 @@
+use chrono::{DateTime, TimeZone, Utc};
 use keys::b58encode_check;
 use proto2::chain::transaction::Contract as ContractPb;
 
@@ -17,6 +18,37 @@ pub struct TransferAssetContract {
     /// before ALLOW_SAME_TOKEN_NAME
     token_name: Option<String>,
     amount: f64,
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct FrozenSupply {
+    frozen_amount: f64,
+    frozen_days: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct AssetIssueContract {
+    owner_address: String,
+    name: String,
+    abbr: String,
+    total_supply: f64,
+    frozen_supply: Vec<FrozenSupply>,
+    num: i32,
+    trx_num: i32,
+    precision: i32,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
+    description: String,
+    url: String,
+    /// FreeAssetNetLimit
+    free_bandwidth: f64,
+    /// PublicFreeAssetNetLimit
+    public_free_bandwidth: f64,
+    // int64 order = 11;  // useless
+    // int32 vote_score = 16;
+    // public_free_asset_net_usage = 24;
+    // public_latest_free_net_time = 25;
+    // string id = 41;
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -117,6 +149,7 @@ pub struct TriggerSmartContract {
 pub enum Contract {
     TransferContract(TransferContract),
     TransferAssetContract(TransferAssetContract),
+    AssetIssueContract(AssetIssueContract),
     WitnessCreateContract(WitnessCreateContract),
     VoteWitnessContract(VoteWitnessContract),
     FreezeBalanceContract(FreezeBalanceContract),
@@ -125,7 +158,6 @@ pub enum Contract {
     ProposalApproveContract(ProposalApproveContract),
     CreateSmartContract(CreateSmartContract),
     TriggerSmartContract(TriggerSmartContract),
-    // AssetIssueContract(AssetIssueContract),
     // AccountCreateContract = 0,
     // VoteAssetContract = 3,
     //  = 6,
@@ -182,6 +214,35 @@ impl From<ContractPb> for Contract {
                     amount: cntr.amount as _,
                 };
                 Contract::TransferAssetContract(inner)
+            }
+            Some(ContractType::AssetIssueContract) => {
+                let cntr = contract_pb::AssetIssueContract::decode(raw).unwrap();
+                let inner = AssetIssueContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    name: cntr.name.clone(),
+                    abbr: cntr.abbr.clone(),
+                    description: cntr.description.clone(),
+                    url: cntr.url.clone(),
+                    total_supply: cntr.total_supply as _,
+                    frozen_supply: cntr
+                        .frozen_supply
+                        .iter()
+                        .map(|sup| FrozenSupply {
+                            frozen_amount: sup.frozen_amount as _,
+                            frozen_days: sup.frozen_days as _,
+                        })
+                        .collect(),
+                    num: cntr.num as _,
+                    trx_num: cntr.trx_num as _,
+                    precision: cntr.precision as _,
+                    start_time: Utc.timestamp(cntr.start_time / 1_000, cntr.start_time as u32 % 1_000 * 1_000_000),
+                    end_time: Utc.timestamp(cntr.end_time / 1_000, cntr.end_time as u32 % 1_000 * 1_000_000),
+                    /// FreeAssetNetLimit
+                    free_bandwidth: cntr.free_asset_net_limit as _,
+                    /// PublicFreeAssetNetLimit
+                    public_free_bandwidth: cntr.public_free_asset_net_limit as _,
+                };
+                Contract::AssetIssueContract(inner)
             }
             Some(ContractType::FreezeBalanceContract) => {
                 let cntr = contract_pb::FreezeBalanceContract::decode(raw).unwrap();

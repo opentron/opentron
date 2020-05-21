@@ -101,8 +101,10 @@ message AssetIssueContract {
   }
 
   bytes owner_address = 1;
-  bytes name = 2;
-  bytes abbr = 3;
+  // changed: bytes
+  string name = 2;
+  // changed: bytes
+  string abbr = 3;
   int64 total_supply = 4;
   repeated FrozenSupply frozen_supply = 5;
   int32 trx_num = 6;
@@ -112,8 +114,10 @@ message AssetIssueContract {
   int64 end_time = 10;
   int64 order = 11;  // useless
   int32 vote_score = 16;
-  bytes description = 20;
-  bytes url = 21;
+  // changed: bytes
+  string description = 20;
+  // changed: bytes
+  string url = 21;
   int64 free_asset_net_limit = 22;
   int64 public_free_asset_net_limit = 23;
   int64 public_free_asset_net_usage = 24;
