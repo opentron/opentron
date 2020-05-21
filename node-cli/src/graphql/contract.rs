@@ -150,6 +150,21 @@ impl From<ContractPb> for Contract {
                 };
                 Contract::TransferAssetContract(inner)
             }
+            Some(ContractType::FreezeBalanceContract) => {
+                let cntr = contract_pb::FreezeBalanceContract::decode(raw).unwrap();
+                let inner = FreezeBalanceContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    receiver_address: b58encode_check(&cntr.receiver_address),
+                    frozen_balance: cntr.frozen_balance as _,
+                    frozen_duration: cntr.frozen_balance as _,
+                    resource: if cntr.resource == 0 {
+                        ResourceCode::Bandwidth
+                    } else {
+                        ResourceCode::Energy
+                    },
+                };
+                Contract::FreezeBalanceContract(inner)
+            }
             Some(ContractType::WitnessCreateContract) => {
                 let cntr = contract_pb::WitnessCreateContract::decode(raw).unwrap();
                 let inner = WitnessCreateContract {
