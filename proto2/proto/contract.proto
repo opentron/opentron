@@ -190,8 +190,7 @@ message CreateSmartContract {
   bytes owner_address = 1;
   proto.common.SmartContract new_contract = 2;
   int64 call_token_value = 3;
-  // ?
-  int64 token_id = 4;
+  int64 call_token_id = 4;
 }
 
 message TriggerSmartContract {

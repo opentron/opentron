@@ -9,6 +9,17 @@ pub struct TransferContract {
 }
 
 #[derive(juniper::GraphQLObject)]
+pub struct TransferAssetContract {
+    owner_address: String,
+    to_address: String,
+    /// after ALLOW_SAME_TOKEN_NAME
+    token_id: Option<i32>,
+    /// before ALLOW_SAME_TOKEN_NAME
+    token_name: Option<String>,
+    amount: f64,
+}
+
+#[derive(juniper::GraphQLObject)]
 pub struct Vote {
     vote_address: String,
     count: f64,
@@ -79,8 +90,8 @@ pub enum Contract {
     ProposalCreateContract(ProposalCreateContract),
     ProposalApproveContract(ProposalApproveContract),
     TriggerSmartContract(TriggerSmartContract),
+    TransferAssetContract(TransferAssetContract),
     // AccountCreateContract = 0,
-    // TransferAssetContract = 2,
     // VoteAssetContract = 3,
     // AssetIssueContract = 6,
     // WitnessUpdateContract = 8,
@@ -121,13 +132,23 @@ impl From<ContractPb> for Contract {
         match ContractType::from_i32(pb.r#type) {
             Some(ContractType::TransferContract) => {
                 let cntr = contract_pb::TransferContract::decode(raw).unwrap();
-
                 let inner = TransferContract {
                     owner_address: b58encode_check(&cntr.owner_address),
                     to_address: b58encode_check(&cntr.to_address),
                     amount: cntr.amount as _,
                 };
                 Contract::TransferContract(inner)
+            }
+            Some(ContractType::TransferAssetContract) => {
+                let cntr = contract_pb::TransferAssetContract::decode(raw).unwrap();
+                let inner = TransferAssetContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    to_address: b58encode_check(&cntr.to_address),
+                    token_id: cntr.asset_name.parse().ok(),
+                    token_name: Some(cntr.asset_name),
+                    amount: cntr.amount as _,
+                };
+                Contract::TransferAssetContract(inner)
             }
             Some(ContractType::WitnessCreateContract) => {
                 let cntr = contract_pb::WitnessCreateContract::decode(raw).unwrap();
