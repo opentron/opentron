@@ -1,6 +1,7 @@
 use chrono::{DateTime, TimeZone, Utc};
 use keys::b58encode_check;
 use proto2::chain::transaction::Contract as ContractPb;
+use proto2::common::Permission as PermissionPb;
 
 #[derive(juniper::GraphQLObject)]
 pub struct TransferContract {
@@ -161,6 +162,73 @@ pub struct TriggerSmartContract {
     call_token_id: i32,
 }
 
+#[derive(juniper::GraphQLEnum, PartialEq, Eq)]
+pub enum PermissionType {
+    Owner = 0,
+    Witness = 1,
+    Active = 2,
+}
+
+impl PermissionType {
+    fn from_i32(val: i32) -> Self {
+        match val {
+            0 => PermissionType::Owner,
+            1 => PermissionType::Witness,
+            2 => PermissionType::Active,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct PermissionKey {
+    address: String,
+    weight: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct Permission {
+    r#type: PermissionType,
+    id: i32,
+    name: String,
+    threshold: i32,
+    // parent_id
+    operations: Option<String>,
+    keys: Vec<PermissionKey>,
+}
+
+impl From<PermissionPb> for Permission {
+    fn from(perm: PermissionPb) -> Self {
+        Permission {
+            r#type: PermissionType::from_i32(perm.r#type),
+            id: perm.id,
+            name: perm.permission_name.clone(),
+            threshold: perm.threshold as _,
+            operations: if !perm.operations.is_empty() {
+                Some(hex::encode(&perm.operations))
+            } else {
+                None
+            },
+            keys: perm
+                .keys
+                .iter()
+                .map(|key| PermissionKey {
+                    address: b58encode_check(&key.address),
+                    weight: key.weight as _,
+                })
+                .collect(),
+        }
+    }
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct AccountPermissionUpdateContract {
+    owner_address: String,
+    owner: Option<Permission>,
+    actives: Vec<Permission>,
+    witness: Option<Permission>,
+}
+
 #[derive(juniper::GraphQLUnion)]
 pub enum Contract {
     TransferContract(TransferContract),
@@ -176,7 +244,7 @@ pub enum Contract {
     ProposalApproveContract(ProposalApproveContract),
     CreateSmartContract(CreateSmartContract),
     TriggerSmartContract(TriggerSmartContract),
-    // AccountPermissionUpdateContract(AccountPermissionUpdateContract),
+    AccountPermissionUpdateContract(AccountPermissionUpdateContract),
     // AccountCreateContract = 0,
     // VoteAssetContract = 3,
     //  = 6,
@@ -405,6 +473,21 @@ impl From<ContractPb> for Contract {
                     is_approve: cntr.is_approval,
                 };
                 Contract::ProposalApproveContract(inner)
+            }
+            Some(ContractType::AccountPermissionUpdateContract) => {
+                let contract_pb::AccountPermissionUpdateContract {
+                    owner_address,
+                    owner,
+                    witness,
+                    actives,
+                } = contract_pb::AccountPermissionUpdateContract::decode(raw).unwrap();
+                let inner = AccountPermissionUpdateContract {
+                    owner_address: b58encode_check(&owner_address),
+                    owner: owner.map(Permission::from),
+                    witness: witness.map(Permission::from),
+                    actives: actives.into_iter().map(Permission::from).collect(),
+                };
+                Contract::AccountPermissionUpdateContract(inner)
             }
             Some(typ) => unimplemented!("unhandled type {:?}", typ),
             None => unreachable!(),
