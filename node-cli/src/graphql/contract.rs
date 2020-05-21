@@ -81,6 +81,13 @@ pub struct WithdrawBalanceContract {
 }
 
 #[derive(juniper::GraphQLObject)]
+pub struct UpdateBrokerageContract {
+    owner_address: String,
+    /// Brokerage in percent, dividend payout ratio.
+    brokerage: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
 pub struct VoteWitnessContract {
     owner_address: String,
     votes: Vec<Vote>,
@@ -237,6 +244,7 @@ pub enum Contract {
     ParticipateAssetIssueContract(ParticipateAssetIssueContract),
     WitnessCreateContract(WitnessCreateContract),
     WithdrawBalanceContract(WithdrawBalanceContract),
+    UpdateBrokerageContract(UpdateBrokerageContract),
     VoteWitnessContract(VoteWitnessContract),
     FreezeBalanceContract(FreezeBalanceContract),
     UnfreezeBalanceContract(UnfreezeBalanceContract),
@@ -266,7 +274,6 @@ pub enum Contract {
     ExchangeTransactionContract = 44,
     UpdateEnergyLimitContract = 45,
     ClearABIContract = 48,
-    UpdateBrokerageContract = 49,
     ShieldedTransferContract = 51,
     */
 }
@@ -382,6 +389,14 @@ impl From<ContractPb> for Contract {
                     owner_address: b58encode_check(&cntr.owner_address),
                 };
                 Contract::WithdrawBalanceContract(inner)
+            }
+            Some(ContractType::UpdateBrokerageContract) => {
+                let cntr = contract_pb::UpdateBrokerageContract::decode(raw).unwrap();
+                let inner = UpdateBrokerageContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    brokerage: cntr.brokerage as _,
+                };
+                Contract::UpdateBrokerageContract(inner)
             }
             Some(ContractType::VoteWitnessContract) => {
                 let cntr = contract_pb::VoteWitnessContract::decode(raw).unwrap();

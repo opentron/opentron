@@ -259,3 +259,8 @@ message AccountPermissionUpdateContract {
   proto.common.Permission witness = 3;
   repeated proto.common.Permission actives = 4;  // empty means invalidate
 }
+
+message UpdateBrokerageContract {
+  bytes owner_address = 1;
+  int32 brokerage = 2;  // in percent
+}
