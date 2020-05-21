@@ -52,6 +52,17 @@ pub struct AssetIssueContract {
 }
 
 #[derive(juniper::GraphQLObject)]
+pub struct ParticipateAssetIssueContract {
+    owner_address: String,
+    to_address: String,
+    /// after ALLOW_SAME_TOKEN_NAME
+    token_id: Option<i32>,
+    /// before ALLOW_SAME_TOKEN_NAME
+    token_name: Option<String>,
+    amount: f64,
+}
+
+#[derive(juniper::GraphQLObject)]
 pub struct Vote {
     vote_address: String,
     count: f64,
@@ -150,6 +161,7 @@ pub enum Contract {
     TransferContract(TransferContract),
     TransferAssetContract(TransferAssetContract),
     AssetIssueContract(AssetIssueContract),
+    ParticipateAssetIssueContract(ParticipateAssetIssueContract),
     WitnessCreateContract(WitnessCreateContract),
     VoteWitnessContract(VoteWitnessContract),
     FreezeBalanceContract(FreezeBalanceContract),
@@ -163,7 +175,6 @@ pub enum Contract {
     //  = 6,
     // WitnessUpdateContract = 8,
     /*
-    ParticipateAssetIssueContract = 9,
     AccountUpdateContract = 10, */
     /* = 12,
     WithdrawBalanceContract = 13,
@@ -243,6 +254,17 @@ impl From<ContractPb> for Contract {
                     public_free_bandwidth: cntr.public_free_asset_net_limit as _,
                 };
                 Contract::AssetIssueContract(inner)
+            }
+            Some(ContractType::ParticipateAssetIssueContract) => {
+                let cntr = contract_pb::ParticipateAssetIssueContract::decode(raw).unwrap();
+                let inner = ParticipateAssetIssueContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    to_address: b58encode_check(&cntr.to_address),
+                    token_id: cntr.asset_name.parse().ok(),
+                    token_name: Some(cntr.asset_name),
+                    amount: cntr.amount as _,
+                };
+                Contract::ParticipateAssetIssueContract(inner)
             }
             Some(ContractType::FreezeBalanceContract) => {
                 let cntr = contract_pb::FreezeBalanceContract::decode(raw).unwrap();
