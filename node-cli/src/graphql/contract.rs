@@ -72,6 +72,31 @@ pub struct ProposalApproveContract {
 }
 
 #[derive(juniper::GraphQLObject)]
+pub struct SmartContract {
+    name: String,
+    origin_address: String,
+    contract_address: Option<String>,
+    /// ABI as JSON string.
+    abi: Option<String>,
+    code: String,
+    /// Percent, 0 to 100.
+    user_resource_percent: i32,
+    origin_energy_limit: f64,
+    code_hash: Option<String>,
+    // When smart contract is created by a trigger smart contract call.
+    txn_id: Option<String>,
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct CreateSmartContract {
+    owner_address: String,
+    new_smart_contract: SmartContract,
+    call_value: f64, // moved from inner struct
+    call_token_value: f64,
+    call_token_id: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
 pub struct TriggerSmartContract {
     owner_address: String,
     contract_address: String,
@@ -84,16 +109,18 @@ pub struct TriggerSmartContract {
 #[derive(juniper::GraphQLUnion)]
 pub enum Contract {
     TransferContract(TransferContract),
-    VoteWitnessContract(VoteWitnessContract),
+    TransferAssetContract(TransferAssetContract),
     WitnessCreateContract(WitnessCreateContract),
+    VoteWitnessContract(VoteWitnessContract),
     FreezeBalanceContract(FreezeBalanceContract),
     ProposalCreateContract(ProposalCreateContract),
     ProposalApproveContract(ProposalApproveContract),
+    CreateSmartContract(CreateSmartContract),
     TriggerSmartContract(TriggerSmartContract),
-    TransferAssetContract(TransferAssetContract),
+    // AssetIssueContract(AssetIssueContract),
     // AccountCreateContract = 0,
     // VoteAssetContract = 3,
-    // AssetIssueContract = 6,
+    //  = 6,
     // WitnessUpdateContract = 8,
     /*
     ParticipateAssetIssueContract = 9,
@@ -106,8 +133,6 @@ pub enum Contract {
     /*
     ProposalDeleteContract = 18,
     SetAccountIdContract = 19,
-    CreateSmartContract = 30,
-     = 31,
     UpdateSettingContract = 33,
     ExchangeCreateContract = 41,
     ExchangeInjectContract = 42,
@@ -187,6 +212,46 @@ impl From<ContractPb> for Contract {
                         .collect(),
                 };
                 Contract::VoteWitnessContract(inner)
+            }
+            Some(ContractType::CreateSmartContract) => {
+                let cntr = contract_pb::CreateSmartContract::decode(raw).unwrap();
+                let smart_cntr = cntr.new_contract.as_ref().unwrap();
+
+                let new_smart_contract = SmartContract {
+                    origin_address: b58encode_check(&smart_cntr.origin_address),
+                    name: smart_cntr.name.clone(),
+                    abi: smart_cntr
+                        .abi
+                        .as_ref()
+                        .map(|abi| &abi.entries)
+                        .and_then(|entries| serde_json::to_string(entries).ok()),
+                    code: hex::encode(&smart_cntr.bytecode),
+                    user_resource_percent: smart_cntr.consume_user_resource_percent as _,
+                    origin_energy_limit: smart_cntr.origin_energy_limit as _,
+                    contract_address: if !smart_cntr.contract_address.is_empty() {
+                        Some(b58encode_check(&smart_cntr.contract_address))
+                    } else {
+                        None
+                    },
+                    code_hash: if !smart_cntr.code_hash.is_empty() {
+                        Some(hex::encode(&smart_cntr.code_hash))
+                    } else {
+                        None
+                    },
+                    txn_id: if !smart_cntr.txn_id.is_empty() {
+                        Some(hex::encode(&smart_cntr.txn_id))
+                    } else {
+                        None
+                    },
+                };
+                let inner = CreateSmartContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    new_smart_contract,
+                    call_value: smart_cntr.call_value as _,
+                    call_token_value: cntr.call_token_value as _,
+                    call_token_id: cntr.call_token_id as _,
+                };
+                Contract::CreateSmartContract(inner)
             }
             Some(ContractType::TriggerSmartContract) => {
                 let cntr = contract_pb::TriggerSmartContract::decode(raw).unwrap();
