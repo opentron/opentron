@@ -75,6 +75,11 @@ pub struct WitnessCreateContract {
 }
 
 #[derive(juniper::GraphQLObject)]
+pub struct WithdrawBalanceContract {
+    owner_address: String,
+}
+
+#[derive(juniper::GraphQLObject)]
 pub struct VoteWitnessContract {
     owner_address: String,
     votes: Vec<Vote>,
@@ -163,6 +168,7 @@ pub enum Contract {
     AssetIssueContract(AssetIssueContract),
     ParticipateAssetIssueContract(ParticipateAssetIssueContract),
     WitnessCreateContract(WitnessCreateContract),
+    WithdrawBalanceContract(WithdrawBalanceContract),
     VoteWitnessContract(VoteWitnessContract),
     FreezeBalanceContract(FreezeBalanceContract),
     UnfreezeBalanceContract(UnfreezeBalanceContract),
@@ -170,6 +176,7 @@ pub enum Contract {
     ProposalApproveContract(ProposalApproveContract),
     CreateSmartContract(CreateSmartContract),
     TriggerSmartContract(TriggerSmartContract),
+    // AccountPermissionUpdateContract(AccountPermissionUpdateContract),
     // AccountCreateContract = 0,
     // VoteAssetContract = 3,
     //  = 6,
@@ -190,7 +197,6 @@ pub enum Contract {
     ExchangeWithdrawContract = 43,
     ExchangeTransactionContract = 44,
     UpdateEnergyLimitContract = 45,
-    AccountPermissionUpdateContract = 46,
     ClearABIContract = 48,
     UpdateBrokerageContract = 49,
     ShieldedTransferContract = 51,
@@ -301,6 +307,13 @@ impl From<ContractPb> for Contract {
                     url: String::from_utf8(cntr.url).unwrap(),
                 };
                 Contract::WitnessCreateContract(inner)
+            }
+            Some(ContractType::WithdrawBalanceContract) => {
+                let cntr = contract_pb::WithdrawBalanceContract::decode(raw).unwrap();
+                let inner = WithdrawBalanceContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                };
+                Contract::WithdrawBalanceContract(inner)
             }
             Some(ContractType::VoteWitnessContract) => {
                 let cntr = contract_pb::VoteWitnessContract::decode(raw).unwrap();
