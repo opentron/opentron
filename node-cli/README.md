@@ -153,3 +153,20 @@ case TRXS:
 state = SYNCING
 remain_num = 0
 block_id_both_have = genesis_block_id
+
+
+
+last notfound num => 5785738
+last notfound num => 5796377
+last notfound num => 5796384
+last notfound num => 5796385
+last notfound num => 5796434
+last notfound num => 5797047
+last notfound num => 5797565
+last notfound num => 5797987
+last notfound num => 5798011
+last notfound num => 5798012
+last notfound num => 5798022
+last notfound num => 5798044
+last notfound num => 5798197
+last notfound num => 5801233
