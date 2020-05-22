@@ -114,12 +114,12 @@ impl ChainDB {
         }
     }
 
-    pub fn force_update_block_height(&self, height: i64) {
+    pub fn force_update_block_height(&self, height: i64) -> Result<(), BoxError> {
         let mut val = [0u8; 8];
         BE::write_u64(&mut val, height as u64);
         self.default
             .put(WriteOptions::default_instance(), b"BLOCK_HEIGHT", &val)
-            .unwrap();
+            .map_err(From::from)
     }
 
     /// Highest block id, counted from 0
@@ -678,18 +678,21 @@ mod tests {
 
         // return;
 
-        /*
+        use proto2::chain::ContractType;
+
         (0..db.get_block_height() + 2).for_each(|num| {
-            if let Some(blk) = db.get_block_by_number(num as _) {
-                if blk.transactions.len() > 100 {
-                    println!("blk {} txns = {}", blk.number(), blk.transactions.len());
+            if let Ok(blk) = db.get_block_by_number(num as _) {
+                for txn in blk.transactions {
+                    let typ = txn.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap().r#type;
+                    let typ = ContractType::from_i32(typ);
+                    println!("txn {:?} {:?}", txn.hash, typ)
                 }
             } else {
-                println!("notfound num => {}", num);
+                println!("last notfound num => {}", num);
             }
         });
-        let num_txns = db.transaction.new_iterator(ReadOptions::default_instance()).count();
-        */
+        // let num_txns = db.transaction.new_iterator(ReadOptions::default_instance()).count();
+
         //  println!("num of blocks => {}", num_blocks);
         // println!("num of txns => {}", num_txns);
 
@@ -708,7 +711,7 @@ mod tests {
 
         let num = 19752249;
 
-        if let Some(block) = db.get_block_by_number(num) {
+        if let Ok(block) = db.get_block_by_number(num) {
             println!("block found and is unique: {:?}", block.hash());
         } else {
             db.handle_chain_fork_at(num).unwrap();
