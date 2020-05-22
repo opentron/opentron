@@ -5,6 +5,7 @@ use primitives::H256;
 use prost::Message;
 use proto2::chain::{Block, BlockHeader, Transaction};
 use proto2::common::BlockId;
+use rayon::prelude::*;
 use std::cmp;
 use std::collections::HashSet;
 
@@ -71,10 +72,18 @@ impl IndexedBlock {
             block_header,
             transactions,
         } = block;
-        let transactions = transactions
-            .into_iter()
-            .map(IndexedTransaction::from_raw)
-            .collect::<Vec<_>>();
+        // Only compute in parallel if there is enough work to benefit it
+        let transactions = if transactions.len() > 200 {
+            transactions
+                .into_par_iter()
+                .map(IndexedTransaction::from_raw)
+                .collect::<Vec<_>>();
+        } else {
+            transactions
+                .into_iter()
+                .map(IndexedTransaction::from_raw)
+                .collect::<Vec<_>>();
+        };
         let mut block_header = block_header.unwrap();
         if block_header.raw_data.as_ref().unwrap().merkle_root_hash.is_empty() {
             block_header
