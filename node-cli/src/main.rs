@@ -69,6 +69,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let fut = node_cli::commands::check::main(config_file, arg_matches);
             rt.block_on(fut)
         }
+        ("fix", Some(arg_matches)) => {
+            let fut = node_cli::commands::fix::main(config_file, arg_matches);
+            rt.block_on(fut)
+        }
         _ => {
             let fut = run(config_file);
             rt.block_on(fut)
@@ -95,10 +99,6 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
         }
     }
     */
-
-    // FIX gap
-    // ctx.db.get_block_by_number(2999)
-    // ctx.db.force_update_block_height(2998);
 
     let (termination_tx, termination_done) = oneshot::channel::<()>();
     let (channel_tx, channel_done) = oneshot::channel::<()>();

@@ -24,3 +24,17 @@ subcommands:
               - WHAT:
                     help: Check item
                     possible_values: ["compact", "merkle_tree", "parent_hash"]
+
+    - fix:
+          about: Misc fix command
+          args:
+              - height:
+                    help: Force update block height
+                    takes_value: true
+                    long: height
+                    value_name: NUM
+              - fork:
+                    help: Fix chain fork at position
+                    takes_value: true
+                    long: fork
+                    value_name: NUM
