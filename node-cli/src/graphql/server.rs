@@ -46,6 +46,7 @@ where
                 async move {
                     match (req.method(), req.uri().path()) {
                         (&Method::GET, "/") => juniper_hyper::graphiql("/graphql", None).await,
+                        (&Method::GET, "/playground") => juniper_hyper::playground("/graphql", None).await,
                         (&Method::GET, "/graphql") | (&Method::POST, "/graphql") => {
                             juniper_hyper::graphql(root_node, ctx, req).await
                         }
