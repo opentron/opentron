@@ -13,10 +13,6 @@ use crate::context::AppContext;
 
 #[derive(juniper::GraphQLObject)]
 struct RawTransaction {
-    expiration: DateTime<Utc>,
-    timestamp: DateTime<Utc>,
-    ref_block_byte: String,
-    ref_block_hash: String,
     // le 1000_000_000, i32 is ok
     fee_limit: i32,
     data: String,
@@ -29,19 +25,29 @@ pub struct Transaction {
     id: String,
     /// Signature of the transaction,
     signatures: Vec<String>,
-    // raw: String,
-    // result: String,
     contract: Contract,
+    timestamp: DateTime<Utc>,
+    expiration: DateTime<Utc>,
+    ref_block_bytes: String,
+    ref_block_hash: String,
+    permission_id: i32,
 }
 
 impl From<IndexedTransaction> for Transaction {
     fn from(txn: IndexedTransaction) -> Self {
         let IndexedTransaction { hash, mut raw } = txn;
         let origin_contract = raw.raw_data.as_mut().unwrap().contract.take().unwrap();
+        let raw_txn = raw.raw_data.as_ref().unwrap();
+        let permission_id = origin_contract.permission_id;
         Transaction {
             id: hex::encode(hash.as_bytes()),
             signatures: raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
             contract: origin_contract.into(),
+            timestamp: Utc.timestamp(raw_txn.timestamp / 1_000, raw_txn.expiration as u32 % 1_000 * 1_000000),
+            expiration: Utc.timestamp(raw_txn.expiration / 1_000, raw_txn.expiration as u32 % 1_000 * 1_000000),
+            ref_block_bytes: hex::encode(&raw_txn.ref_block_bytes),
+            ref_block_hash: hex::encode(&raw_txn.ref_block_hash),
+            permission_id,
         }
     }
 }

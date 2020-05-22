@@ -23,6 +23,7 @@ impl Query {
     }
 
     /// Get a transaction
+    #[graphql(arguments(id(description = "transaction hash")))]
     fn transaction(ctx: &Context, id: String) -> FieldResult<Transaction> {
         ctx.get_transaction(id)
     }
