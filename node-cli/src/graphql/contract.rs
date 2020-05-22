@@ -175,6 +175,31 @@ pub struct TriggerSmartContract {
     call_token_id: i32,
 }
 
+#[derive(juniper::GraphQLEnum, PartialEq, Eq)]
+pub enum AccountType {
+    Normal = 0,
+    AssetIssue = 1,
+    Contract = 2,
+}
+
+impl AccountType {
+    fn from_i32(val: i32) -> Self {
+        match val {
+            0 => AccountType::Normal,
+            1 => AccountType::AssetIssue,
+            2 => AccountType::Contract,
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct AccountCreateContract {
+    owner_address: String,
+    account_address: String,
+    r#type: AccountType,
+}
+
 #[derive(juniper::GraphQLObject)]
 pub struct AccountUpdateContract {
     owner_address: String,
@@ -265,9 +290,9 @@ pub enum Contract {
     ProposalDeleteContract(ProposalDeleteContract),
     CreateSmartContract(CreateSmartContract),
     TriggerSmartContract(TriggerSmartContract),
+    AccountCreateContract(AccountCreateContract),
     AccountUpdateContract(AccountUpdateContract),
     AccountPermissionUpdateContract(AccountPermissionUpdateContract),
-    // AccountCreateContract = 0,
     // VoteAssetContract = 3,
     // WitnessUpdateContract = 8,
     /*
@@ -504,6 +529,15 @@ impl From<ContractPb> for Contract {
                     proposal_id: cntr.proposal_id as _,
                 };
                 Contract::ProposalDeleteContract(inner)
+            }
+            Some(ContractType::AccountCreateContract) => {
+                let cntr = contract_pb::AccountCreateContract::decode(raw).unwrap();
+                let inner = AccountCreateContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    account_address: b58encode_check(&cntr.account_address),
+                    r#type: AccountType::from_i32(cntr.r#type),
+                };
+                Contract::AccountCreateContract(inner)
             }
             Some(ContractType::AccountUpdateContract) => {
                 let cntr = contract_pb::AccountUpdateContract::decode(raw).unwrap();
