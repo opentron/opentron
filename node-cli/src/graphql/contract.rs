@@ -175,6 +175,12 @@ pub struct TriggerSmartContract {
     call_token_id: i32,
 }
 
+#[derive(juniper::GraphQLObject)]
+pub struct AccountUpdateContract {
+    owner_address: String,
+    account_name: String,
+}
+
 #[derive(juniper::GraphQLEnum, PartialEq, Eq)]
 pub enum PermissionType {
     Owner = 0,
@@ -259,11 +265,11 @@ pub enum Contract {
     ProposalDeleteContract(ProposalDeleteContract),
     CreateSmartContract(CreateSmartContract),
     TriggerSmartContract(TriggerSmartContract),
+    AccountUpdateContract(AccountUpdateContract),
     AccountPermissionUpdateContract(AccountPermissionUpdateContract),
     // AccountCreateContract = 0,
     // VoteAssetContract = 3,
     // WitnessUpdateContract = 8,
-    // AccountUpdateContract = 10,
     /*
     WithdrawBalanceContract = 13,
     UnfreezeAssetContract = 14,
@@ -498,6 +504,14 @@ impl From<ContractPb> for Contract {
                     proposal_id: cntr.proposal_id as _,
                 };
                 Contract::ProposalDeleteContract(inner)
+            }
+            Some(ContractType::AccountUpdateContract) => {
+                let cntr = contract_pb::AccountUpdateContract::decode(raw).unwrap();
+                let inner = AccountUpdateContract {
+                    owner_address: b58encode_check(&cntr.owner_address),
+                    account_name: cntr.account_name.clone(),
+                };
+                Contract::AccountUpdateContract(inner)
             }
             Some(ContractType::AccountPermissionUpdateContract) => {
                 let contract_pb::AccountPermissionUpdateContract {

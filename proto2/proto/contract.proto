@@ -15,7 +15,8 @@ message AccountCreateContract {
 // Update account name. Account name is not unique now.
 message AccountUpdateContract {
   // max len = 200
-  bytes account_name = 1;
+  // changed: bytes
+  string account_name = 1;
   bytes owner_address = 2;
 }
 
