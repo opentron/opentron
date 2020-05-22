@@ -18,5 +18,9 @@ subcommands:
           about: Run the node
           settings: *default_settings
 
-    - check-db:
+    - check:
           about: Check db consistency
+          args:
+              - WHAT:
+                    help: Check item
+                    possible_values: ["compact", "merkle_tree", "parent_hash"]

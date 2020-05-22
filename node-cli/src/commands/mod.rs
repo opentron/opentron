@@ -1,1 +1,1 @@
-pub mod check_db;
+pub mod check;

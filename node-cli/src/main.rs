@@ -65,8 +65,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     match matches.subcommand() {
-        ("check-db", _) => {
-            let fut = node_cli::commands::check_db::main(config_file);
+        ("check", Some(arg_matches)) => {
+            let fut = node_cli::commands::check::main(config_file, arg_matches);
             rt.block_on(fut)
         }
         _ => {
