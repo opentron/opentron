@@ -53,13 +53,6 @@ impl ChainDB {
                 "block-header",
                 ColumnFamilyOptions::default().max_write_buffer_number(6),
             ),
-            /*
-            ColumnFamilyDescriptor::new(
-                "block-transactions",
-                ColumnFamilyOptions::default()
-                    .optimize_for_point_lookup(128)
-                    .max_write_buffer_number(6),
-            ),*/
             // [block_hash, transaction_index: u64, transaction_hash] => Transaction
             ColumnFamilyDescriptor::new(
                 "transaction",
@@ -291,12 +284,11 @@ impl ChainDB {
         let block_key = self
             .transaction_block
             .get(ReadOptions::default_instance(), txn.hash.as_bytes())?;
-        let header = self
-            .block_header
+        self.block_header
             .get(ReadOptions::default_instance(), &block_key[..32])
             .map(|raw| BlockHeader::decode(&*raw).unwrap())
-            .map(|header| IndexedBlockHeader::new(H256::from_slice(&block_key[..32]), header))?;
-        Ok(header)
+            .map(|header| IndexedBlockHeader::new(H256::from_slice(&block_key[..32]), header))
+            .map_err(From::from)
     }
 
     pub fn delete_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> Result<(), BoxError> {
@@ -334,11 +326,6 @@ impl ChainDB {
             });
 
         self.db.write(WriteOptions::default_instance(), &wb).is_ok()
-    }
-
-    // leaves dangling transactions
-    fn delete_block_header(&self, header: &IndexedBlockHeader, wb: &mut WriteBatch) {
-        wb.delete_cf(&self.block_header, header.hash.as_bytes());
     }
 
     fn delete_orphan_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> bool {
@@ -456,7 +443,7 @@ impl ChainDB {
 
         for fork in tobe_purged_forks {
             for header in fork.iter() {
-                self.delete_block_header(header, &mut wb);
+                wb.delete(header.hash.as_bytes());
                 let block = self.get_block_from_header(header.clone()).unwrap();
                 for txn in block.transactions {
                     if !txn_whitelist.contains(&txn) {
@@ -483,9 +470,7 @@ impl ChainDB {
     pub fn visit(&self) -> Result<(), Box<dyn Error>> {
         let it = self.transaction.new_iterator(ReadOptions::default_instance());
 
-        for (key, raw) in it
-        // .take(2000)
-        {
+        for (key, raw) in it {
             let txn = Transaction::decode(raw)?;
             match ContractType::from_i32(txn.raw_data.as_ref().unwrap().contract.as_ref().unwrap().r#type) {
                 Some(ContractType::TransferContract) => {
@@ -539,20 +524,15 @@ impl ChainDB {
         self.verify_parent_hashes_from(0)
     }
 
-    /*
-    pub fn blocks(&self) -> impl Iterator<Item = IndexedBlock> {
+    pub fn blocks<'a>(&'a self) -> impl Iterator<Item = IndexedBlock> + 'a {
         self.block_header
             .new_iterator(ReadOptions::default_instance())
             .map(|(blk_id, raw_header)| {
                 IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap())
             })
-            .map(|header| self.get_block_from_header(header).unwrap())
+            .map(move |header| self.get_block_from_header(header).unwrap())
     }
-    */
 
-    /**
-     * From block 1102553, 1103364, 1103650, 1135972
-     */
     pub fn verify_merkle_tree(&self) -> Result<(), Box<dyn Error>> {
         let ropt = ReadOptions::default();
 
@@ -656,65 +636,5 @@ impl ChainDB {
         info!("cancel background work");
         info!("syncing WAL ... {:?}", self.db.sync_wal());
         // eprintln!("Close DB ... {:?}", self.db.close());
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[ignore]
-    fn dummy() {
-        println!("opening db ...");
-        let db = ChainDB::new("./data.nile");
-        println!("db opened!");
-        db.report_status();
-        //assert!(db.verify_parent_hashes().unwrap());
-
-        let blk = db.get_block_by_number(5633889).unwrap();
-        println!("txns => {}", blk.transactions.len());
-        println!("what => {}", blk.verify_merkle_root_hash());
-
-        // return;
-
-        use proto2::chain::ContractType;
-
-        (0..db.get_block_height() + 2).for_each(|num| {
-            if let Ok(blk) = db.get_block_by_number(num as _) {
-                for txn in blk.transactions {
-                    let typ = txn.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap().r#type;
-                    let typ = ContractType::from_i32(typ);
-                    println!("txn {:?} {:?}", txn.hash, typ)
-                }
-            } else {
-                println!("last notfound num => {}", num);
-            }
-        });
-        // let num_txns = db.transaction.new_iterator(ReadOptions::default_instance()).count();
-
-        //  println!("num of blocks => {}", num_blocks);
-        // println!("num of txns => {}", num_txns);
-
-        // let _ = db.verify_merkle_tree();
-
-        // assert!(db.verify_parent_hashes_from(0).unwrap());
-    }
-
-    #[test]
-    #[ignore]
-    fn fix_forked_chain() {
-        println!("opening db ...");
-        let db = ChainDB::new("./data");
-        println!("db opened!");
-        db.report_status();
-
-        let num = 19752249;
-
-        if let Ok(block) = db.get_block_by_number(num) {
-            println!("block found and is unique: {:?}", block.hash());
-        } else {
-            db.handle_chain_fork_at(num).unwrap();
-        }
     }
 }
