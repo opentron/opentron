@@ -119,23 +119,26 @@ message Transaction {
     enum ContractStatus {
       DEFAULT = 0;
       SUCCESS = 1;
+      // Used by CreatSmartContract and TriggerSmartContract
       REVERT = 2;
+      ILLEGAL_OPERATION = 8;
+      OUT_OF_TIME = 11;
+      OUT_OF_ENERGY = 10;
+      TRANSFER_FAILED = 14;
+      // Maybe not used
       BAD_JUMP_DESTINATION = 3;
       OUT_OF_MEMORY = 4;
       PRECOMPILED_CONTRACT = 5;
       STACK_TOO_SMALL = 6;
       STACK_TOO_LARGE = 7;
-      ILLEGAL_OPERATION = 8;
       STACK_OVERFLOW = 9;
-      OUT_OF_ENERGY = 10;
-      OUT_OF_TIME = 11;
       JVM_STACK_OVER_FLOW = 12;
       UNKNOWN = 13;
-      TRANSFER_FAILED = 14;
     }
 
     int64 fee = 1;
     // renamed: ret
+    // NOTE: Actually not used. Always = 0
     Status status = 2;
     // renamed: contractRet
     ContractStatus contract_status = 3;
