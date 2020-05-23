@@ -73,16 +73,10 @@ impl IndexedBlock {
             transactions,
         } = block;
         // Only compute in parallel if there is enough work to benefit it
-        let transactions = if transactions.len() > 200 {
-            transactions
-                .into_par_iter()
-                .map(IndexedTransaction::from_raw)
-                .collect::<Vec<_>>();
+        let transactions: Vec<_> = if transactions.len() > 200 {
+            transactions.into_par_iter().map(IndexedTransaction::from_raw).collect()
         } else {
-            transactions
-                .into_iter()
-                .map(IndexedTransaction::from_raw)
-                .collect::<Vec<_>>();
+            transactions.into_iter().map(IndexedTransaction::from_raw).collect()
         };
         let mut block_header = block_header.unwrap();
         if block_header.raw_data.as_ref().unwrap().merkle_root_hash.is_empty() {
