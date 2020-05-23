@@ -491,14 +491,13 @@ impl ChainDB {
 
         println!("start from parent hash = {}", hex::encode(&parent_hash));
 
-        let mut lower_bound = [0u8; 8];
-        BE::write_u64(&mut lower_bound, num);
-
-        for (blk_id, raw_header) in self
+        for header in self
             .block_header
-            .new_iterator(&ReadOptions::default().iterate_lower_bound(&lower_bound))
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(start_block.hash().as_bytes()))
+            .map(|(blk_id, raw_header)| {
+                IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap())
+            })
         {
-            let header = IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap());
             if header.raw.raw_data.as_ref().unwrap().parent_hash != parent_hash {
                 eprintln!("❌ parent_hash verification error");
                 eprintln!(
@@ -510,9 +509,9 @@ impl ChainDB {
                 return Ok(false);
             }
             if header.number() % 10000 == 0 {
-                println!("block => {} parent_hash => {}", header.number(), hex::encode(blk_id));
+                println!("block => {} parent_hash => {:?}", header.number(), header.hash);
             }
-            parent_hash = blk_id.to_vec();
+            parent_hash = header.hash.as_bytes().to_vec();
         }
 
         println!("✅ verification all passed!");
@@ -522,6 +521,14 @@ impl ChainDB {
     pub fn verify_parent_hashes(&self) -> Result<bool, Box<dyn Error>> {
         // genesis parent_hash: e58f33f9baf9305dc6f82b9f1934ea8f0ade2defb951258d50167028c780351f
         self.verify_parent_hashes_from(0)
+    }
+
+    pub fn block_headers<'a>(&'a self) -> impl Iterator<Item = IndexedBlockHeader> + 'a {
+        self.block_header
+            .new_iterator(ReadOptions::default_instance())
+            .map(|(blk_id, raw_header)| {
+                IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap())
+            })
     }
 
     pub fn blocks<'a>(&'a self) -> impl Iterator<Item = IndexedBlock> + 'a {
