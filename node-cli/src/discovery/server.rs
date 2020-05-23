@@ -72,7 +72,7 @@ where
                 .unwrap_or(18888) as _,
             node_id: node_id.to_vec(),
         });
-
+    info!("discovery will broadcast {}:{}", &my_endpoint.address, my_endpoint.port);
     let mut transport = DiscoveryMessageTransport::new(socket);
 
     for peer in &ctx.config.protocol.seed_nodes {
