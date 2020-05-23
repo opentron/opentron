@@ -236,14 +236,22 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
                     "head_block" => peer_head_block_id.as_ref().unwrap().number,
                 );
 
-                assert_eq!(version, p2p_version);
+                if version != p2p_version {
+                    writer
+                        .send(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect {
+                            reason: ReasonCode::IncompatibleVersion as i32,
+                        }))
+                        .await?;
+                    warn!("p2p version mismatch version={}, disconnect", version);
+                    return Ok(());
+                }
                 if peer_genesis_block_id != ctx.genesis_block_id {
                     writer
                         .send(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect {
                             reason: ReasonCode::IncompatibleChain as i32,
                         }))
                         .await?;
-                    warn!("incompatible chain, disconnect");
+                    warn!("genesis block mismatch, disconnect");
                     return Ok(());
                 }
 
