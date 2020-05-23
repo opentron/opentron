@@ -201,6 +201,7 @@ pub struct AccountCreateContract {
 }
 
 #[derive(juniper::GraphQLObject)]
+/// Set account name.
 pub struct AccountUpdateContract {
     owner_address: String,
     account_name: String,

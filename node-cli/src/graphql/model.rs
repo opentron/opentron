@@ -6,16 +6,48 @@ use juniper::{GraphQLType, Registry, ScalarValue};
 use keys::Address;
 use primitives::H256;
 use std::convert::TryFrom;
+use std::str;
 use std::sync::Arc;
 
 use super::contract::Contract;
 use crate::context::AppContext;
 
+#[derive(juniper::GraphQLEnum, PartialEq, Eq)]
+#[repr(i32)]
+enum ContractReturn {
+    Default = 0,
+    Success = 1,
+    Revert = 2,
+    IllegalOperation = 8,
+    OutOfEnergy = 10,
+    OutOfTime = 11,
+    TransferFailed = 14,
+    BadJumpDestination = 3,
+    OutOfMemory = 4,
+    PrecompiledContract = 5,
+    StackTooSmall = 6,
+    StackTooLarge = 7,
+    StackOverflow = 9,
+    JvmStackOverFlow = 12,
+    Unknown = 13,
+}
+
+impl ContractReturn {
+    fn from_i32(val: i32) -> Self {
+        unsafe { std::mem::transmute(val) }
+    }
+}
+
 #[derive(juniper::GraphQLObject)]
 struct RawTransaction {
-    // le 1000_000_000, i32 is ok
+    contract: Contract,
+    timestamp: DateTime<Utc>,
+    expiration: DateTime<Utc>,
+    ref_block_bytes: String,
+    ref_block_hash: String,
+    permission_id: i32,
     fee_limit: i32,
-    data: String,
+    memo: Option<String>,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -25,12 +57,9 @@ pub struct Transaction {
     id: String,
     /// Signature of the transaction,
     signatures: Vec<String>,
-    contract: Contract,
-    timestamp: DateTime<Utc>,
-    expiration: DateTime<Utc>,
-    ref_block_bytes: String,
-    ref_block_hash: String,
-    permission_id: i32,
+    /// Inner transaction.
+    inner: RawTransaction,
+    contract_return: Option<ContractReturn>,
 }
 
 impl From<IndexedTransaction> for Transaction {
@@ -39,15 +68,30 @@ impl From<IndexedTransaction> for Transaction {
         let origin_contract = raw.raw_data.as_mut().unwrap().contract.take().unwrap();
         let raw_txn = raw.raw_data.as_ref().unwrap();
         let permission_id = origin_contract.permission_id;
-        Transaction {
-            id: hex::encode(hash.as_bytes()),
-            signatures: raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
+        let result = raw.result.take().unwrap_or_default();
+
+        let inner = RawTransaction {
             contract: origin_contract.into(),
             timestamp: Utc.timestamp(raw_txn.timestamp / 1_000, raw_txn.expiration as u32 % 1_000 * 1_000000),
             expiration: Utc.timestamp(raw_txn.expiration / 1_000, raw_txn.expiration as u32 % 1_000 * 1_000000),
             ref_block_bytes: hex::encode(&raw_txn.ref_block_bytes),
             ref_block_hash: hex::encode(&raw_txn.ref_block_hash),
             permission_id,
+            fee_limit: raw_txn.fee_limit as _,
+            memo: if !raw_txn.data.is_empty() {
+                str::from_utf8(&raw_txn.data)
+                    .map(|s| s.to_owned())
+                    .ok()
+                    .or_else(|| Some(hex::encode(&raw_txn.data)))
+            } else {
+                None
+            },
+        };
+        Transaction {
+            id: hex::encode(hash.as_bytes()),
+            signatures: raw.signatures.iter().map(|sig| hex::encode(sig)).collect(),
+            inner,
+            contract_return: Some(ContractReturn::from_i32(result.contract_status)),
         }
     }
 }
