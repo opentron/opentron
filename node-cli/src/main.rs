@@ -15,6 +15,7 @@ use std::sync::Mutex;
 use node_cli::channel::server::channel_server;
 use node_cli::context::AppContext;
 use node_cli::graphql::server::graphql_server;
+use node_cli::discovery::server::discovery_server;
 use node_cli::util::get_my_ip;
 
 pub enum PeerStatus {
@@ -103,11 +104,13 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
     let (termination_tx, termination_done) = oneshot::channel::<()>();
     let (channel_tx, channel_done) = oneshot::channel::<()>();
     let (graphql_tx, graphql_done) = oneshot::channel::<()>();
+    let (discovery_tx, discovery_done) = oneshot::channel::<()>();
     let termination_handler = {
         let ctx = ctx.clone();
         move || {
             let _ = channel_tx.send(());
             let _ = graphql_tx.send(());
+            let _ = discovery_tx.send(());
             while let Some(done) = ctx.peers.write().unwrap().pop() {
                 let _ = done.send(());
             }
@@ -142,7 +145,12 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
         channel_server(ctx, channel_done.map(|_| ())).with_logger(logger)
     };
 
-    let _ = join!(graphql_service, channel_service);
+    let discovery_service = {
+        let ctx = ctx.clone();
+        let logger = slog_scope::logger().new(o!("service" => "discovery"));
+        discovery_server(ctx, discovery_done.map(|_| ()).with_logger(logger))
+    };
+    let _ = join!(graphql_service, channel_service, discovery_service);
 
     Ok(termination_done.await?)
 }
