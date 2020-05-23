@@ -4,6 +4,7 @@ use hyper::{
 };
 use juniper::{EmptyMutation, EmptySubscription, RootNode};
 use log::{info, warn};
+use slog::slog_info;
 use std::future::Future;
 use std::sync::Arc;
 
@@ -30,13 +31,15 @@ where
     let graphql_service = make_service_fn(move |_| {
         let root_node = root_node.clone();
         let ctx = ctx.clone();
+        let logger = slog_scope::logger();
 
         async move {
             Ok::<_, hyper::Error>(service_fn(move |req| {
                 let root_node = root_node.clone();
                 let ctx = ctx.clone();
 
-                info!(
+                slog_info!(
+                    logger,
                     "{:?} {} {:?} {:?}",
                     req.method(),
                     req.uri(),
