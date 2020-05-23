@@ -165,7 +165,6 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
     let mut writer = ChannelMessageCodec::new_write(writer);
 
     let p2p_version = ctx.config.chain.p2p_version;
-    let node_id = &ctx.node_id[..];
 
     let channel_conf = &ctx.config.protocol.channel;
     let advertised_endpoint = channel_conf
@@ -174,7 +173,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
         .map(|addr| Endpoint {
             address: addr.ip().to_string(),
             port: addr.port() as _,
-            node_id: node_id.to_vec(),
+            node_id: ctx.node_id.clone(),
         })
         .unwrap_or_else(|_| Endpoint {
             address: ctx.outbound_ip.clone(),
@@ -183,7 +182,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
                 .parse::<SocketAddr>()
                 .map(|addr| addr.port())
                 .unwrap_or(18888) as _,
-            node_id: node_id.to_vec(),
+            node_id: ctx.node_id.clone(),
         });
 
     let block_height = ctx.db.get_block_height();
@@ -468,10 +467,11 @@ async fn sync_channel_handler(
                         }
                     }
                     Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
+                        const SYNC_FETCH_BATCH_NUM: usize = 2000;
+
                         info!("peer wants to sync blockchain: {:?}", blk_inv);
                         let BlockInventory { mut ids, .. } = blk_inv;
                         let last_block_id = ids.last().unwrap().clone();
-                        const SYNC_FETCH_BATCH_NUM: usize = 2000;
                         let block_ids: Vec<BlockId> = ctx
                             .db
                             .block_hashes_from(&last_block_id.hash, SYNC_FETCH_BATCH_NUM+1)
@@ -485,11 +485,11 @@ async fn sync_channel_handler(
                         };
                         info!("block ids {}", block_ids.len());
                         info!("remain num {}", remain_num);
-                        let chain_inv = ChainInventory {
+                        let _chain_inv = ChainInventory {
                             ids: block_ids,
                             remain_num: remain_num,
                         };
-                        writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
+                        // writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
                     }
                     Ok(msg) => {
                         error!("unhandled message {:?}", msg);

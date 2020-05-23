@@ -147,8 +147,7 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
 
     let discovery_service = {
         let ctx = ctx.clone();
-        let logger = slog_scope::logger().new(o!("service" => "discovery"));
-        discovery_server(ctx, discovery_done.map(|_| ()).with_logger(logger))
+        discovery_server(ctx, discovery_done.map(|_| ()))
     };
     let _ = join!(graphql_service, channel_service, discovery_service);
 

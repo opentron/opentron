@@ -14,7 +14,7 @@ use crate::genesis::GenesisConfig;
 
 pub struct AppContext {
     pub outbound_ip: String,
-    pub node_id: [u8; 64],
+    pub node_id: Vec<u8>,
     pub genesis_block_id: Option<BlockId>,
     pub config: Config,
     pub db: ChainDB,
@@ -51,8 +51,8 @@ impl AppContext {
 
         info!("chain version => {}", config.chain.p2p_version);
         info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
-        let mut node_id = [b'A'; 64];
-        node_id[63] = b'0';
+        let node_id = db.get_node_id();
+        info!("node id => {}", hex::encode(&node_id));
         Ok(AppContext {
             db,
             config,

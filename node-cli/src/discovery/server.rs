@@ -3,10 +3,10 @@ use futures::future::FutureExt;
 use futures::select;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
-use log::{debug, error, info, warn};
 use proto2::common::Endpoint;
 use proto2::discovery::{FindPeers, Peers, Ping, Pong};
 use rand::Rng;
+use slog::{debug, error, info, o, warn};
 use std::collections::HashSet;
 use std::error::Error;
 use std::future::Future;
@@ -36,9 +36,10 @@ where
     F: Future<Output = ()> + Unpin,
 {
     let config = &ctx.config.protocol.discovery;
+    let logger = slog_scope::logger().new(o!("service" => "discovery"));
 
     if !config.enable {
-        warn!("discover service disabled");
+        warn!(logger, "discovery service disabled");
         return Ok(());
     }
 
@@ -49,11 +50,10 @@ where
     let endpoint = &config.endpoint;
 
     let socket = UdpSocket::bind(endpoint).await?;
-    info!("udp bind to socket {}", socket.local_addr()?);
+    info!(logger, "udp bind to socket {}", socket.local_addr()?);
 
     let peers_data = std::fs::read_to_string("./peers.json").unwrap_or("[]".to_string());
     let mut peers_db: HashSet<Peer> = serde_json::from_str(&peers_data)?;
-    let node_id = &ctx.node_id;
 
     let my_endpoint = channel_config
         .advertised_endpoint
@@ -61,7 +61,7 @@ where
         .map(|addr| Endpoint {
             address: addr.ip().to_string(),
             port: addr.port() as _,
-            node_id: node_id.to_vec(),
+            node_id: ctx.node_id.clone(),
         })
         .unwrap_or_else(|_| Endpoint {
             address: ctx.outbound_ip.clone(),
@@ -70,9 +70,12 @@ where
                 .parse::<SocketAddr>()
                 .map(|addr| addr.port())
                 .unwrap_or(18888) as _,
-            node_id: node_id.to_vec(),
+            node_id: ctx.node_id.clone(),
         });
-    info!("discovery will broadcast {}:{}", &my_endpoint.address, my_endpoint.port);
+    info!(
+        logger,
+        "advertised endpoint {}:{}", &my_endpoint.address, my_endpoint.port
+    );
     let mut transport = DiscoveryMessageTransport::new(socket);
 
     for peer in &ctx.config.protocol.seed_nodes {
@@ -88,9 +91,9 @@ where
                 timestamp: Utc::now().timestamp_millis(),
             };
             transport.send((ping.into(), peer_addr)).await?;
-            info!("ping {}", peer_addr);
+            info!(logger, "ping {}", peer_addr);
         } else {
-            warn!("unable to resove address {:?}", peer);
+            warn!(logger, "unable to resove address {:?}", peer);
         }
     }
 
@@ -99,19 +102,19 @@ where
         let mut payload_fut = transport.next().fuse();
         select! {
             _ = signal => {
-                    warn!("discover service closed");
+                    warn!(logger, "discovery service closed");
                     break;
             }
             payload = payload_fut => {
                 if payload.is_none() {
-                    warn!("udp discoery closed");
+                    warn!(logger, "udp discovery closed");
                     return Ok(());
                 }
                 let payload = payload.unwrap();
                 match payload {
                     Ok((DiscoveryMessage::Ping(ping), peer_addr)) => {
                         if ping.version != p2p_version {
-                            warn!("{} version mismatch: version = {}", peer_addr, ping.version);
+                            warn!(logger, "p2p version mismatch: version = {}", ping.version, ; "peer_addr" => peer_addr);
                             continue;
                         }
                         let pong = Pong {
@@ -120,11 +123,11 @@ where
                             echo_version: p2p_version,
                         };
                         transport.send((pong.into(), peer_addr)).await?;
-                        debug!("{} pong", peer_addr);
+                        debug!(logger, "pong"; "peer_addr" => peer_addr);
                         let mut rng = rand::thread_rng();
                         let mut random_id = vec![0u8; 32];
                         rng.fill(&mut random_id[..]);
-                        debug!("find peers target={}", hex::encode(&random_id));
+                        debug!(logger, "find peers target={}", hex::encode(&random_id); "peer_addr" => peer_addr);
                         if ["127.0.0.1", my_ip, "192.168.1.1"].contains(&&*peer_addr.ip().to_string()) {
                             continue;
                         }
@@ -163,7 +166,7 @@ where
                                 continue;
                             }
                             if let Ok(peer_addr) = format!("{}:{}", peer.address, peer.port).parse() {
-                                info!("=> ping peer {}", peer_addr);
+                                info!(logger, "ping"; "peer_addr" => peer_addr);
                                 let ping = Ping {
                                     from: Some(my_endpoint.clone()),
                                     to: Some(Endpoint {
@@ -176,7 +179,7 @@ where
                                 };
                                 transport.send((ping.into(), peer_addr)).await?;
                             } else {
-                                warn!("unable to parse peer address {}:{}", peer.address, peer.port);
+                                warn!(logger, "unable to parse peer address {}:{}", peer.address, peer.port);
                             }
                         }
                     }
@@ -196,7 +199,7 @@ where
                         }
                     }
                     Err(e) => {
-                        error!("error: {:?}", e);
+                        error!(logger, "error: {:?}", e);
                         return Err(e).map_err(From::from);
                     }
                 }

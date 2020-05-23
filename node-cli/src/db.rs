@@ -13,6 +13,7 @@ use std::error::Error;
 use std::io;
 use std::iter::FromIterator;
 use std::path::Path;
+use rand::Rng;
 
 pub type BoxError = Box<dyn Error>;
 
@@ -86,6 +87,18 @@ impl ChainDB {
             block_header: blk,
             transaction: txn,
             transaction_block: txn_blk,
+        }
+    }
+
+    pub fn get_node_id(&self) -> Vec<u8> {
+        if let Ok(node_id) = self.default.get(ReadOptions::default_instance(), b"NODE_ID") {
+            return node_id.to_vec()
+        } else {
+            let mut rng = rand::thread_rng();
+            let mut node_id = vec![b'A'; 64];
+            rng.fill(&mut node_id[32..]);
+            self.default.put(WriteOptions::default_instance(), b"NODE_ID", &node_id).unwrap();
+            node_id
         }
     }
 
