@@ -470,7 +470,7 @@ async fn sync_channel_handler(
                     Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
                         info!("peer wants to sync blockchain: {:?}", blk_inv);
                         let BlockInventory { mut ids, .. } = blk_inv;
-                        let last_block_id = ids[0].clone();
+                        let last_block_id = ids.last().unwrap().clone();
                         const SYNC_FETCH_BATCH_NUM: usize = 2000;
                         let block_ids: Vec<BlockId> = ctx
                             .db
@@ -489,7 +489,7 @@ async fn sync_channel_handler(
                             ids: block_ids,
                             remain_num: remain_num,
                         };
-                        // writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
+                        writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
                     }
                     Ok(msg) => {
                         error!("unhandled message {:?}", msg);
