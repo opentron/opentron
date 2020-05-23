@@ -10,6 +10,7 @@ use rand::Rng;
 use std::collections::HashSet;
 use std::error::Error;
 use std::future::Future;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net;
 use tokio::net::UdpSocket;
@@ -41,7 +42,7 @@ where
         return Ok(());
     }
 
-    // let channel_config = &ctx.config.protocol.channel;
+    let channel_config = &ctx.config.protocol.channel;
     let my_ip = &ctx.outbound_ip;
     let p2p_version = ctx.config.chain.p2p_version;
 
@@ -52,12 +53,25 @@ where
 
     let peers_data = std::fs::read_to_string("./peers.json").unwrap_or("[]".to_string());
     let mut peers_db: HashSet<Peer> = serde_json::from_str(&peers_data)?;
+    let node_id = &ctx.node_id;
 
-    let my_endpoint = Endpoint {
-        address: my_ip.clone(),
-        port: 18888,
-        node_id: ctx.node_id.to_vec(),
-    };
+    let my_endpoint = channel_config
+        .advertised_endpoint
+        .parse::<SocketAddr>()
+        .map(|addr| Endpoint {
+            address: addr.ip().to_string(),
+            port: addr.port() as _,
+            node_id: node_id.to_vec(),
+        })
+        .unwrap_or_else(|_| Endpoint {
+            address: ctx.outbound_ip.clone(),
+            port: channel_config
+                .endpoint
+                .parse::<SocketAddr>()
+                .map(|addr| addr.port())
+                .unwrap_or(18888) as _,
+            node_id: node_id.to_vec(),
+        });
 
     let mut transport = DiscoveryMessageTransport::new(socket);
 
