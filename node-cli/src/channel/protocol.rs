@@ -5,7 +5,7 @@ use prost::Message;
 use proto2::chain::Block;
 use proto2::channel::{
     inventory::Type as InventoryType, BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory,
-    Transactions,
+    ReasonCode as DisconnectReasonCode, Transactions,
 };
 use std::convert::TryFrom;
 use std::io::{self, Cursor};
@@ -59,6 +59,10 @@ impl ChannelMessage {
             Ping => 0x22,
             Pong => 0x23,
         }
+    }
+
+    pub fn disconnect_with_reason(reason: DisconnectReasonCode) -> Self {
+        ChannelMessage::HandshakeDisconnect(HandshakeDisconnect { reason: reason as i32 })
     }
 
     pub fn encode_to<T: BufMut>(&self, dst: &mut T) -> Result<(), io::Error> {

@@ -11,7 +11,6 @@ use log::{debug, error, info, warn};
 use primitives::H256;
 use proto2::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
-    ReasonCode,
 };
 use proto2::common::{BlockId, Endpoint};
 use slog::{o, slog_info};
@@ -237,18 +236,18 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
 
                 if version != p2p_version {
                     writer
-                        .send(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect {
-                            reason: ReasonCode::IncompatibleVersion as i32,
-                        }))
+                        .send(ChannelMessage::disconnect_with_reason(
+                            DisconnectReasonCode::IncompatibleVersion,
+                        ))
                         .await?;
                     warn!("p2p version mismatch version={}, disconnect", version);
                     return Ok(());
                 }
                 if peer_genesis_block_id != ctx.genesis_block_id {
                     writer
-                        .send(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect {
-                            reason: ReasonCode::IncompatibleChain as i32,
-                        }))
+                        .send(ChannelMessage::disconnect_with_reason(
+                            DisconnectReasonCode::IncompatibleChain,
+                        ))
                         .await?;
                     warn!("genesis block mismatch, disconnect");
                     return Ok(());
@@ -313,7 +312,7 @@ async fn sync_channel_handler(
     */
 
     let mut last_block_number = highest_block_id.number;
-    let mut last_block_number_in_this_batch = 0;
+    let mut last_block_number_in_this_batch = 0_i64;
     if *ctx.syncing.read().unwrap() {
         info!("sync block from {}", highest_block_id);
         let inv = BlockInventory {
@@ -467,28 +466,37 @@ async fn sync_channel_handler(
                         }
                     }
                     Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
-                        const SYNC_FETCH_BATCH_NUM: usize = 2000;
+                        const SYNC_FETCH_BATCH_NUM: i64 = 2000;
                         let BlockInventory { mut ids, .. } = blk_inv;
                         info!("sync blockchain: {:?}", ids.iter().map(|blk_id| blk_id.number).collect::<Vec<_>>());
-                        let last_block_id = ids.last().unwrap().clone();
-                        let block_ids: Vec<BlockId> = ctx
-                            .db
-                            .block_hashes_from(&last_block_id.hash, SYNC_FETCH_BATCH_NUM+1)
-                            .into_iter()
-                            .map(|block_hash| BlockId::from(block_hash))
-                            .collect();
-                        let remain_num = if block_ids.len() < SYNC_FETCH_BATCH_NUM {
-                            block_ids.last().unwrap().number - last_block_id.number
-                        } else {
-                            ctx.db.get_block_height() - block_ids.last().unwrap().number
-                        };
-                        info!("block ids {}", block_ids.len());
-                        info!("remain num {}", remain_num);
-                        let _chain_inv = ChainInventory {
-                            ids: block_ids,
-                            remain_num: remain_num,
-                        };
-                        // writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
+                        let unfork_id = ids.iter().find(|blk_id| ctx.db.has_block_id(&H256::from_slice(&blk_id.hash)));
+
+                        match unfork_id {
+                            None => {
+                                warn!("can not find an unfork id");
+                                writer.send(
+                                    ChannelMessage::disconnect_with_reason(DisconnectReasonCode::SyncFail))
+                                .await?;
+                                return Ok(());
+                            }
+                            Some(unfork_id) => {
+                                let block_height = ctx.db.get_block_height();
+                                let max_block_num = block_height.min(unfork_id.number + SYNC_FETCH_BATCH_NUM);
+                                let reply_ids:Vec<BlockId> =
+                                    ctx.db.block_hashes_from(
+                                        &unfork_id.hash, (max_block_num - unfork_id.number) as usize)
+                                    .into_iter()
+                                    .map(|block_hash| BlockId::from(block_hash))
+                                    .collect();
+                                let remain_num = max_block_num - reply_ids.last().unwrap().number;
+                                info!("reply with remain_num = {}", remain_num);
+                                let chain_inv = ChainInventory {
+                                    ids: reply_ids,
+                                    remain_num: remain_num,
+                                };
+                                writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
+                            }
+                        }
                     }
                     Ok(msg) => {
                         error!("unhandled message {:?}", msg);
