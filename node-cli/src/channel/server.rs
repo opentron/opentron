@@ -468,9 +468,8 @@ async fn sync_channel_handler(
                     }
                     Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
                         const SYNC_FETCH_BATCH_NUM: usize = 2000;
-
-                        info!("peer wants to sync blockchain: {:?}", blk_inv);
                         let BlockInventory { mut ids, .. } = blk_inv;
+                        info!("sync blockchain: {:?}", ids.iter().map(|blk_id| blk_id.number).collect::<Vec<_>>());
                         let last_block_id = ids.last().unwrap().clone();
                         let block_ids: Vec<BlockId> = ctx
                             .db
