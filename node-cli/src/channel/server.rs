@@ -309,7 +309,7 @@ async fn sync_channel_handler(
         number: 19822000,
         hash: hex::decode("00000000012e75b0c3dcb528f9bc31a43f7098d97b59f618387b958b4180bf8d").unwrap(),
     };
-    */
+   */
 
     let mut last_block_number = highest_block_id.number;
     let mut last_block_number_in_this_batch = 0_i64;
@@ -469,7 +469,9 @@ async fn sync_channel_handler(
                         const SYNC_FETCH_BATCH_NUM: i64 = 2000;
                         let BlockInventory { mut ids, .. } = blk_inv;
                         info!("sync blockchain: {:?}", ids.iter().map(|blk_id| blk_id.number).collect::<Vec<_>>());
-                        let unfork_id = ids.iter().find(|blk_id| ctx.db.has_block_id(&H256::from_slice(&blk_id.hash)));
+                        let unfork_id = ids.iter()
+                            .rev()
+                            .find(|blk_id| ctx.db.has_block_id(&H256::from_slice(&blk_id.hash)));
 
                         match unfork_id {
                             None => {
@@ -485,7 +487,7 @@ async fn sync_channel_handler(
                                 let max_block_num = block_height.min(unfork_id.number + SYNC_FETCH_BATCH_NUM);
                                 let reply_ids:Vec<BlockId> =
                                     ctx.db.block_hashes_from(
-                                        &unfork_id.hash, (max_block_num - unfork_id.number) as usize)
+                                        &unfork_id.hash, (max_block_num - unfork_id.number) as usize + 1)
                                     .into_iter()
                                     .map(|block_hash| BlockId::from(block_hash))
                                     .collect();

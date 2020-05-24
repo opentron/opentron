@@ -14,8 +14,8 @@ use std::sync::Mutex;
 
 use node_cli::channel::server::channel_server;
 use node_cli::context::AppContext;
-use node_cli::graphql::server::graphql_server;
 use node_cli::discovery::server::discovery_server;
+use node_cli::graphql::server::graphql_server;
 use node_cli::util::get_my_ip;
 
 pub enum PeerStatus {
