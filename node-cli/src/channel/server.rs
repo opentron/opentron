@@ -480,6 +480,7 @@ async fn sync_channel_handler(
                                 return Ok(());
                             }
                             Some(unfork_id) => {
+                                info!("unfork id => {}", unfork_id);
                                 let block_height = ctx.db.get_block_height();
                                 let max_block_num = block_height.min(unfork_id.number + SYNC_FETCH_BATCH_NUM);
                                 let reply_ids:Vec<BlockId> =
@@ -490,6 +491,7 @@ async fn sync_channel_handler(
                                     .collect();
                                 let remain_num = block_height - reply_ids.last().unwrap().number;
                                 info!("reply with remain_num = {}", remain_num);
+                                info!("reply with ids = {}", reply_ids.len());
                                 let chain_inv = ChainInventory {
                                     ids: reply_ids,
                                     remain_num: remain_num,
