@@ -488,7 +488,7 @@ async fn sync_channel_handler(
                                     .into_iter()
                                     .map(|block_hash| BlockId::from(block_hash))
                                     .collect();
-                                let remain_num = max_block_num - reply_ids.last().unwrap().number;
+                                let remain_num = block_height - reply_ids.last().unwrap().number;
                                 info!("reply with remain_num = {}", remain_num);
                                 let chain_inv = ChainInventory {
                                     ids: reply_ids,
