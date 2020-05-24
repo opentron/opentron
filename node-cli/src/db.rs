@@ -405,7 +405,7 @@ impl ChainDB {
             .collect()
     }
 
-    pub fn handle_chain_fork_at(&self, mut num: u64) -> Result<(), BoxError> {
+    pub fn handle_chain_fork_at(&self, mut num: u64, dry_run: bool) -> Result<(), BoxError> {
         // check
         assert!(num > 0, "cannot fork from genesis block");
         assert!(self.get_block_headers_by_number(num - 1).len() == 1);
@@ -426,6 +426,12 @@ impl ChainDB {
             }
             if headers.len() == 1 {
                 break;
+            }
+            if headers.is_empty() {
+                return Err(Box::new(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "can not determine longest fork",
+                )));
             }
             num += 1;
         }
@@ -463,10 +469,14 @@ impl ChainDB {
                 let block = self.get_block_from_header(header.clone()).unwrap();
                 for txn in block.transactions {
                     if !txn_whitelist.contains(&txn) {
+                        println!("! found orphan txn: {:?}", txn.hash);
                         orphan_txns.insert(txn);
                     }
                 }
             }
+        }
+        if dry_run {
+            return Ok(());
         }
         self.db.write(WriteOptions::default_instance(), &wb)?;
 
@@ -474,7 +484,7 @@ impl ChainDB {
             wb.clear();
             for txn in &orphan_txns {
                 if self.delete_orphan_transaction(&txn, &mut wb) {
-                    println!("! delete orphan txn: {:?}", txn.hash);
+                    println!("! deleted orphan txn: {:?}", txn.hash);
                 }
             }
             self.db.write(WriteOptions::default_instance(), &wb)?;
