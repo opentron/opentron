@@ -389,9 +389,10 @@ impl ChainDB {
 
             if corrent_reverse_index != &*reverse_index {
                 println!(
-                    "! wrong reverse index {:?} => {}",
+                    "! wrong reverse index {:?}\n=> {}\n=>{}",
                     txn.hash,
-                    hex::encode(&*reverse_index)
+                    hex::encode(&*reverse_index),
+                    hex::encode(&correct_block_hash),
                 );
                 wb.put_cf(&self.transaction_block, txn.hash.as_ref(), correct_block_hash);
             }
@@ -467,7 +468,7 @@ impl ChainDB {
 
         for fork in tobe_purged_forks {
             for header in fork.iter() {
-                wb.delete(header.hash.as_bytes());
+                wb.delete_cf(&self.block_header, header.hash.as_bytes());
                 println!("! delete header {:?}", header.hash);
                 let block = self.get_block_from_header(header.clone()).unwrap();
                 for txn in block.transactions {
