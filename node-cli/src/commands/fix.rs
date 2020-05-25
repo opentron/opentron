@@ -22,7 +22,7 @@ pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> R
 
     if let Some(val) = matches.value_of("fork") {
         let block_number = val.parse().expect("height number");
-        db.handle_chain_fork_at(block_number, /* dry_run */ true)?;
+        db.handle_chain_fork_at(block_number, /* dry_run */ false)?;
     }
 
     Ok(())

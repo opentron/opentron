@@ -468,6 +468,7 @@ impl ChainDB {
         for fork in tobe_purged_forks {
             for header in fork.iter() {
                 wb.delete(header.hash.as_bytes());
+                println!("! delete header {:?}", header.hash);
                 let block = self.get_block_from_header(header.clone()).unwrap();
                 for txn in block.transactions {
                     if !txn_whitelist.contains(&txn) {
@@ -483,13 +484,17 @@ impl ChainDB {
         self.db.write(WriteOptions::default_instance(), &wb)?;
 
         if !orphan_txns.is_empty() {
-            wb.clear();
+            use std::fs::OpenOptions;
+            use std::io::Write;
+
+            let mut f = OpenOptions::new()
+                .read(true)
+                .create(true)
+                .append(true)
+                .open("./orphan_txns.log")?;
             for txn in &orphan_txns {
-                if self.delete_orphan_transaction(&txn, &mut wb) {
-                    println!("! deleted orphan txn: {:?}", txn.hash);
-                }
+                write!(f, "{:?}\n", txn.hash)?;
             }
-            self.db.write(WriteOptions::default_instance(), &wb)?;
         }
 
         Ok(())
