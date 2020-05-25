@@ -377,23 +377,25 @@ impl ChainDB {
             return;
         }
         let correct_block_hash = block.hash().as_bytes();
-        let txn_hashes: Vec<_> = block.transactions.iter().map(|txn| txn.hash.as_bytes()).collect();
-        let block_hashes = self
-            .transaction_block
-            .multi_get(ReadOptions::default_instance(), &txn_hashes);
+        block.transactions.iter().enumerate().for_each(|(i, txn)| {
+            let mut corrent_reverse_index = vec![0u8; 32 + 8];
+            (&mut corrent_reverse_index[..32]).copy_from_slice(block.hash().as_bytes());
+            BE::write_u64(&mut corrent_reverse_index[32..], i as u64);
 
-        for (txn_hash, block_hash) in txn_hashes.iter().zip(block_hashes.into_iter()) {
-            let block_hash = block_hash.unwrap();
+            let reverse_index = self
+                .transaction_block
+                .get(ReadOptions::default_instance(), txn.hash.as_bytes())
+                .unwrap();
 
-            if block_hash != correct_block_hash {
+            if corrent_reverse_index != &*reverse_index {
                 println!(
-                    "! wrong block hash {:?} => {:?}",
-                    hex::encode(txn_hash),
-                    hex::encode(&block_hash)
+                    "! wrong reverse index {:?} => {}",
+                    txn.hash,
+                    hex::encode(&*reverse_index)
                 );
-                wb.put_cf(&self.transaction_block, txn_hash, correct_block_hash);
+                wb.put_cf(&self.transaction_block, txn.hash.as_ref(), correct_block_hash);
             }
-        }
+        });
     }
 
     pub fn block_hashes_from(&self, start_block_hash: &[u8], count: usize) -> Vec<Vec<u8>> {
