@@ -570,6 +570,9 @@ impl ChainDB {
             parent_hash = header.hash.as_bytes().to_vec();
         }
 
+        let block_number = BE::read_u64(&parent_hash[..8]);
+        self.update_verified_block_number(block_number)?;
+
         info!("✅ verification all passed!");
         Ok(true)
     }
