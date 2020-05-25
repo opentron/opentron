@@ -513,14 +513,31 @@ impl ChainDB {
         Ok(())
     }
 
-    pub fn get_verified_block_number(&self) -> u64 {
+    pub fn block_headers<'a>(&'a self) -> impl Iterator<Item = IndexedBlockHeader> + 'a {
+        self.block_header
+            .new_iterator(ReadOptions::default_instance())
+            .map(|(blk_id, raw_header)| {
+                IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap())
+            })
+    }
+
+    pub fn blocks<'a>(&'a self) -> impl Iterator<Item = IndexedBlock> + 'a {
+        self.block_header
+            .new_iterator(ReadOptions::default_instance())
+            .map(|(blk_id, raw_header)| {
+                IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap())
+            })
+            .map(move |header| self.get_block_from_header(header).unwrap())
+    }
+
+    pub fn get_parent_hash_verified_block_number(&self) -> u64 {
         self.default
             .get(ReadOptions::default_instance(), b"PARENT_HASH_VERIFIED")
             .map(|raw| BE::read_u64(&*raw))
             .unwrap_or(0)
     }
 
-    fn update_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
+    fn update_parent_hash_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
         let mut raw = [0u8; 8];
         BE::write_u64(&mut raw[..], num);
         self.default
@@ -529,7 +546,7 @@ impl ChainDB {
     }
 
     pub fn verify_parent_hashes(&self) -> Result<bool, BoxError> {
-        let start_block_num = self.get_verified_block_number();
+        let start_block_num = self.get_parent_hash_verified_block_number();
         let start_block = self.get_block_by_number(start_block_num)?;
 
         let mut parent_hash = start_block.header.raw.raw_data.as_ref().unwrap().parent_hash.to_vec();
@@ -549,7 +566,7 @@ impl ChainDB {
         {
             if header.raw.raw_data.as_ref().unwrap().parent_hash != parent_hash {
                 let parent_block_number = BE::read_u64(&parent_hash[..8]);
-                self.update_verified_block_number(parent_block_number)?;
+                self.update_parent_hash_verified_block_number(parent_block_number)?;
 
                 error!("❌ parent_hash verification error");
                 warn!(
@@ -571,39 +588,36 @@ impl ChainDB {
         }
 
         let block_number = BE::read_u64(&parent_hash[..8]);
-        self.update_verified_block_number(block_number)?;
+        self.update_parent_hash_verified_block_number(block_number)?;
 
         info!("✅ verification all passed!");
         Ok(true)
     }
 
-    pub fn block_headers<'a>(&'a self) -> impl Iterator<Item = IndexedBlockHeader> + 'a {
-        self.block_header
-            .new_iterator(ReadOptions::default_instance())
-            .map(|(blk_id, raw_header)| {
-                IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap())
-            })
+    pub fn get_merkle_tree_verified_block_number(&self) -> u64 {
+        self.default
+            .get(ReadOptions::default_instance(), b"MERKLE_TREE_VERIFIED")
+            .map(|raw| BE::read_u64(&*raw))
+            .unwrap_or(0)
     }
 
-    pub fn blocks<'a>(&'a self) -> impl Iterator<Item = IndexedBlock> + 'a {
-        self.block_header
-            .new_iterator(ReadOptions::default_instance())
-            .map(|(blk_id, raw_header)| {
-                IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap())
-            })
-            .map(move |header| self.get_block_from_header(header).unwrap())
+    fn update_merkle_tree_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
+        let mut raw = [0u8; 8];
+        BE::write_u64(&mut raw[..], num);
+        self.default
+            .put(WriteOptions::default_instance(), b"MERKLE_TREE_VERIFIED", &raw)
+            .map_err(From::from)
     }
 
     pub fn verify_merkle_tree(&self) -> Result<(), Box<dyn Error>> {
-        let ropt = ReadOptions::default();
+        let start_block = self.get_block_by_number(self.get_merkle_tree_verified_block_number())?;
+        let ropt = ReadOptions::default().iterate_lower_bound(start_block.hash().as_bytes());
+        info!("verify merkle tree from {}", start_block.number());
 
         for (blk_id, raw_header) in self.block_header.new_iterator(&ropt) {
             let header = IndexedBlockHeader::new(H256::from_slice(blk_id), BlockHeader::decode(raw_header).unwrap());
             let block = self.get_block_from_header(header).unwrap();
 
-            if block.number() % 1000 == 0 {
-                println!("block {} {:?}", block.number(), block.hash());
-            }
             if !block.verify_merkle_root_hash() {
                 println!(
                     "! mismatch block => {} {:?}\n  merkle tree={}",
@@ -614,6 +628,11 @@ impl ChainDB {
                 for (i, txn) in block.transactions.iter().enumerate() {
                     println!("  txn {} {:?} verify={}", i, txn.hash, txn.verify());
                 }
+                return Ok(());
+            }
+            if block.number() % 1000 == 0 {
+                println!("block {} {:?}", block.number(), block.hash());
+                self.update_merkle_tree_verified_block_number(block.number() as _)?;
             }
         }
         Ok(())
