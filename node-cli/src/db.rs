@@ -344,31 +344,17 @@ impl ChainDB {
         self.db.write(WriteOptions::default_instance(), &wb).is_ok()
     }
 
-    fn delete_orphan_transaction(&self, txn: &IndexedTransaction, wb: &mut WriteBatch) -> bool {
-        if let Ok(block_hash) = self
-            .transaction_block
-            .get(ReadOptions::default_instance(), txn.hash.as_bytes())
-        {
-            if self
-                .block_header
-                .get(ReadOptions::default_instance(), &*block_hash)
-                .is_ok()
-            {
-                eprintln!(
-                    "! txn not orphan {:?} => block {}",
-                    txn.hash,
-                    BE::read_u64(&block_hash[..8])
-                );
-                false
-            } else {
-                wb.delete_cf(&self.transaction, txn.hash.as_bytes());
-                wb.delete_cf(&self.transaction_block, txn.hash.as_bytes());
-                true
-            }
-        } else {
-            eprintln!("Not Found");
-            false
-        }
+    fn delete_block_without_reverse_index(&self, block: &IndexedBlock, wb: &mut WriteBatch) {
+        wb.delete_cf(&self.block_header, block.hash().as_bytes());
+
+        let header = &block.header;
+        self.transaction
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(&header.hash.as_bytes()))
+            .keys()
+            .take_while(|key| &key[..32] == header.hash.as_bytes())
+            .for_each(|key| {
+                wb.delete_cf(&self.transaction, &key);
+            });
     }
 
     fn relink_transactions_to_block(&self, block: &IndexedBlock, wb: &mut WriteBatch) {
@@ -376,7 +362,6 @@ impl ChainDB {
             eprintln!("error while checking block merkle root hash");
             return;
         }
-        let correct_block_hash = block.hash().as_bytes();
         block.transactions.iter().enumerate().for_each(|(i, txn)| {
             let mut corrent_reverse_index = vec![0u8; 32 + 8];
             (&mut corrent_reverse_index[..32]).copy_from_slice(block.hash().as_bytes());
@@ -389,12 +374,12 @@ impl ChainDB {
 
             if corrent_reverse_index != &*reverse_index {
                 println!(
-                    "! wrong reverse index {:?}\n=> {}\n=>{}",
+                    "! wrong reverse index {:?}\n=> {}\n=> {}",
                     txn.hash,
                     hex::encode(&*reverse_index),
-                    hex::encode(&correct_block_hash),
+                    hex::encode(&corrent_reverse_index),
                 );
-                wb.put_cf(&self.transaction_block, txn.hash.as_ref(), correct_block_hash);
+                wb.put_cf(&self.transaction_block, txn.hash.as_ref(), &corrent_reverse_index);
             }
         });
     }
@@ -468,9 +453,10 @@ impl ChainDB {
 
         for fork in tobe_purged_forks {
             for header in fork.iter() {
-                wb.delete_cf(&self.block_header, header.hash.as_bytes());
-                println!("! delete header {:?}", header.hash);
+                // wb.delete_cf(&self.block_header, header.hash.as_bytes());
                 let block = self.get_block_from_header(header.clone()).unwrap();
+                self.delete_block_without_reverse_index(&block, &mut wb);
+                println!("! delete header {:?}", header.hash);
                 for txn in block.transactions {
                     if !txn_whitelist.contains(&txn) {
                         println!("! found orphan txn: {:?}", txn.hash);
