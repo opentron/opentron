@@ -1,14 +1,15 @@
 use clap::ArgMatches;
 use std::path::Path;
+use log::info;
 
 use crate::config::Config;
 use crate::db::ChainDB;
 
 pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::load_from_file(config_path)?;
-    println!("opening db ...");
+    info!("config file loaded");
     let db = ChainDB::new(&config.storage.data_dir);
-    println!("db opened");
+    info!("db opened");
 
     db.await_background_jobs();
 
@@ -27,7 +28,7 @@ pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> R
         _ => (),
     }
 
-    println!("height = {}", db.get_block_height());
+    info!("block height = {}", db.get_block_height());
 
     Ok(())
 }

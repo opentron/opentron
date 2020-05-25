@@ -3,7 +3,7 @@ extern crate byteorder;
 use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
-use log::{debug, info};
+use log::{debug, error, info, warn};
 use primitives::H256;
 use prost::Message;
 use proto2::chain::ContractType;
@@ -513,11 +513,32 @@ impl ChainDB {
         Ok(())
     }
 
-    pub fn verify_parent_hashes_from(&self, num: u64) -> Result<bool, BoxError> {
-        let start_block = self.get_block_by_number(num).unwrap();
+    pub fn get_verified_block_number(&self) -> u64 {
+        self.default
+            .get(ReadOptions::default_instance(), b"PARENT_HASH_VERIFIED")
+            .map(|raw| BE::read_u64(&*raw))
+            .unwrap_or(0)
+    }
+
+    fn update_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
+        let mut raw = [0u8; 8];
+        BE::write_u64(&mut raw[..], num);
+        self.default
+            .put(WriteOptions::default_instance(), b"PARENT_HASH_VERIFIED", &raw)
+            .map_err(From::from)
+    }
+
+    pub fn verify_parent_hashes(&self) -> Result<bool, BoxError> {
+        let start_block_num = self.get_verified_block_number();
+        let start_block = self.get_block_by_number(start_block_num)?;
+
         let mut parent_hash = start_block.header.raw.raw_data.as_ref().unwrap().parent_hash.to_vec();
 
-        println!("start from parent hash = {}", hex::encode(&parent_hash));
+        info!(
+            "start from block {}, parent_hash = {}",
+            start_block_num,
+            hex::encode(&parent_hash)
+        );
 
         for header in self
             .block_header
@@ -527,28 +548,30 @@ impl ChainDB {
             })
         {
             if header.raw.raw_data.as_ref().unwrap().parent_hash != parent_hash {
-                eprintln!("❌ parent_hash verification error");
-                eprintln!(
-                    "parent block {} => {}",
-                    BE::read_u64(&parent_hash[..8]),
+                let parent_block_number = BE::read_u64(&parent_hash[..8]);
+                self.update_verified_block_number(parent_block_number)?;
+
+                error!("❌ parent_hash verification error");
+                warn!(
+                    "parent block {}, hash = {}",
+                    parent_block_number,
                     hex::encode(parent_hash)
                 );
-                eprintln!("current block {} => {:?}", header.number(), header);
+                warn!(
+                    "current block {}, parent_hash = {}",
+                    header.number(),
+                    hex::encode(&header.raw.raw_data.as_ref().unwrap().parent_hash)
+                );
                 return Ok(false);
             }
             if header.number() % 10000 == 0 {
-                println!("block => {} parent_hash => {:?}", header.number(), header.hash);
+                info!("block => {} parent_hash => {:?}", header.number(), header.hash);
             }
             parent_hash = header.hash.as_bytes().to_vec();
         }
 
-        println!("✅ verification all passed!");
+        info!("✅ verification all passed!");
         Ok(true)
-    }
-
-    pub fn verify_parent_hashes(&self) -> Result<bool, Box<dyn Error>> {
-        // genesis parent_hash: e58f33f9baf9305dc6f82b9f1934ea8f0ade2defb951258d50167028c780351f
-        self.verify_parent_hashes_from(0)
     }
 
     pub fn block_headers<'a>(&'a self) -> impl Iterator<Item = IndexedBlockHeader> + 'a {
