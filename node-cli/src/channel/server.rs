@@ -69,7 +69,6 @@ where
 
     let listening_addr = &ctx.config.protocol.channel.endpoint;
 
-    // passive connections
     let mut listener = TcpListener::bind(listening_addr).await?;
     let server = {
         let ctx = ctx.clone();
@@ -119,6 +118,9 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
         let active_nodes = ctx.config.protocol.channel.active_nodes.clone();
         tokio::spawn(async move {
             for peer_addr in active_nodes.into_iter().cycle() {
+                while ctx.num_active_connections.load(Ordering::SeqCst) >= 4 {
+                    delay_for(Duration::from_secs(20)).await;
+                }
                 if !ctx.running.load(Ordering::Relaxed) {
                     warn!("active connection service closed");
                     break;
@@ -133,7 +135,11 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
                 if let Ok(conn) = timeout(Duration::from_secs(10), TcpStream::connect(&peer_addr)).await {
                     match conn {
                         Ok(sock) => {
-                            let _ = handshake_handler(ctx, sock).await;
+                            tokio::spawn(async move {
+                                ctx.num_active_connections.fetch_add(1, Ordering::SeqCst);
+                                let _ = handshake_handler(ctx.clone(), sock).await;
+                                ctx.num_active_connections.fetch_sub(1, Ordering::SeqCst);
+                            });
                         }
                         Err(e) => {
                             warn!("connect {} failed: {}", peer_addr, e);
@@ -305,11 +311,11 @@ async fn sync_channel_handler(
         .map(|blk| blk.block_id())
         .unwrap_or(ctx.genesis_block_id.clone().unwrap());
     /*
-    let highest_block_id = BlockId {
-        number: 19822000,
-        hash: hex::decode("00000000012e75b0c3dcb528f9bc31a43f7098d97b59f618387b958b4180bf8d").unwrap(),
-    };
-   */
+     let highest_block_id = BlockId {
+         number: 19822000,
+         hash: hex::decode("00000000012e75b0c3dcb528f9bc31a43f7098d97b59f618387b958b4180bf8d").unwrap(),
+     };
+    */
 
     let mut last_block_number = highest_block_id.number;
     let mut last_block_number_in_this_batch = 0_i64;

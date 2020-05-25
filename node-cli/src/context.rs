@@ -5,7 +5,7 @@ use proto2::common::BlockId;
 use std::collections::HashSet;
 use std::error::Error;
 use std::path::Path;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::{Arc, RwLock};
 
 use crate::config::Config;
@@ -19,6 +19,7 @@ pub struct AppContext {
     pub config: Config,
     pub db: ChainDB,
     pub running: Arc<AtomicBool>,
+    pub num_active_connections: AtomicU32,
     pub recent_blk_ids: RwLock<HashSet<H256>>,
     pub syncing: RwLock<bool>,
     pub peers: RwLock<Vec<oneshot::Sender<()>>>,
@@ -60,6 +61,7 @@ impl AppContext {
             outbound_ip: String::new(),
             genesis_block_id: Some(genesis_block_id),
             running: Arc::new(AtomicBool::new(true)),
+            num_active_connections: AtomicU32::new(0),
             recent_blk_ids: RwLock::new(HashSet::new()),
             syncing: RwLock::new(true),
             peers: RwLock::default(),
