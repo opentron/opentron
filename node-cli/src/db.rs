@@ -566,7 +566,8 @@ impl ChainDB {
         {
             if header.raw.raw_data.as_ref().unwrap().parent_hash != parent_hash {
                 let parent_block_number = BE::read_u64(&parent_hash[..8]);
-                self.update_parent_hash_verified_block_number(parent_block_number)?;
+                // block_number - 1 to handle multiple forks
+                self.update_parent_hash_verified_block_number(parent_block_number - 1)?;
 
                 error!("❌ parent_hash verification error");
                 warn!(
