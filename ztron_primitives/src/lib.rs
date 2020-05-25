@@ -5,6 +5,7 @@
 
 // Catch documentation errors caused by code changes.
 #![deny(intra_doc_link_resolution_failure)]
+#![allow(unused_parens)]
 
 use lazy_static::lazy_static;
 
