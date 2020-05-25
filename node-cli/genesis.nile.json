@@ -1,0 +1,160 @@
+{
+  "timestamp": 0,
+  "parentHash": "0xe58f33f9baf9305dc6f82b9f1934ea8f0ade2defb951258d50167028c780351f",
+  "witnesses": [
+    {
+      "address": "TD23EqH3ixYMYh8CMXKdHyQWjePi3KQvxV",
+      "url": "http://GR1.com",
+      "votes": 100000026
+    },
+    {
+      "address": "TCm4Lz1uP3tQm3jzpwFTG6o5UvSTA2XEHc",
+      "url": "http://GR2.com",
+      "votes": 100000025
+    },
+    {
+      "address": "TTgDUgREiPBeY3iudD5e2eEibE4v4CE8C9",
+      "url": "http://GR3.com",
+      "votes": 100000024
+    },
+    {
+      "address": "TFVDe7kMEmb8EuUxxp42kocQY1fFY727WS",
+      "url": "http://GR4.com",
+      "votes": 100000023
+    },
+    {
+      "address": "TY4NSjctzTchHkhaCskVc5zQtnX9s1uxAX",
+      "url": "http://GR5.com",
+      "votes": 100000022
+    },
+    {
+      "address": "TWSMPrm6aizvsJmPnjMB7x3UExJfRhyQhd",
+      "url": "http://GR6.com",
+      "votes": 100000021
+    },
+    {
+      "address": "TKwLkSaCvqqpAB44qaHGTohCTCFoYw7ecy",
+      "url": "http://GR7.com",
+      "votes": 100000020
+    },
+    {
+      "address": "TDsYmm1St9r4UZebDGWBcTMtfYTw9YX5h4",
+      "url": "http://GR8.com",
+      "votes": 100000019
+    },
+    {
+      "address": "TFEQbWAPxhbUr1P14y9UJBUZo3LgtdqTS7",
+      "url": "http://GR9.com",
+      "votes": 100000018
+    },
+    {
+      "address": "TCynAi8tb7UWP7uhLv6fe971KLm2KT8tcs",
+      "url": "http://GR10.com",
+      "votes": 100000017
+    },
+    {
+      "address": "TC2YsLp4rzrt3AbeN3EryoSywrBjEUVCq3",
+      "url": "http://GR11.com",
+      "votes": 100000016
+    },
+    {
+      "address": "THxMKH1uaL5FpURujkQR7u2sNZ2n5PSsiH",
+      "url": "http://GR12.com",
+      "votes": 100000015
+    },
+    {
+      "address": "TWbzgoHimDcXWy19ts1An8bxA4JKjcYHeG",
+      "url": "http://GR13.com",
+      "votes": 100000014
+    },
+    {
+      "address": "TW2LmXnVCEaxuVtQN8gZR1ixT5PNm4QLft",
+      "url": "http://GR14.com",
+      "votes": 100000013
+    },
+    {
+      "address": "TVuqk4rYYVHVA6j6sSEnaLexhhoQhN8nyZ",
+      "url": "http://GR15.com",
+      "votes": 100000012
+    },
+    {
+      "address": "TVMZu5ptZPhhkZ3Kaagkq35FmyuKNvUKJV",
+      "url": "http://GR16.com",
+      "votes": 100000011
+    },
+    {
+      "address": "TFDHT8PqUrL2Bd8DeysSiHHBAEMidZgkhx",
+      "url": "http://GR17.com",
+      "votes": 100000010
+    },
+    {
+      "address": "TVqz5Bj3M1uEenaSsw2NnXvTWChPj6K3hb",
+      "url": "http://GR18.com",
+      "votes": 100000009
+    },
+    {
+      "address": "TSt8YNpARJkhdMdEV4C7ajH1tFHpZWzF1T",
+      "url": "http://GR19.com",
+      "votes": 100000008
+    },
+    {
+      "address": "TTxWDjEb3Be1Ax8BCvK48cnaorZofLq2C9",
+      "url": "http://GR20.com",
+      "votes": 100000007
+    },
+    {
+      "address": "TU5T838YtyZtEQKpnXEdRz3d8hJn6WHhjw",
+      "url": "http://GR21.com",
+      "votes": 100000006
+    },
+    {
+      "address": "TRuSs1MpL3o2hzhU8r6HLC7WtDyVE9hsF6",
+      "url": "http://GR22.com",
+      "votes": 100000005
+    },
+    {
+      "address": "TYMCoCZyAjWkWdUfEHg1oZQYbLKev282ou",
+      "url": "http://GR23.com",
+      "votes": 100000004
+    },
+    {
+      "address": "TQvAyGATpLZymHbpeaRozJCKqSeRWVNhCJ",
+      "url": "http://GR24.com",
+      "votes": 100000003
+    },
+    {
+      "address": "TYDd9nskbhJmLLNoe4yV2Z1SYtGjNa8wyg",
+      "url": "http://GR25.com",
+      "votes": 100000002
+    },
+    {
+      "address": "TS5991Geh2qeHtw46rskpJyn6hFNbuZGGc",
+      "url": "http://GR26.com",
+      "votes": 100000001
+    },
+    {
+      "address": "TKnn5MBnmXXeKdu9dxKVfKk4n1YdCeSRGr",
+      "url": "http://GR27.com",
+      "votes": 100000000
+    }
+  ],
+  "allocs": [
+    {
+      "name": "Zion",
+      "address": "TMWXhuxiT1KczhBxCseCDDsrhmpYGUcoA9",
+      "balance": 99000000000000000
+    },
+    {
+      "name": "Sun",
+      "address": "TN21Wx2yoNYiZ7znuQonmZMJnH5Vdfxu78",
+      "balance": 99000000000000000
+    },
+    {
+      "name": "Blackhole",
+      "address": "TDPJULRzVtzVjnBmZvfaTcTNQ2tsVi6XxQ",
+      "balance": -9223372036854775808
+    }
+  ],
+  "mantra": "A new system must allow existing systems to be linked together without requiring any central control or coordination",
+  "creator": "7YxAaK71utTpYJ8u4Zna7muWxd1pQwimpGxy8"
+}

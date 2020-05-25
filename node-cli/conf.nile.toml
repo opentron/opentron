@@ -1,0 +1,97 @@
+log-level = 'info'
+log-file = ''
+
+[server]
+sync-check = false
+
+[storage]
+data-dir = './data.nile'
+engine = 'rocksdb'
+
+[chain]
+genesis = './genesis.nile.json'
+p2p-version = 201910292
+maintenance-interval = '6h'
+proposal-expire-time = '3d'
+
+[chain.tvm]
+save-internal-txn = true
+
+[chain.proposal]
+# should enable on private net
+allow-creation-of-contracts = false
+allow-multi-sign = false
+# should enable on private net
+allow-adaptive-energy = false
+allow-delegate-resource = false
+allow-same-token-name = false
+allow-tvm-transfer-trc10 = false
+# The Constantinople upgrade
+allow-tvm-constantinople = false
+allow-tvm-solidity-059 = false
+forbid-transfer-to-contract = false
+
+[graphql]
+enable = true
+endpoint = "0.0.0.0:3000"
+
+[protocol]
+seed-nodes = ['47.90.214.183:18888']
+
+[protocol.discovery]
+enable = false
+persist = true
+# udp discovery
+endpoint = '0.0.0.0:18888'
+#
+# advertise-endpoint = ''
+active-nodes = []
+
+[protocol.channel]
+enable = true
+enable-passive = false
+enable-active = true
+# 1 to 2000
+sync-batch-size = 2000
+# tcp channel
+endpoint = '0.0.0.0:18888'
+advertised-endpoint = ''
+# connect in any case
+active-nodes = [
+    # "182.92.154.46:18888",
+    "119.23.35.152:18888",
+    "47.75.218.79:18888",
+    "47.252.17.40:18888",
+    "47.252.19.181:18888",
+    "47.90.243.177:18888",
+    "47.90.214.183:18888",
+    "47.252.73.173:18888",
+    "34.216.199.10:18888",
+    "34.216.199.10:18888",
+]
+# accept in any case
+passive-nodes = []
+max-active-peers = 2
+
+[witness]
+private-key = ""
+
+[prometheus]
+endpoint = '0.0.0.0:23333'
+
+[rocksdb]
+# create-if-missing = true
+max-open-files = 40960
+
+# max-background-jobs = 8
+# max-sub-compactions = 3
+# max-manifest-file-size = "128MB"
+# wal-recovery-mode = 2
+# wal-dir = "/tmp/tron/store"
+# wal-ttl-seconds = 0
+# wal-size-limit = 0
+# enable-statistics = true
+# stats-dump-period = "10m"
+# compaction-readahead-size = 0
+[rocksdb.defaultcf]
+compression-per-level = ["no", "no", "lz4", "lz4", "lz4", "zstd", "zstd"]
