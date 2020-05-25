@@ -1,22 +1,23 @@
 use clap::ArgMatches;
 use std::path::Path;
+use log::info;
 
 use crate::config::Config;
 use crate::db::ChainDB;
 
 pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::load_from_file(config_path)?;
-    println!("opening db ...");
+    info!("config file loaded");
     let db = ChainDB::new(&config.storage.data_dir);
-    println!("db opened");
+    info!("db opened");
 
     db.await_background_jobs();
 
     if let Some(val) = matches.value_of("height") {
-        println!("original block height => {}", db.get_block_height());
+        info!("original block height => {}", db.get_block_height());
         let new_height = val.parse().expect("height number");
         db.force_update_block_height(new_height)?;
-        println!("force update block height => {}", new_height);
+        info!("force update block height => {}", new_height);
     }
 
     if let Some(val) = matches.value_of("fork") {
