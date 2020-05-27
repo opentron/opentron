@@ -52,11 +52,19 @@ pub struct GraphQLConfig {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
+pub struct MerkleTreePatch {
+    pub txn: String,
+    pub tree_node_hash: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub chain: ChainConfig,
     pub storage: StorageConfig,
     pub protocol: ProtocolConfig,
     pub graphql: GraphQLConfig,
+    pub merkle_tree_patch: Vec<MerkleTreePatch>,
 }
 
 impl Config {

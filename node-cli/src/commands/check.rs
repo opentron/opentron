@@ -1,6 +1,7 @@
 use clap::ArgMatches;
-use std::path::Path;
 use log::info;
+use primitives::H256;
+use std::path::Path;
 
 use crate::config::Config;
 use crate::db::ChainDB;
@@ -20,7 +21,17 @@ pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> R
             println!("compact => {:?}", ret);
         }
         Some("merkle_tree") => {
-            db.verify_merkle_tree()?;
+            let patch = config
+                .merkle_tree_patch
+                .iter()
+                .map(|patch| {
+                    (
+                        H256::from_slice(&hex::decode(&patch.txn).unwrap()),
+                        H256::from_slice(&hex::decode(&patch.tree_node_hash).unwrap()),
+                    )
+                })
+                .collect();
+            db.verify_merkle_tree(&patch)?;
         }
         Some("parent_hash") => {
             db.verify_parent_hashes()?;

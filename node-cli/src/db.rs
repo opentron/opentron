@@ -9,7 +9,7 @@ use prost::Message;
 use proto2::chain::ContractType;
 use rand::Rng;
 use rocks::prelude::*;
-use std::collections::{HashSet, LinkedList};
+use std::collections::{HashSet, LinkedList, HashMap};
 use std::error::Error;
 use std::io;
 use std::iter::FromIterator;
@@ -456,7 +456,7 @@ impl ChainDB {
                 // wb.delete_cf(&self.block_header, header.hash.as_bytes());
                 let block = self.get_block_from_header(header.clone()).unwrap();
                 self.delete_block_without_reverse_index(&block, &mut wb);
-                println!("! delete header {:?}", header.hash);
+                println!("! delete block {:?}", header.hash);
                 for txn in block.transactions {
                     if !txn_whitelist.contains(&txn) {
                         println!("! found orphan txn: {:?}", txn.hash);
@@ -602,7 +602,7 @@ impl ChainDB {
             .map_err(From::from)
     }
 
-    pub fn verify_merkle_tree(&self) -> Result<(), Box<dyn Error>> {
+    pub fn verify_merkle_tree(&self, patch: &HashMap<H256, H256>) -> Result<bool, Box<dyn Error>> {
         let start_block = self.get_block_by_number(self.get_merkle_tree_verified_block_number())?;
         let ropt = ReadOptions::default().iterate_lower_bound(start_block.hash().as_bytes());
         info!("verify merkle tree from {}", start_block.number());
@@ -612,23 +612,19 @@ impl ChainDB {
             let block = self.get_block_from_header(header).unwrap();
 
             if !block.verify_merkle_root_hash() {
-                println!(
-                    "! mismatch block => {} {:?}\n  merkle tree={}",
-                    block.number(),
-                    block.hash(),
-                    hex::encode(block.merkle_root_hash())
-                );
-                for (i, txn) in block.transactions.iter().enumerate() {
-                    println!("  txn {} {:?} verify={}", i, txn.hash, txn.verify());
+                if block.verify_merkle_root_hash_with_patch(patch) {
+                    info!("verified block {} with patch", block.number());
+                } else {
+                    warn!("verify block {} failed", block.number());
+                    return Ok(false);
                 }
-                return Ok(());
             }
             if block.number() % 1000 == 0 {
                 println!("block {} {:?}", block.number(), block.hash());
                 self.update_merkle_tree_verified_block_number(block.number() as _)?;
             }
         }
-        Ok(())
+        Ok(true)
     }
 
     pub fn get_db_property(&self, key: &str) -> u64 {
