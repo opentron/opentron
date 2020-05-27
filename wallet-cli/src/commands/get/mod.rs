@@ -105,6 +105,17 @@ fn get_merkle_tree(matches: &ArgMatches) -> Result<(), Error> {
             hex::encode(txn_merkle_node),
             hex::encode(txn_hash)
         );
+        if txn.get_ret().len() > 1 {
+            eprintln!("      ! len(Transaction.ret) = {}", txn.get_ret().len());
+        }
+        if let Some(ret) = txn.get_ret().get(0) {
+            if let Some(ref ufields) = ret.unknown_fields.fields {
+                eprintln!("      ! malformed ret {:?}", ufields);
+            }
+        }
+        if let Some(ref ufields) = txn.get_raw_data().unknown_fields.fields {
+            eprintln!("      ! malformed raw_data {:?}", ufields);
+        }
     }
 
     Ok(())
