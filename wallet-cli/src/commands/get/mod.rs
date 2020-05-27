@@ -81,6 +81,35 @@ fn get_node_graph() -> Result<(), Error> {
     Ok(())
 }
 
+fn get_merkle_tree(matches: &ArgMatches) -> Result<(), Error> {
+    use crate::utils::crypto;
+    use protobuf::Message;
+
+    let num = matches.value_of("BLOCK").unwrap().parse()?;
+    let mut req = NumberMessage::new();
+    req.num = num;
+    let block = executor::block_on(
+        client::GRPC_CLIENT
+            .get_block_by_num2(Default::default(), req)
+            .drop_metadata(),
+    )?;
+
+    for (i, txn_ex) in block.get_transactions().iter().enumerate() {
+        let txn = txn_ex.get_transaction();
+        let raw = txn.write_to_bytes()?;
+        let txn_merkle_node = crypto::sha256(&raw);
+        let txn_hash = crypto::sha256(&txn.get_raw_data().write_to_bytes()?);
+        println!(
+            "{:4}  {} txn={}",
+            i,
+            hex::encode(txn_merkle_node),
+            hex::encode(txn_hash)
+        );
+    }
+
+    Ok(())
+}
+
 fn get_block(matches: &ArgMatches) -> Result<(), Error> {
     let mut block = match matches.value_of("BLOCK") {
         Some(id) if id.starts_with("0000") => {
@@ -319,6 +348,7 @@ pub fn main(matches: &ArgMatches) -> Result<(), Error> {
         ("node", _) => node_info(),
         ("node_graph", _) => get_node_graph(),
         ("block", Some(arg_matches)) => get_block(arg_matches),
+        ("merkle_tree", Some(arg_matches)) => get_merkle_tree(arg_matches),
         ("transaction", Some(tr_matches)) => {
             let id = tr_matches.value_of("ID").expect("required in cli.yml; qed");
             transaction::get_transaction(id)

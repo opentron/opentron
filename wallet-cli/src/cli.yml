@@ -90,6 +90,11 @@ subcommands:
                     args:
                         - BLOCK:
                               help: The number or ID of the block to retrieve
+              - merkle_tree:
+                    about: Retrieve a full merkle tree of a block
+                    args:
+                        - BLOCK:
+                              help: The number of the block to retrieve
               - transaction:
                     about: Retrieve a transaction from the blockchain
                     args:
