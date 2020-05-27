@@ -23,14 +23,18 @@ pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> R
         Some("merkle_tree") => {
             let patch = config
                 .merkle_tree_patch
-                .iter()
                 .map(|patch| {
-                    (
-                        H256::from_slice(&hex::decode(&patch.txn).unwrap()),
-                        H256::from_slice(&hex::decode(&patch.tree_node_hash).unwrap()),
-                    )
+                    patch
+                        .iter()
+                        .map(|patch| {
+                            (
+                                H256::from_slice(&hex::decode(&patch.txn).unwrap()),
+                                H256::from_slice(&hex::decode(&patch.tree_node_hash).unwrap()),
+                            )
+                        })
+                        .collect()
                 })
-                .collect();
+                .unwrap_or_default();
             db.verify_merkle_tree(&patch)?;
         }
         Some("parent_hash") => {

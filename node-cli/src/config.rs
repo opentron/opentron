@@ -64,7 +64,7 @@ pub struct Config {
     pub storage: StorageConfig,
     pub protocol: ProtocolConfig,
     pub graphql: GraphQLConfig,
-    pub merkle_tree_patch: Vec<MerkleTreePatch>,
+    pub merkle_tree_patch: Option<Vec<MerkleTreePatch>>,
 }
 
 impl Config {
