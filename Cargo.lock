@@ -303,7 +303,6 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "crypto",
- "lazy_static",
  "merkle-tree",
  "primitives",
  "prost",
