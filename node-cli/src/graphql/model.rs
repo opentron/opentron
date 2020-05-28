@@ -68,7 +68,8 @@ impl From<IndexedTransaction> for Transaction {
         let origin_contract = raw.raw_data.as_mut().unwrap().contract.take().unwrap();
         let raw_txn = raw.raw_data.as_ref().unwrap();
         let permission_id = origin_contract.permission_id;
-        let result = raw.result.take().unwrap_or_default();
+        // NOTE: take first result
+        let result = raw.result.into_iter().next().unwrap_or_default();
 
         let inner = RawTransaction {
             contract: origin_contract.into(),
