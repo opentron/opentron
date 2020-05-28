@@ -9,9 +9,11 @@ use prost::Message;
 use proto2::chain::ContractType;
 use rand::Rng;
 use rocks::prelude::*;
-use std::collections::{HashSet, LinkedList, HashMap};
+use std::collections::{HashMap, HashSet, LinkedList};
 use std::error::Error;
+use std::fs::OpenOptions;
 use std::io;
+use std::io::Write;
 use std::iter::FromIterator;
 use std::path::Path;
 
@@ -326,6 +328,35 @@ impl ChainDB {
         )))
     }
 
+    pub fn delete_block_by_number(&self, num: u64) -> Result<(), BoxError> {
+        let mut lower_bound = [0u8; 8];
+        BE::write_u64(&mut lower_bound[..], num);
+
+        let mut wb = WriteBatch::with_reserved_bytes(1024);
+
+        self.block_header
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(&lower_bound))
+            .keys()
+            .take_while(|key| &key[..8] == &lower_bound)
+            .for_each(|key| {
+                info!("delete block {}", hex::encode(key));
+                wb.delete_cf(&self.block_header, key);
+            });
+        self.transaction
+            .new_iterator(&ReadOptions::default().iterate_lower_bound(&lower_bound))
+            .keys()
+            .take_while(|key| &key[..8] == &lower_bound)
+            .for_each(|key| {
+                info!("delete transaction {}", hex::encode(&key[32 + 8..]));
+                wb.delete_cf(&self.transaction, key);
+                wb.delete_cf(&self.transaction_block, &key[32 + 8..]);
+            });
+
+        self.db.write(WriteOptions::default_instance(), &wb)?;
+
+        Ok(())
+    }
+
     pub fn delete_block(&self, block: &IndexedBlock) -> bool {
         let mut wb = WriteBatch::with_reserved_bytes(1024);
 
@@ -471,9 +502,6 @@ impl ChainDB {
         self.db.write(WriteOptions::default_instance(), &wb)?;
 
         if !orphan_txns.is_empty() {
-            use std::fs::OpenOptions;
-            use std::io::Write;
-
             let mut f = OpenOptions::new()
                 .read(true)
                 .create(true)
@@ -529,7 +557,7 @@ impl ChainDB {
             .unwrap_or(0)
     }
 
-    fn update_parent_hash_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
+    pub fn update_parent_hash_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
         let mut raw = [0u8; 8];
         BE::write_u64(&mut raw[..], num);
         self.default
@@ -594,7 +622,7 @@ impl ChainDB {
             .unwrap_or(0)
     }
 
-    fn update_merkle_tree_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
+    pub fn update_merkle_tree_verified_block_number(&self, num: u64) -> Result<(), BoxError> {
         let mut raw = [0u8; 8];
         BE::write_u64(&mut raw[..], num);
         self.default
@@ -612,12 +640,17 @@ impl ChainDB {
             let block = self.get_block_from_header(header).unwrap();
 
             if !block.verify_merkle_root_hash() {
-                warn!("verify block {} merkle root hash failed", block.number());
                 if block.verify_merkle_root_hash_with_patch(patch) {
                     info!("verified block {} with patch", block.number());
                 } else {
                     error!("verify block {} failed", block.number());
-                    return Ok(false);
+
+                    let mut f = OpenOptions::new()
+                        .read(true)
+                        .create(true)
+                        .append(true)
+                        .open("./bad_block.log")?;
+                    write!(f, "{:?}\n", block.number())?;
                 }
             }
             if block.number() % 1000 == 0 {

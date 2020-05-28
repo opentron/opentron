@@ -93,13 +93,7 @@ impl IndexedBlock {
     }
 
     pub fn verify_merkle_root_hash(&self) -> bool {
-        if self.merkle_root_hash() == merkle_root(&self.transactions).as_bytes() {
-            true
-        } else {
-            eprintln!("block saved => {:?}", H256::from_slice(self.merkle_root_hash()));
-            eprintln!("calculated  => {:?}", merkle_root(&self.transactions));
-            false
-        }
+        self.merkle_root_hash() == merkle_root(&self.transactions).as_bytes()
     }
 
     pub fn verify_merkle_root_hash_with_patch(&self, patch: &HashMap<H256, H256>) -> bool {

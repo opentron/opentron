@@ -36,6 +36,7 @@ pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> R
                 })
                 .unwrap_or_default();
             db.verify_merkle_tree(&patch)?;
+            info!("verify merkle tree with {} patches", patch.len());
         }
         Some("parent_hash") => {
             db.verify_parent_hashes()?;
