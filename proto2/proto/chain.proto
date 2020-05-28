@@ -186,4 +186,10 @@ message Transaction {
   // renamed: ret
   // NOTE: many malformed transactions with len(result) = 2
   repeated Result result = 5;
+  // NOTE: guess from wrong format
+  // in txn 17e597a68ea38205ca3d6724fc9733563d60879fc2118a52303f515fa1f36fec
+  bytes OBSOLETE_raw = 6;
+  // might be right or wrong
+  // like in 901af9115d4944a87d2923be2d67ae5e3fc0df4dcb8867bb952612a551695116
+  bytes OBSOLETE_txid = 7;
 }
