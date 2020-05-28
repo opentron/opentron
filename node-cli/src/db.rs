@@ -612,10 +612,11 @@ impl ChainDB {
             let block = self.get_block_from_header(header).unwrap();
 
             if !block.verify_merkle_root_hash() {
+                warn!("verify block {} merkle root hash failed", block.number());
                 if block.verify_merkle_root_hash_with_patch(patch) {
                     info!("verified block {} with patch", block.number());
                 } else {
-                    warn!("verify block {} failed", block.number());
+                    error!("verify block {} failed", block.number());
                     return Ok(false);
                 }
             }

@@ -184,6 +184,6 @@ message Transaction {
   // normally size = 1, repeated list here for multi-sig extension
   repeated bytes signatures = 2;
   // renamed: ret
-  // changed: from repeated to optional
-  Result result = 5;
+  // NOTE: many malformed transactions with len(result) = 2
+  repeated Result result = 5;
 }
