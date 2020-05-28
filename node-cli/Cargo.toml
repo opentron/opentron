@@ -38,7 +38,7 @@ juniper_hyper = { version = "0.5.2", git = "https://github.com/graphql-rust/juni
 hyper = "0.13"
 # db
 #rocks = { version = "0.1.7", git = "https://github.com/bh1xuw/rust-rocks.git" }
-rocks = "0.1.7"
+rocks = "0.1.8"
 # misc
 num_cpus = "1.13.0"
 rand = '0.7'
