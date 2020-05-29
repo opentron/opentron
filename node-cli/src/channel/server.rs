@@ -456,15 +456,15 @@ async fn sync_channel_handler(
                         let block = IndexedBlock::from_raw(block);
                         if ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
                             warn!("block in recent blocks");
-                            continue;
-                        }
-                        ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
-                        // || block.number() == 2999
-                        if !ctx.db.has_block(&block)  {
-                            ctx.db.insert_block(&block)?;
-                            ctx.db.update_block_height(block.number());
                         } else {
-                            warn!("block exists in db");
+                            ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
+                            // || block.number() == 2999
+                            if !ctx.db.has_block(&block)  {
+                                ctx.db.insert_block(&block)?;
+                                ctx.db.update_block_height(block.number());
+                            } else {
+                                warn!("block exists in db");
+                            }
                         }
                         if syncing {
                             if block.number() == last_block_number {
