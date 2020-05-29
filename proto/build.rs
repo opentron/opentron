@@ -1,6 +1,10 @@
 fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/lib.rs");
+    println!("cargo:rerun-if-changed=protocol/core/Tron.proto");
+    println!("cargo:rerun-if-changed=protocol/core/Contract.proto");
+    println!("cargo:rerun-if-changed=protocol/core/Discover.proto");
+    println!("cargo:rerun-if-changed=protocol/api/api.proto");
 
     protoc_rust::Codegen::new()
         .out_dir("src")
