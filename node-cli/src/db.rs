@@ -644,13 +644,7 @@ impl ChainDB {
                     info!("verified block {} with patch", block.number());
                 } else {
                     error!("verify block {} failed", block.number());
-
-                    let mut f = OpenOptions::new()
-                        .read(true)
-                        .create(true)
-                        .append(true)
-                        .open("./bad_block.log")?;
-                    write!(f, "{:?}\n", block.number())?;
+                    return Ok(false);
                 }
             }
             if block.number() % 1000 == 0 {
