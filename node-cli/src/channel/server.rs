@@ -11,6 +11,7 @@ use log::{debug, error, info, warn};
 use primitives::H256;
 use proto2::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
+    Transactions,
 };
 use proto2::common::{BlockId, Endpoint};
 use slog::{o, slog_info};
@@ -135,8 +136,8 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
                 if let Ok(conn) = timeout(Duration::from_secs(10), TcpStream::connect(&peer_addr)).await {
                     match conn {
                         Ok(sock) => {
+                            ctx.num_active_connections.fetch_add(1, Ordering::SeqCst);
                             tokio::spawn(async move {
-                                ctx.num_active_connections.fetch_add(1, Ordering::SeqCst);
                                 let _ = handshake_handler(ctx.clone(), sock).await;
                                 ctx.num_active_connections.fetch_sub(1, Ordering::SeqCst);
                             });
@@ -298,6 +299,8 @@ async fn sync_channel_handler(
 ) -> Result<(), Box<dyn Error>> {
     const BATCH: usize = 500;
 
+    let mut syncing = true;
+
     let mut done = {
         let mut peers = ctx.peers.write().unwrap();
         let (tx, rx) = oneshot::channel::<()>();
@@ -319,7 +322,7 @@ async fn sync_channel_handler(
 
     let mut last_block_number = highest_block_id.number;
     let mut last_block_number_in_this_batch = 0_i64;
-    if *ctx.syncing.read().unwrap() {
+    if syncing {
         info!("sync block from {}", highest_block_id);
         let inv = BlockInventory {
             ids: vec![highest_block_id],
@@ -369,9 +372,31 @@ async fn sync_channel_handler(
                     Ok(ChannelMessage::Pong) => {
                         info!("pong");
                     },
-                    Ok(ChannelMessage::TransactionInventory(_)) => {}
+                    Ok(ChannelMessage::TransactionInventory(inv)) => {
+                        let Inventory { mut ids, r#type } = inv;
+                        for id in &ids {
+                            info!("transaction inventory, txn_id={}", hex::encode(id));
+                        }
+                        /*
+                        if ids.len() == 1 {
+                            // ids[0][0] = b'A';
+                            let fake_inv = Inventory { ids, r#type };
+                            info!("request inv");
+                            // writer.send(ChannelMessage::TransactionInventory(fake_inv)).await?;
+                            writer.send(ChannelMessage::FetchBlockInventory(fake_inv)).await?;
+                        }
+                        */
+                    }
+                    Ok(ChannelMessage::FetchTransactionInventory(inv)) => {
+                        info!("fetch transactions {:?}", inv);
+                    }
+                    Ok(ChannelMessage::Transactions(Transactions { transactions })) => {
+                        for txn in &transactions {
+                            info!("got txn {:?}", txn);
+                        }
+                    }
                     Ok(ChannelMessage::BlockInventory(inv)) => {
-                        if *ctx.syncing.read().unwrap() {
+                        if syncing {
                             continue;
                         }
                         let Inventory { ids, r#type } = inv;
@@ -409,7 +434,7 @@ async fn sync_channel_handler(
                         if syncing_block_ids.is_empty() {
                             warn!("syning finished");
                             // remore: peer.setNeedSyncFromUs = false
-                            *ctx.syncing.write().unwrap() = false;
+                            syncing = false;
                         } else {
                             last_block_number_in_this_batch = block_hash_to_number(syncing_block_ids.last().unwrap());
                         }
@@ -421,7 +446,7 @@ async fn sync_channel_handler(
                         writer.send(ChannelMessage::FetchBlockInventory(block_inv)).await?;
                     }
                     Ok(ChannelMessage::Block(block)) => {
-                        if *ctx.syncing.read().unwrap() {
+                        if syncing {
                             if block.number() % 100 == 0 {
                                 info!("syncing {}", block.to_string());
                             }
@@ -441,7 +466,7 @@ async fn sync_channel_handler(
                         } else {
                             warn!("block exists in db");
                         }
-                        if *ctx.syncing.read().unwrap() {
+                        if syncing {
                             if block.number() == last_block_number {
                                 ctx.db.report_status();
                                 info!("sync next bulk of blocks from {}", block.number());
