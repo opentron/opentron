@@ -108,8 +108,7 @@ message Transaction {
   }
 
   message Result {
-    reserved 4;
-    reserved "receipt", "constant_result";
+    reserved "constant_result";
     // renamed: code
     enum Status {
       SUCESS = 0;
@@ -145,7 +144,11 @@ message Transaction {
 
     // NOTE: 2018/08/02 block=1102553
     // Then it was wrongly deleted, and wrongly used
-    // ResourceReceipt OBSOLETE_resource_receipt = 4;
+    // e.g. txn: 97d6802de90da0d7e680c184c5780c4396b45ae8df83e69e05c5ae7d3fca3987
+    // there might be empty bytes
+    oneof OBSOLETE_resource_receipt_wrapper {
+      bytes OBSOLETE_resource_receipt = 4;
+    }
 
     // renamed: assetIssueID
     string asset_issue_id = 14;
@@ -176,7 +179,10 @@ message Transaction {
     int64 timestamp = 14;
     // in commit ae0075bd6d433f6bfb2ecbb74e5f380ee819dbc8
     // in txn a5262325574c1cd4f0b7e0ea3d099d8546f47c72f8c165b792971f52d67d436c
-    int64 OBSOLETE_max_cpu_usage = 15;
+    // there might be an encoded `0`: 2b95b265f75fd0f91c3cd39b428d104bd80c5344f3bb4d5c06eede2ff542f8a9
+    oneof OBSOLETE_max_cpu_usage_wrapper {
+      int64 OBSOLETE_max_cpu_usage = 15;
+    }
     int64 fee_limit = 18;
   }
 
