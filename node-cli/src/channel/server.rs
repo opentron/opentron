@@ -375,7 +375,7 @@ async fn sync_channel_handler(
                     Ok(ChannelMessage::TransactionInventory(inv)) => {
                         let Inventory { mut ids, r#type } = inv;
                         for id in &ids {
-                            info!("transaction inventory, txn_id={}", hex::encode(id));
+                            debug!("transaction inventory, txn_id={}", hex::encode(id));
                         }
                         /*
                         if ids.len() == 1 {
