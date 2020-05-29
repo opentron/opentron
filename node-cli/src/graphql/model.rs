@@ -41,7 +41,7 @@ impl ContractReturn {
 #[derive(juniper::GraphQLObject)]
 struct RawTransaction {
     contract: Contract,
-    timestamp: DateTime<Utc>,
+    timestamp: Option<DateTime<Utc>>,
     expiration: DateTime<Utc>,
     ref_block_bytes: String,
     ref_block_hash: String,
@@ -73,7 +73,11 @@ impl From<IndexedTransaction> for Transaction {
 
         let inner = RawTransaction {
             contract: origin_contract.into(),
-            timestamp: Utc.timestamp(raw_txn.timestamp / 1_000, raw_txn.expiration as u32 % 1_000 * 1_000000),
+            timestamp: if raw_txn.timestamp != 0 {
+                Some(Utc.timestamp(raw_txn.timestamp / 1_000, raw_txn.expiration as u32 % 1_000 * 1_000000))
+            } else {
+                None
+            },
             expiration: Utc.timestamp(raw_txn.expiration / 1_000, raw_txn.expiration as u32 % 1_000 * 1_000000),
             ref_block_bytes: hex::encode(&raw_txn.ref_block_bytes),
             ref_block_hash: hex::encode(&raw_txn.ref_block_hash),
