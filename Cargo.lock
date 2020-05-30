@@ -349,9 +349,9 @@ dependencies = [
 
 [[package]]
 name = "cmake"
-version = "0.1.42"
+version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81fb25b677f8bf1eb325017cb6bb8452f87969db0fedb4f757b297bee78a7c62"
+checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
 dependencies = [
  "cc",
 ]
@@ -1918,9 +1918,9 @@ dependencies = [
 
 [[package]]
 name = "rocks"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ddd6ea1e4a4f3f0bf23dfdf1a39d9ccc98663fcd2f9d9ba88c8dfee0dc9b1ac"
+checksum = "b970bcd91f0ec19f95a9ce758e9324f6bf035cd7024c640f5b35f32e518a3624"
 dependencies = [
  "lazy_static",
  "rocks-sys",
@@ -1928,9 +1928,9 @@ dependencies = [
 
 [[package]]
 name = "rocks-sys"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eea80d5ad14d412ca13380b2c56437c8ebc664adaeb9bb1937fae38638d9cd20"
+checksum = "8c663feb2f1ce296fbecfd985ba84ba92e719f9377530fecddcc317ec167c2d3"
 dependencies = [
  "cc",
  "cmake",
