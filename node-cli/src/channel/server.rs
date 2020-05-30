@@ -338,14 +338,21 @@ async fn sync_channel_handler(
     }
 
     let mut syncing_block_ids: Vec<Vec<u8>> = vec![];
+    let mut pinged = false;
 
     loop {
         let mut next_packet = reader.next().fuse();
         let mut timeout = delay_for(Duration::from_secs(18)).fuse();
         select! {
             _ = timeout => {
-                warn!("timeout, try ping remote");
-                writer.send(ChannelMessage::Ping).await?;
+                if !pinged {
+                    warn!("timeout, try ping remote");
+                    writer.send(ChannelMessage::Ping).await?;
+                    pinged = true;
+                } else {
+                    warn!("timeout without replying to ping");
+                    return Ok(());
+                }
             }
             _ = done => {
                 warn!("close channel connection");
