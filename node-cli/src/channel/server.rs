@@ -455,10 +455,13 @@ async fn sync_channel_handler(
                         if !ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
                             if syncing {
                                 if block.number() % 100 == 0 {
-                                    info!("receive block, number={}, hash={:?}", block.number(), block.hash());
+                                    info!("sync block, number={}, txns={}, hash={:?}",
+                                    block.number(), block.transactions.len(), block.hash());
                                 }
                             } else {
-                                info!("receive block, number={}, hash={:?}", block.number(), block.hash());
+                                info!(
+                                    "receive block, number={}, txns={}, hash={:?}",
+                                    block.number(), block.transactions.len(), block.hash());
                             }
 
                             ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
