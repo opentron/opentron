@@ -342,6 +342,7 @@ async fn sync_channel_handler(
     loop {
         let mut next_packet = reader.next().fuse();
         let mut timeout = delay_for(Duration::from_secs(20)).fuse();
+        let mut ping_timeout = delay_for(Duration::from_secs(18)).fuse();
         select! {
             _ = timeout => {
                 warn!("timeout");
@@ -350,6 +351,10 @@ async fn sync_channel_handler(
             _ = done => {
                 warn!("close channel connection");
                 break;
+            }
+            _ = ping_timeout => {
+                info!("ping");
+                writer.send(ChannelMessage::Ping).await?;
             }
             payload = next_packet => {
                 if payload.is_none() {
