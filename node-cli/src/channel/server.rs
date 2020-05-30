@@ -363,7 +363,7 @@ async fn sync_channel_handler(
             payload = next_packet => {
                 if payload.is_none() {
                     warn!("connection closed");
-                    break;
+                    return Ok(());
                 }
                 let payload = payload.unwrap();
                 debug!("receive message, payload={}", format!("{:?}", payload));
@@ -381,6 +381,7 @@ async fn sync_channel_handler(
                     },
                     Ok(ChannelMessage::Ping) => {
                         debug!("ping");
+                        writer.send(ChannelMessage::Pong).await?;
                         if syncing_from_us {
                             writer.send(ChannelMessage::Pong).await?;
                             let new_block_id = ctx.db.highest_block()?.block_id();
@@ -534,7 +535,7 @@ async fn sync_channel_handler(
                             }
                         }
                     }
-                    // handle remove sync
+                    // handle remote sync
                     Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
                         const SYNC_FETCH_BATCH_NUM: i64 = 2000;
                         let BlockInventory { mut ids, .. } = blk_inv;
@@ -601,6 +602,8 @@ async fn sync_channel_handler(
             }
         }
     }
+
+    warn!("channel connection closed");
 
     Ok(())
 }
