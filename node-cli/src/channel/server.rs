@@ -7,6 +7,7 @@ use futures::join;
 use futures::select;
 use futures::sink::{Sink, SinkExt};
 use futures::stream::Stream;
+use keys::b58encode_check;
 use log::{debug, error, info, warn};
 use primitives::H256;
 use proto2::channel::{
@@ -455,13 +456,22 @@ async fn sync_channel_handler(
                         if !ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
                             if syncing {
                                 if block.number() % 100 == 0 {
-                                    info!("sync block, number={}, txns={}, hash={:?}",
-                                    block.number(), block.transactions.len(), block.hash());
+                                    info!(
+                                        "syncing block, number={}, witness={}, txns={}, hash={}",
+                                        block.number(),
+                                        b58encode_check(block.witness()),
+                                        block.transactions.len(),
+                                        block.hash()
+                                    );
                                 }
                             } else {
                                 info!(
-                                    "receive block, number={}, txns={}, hash={:?}",
-                                    block.number(), block.transactions.len(), block.hash());
+                                    "receive block, number={}, witness={}, txns={}, hash={}",
+                                    block.number(),
+                                    b58encode_check(block.witness()),
+                                    block.transactions.len(),
+                                    block.hash()
+                                );
                             }
 
                             ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
