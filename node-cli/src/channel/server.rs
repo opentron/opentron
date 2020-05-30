@@ -342,19 +342,14 @@ async fn sync_channel_handler(
     loop {
         let mut next_packet = reader.next().fuse();
         let mut timeout = delay_for(Duration::from_secs(20)).fuse();
-        let mut ping_timeout = delay_for(Duration::from_secs(18)).fuse();
         select! {
             _ = timeout => {
-                warn!("timeout");
-                break
+                warn!("timeout, try ping remote");
+                writer.send(ChannelMessage::Ping).await?;
             }
             _ = done => {
                 warn!("close channel connection");
                 break;
-            }
-            _ = ping_timeout => {
-                info!("ping");
-                writer.send(ChannelMessage::Ping).await?;
             }
             payload = next_packet => {
                 if payload.is_none() {
@@ -549,8 +544,7 @@ async fn sync_channel_handler(
                                     .map(|block_hash| BlockId::from(block_hash))
                                     .collect();
                                 let remain_num = block_height - reply_ids.last().unwrap().number;
-                                info!("reply with remain_num = {}", remain_num);
-                                info!("reply with ids = {}", reply_ids.len());
+                                info!("reply with remain_num={} ids={}", remain_num, reply_ids.len());
                                 let chain_inv = ChainInventory {
                                     ids: reply_ids,
                                     remain_num: remain_num,
@@ -576,6 +570,7 @@ async fn sync_channel_handler(
                             let block = ctx.db.get_block_by_id(&id)?;
                             writer.send(ChannelMessage::Block(block.into())).await?
                         }
+                        info!("sent {} blocks", ids.len());
                     }
                     Ok(msg) => {
                         error!("unhandled message {:?}", msg);
