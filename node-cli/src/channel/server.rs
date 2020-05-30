@@ -25,6 +25,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::stream::StreamExt;
+use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::time::{delay_for, timeout};
 
@@ -339,11 +340,11 @@ async fn sync_channel_handler(
 
     let mut syncing_block_ids: Vec<Vec<u8>> = vec![];
     let mut pinged = false;
-    // to bypass PeerStatusCheck
-    let mut syncing_from_us = false;
+    let (mut tx, mut rx) = mpsc::channel::<ChannelMessage>(1000);
 
     loop {
         let mut next_packet = reader.next().fuse();
+        let mut sending_packet = rx.next().fuse();
         let mut timeout = delay_for(Duration::from_secs(18)).fuse();
         select! {
             _ = timeout => {
@@ -380,18 +381,8 @@ async fn sync_channel_handler(
                         return Ok(());
                     },
                     Ok(ChannelMessage::Ping) => {
-                        debug!("ping");
+                        info!("ping");
                         writer.send(ChannelMessage::Pong).await?;
-                        if syncing_from_us {
-                            writer.send(ChannelMessage::Pong).await?;
-                            let new_block_id = ctx.db.highest_block()?.block_id();
-                            let block_inv = Inventory {
-                                r#type: 1, // BLOCK
-                                ids: vec![new_block_id.hash],
-                            };
-                            // writer.send(ChannelMessage::BlockInventory(block_inv)).await?;
-                            info!("advertise highest block");
-                        }
                     },
                     Ok(ChannelMessage::Pong) => {
                         debug!("pong");
@@ -562,9 +553,6 @@ async fn sync_channel_handler(
                                     .into_iter()
                                     .map(|block_hash| BlockId::from(block_hash))
                                     .collect();
-                                // set syncing flag
-                                syncing_from_us = reply_ids.len() > 1;
-
                                 let remain_num = block_height - reply_ids.last().unwrap().number;
                                 info!("reply with remain_num={} ids={}", remain_num, reply_ids.len());
                                 let chain_inv = ChainInventory {
@@ -590,7 +578,7 @@ async fn sync_channel_handler(
                         }
                         for id in ids.iter().map(|raw| H256::from_slice(&*raw)) {
                             let block = ctx.db.get_block_by_id(&id)?;
-                            writer.send(ChannelMessage::Block(block.into())).await?;
+                            tx.send(ChannelMessage::Block(block.into())).await?;
                         }
                         info!("sent {} blocks", ids.len());
                     }
@@ -598,6 +586,12 @@ async fn sync_channel_handler(
                         error!("unhandled message {:?}", msg);
                         return Ok(());
                     },
+                }
+            }
+            // select!
+            packet = sending_packet => {
+                if let Some(msg) = packet {
+                    writer.send(msg).await?;
                 }
             }
         }
