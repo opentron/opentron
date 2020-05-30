@@ -77,6 +77,10 @@ impl IndexedBlock {
         }
     }
 
+    pub fn witness(&self) -> &[u8] {
+        &self.header.raw.raw_data.as_ref().unwrap().witness_address
+    }
+
     pub fn into_raw_block(self) -> Block {
         Block {
             block_header: Some(self.header.raw),
