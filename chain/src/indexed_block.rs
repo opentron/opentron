@@ -23,6 +23,12 @@ impl cmp::PartialEq for IndexedBlock {
     }
 }
 
+impl std::convert::From<IndexedBlock> for Block {
+    fn from(block: IndexedBlock) -> Block {
+        block.into_raw_block()
+    }
+}
+
 impl IndexedBlock {
     pub fn new(header: IndexedBlockHeader, transactions: Vec<IndexedTransaction>) -> Self {
         IndexedBlock {

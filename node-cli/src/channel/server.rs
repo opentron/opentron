@@ -261,12 +261,17 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
                     return Ok(());
                 }
 
-                info!("handshake finished");
+                // only syncing if remote >= local?
+                let need_syncing =
+                    peer_head_block_id.as_ref().unwrap().number >= head_block_id.as_ref().unwrap().number;
+
+                info!("handshake finished, need sync = {}", need_syncing);
                 let logger = slog_scope::logger().new(o!(
                     "protocol" => "channel"
                 ));
-                // let ret = channel_handler(ctx, reader, writer).with_logger(logger).await;
-                let ret = sync_channel_handler(ctx, reader, writer).with_logger(logger).await;
+                let ret = sync_channel_handler(ctx, need_syncing, reader, writer)
+                    .with_logger(logger)
+                    .await;
                 info!("channel finished, return={}", format!("{:?}", ret));
                 return Ok(());
             }
@@ -295,12 +300,11 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
 
 async fn sync_channel_handler(
     ctx: Arc<AppContext>,
+    mut syncing: bool,
     mut reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
     mut writer: impl Sink<ChannelMessage, Error = io::Error> + Unpin,
 ) -> Result<(), Box<dyn Error>> {
     const BATCH: usize = 500;
-
-    let mut syncing = true;
 
     let mut done = {
         let mut peers = ctx.peers.write().unwrap();
@@ -513,10 +517,11 @@ async fn sync_channel_handler(
                             }
                         }
                     }
+                    // handle remove sync
                     Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
                         const SYNC_FETCH_BATCH_NUM: i64 = 2000;
                         let BlockInventory { mut ids, .. } = blk_inv;
-                        info!("sync blockchain: {:?}", ids.iter().map(|blk_id| blk_id.number).collect::<Vec<_>>());
+                        info!("sync request {:?}", ids.iter().map(|blk_id| blk_id.number).collect::<Vec<_>>());
                         let unfork_id = ids.iter()
                             .rev()
                             .find(|blk_id| ctx.db.has_block_id(&H256::from_slice(&blk_id.hash)));
@@ -548,6 +553,24 @@ async fn sync_channel_handler(
                                 };
                                 writer.send(ChannelMessage::BlockchainInventory(chain_inv)).await?
                             }
+                        }
+                    }
+                    Ok(ChannelMessage::FetchBlockInventory(Inventory { ids, .. })) => {
+                        info!(
+                            "fetch block request, start={}, end={}, len={}",
+                            block_hash_to_number(ids.first().unwrap()),
+                            block_hash_to_number(ids.last().unwrap()),
+                            ids.len());
+                        if ids.len() > 100 {
+                            warn!("reject malformed node");
+                            writer.send(
+                                ChannelMessage::disconnect_with_reason(DisconnectReasonCode::BadProtocol))
+                            .await?;
+                            return Ok(());
+                        }
+                        for id in ids.iter().map(|raw| H256::from_slice(&*raw)) {
+                            let block = ctx.db.get_block_by_id(&id)?;
+                            writer.send(ChannelMessage::Block(block.into())).await?
                         }
                     }
                     Ok(msg) => {
