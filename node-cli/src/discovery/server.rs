@@ -50,7 +50,7 @@ where
     let endpoint = &config.endpoint;
 
     let socket = UdpSocket::bind(endpoint).await?;
-    info!(logger, "udp bind to socket {}", socket.local_addr()?);
+    info!(logger, "bind to udp socket {}", socket.local_addr()?);
 
     let peers_data = std::fs::read_to_string("./peers.json").unwrap_or("[]".to_string());
     let mut peers_db: HashSet<Peer> = serde_json::from_str(&peers_data)?;
