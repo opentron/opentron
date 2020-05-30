@@ -99,7 +99,7 @@ active-nodes = [
 ]
 # accept in any case
 passive-nodes = []
-max-active-peers = 2
+max-active-connections = 4
 
 [witness]
 private-key = ""

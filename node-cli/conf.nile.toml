@@ -52,6 +52,7 @@ enable = true
 enable-passive = false
 enable-active = true
 # 1 to 2000
+# 100 for java-tron
 sync-batch-size = 2000
 # tcp channel
 endpoint = '0.0.0.0:18888'
@@ -71,7 +72,7 @@ active-nodes = [
 ]
 # accept in any case
 passive-nodes = []
-max-active-peers = 2
+max-active-connections = 2
 
 [witness]
 private-key = ""

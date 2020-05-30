@@ -116,12 +116,14 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
         return Ok(());
     }
 
+    let max_active_connections = config.max_active_connections;
+
     let active_service = {
         let ctx = ctx.clone();
         let active_nodes = ctx.config.protocol.channel.active_nodes.clone();
         tokio::spawn(async move {
             for peer_addr in active_nodes.into_iter().cycle() {
-                while ctx.num_active_connections.load(Ordering::SeqCst) >= 4 {
+                while ctx.num_active_connections.load(Ordering::SeqCst) >= max_active_connections {
                     delay_for(Duration::from_secs(20)).await;
                 }
                 if !ctx.running.load(Ordering::Relaxed) {

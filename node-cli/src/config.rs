@@ -33,6 +33,7 @@ pub struct ChannelProtoConfig {
     pub endpoint: String,
     pub advertised_endpoint: String,
     pub active_nodes: Vec<String>,
+    pub max_active_connections: u32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
