@@ -341,7 +341,7 @@ async fn sync_channel_handler(
 
     loop {
         let mut next_packet = reader.next().fuse();
-        let mut timeout = delay_for(Duration::from_secs(20)).fuse();
+        let mut timeout = delay_for(Duration::from_secs(18)).fuse();
         select! {
             _ = timeout => {
                 warn!("timeout, try ping remote");
@@ -571,7 +571,6 @@ async fn sync_channel_handler(
                             writer.send(ChannelMessage::Block(block.into())).await?
                         }
                         info!("sent {} blocks", ids.len());
-                        writer.send(ChannelMessage::Ping).await?;
                     }
                     Ok(msg) => {
                         error!("unhandled message {:?}", msg);
