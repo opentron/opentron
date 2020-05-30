@@ -366,11 +366,11 @@ async fn sync_channel_handler(
                         return Ok(());
                     },
                     Ok(ChannelMessage::Ping) => {
-                        info!("ping");
+                        debug!("ping");
                         writer.send(ChannelMessage::Pong).await?;
                     },
                     Ok(ChannelMessage::Pong) => {
-                        info!("pong");
+                        debug!("pong");
                     },
                     Ok(ChannelMessage::TransactionInventory(inv)) => {
                         let Inventory { mut ids, r#type } = inv;
@@ -403,11 +403,11 @@ async fn sync_channel_handler(
                         let ids: Vec<_> = ids
                             .into_iter()
                             .filter(|blk_id| {
-                                info!("block inventory, blk_id={}", hex::encode(&blk_id));
                                 if ctx.recent_blk_ids.read().unwrap().contains(&H256::from_slice(blk_id)) {
-                                    warn!("block in recent blocks, skip fetch");
+                                    info!("block inventory, number={}, skip for seen", block_hash_to_number(&blk_id));
                                     false
                                 } else {
+                                    info!("block inventory, number={}, fetch", block_hash_to_number(&blk_id));
                                     true
                                 }
                             })
@@ -419,12 +419,17 @@ async fn sync_channel_handler(
                         }
                     }
                     Ok(ChannelMessage::BlockchainInventory(mut chain_inv)) => {
-                        info!("remains = {}", chain_inv.remain_num);
-                        info!("id[+0] = {}", chain_inv.ids[0]);
+                        let start_block_num = chain_inv.ids[0].number;
                         syncing_block_ids = chain_inv.ids.iter().skip(1).map(|blk_id| blk_id.hash.clone()).collect();
-                        let last_blk_id = chain_inv.ids.pop().unwrap();
-                        info!("id[-1] = {}", last_blk_id);
-                        last_block_number = last_blk_id.number;
+                        let last_block_id = chain_inv.ids.pop().unwrap();
+
+                        info!(
+                            "chain inventory, {}..={}, remains = {}",
+                            start_block_num,
+                            last_block_id.number,
+                            chain_inv.remain_num);
+
+                        last_block_number = last_block_id.number;
 
                         let tail = if syncing_block_ids.len() >= BATCH {
                             syncing_block_ids.split_off(BATCH)
@@ -432,7 +437,7 @@ async fn sync_channel_handler(
                             vec![]
                         };
                         if syncing_block_ids.is_empty() {
-                            warn!("syning finished");
+                            info!("syncing finished, entering gossip loop");
                             // remore: peer.setNeedSyncFromUs = false
                             syncing = false;
                         } else {
@@ -446,17 +451,16 @@ async fn sync_channel_handler(
                         writer.send(ChannelMessage::FetchBlockInventory(block_inv)).await?;
                     }
                     Ok(ChannelMessage::Block(block)) => {
-                        if syncing {
-                            if block.number() % 100 == 0 {
-                                info!("syncing {}", block.to_string());
-                            }
-                        } else {
-                            info!("receive {}", block.to_string());
-                        }
                         let block = IndexedBlock::from_raw(block);
-                        if ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
-                            warn!("block in recent blocks");
-                        } else {
+                        if !ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
+                            if syncing {
+                                if block.number() % 100 == 0 {
+                                    info!("receive block, number={}, hash={:?}", block.number(), block.hash());
+                                }
+                            } else {
+                                info!("receive block, number={}, hash={:?}", block.number(), block.hash());
+                            }
+
                             ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
                             // || block.number() == 2999
                             if !ctx.db.has_block(&block)  {

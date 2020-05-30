@@ -45,8 +45,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // ! init loggers
     let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
-    // let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    // let drain = slog_term::CompactFormat::new(decorator).build().fuse();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
     let drain = slog::LevelFilter(drain, slog::Level::Info).fuse();
 
