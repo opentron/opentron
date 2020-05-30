@@ -277,7 +277,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
             }
             Ok(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect { reason })) => {
                 warn!(
-                    "disconnect, reason={}",
+                    "disconnect before handshake, reason={}",
                     DisconnectReasonCode::from_i32(reason).unwrap().to_string()
                 );
                 return Ok(());
@@ -466,25 +466,24 @@ async fn sync_channel_handler(
                             if syncing {
                                 if block.number() % 100 == 0 {
                                     info!(
-                                        "syncing block, number={}, witness={}, txns={}, hash={}",
+                                        "syncing block, number={}, txns={}, hash={}, witness={}",
                                         block.number(),
-                                        b58encode_check(block.witness()),
                                         block.transactions.len(),
-                                        block.hash()
+                                        block.hash(),
+                                        b58encode_check(block.witness()),
                                     );
                                 }
                             } else {
                                 info!(
-                                    "receive block, number={}, witness={}, txns={}, hash={}",
+                                    "receive block, number={}, txns={}, hash={}, witness={}",
                                     block.number(),
-                                    b58encode_check(block.witness()),
                                     block.transactions.len(),
-                                    block.hash()
+                                    block.hash(),
+                                    b58encode_check(block.witness()),
                                 );
                             }
 
                             ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
-                            // || block.number() == 2999
                             if !ctx.db.has_block(&block)  {
                                 ctx.db.insert_block(&block)?;
                                 ctx.db.update_block_height(block.number());

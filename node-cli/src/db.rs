@@ -1,9 +1,7 @@
-extern crate byteorder;
-
 use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use primitives::H256;
 use prost::Message;
 use proto2::chain::ContractType;
@@ -672,29 +670,17 @@ impl ChainDB {
     }
 
     pub fn report_status(&self) {
+        let n_compactions = self
+            .db
+            .get_int_property("rocksdb.num-running-compactions")
+            .unwrap_or_default();
+        let n_flushes = self
+            .db
+            .get_int_property("rocksdb.num-running-flushes")
+            .unwrap_or_default();
         info!(
-            "rocksdb.num-running-compactions = {:?}",
-            self.db
-                .get_int_property("rocksdb.num-running-compactions")
-                .unwrap_or_default()
-        );
-        info!(
-            "rocksdb.num-running-flushes = {:?}",
-            self.db
-                .get_int_property("rocksdb.num-running-flushes")
-                .unwrap_or_default()
-        );
-        debug!(
-            "rocksdb.compaction-pending = {:?}",
-            self.db
-                .get_int_property("rocksdb.compaction-pending")
-                .unwrap_or_default()
-        );
-        debug!(
-            "rocksdb.mem-table-flush-pending = {:?}",
-            self.db
-                .get_int_property("rocksdb.mem-table-flush-pending")
-                .unwrap_or_default()
+            "background db status: compactions={}, flushes={}",
+            n_compactions, n_flushes
         );
     }
 
