@@ -199,7 +199,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
         .map(|blk| blk.block_id())
         .ok();
 
-    info!("my head block id {}", head_block_id.as_ref().unwrap());
+    info!("handshake with block id {}", head_block_id.as_ref().unwrap());
 
     let _solid_block_id = if block_height > 27 {
         ctx.db
@@ -236,7 +236,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
                 solid_block_id: _peer_solid_block_id,
                 ..
             })) => {
-                slog_info!(slog_scope::logger(), "handshake";
+                slog_info!(slog_scope::logger(), "handshake request";
                     "version" => version,
                     "genesis_block" => hex::encode(&peer_genesis_block_id.as_ref().unwrap().hash),
                     "head_block" => peer_head_block_id.as_ref().unwrap().number,
@@ -571,6 +571,7 @@ async fn sync_channel_handler(
                             writer.send(ChannelMessage::Block(block.into())).await?
                         }
                         info!("sent {} blocks", ids.len());
+                        writer.send(ChannelMessage::Ping).await?;
                     }
                     Ok(msg) => {
                         error!("unhandled message {:?}", msg);
