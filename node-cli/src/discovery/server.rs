@@ -91,7 +91,7 @@ where
                 timestamp: Utc::now().timestamp_millis(),
             };
             transport.send((ping.into(), peer_addr)).await?;
-            info!(logger, "ping {}", peer_addr);
+            debug!(logger, "ping {}", peer_addr);
         } else {
             warn!(logger, "unable to resove address {:?}", peer);
         }

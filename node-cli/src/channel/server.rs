@@ -275,7 +275,10 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
                 let ret = sync_channel_handler(ctx, need_syncing, reader, writer)
                     .with_logger(logger)
                     .await;
-                info!("channel finished, return={}", format!("{:?}", ret));
+                match ret {
+                    Ok(_) => info!("channel finished"),
+                    Err(e) => warn!("channel finished with error={:?}", e),
+                }
                 return Ok(());
             }
             Ok(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect { reason })) => {
