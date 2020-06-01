@@ -166,7 +166,7 @@ where
                                 continue;
                             }
                             if let Ok(peer_addr) = format!("{}:{}", peer.address, peer.port).parse() {
-                                info!(logger, "ping"; "peer_addr" => peer_addr);
+                                debug!(logger, "ping"; "peer_addr" => peer_addr);
                                 let ping = Ping {
                                     from: Some(my_endpoint.clone()),
                                     to: Some(Endpoint {
