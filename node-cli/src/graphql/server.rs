@@ -1,3 +1,4 @@
+use futures::future::FutureExt;
 use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Response, Server, StatusCode,
@@ -5,17 +6,14 @@ use hyper::{
 use juniper::{EmptySubscription, RootNode};
 use log::{info, warn};
 use slog::slog_info;
-use std::future::Future;
 use std::sync::Arc;
+use tokio::sync::broadcast;
 
 use super::model::Context;
 use super::schema::{Mutation, Query, Schema};
 use crate::context::AppContext;
 
-pub async fn graphql_server<F>(ctx: Arc<AppContext>, shutdown_signal: F)
-where
-    F: Future<Output = ()>,
-{
+pub async fn graphql_server(ctx: Arc<AppContext>, mut shutdown_signal: broadcast::Receiver<()>) {
     let config = &ctx.config.graphql;
 
     if !config.enable {
@@ -67,5 +65,5 @@ where
     let server = Server::bind(&addr).serve(graphql_service);
     info!("listening on http://{}", addr);
 
-    let _ = server.with_graceful_shutdown(shutdown_signal).await;
+    let _ = server.with_graceful_shutdown(shutdown_signal.recv().map(|_| ())).await;
 }

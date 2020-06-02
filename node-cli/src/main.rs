@@ -1,7 +1,7 @@
 #![recursion_limit = "1024"]
 
 use futures::channel::oneshot;
-use futures::future::FutureExt;
+// use futures::future::FutureExt;
 use futures::join;
 use log::info;
 use slog::{o, Drain};
@@ -11,6 +11,7 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
+use tokio::sync::broadcast;
 
 use node_cli::channel::server::channel_server;
 use node_cli::context::AppContext;
@@ -68,16 +69,13 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
     info!("outbound ip address: {}", ctx.outbound_ip);
     let ctx = Arc::new(ctx);
 
+    let (done, _) = broadcast::channel::<()>(1);
     let (termination_tx, termination_done) = oneshot::channel::<()>();
-    let (channel_tx, channel_done) = oneshot::channel::<()>();
-    let (graphql_tx, graphql_done) = oneshot::channel::<()>();
-    let (discovery_tx, discovery_done) = oneshot::channel::<()>();
     let termination_handler = {
         let ctx = ctx.clone();
+        let done = done.clone();
         move || {
-            let _ = channel_tx.send(());
-            let _ = graphql_tx.send(());
-            let _ = discovery_tx.send(());
+            let _ = done.send(());
             while let Some(done) = ctx.peers.write().unwrap().pop() {
                 let _ = done.send(());
             }
@@ -102,19 +100,22 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
 
     let graphql_service = {
         let ctx = ctx.clone();
+        let done_signal = done.subscribe();
         let logger = slog_scope::logger().new(o!("service" => "graphql"));
-        graphql_server(ctx, graphql_done.map(|_| ())).with_logger(logger)
+        graphql_server(ctx, done_signal).with_logger(logger)
     };
 
     let channel_service = {
         let ctx = ctx.clone();
+        let done_signal = done.subscribe();
         let logger = slog_scope::logger().new(o!("service" => "channel"));
-        channel_server(ctx, channel_done.map(|_| ())).with_logger(logger)
+        channel_server(ctx, done_signal).with_logger(logger)
     };
 
     let discovery_service = {
         let ctx = ctx.clone();
-        discovery_server(ctx, discovery_done.map(|_| ()))
+        let done_signal = done.subscribe();
+        discovery_server(ctx, done_signal)
     };
     let _ = join!(graphql_service, channel_service, discovery_service);
 

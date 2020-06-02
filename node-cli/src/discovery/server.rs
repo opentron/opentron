@@ -9,11 +9,12 @@ use rand::Rng;
 use slog::{debug, error, info, o, warn};
 use std::collections::HashSet;
 use std::error::Error;
-use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net;
 use tokio::net::UdpSocket;
+use tokio::sync::broadcast;
+use tokio::pin;
 
 use super::protocol::{DiscoveryMessage, DiscoveryMessageTransport};
 use crate::context::AppContext;
@@ -31,10 +32,7 @@ fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
     acc
 }
 
-pub async fn discovery_server<F>(ctx: Arc<AppContext>, signal: F) -> Result<(), Box<dyn Error>>
-where
-    F: Future<Output = ()> + Unpin,
-{
+pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<()>) -> Result<(), Box<dyn Error>> {
     let config = &ctx.config.protocol.discovery;
     let logger = slog_scope::logger().new(o!("service" => "discovery"));
 
@@ -97,11 +95,11 @@ where
         }
     }
 
-    let mut signal = signal.fuse();
+    pin!(signal);
     loop {
         let mut payload_fut = transport.next().fuse();
         select! {
-            _ = signal => {
+            _ = signal.recv().fuse() => {
                     warn!(logger, "discovery service closed");
                     break;
             }

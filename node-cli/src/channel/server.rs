@@ -18,13 +18,13 @@ use proto2::common::{BlockId, Endpoint};
 use slog::{o, slog_info};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use std::error::Error;
-use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::stream::StreamExt;
+use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::time::{delay_for, timeout};
@@ -32,10 +32,7 @@ use tokio::time::{delay_for, timeout};
 use crate::context::AppContext;
 use crate::util::block_hash_to_number;
 
-pub async fn channel_server<F>(ctx: Arc<AppContext>, signal: F) -> Result<(), Box<dyn Error>>
-where
-    F: Future<Output = ()> + Unpin,
-{
+pub async fn channel_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<()>) -> Result<(), Box<dyn Error>> {
     let config = &ctx.config.protocol.channel;
 
     if !config.enable {
@@ -60,10 +57,10 @@ where
     Ok(())
 }
 
-async fn passive_channel_service<F>(ctx: Arc<AppContext>, signal: F) -> Result<(), Box<dyn Error>>
-where
-    F: Future<Output = ()> + Unpin,
-{
+async fn passive_channel_service(
+    ctx: Arc<AppContext>,
+    mut signal: broadcast::Receiver<()>,
+) -> Result<(), Box<dyn Error>> {
     let config = &ctx.config.protocol.channel;
     if !config.enable_passive {
         warn!("passive channel service disabled");
@@ -78,10 +75,13 @@ where
         async move {
             info!("listening on grpc://{}", listener.local_addr().unwrap());
             let mut incoming = listener.incoming();
-            let mut signal = signal.fuse();
             loop {
                 let mut incoming = incoming.next().fuse();
                 select! {
+                    _ = signal.recv().fuse() => {
+                        warn!("incoming connection service closed");
+                        break;
+                    },
                     conn = incoming => {
                         match conn {
                             Some(Ok(sock)) => {
@@ -97,10 +97,6 @@ where
                             }
                         }
                     },
-                    _ = signal => {
-                        warn!("incoming connection service closed");
-                        break;
-                    }
                 }
             }
         }
