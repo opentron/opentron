@@ -120,7 +120,7 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
         tokio::spawn(async move {
             for peer_addr in active_nodes.into_iter().cycle() {
                 while ctx.num_active_connections.load(Ordering::SeqCst) >= max_active_connections {
-                    delay_for(Duration::from_secs(20)).await;
+                    delay_for(Duration::from_secs(2)).await;
                 }
                 if !ctx.running.load(Ordering::Relaxed) {
                     warn!("active connection service closed");
