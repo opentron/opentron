@@ -39,15 +39,24 @@ impl ContractReturn {
 }
 
 #[derive(juniper::GraphQLObject)]
-struct RawTransaction {
-    contract: Contract,
-    timestamp: Option<DateTime<Utc>>,
-    expiration: DateTime<Utc>,
-    ref_block_bytes: String,
-    ref_block_hash: String,
-    permission_id: i32,
-    fee_limit: i32,
-    memo: Option<String>,
+pub struct RawTransaction {
+    pub contract: Contract,
+    pub timestamp: Option<DateTime<Utc>>,
+    pub expiration: DateTime<Utc>,
+    pub ref_block_bytes: String,
+    pub ref_block_hash: String,
+    pub permission_id: i32,
+    pub fee_limit: i32,
+    pub memo: Option<String>,
+}
+
+#[derive(juniper::GraphQLObject)]
+/// A transaction of blockchain.
+pub struct UnsignedTransaction {
+    /// Transaction hash.
+    pub id: String,
+    /// Inner transaction.
+    pub inner: RawTransaction,
 }
 
 #[derive(juniper::GraphQLObject)]

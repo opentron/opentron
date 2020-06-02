@@ -5,9 +5,9 @@ use proto2::common::Permission as PermissionPb;
 
 #[derive(juniper::GraphQLObject)]
 pub struct TransferContract {
-    owner_address: String,
-    to_address: String,
-    amount: f64,
+    pub owner_address: String,
+    pub to_address: String,
+    pub amount: f64,
 }
 
 #[derive(juniper::GraphQLObject)]

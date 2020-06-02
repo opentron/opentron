@@ -1,6 +1,11 @@
-use juniper::FieldResult;
+//! A schema consists of two types: a query object and a mutation object.
 
-use super::model::{Block, Context, NodeInfo, Transaction};
+use chrono::{Duration, Utc};
+use juniper::FieldResult;
+use keys::Address;
+
+use super::contract::{Contract, TransferContract};
+use super::model::{Block, Context, NodeInfo, RawTransaction, Transaction, UnsignedTransaction};
 
 pub(crate) struct Query;
 
@@ -29,7 +34,50 @@ impl Query {
     }
 }
 
+#[derive(juniper::GraphQLInputObject)]
+struct ContractOptions {
+    memo: Option<String>,
+    permission_id: Option<i32>,
+    fee_limit: Option<i32>,
+}
+
+pub(crate) struct Mutation;
+
+#[juniper::graphql_object(Context = Context)]
+impl Mutation {
+    fn transfer(
+        ctx: &Context,
+        owner: String,
+        to: String,
+        amount: f64,
+        option: Option<ContractOptions>,
+    ) -> FieldResult<UnsignedTransaction> {
+        let contract = TransferContract {
+            owner_address: owner,
+            to_address: to,
+            amount,
+        };
+
+        let ref_block_id = ctx.app.db.highest_block()?.block_id();
+
+        let raw_txn = RawTransaction {
+            contract: Contract::TransferContract(contract),
+            timestamp: Some(Utc::now()),
+            expiration: Utc::now() + Duration::minutes(10),
+            ref_block_bytes: hex::encode(&ref_block_id.hash[6..8]),
+            ref_block_hash: hex::encode(&ref_block_id.hash[8..16]),
+            permission_id: Default::default(),
+            fee_limit: Default::default(),
+            memo: Default::default(),
+        };
+
+        Ok(UnsignedTransaction {
+            id: Default::default(),
+            inner: raw_txn,
+        })
+    }
+}
+
 // A root schema consists of a query and a mutation.
 // Request queries can be executed against a RootNode.
-pub(crate) type Schema =
-    juniper::RootNode<'static, Query, juniper::EmptyMutation<Context>, juniper::EmptySubscription<Context>>;
+pub(crate) type Schema = juniper::RootNode<'static, Query, Mutation, juniper::EmptySubscription<Context>>;

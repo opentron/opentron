@@ -2,14 +2,14 @@ use hyper::{
     service::{make_service_fn, service_fn},
     Body, Method, Response, Server, StatusCode,
 };
-use juniper::{EmptyMutation, EmptySubscription, RootNode};
+use juniper::{EmptySubscription, RootNode};
 use log::{info, warn};
 use slog::slog_info;
 use std::future::Future;
 use std::sync::Arc;
 
 use super::model::Context;
-use super::schema::{Query, Schema};
+use super::schema::{Mutation, Query, Schema};
 use crate::context::AppContext;
 
 pub async fn graphql_server<F>(ctx: Arc<AppContext>, shutdown_signal: F)
@@ -25,7 +25,7 @@ where
 
     let addr = config.endpoint.parse().expect("malformed endpoint address");
 
-    let root_node: Arc<Schema> = Arc::new(RootNode::new(Query, EmptyMutation::new(), EmptySubscription::new()));
+    let root_node: Arc<Schema> = Arc::new(RootNode::new(Query, Mutation, EmptySubscription::new()));
     let ctx = Arc::new(Context { app: ctx });
 
     let graphql_service = make_service_fn(move |_| {
