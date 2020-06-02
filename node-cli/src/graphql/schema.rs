@@ -2,7 +2,6 @@
 
 use chrono::{Duration, Utc};
 use juniper::FieldResult;
-use keys::Address;
 
 use super::contract::{Contract, TransferContract};
 use super::model::{Block, Context, NodeInfo, RawTransaction, Transaction, UnsignedTransaction};
@@ -50,7 +49,7 @@ impl Mutation {
         owner: String,
         to: String,
         amount: f64,
-        option: Option<ContractOptions>,
+        mut option: Option<ContractOptions>,
     ) -> FieldResult<UnsignedTransaction> {
         let contract = TransferContract {
             owner_address: owner,
@@ -59,6 +58,12 @@ impl Mutation {
         };
 
         let ref_block_id = ctx.app.db.highest_block()?.block_id();
+        let memo = option.as_mut().and_then(|opt| opt.memo.take());
+        let permission_id = option
+            .as_mut()
+            .and_then(|opt| opt.permission_id.take())
+            .unwrap_or_default();
+        let fee_limit = option.as_mut().and_then(|opt| opt.fee_limit.take()).unwrap_or_default();
 
         let raw_txn = RawTransaction {
             contract: Contract::TransferContract(contract),
@@ -66,9 +71,9 @@ impl Mutation {
             expiration: Utc::now() + Duration::minutes(10),
             ref_block_bytes: hex::encode(&ref_block_id.hash[6..8]),
             ref_block_hash: hex::encode(&ref_block_id.hash[8..16]),
-            permission_id: Default::default(),
-            fee_limit: Default::default(),
-            memo: Default::default(),
+            permission_id,
+            fee_limit,
+            memo,
         };
 
         Ok(UnsignedTransaction {
