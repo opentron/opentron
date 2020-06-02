@@ -36,12 +36,10 @@ impl AppContext {
 
         if !db.has_block(&genesis_blk) {
             if let Ok(_) = db.get_genesis_block() {
-                panic!("genesis block is inconsistent with db");
+                panic!("genesis block config is inconsistent with db");
             }
-            info!("insert genesis block to db");
             db.insert_block(&genesis_blk)?;
-        } else {
-            info!("genesis block check passed");
+            info!("inserted genesis block to db");
         }
         db.report_status();
 
@@ -50,10 +48,12 @@ impl AppContext {
             hash: genesis_blk.header.hash.as_ref().to_owned(),
         };
 
-        info!("chain version => {}", config.chain.p2p_version);
-        info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
         let node_id = db.get_node_id();
         info!("node id => {}", hex::encode(&node_id));
+        info!("p2p version => {}", config.chain.p2p_version);
+        info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
+        info!("chain db loaded");
+
         Ok(AppContext {
             db,
             config,

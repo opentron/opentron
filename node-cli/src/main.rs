@@ -18,26 +18,6 @@ use node_cli::discovery::server::discovery_server;
 use node_cli::graphql::server::graphql_server;
 use node_cli::util::get_my_ip;
 
-pub enum PeerStatus {
-    HandshakeFinished,
-    BeforeSyncing,
-    Syncing,
-    BackingUp,
-}
-
-pub enum Direction {
-    Inbound,
-    Outbound,
-}
-
-/*
-pub struct PeerConnectionContext {
-    peer_addr: SocketAddr,
-    done: oneshot::Receiver<()>,
-    syncing: RwLock<bool>,
-}
-*/
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ! init app command line arguments
     let yaml = clap::load_yaml!("cli.yml");
@@ -87,19 +67,6 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
     ctx.outbound_ip = get_my_ip().await?;
     info!("outbound ip address: {}", ctx.outbound_ip);
     let ctx = Arc::new(ctx);
-
-    // Fix: account state root First appares in 8222293
-
-    /*
-    for num in 1102553..1135973 {
-        if let Some(blk) = ctx.db.get_block_by_number(num) {
-            println!("delete {} => {:?}", num, ctx.db.delete_block(&blk));
-        } else {
-            println!("done");
-            return Ok(());
-        }
-    }
-    */
 
     let (termination_tx, termination_done) = oneshot::channel::<()>();
     let (channel_tx, channel_done) = oneshot::channel::<()>();
