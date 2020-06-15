@@ -19,9 +19,7 @@ Full Node API: <http://api.tronstack.io>
 
 Tronscan API: <https://apilist.tronscan.org>
 
-gRPC
-
-- grpc.trongrid.io:50051
+gRPC: grpc.trongrid.io:50051
 
 Public Full Node:
 
@@ -64,9 +62,7 @@ TronGrid API / Full Node API / Event API: <https://api.shasta.trongrid.io>
 
 Tronscan API: <https://api.shasta.tronscan.org>
 
-gRPC
-
-- grpc.shasta.trongrid.io:50051
+gRPC: grpc.shasta.trongrid.io:50051
 
 ## Nile Testnet
 
