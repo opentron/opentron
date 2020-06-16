@@ -115,8 +115,8 @@ message AssetIssueContract {
   int64 end_time = 10;
   int64 order = 11;  // useless
   int32 vote_score = 16;
-  // changed: bytes
-  string description = 20;
+  // note: might be illegal utf8 bytes
+  bytes description = 20;
   // changed: bytes
   string url = 21;
   int64 free_asset_net_limit = 22;
