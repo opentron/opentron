@@ -4,7 +4,7 @@ use primitives::H256;
 use std::path::Path;
 
 use crate::config::Config;
-use crate::db::ChainDB;
+use crate::db::{ChainDB, CheckResult};
 
 pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::load_from_file(config_path)?;
@@ -39,7 +39,9 @@ pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> R
             info!("verify merkle tree with {} patches", patch.len());
         }
         Some("parent_hash") => {
-            db.verify_parent_hashes()?;
+            while let CheckResult::ForkAt(pos) = db.verify_parent_hashes()? {
+                db.handle_chain_fork_at(pos, /* dry_run */ false)?;
+            }
         }
         _ => (),
     }

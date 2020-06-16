@@ -17,6 +17,13 @@ use std::path::Path;
 
 pub type BoxError = Box<dyn Error>;
 
+#[derive(Debug)]
+pub enum CheckResult {
+    Ok,
+    ForkAt(u64),
+    BreakAt(u64),
+}
+
 pub struct ChainDB {
     db: DB,
     default: ColumnFamily,
@@ -563,7 +570,7 @@ impl ChainDB {
             .map_err(From::from)
     }
 
-    pub fn verify_parent_hashes(&self) -> Result<bool, BoxError> {
+    pub fn verify_parent_hashes(&self) -> Result<CheckResult, BoxError> {
         let start_block_num = self.get_parent_hash_verified_block_number();
         let start_block = self.get_block_by_number(start_block_num)?;
 
@@ -598,7 +605,11 @@ impl ChainDB {
                     header.number(),
                     hex::encode(&header.raw.raw_data.as_ref().unwrap().parent_hash)
                 );
-                return Ok(false);
+                if parent_block_number == header.number() as u64 {
+                    return Ok(CheckResult::ForkAt(parent_block_number))
+                } else {
+                    return Ok(CheckResult::BreakAt(parent_block_number))
+                }
             }
             if header.number() % 10000 == 0 {
                 info!("block => {} parent_hash => {:?}", header.number(), header.hash);
@@ -610,7 +621,7 @@ impl ChainDB {
         self.update_parent_hash_verified_block_number(block_number)?;
 
         info!("✅ verification all passed!");
-        Ok(true)
+        Ok(CheckResult::Ok)
     }
 
     pub fn get_merkle_tree_verified_block_number(&self) -> u64 {
