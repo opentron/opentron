@@ -12,8 +12,6 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-// use crate::merkle_tree::MerkleTree;
-
 #[derive(Serialize, Deserialize, Debug)]
 struct Witness {
     address: String,

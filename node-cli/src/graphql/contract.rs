@@ -347,7 +347,7 @@ impl From<ContractPb> for Contract {
                     owner_address: b58encode_check(&cntr.owner_address),
                     name: cntr.name.clone(),
                     abbr: cntr.abbr.clone(),
-                    description: String::from_utf8_lossy(&cntr.description).into(),
+                    description: hex::encode(&cntr.description),
                     url: cntr.url.clone(),
                     total_supply: cntr.total_supply as _,
                     frozen_supply: cntr
