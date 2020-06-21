@@ -396,6 +396,9 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
         "! Free Bandwith Usage: {}/{}",
         payload.freeNetUsed, payload.freeNetLimit
     );
+    if payload.NetLimit > 0 {
+        eprintln!("! Bandwidth Usage: {}/{}", payload.NetUsed, payload.NetLimit);
+    }
     if payload.EnergyLimit > 0 {
         eprintln!("! Energy Usage: {}/{}", payload.EnergyUsed, payload.EnergyLimit);
     }
