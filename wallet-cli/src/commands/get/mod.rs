@@ -3,10 +3,11 @@ use clap::ArgMatches;
 use futures::executor;
 use hex::FromHex;
 use keys::Address;
-use proto::api::{BytesMessage, EmptyMessage, NumberMessage};
+use proto::api::{BytesMessage, DelegatedResourceMessage, EmptyMessage, NumberMessage};
 use proto::core::Account;
 use serde_json::json;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
 use crate::error::Error;
 use crate::utils::client;
@@ -410,6 +411,84 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
         "! Bandwidth By Freezing 1_TRX = {:.5}",
         payload.TotalNetLimit as f64 / payload.TotalNetWeight as f64
     );
+
+    // delegation query
+
+    let payload = executor::block_on(
+        client::GRPC_CLIENT
+            .get_delegated_resource_account_index(
+                Default::default(),
+                BytesMessage {
+                    value: addr.as_bytes().to_owned(),
+                    ..Default::default()
+                },
+            )
+            .drop_metadata(),
+    )?;
+
+    for from in &payload.fromAccounts {
+        let mut req = DelegatedResourceMessage::new();
+        req.set_fromAddress(from.to_owned());
+        req.set_toAddress(addr.as_bytes().to_owned());
+
+        let delegates = executor::block_on(
+            client::GRPC_CLIENT
+                .get_delegated_resource(Default::default(), req)
+                .drop_metadata(),
+        )?;
+        for delegate in &delegates.delegatedResource {
+            if delegate.frozen_balance_for_energy > 0 {
+                eprintln!(
+                    "! Delegate Energy    From {} {}_TRX expiration={}",
+                    Address::try_from(from).unwrap(),
+                    delegate.frozen_balance_for_energy as f64 / 1_000_000.0,
+                    Local.timestamp(delegate.expire_time_for_energy / 1_000, 0)
+                );
+            }
+            if delegate.frozen_balance_for_bandwidth > 0 {
+                eprintln!(
+                    "! Delegate Bandwidth From {} {}_TRX expiration={}",
+                    Address::try_from(from).unwrap(),
+                    delegate.frozen_balance_for_bandwidth as f64 / 1_000_000.0,
+                    Local.timestamp(delegate.frozen_balance_for_bandwidth / 1_000, 0)
+                );
+            }
+        }
+    }
+
+    if payload.toAccounts.len() > 2 {
+        eprintln!("! Delegate resources to {} accounts", payload.toAccounts.len());
+    }
+    for to in &payload.toAccounts {
+        let mut req = DelegatedResourceMessage::new();
+        req.set_fromAddress(addr.as_bytes().to_owned());
+        req.set_toAddress(to.to_owned());
+
+        let delegates = executor::block_on(
+            client::GRPC_CLIENT
+                .get_delegated_resource(Default::default(), req)
+                .drop_metadata(),
+        )?;
+        for delegate in &delegates.delegatedResource {
+            if delegate.frozen_balance_for_energy > 0 {
+                eprintln!(
+                    "! Delegate Energy    To {} {}_TRX expiration={}",
+                    Address::try_from(to).unwrap(),
+                    delegate.frozen_balance_for_energy as f64 / 1_000_000.0,
+                    Local.timestamp(delegate.expire_time_for_energy / 1_000, 0)
+                );
+            }
+            if delegate.frozen_balance_for_bandwidth > 0 {
+                eprintln!(
+                    "! Delegate Bandwidth To {} {}_TRX expiration={}",
+                    Address::try_from(to).unwrap(),
+                    delegate.frozen_balance_for_bandwidth as f64 / 1_000_000.0,
+                    Local.timestamp(delegate.frozen_balance_for_bandwidth / 1_000, 0)
+                );
+            }
+        }
+    }
+
     Ok(())
 }
 
