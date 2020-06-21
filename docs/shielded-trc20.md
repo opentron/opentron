@@ -1,6 +1,6 @@
 # Shielded TRC20
 
-ver: 20200613
+ver: 20200615
 
 匿名 TRC20 币使用.
 
@@ -216,3 +216,7 @@ feature/add_shiled_precompiles_return_bytes32arr
 ### 查询 Note 是否被花掉
 
 使用 `wallet/isshieldedtrc20contractNoteSpent` API. 提供 `ak`, `nk`.
+
+### z 地址转入到透明地址 - burn
+
+操作同 transfer.
