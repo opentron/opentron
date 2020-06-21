@@ -81,9 +81,133 @@ fn get_node_graph() -> Result<(), Error> {
     Ok(())
 }
 
+fn dump_merkle_tree() -> Result<(), Error> {
+    use crate::utils::crypto;
+    use protobuf::Message;
+
+    let block_nums = [
+        1102553, 1103364, 1103650, 1104274, 1104326, 1104948, 1105494, 1106300, 1106888, 1107730, 1110468, 1110780,
+        1110832, 1111066, 1111222, 1111430, 1111508, 1111818, 1111896, 1111922, 1111966, 1112021, 1112026, 1112052,
+        1112078, 1112099, 1112104, 1112122, 1112130, 1112156, 1112564, 1112668, 1112754, 1113222, 1114106, 1114124,
+        1114205, 1114444, 1114522, 1114548, 1114938, 1115536, 1115640, 1115788, 1115822, 1116264, 1116282, 1116308,
+        1116386, 1116706, 1116732, 1116758, 1116984, 1117018, 1117460, 1117668, 1117694, 1117928, 1118050, 1118292,
+        1118370, 1118604, 1118758, 1118810, 1118914, 1118992, 1119408, 1119460, 1119486, 1119642, 1119660, 1119668,
+        1119772, 1120032, 1120084, 1120136, 1120180, 1120344, 1120370, 1120388, 1120422, 1121124, 1121228, 1121402,
+        1121696, 1121852, 1122736, 1123022, 1123568, 1123638, 1123750, 1124166, 1124756, 1124990, 1125336, 1125518,
+        1125750, 1125846, 1126192, 1126314, 1126340, 1126582, 1127128, 1127536, 1128272, 1129000, 1129858, 1129910,
+        1129962, 1130118, 1130690, 1131028, 1131626, 1132922, 1132941, 1132976, 1133084, 1134406, 1135135, 1135513,
+        1135675, 1135702, 1135837, 1135918, 1135972, 9023535, 9031292, 9031302, 9031395, 9047637, 9050591, 9088413,
+        9117054, 9144428, 9258022, 9314226, 9342309, 9402274, 9545005, 9601119, 9601144, 9601555, 9746423, 9859519,
+        9859543, 9916886, 9916906, 9946923, 9946945, 9972961, 9972983, 10344002, 10430101, 10451465, 10451490,
+        10451737, 10451798, 10451980, 10452060, 10452149, 10452186, 10452823, 10453179, 10466915, 10466960, 10467186,
+        10467229, 10467356, 10467394, 10469444, 10469508, 10472308, 10474132, 10474645, 10475107, 10476216, 10476312,
+        10476409, 10476461, 10476746, 10477778, 10479675, 10479693, 10479731, 10479775, 10479798, 10479820, 10479893,
+        10479904, 10479914, 10479920, 10480305, 10480321, 10480335, 10480342, 10480383, 10480470, 10480508, 10480520,
+        10480564, 10480574, 10480741, 10481131, 10481484, 10495287, 10495427, 10495547, 10496286, 10496340, 10496614,
+        10496627, 10496675, 10496705, 10496720, 10496760, 10496828, 10498246, 10498464, 10498612, 10498687, 10498733,
+        10498801, 10501834, 10503636, 10544991, 10545010, 10596876, 11229571, 11229645, 11229672, 11240120, 12606097,
+        14734523, 14734681, 14848103, 14848129, 14877094, 14877125, 14877762, 14905850, 14905872, 15137348, 15137376,
+        15302325, 15767553, 15969715, 16258004, 16258011, 16346033, 16346068, 16487094, 16487116, 16515875, 16515951,
+        16660568, 16660633, 16746113, 16746179, 16861899, 16862200, 16948617, 16948646, 16977391, 17839835, 17839980,
+        17840259, 17897094, 17897144, 17897176, 17897366, 17953720, 17953734, 17984748, 18011991, 18213657, 18214173,
+    ];
+
+    for &num in block_nums.iter() {
+        let mut req = NumberMessage::new();
+        req.num = num;
+        let block = executor::block_on(
+            client::GRPC_CLIENT
+                .get_block_by_num2(Default::default(), req)
+                .drop_metadata(),
+        )?;
+
+        for (i, txn_ex) in block.get_transactions().iter().enumerate() {
+            let txn = txn_ex.get_transaction();
+            let raw = txn.write_to_bytes()?;
+            let txn_merkle_node = crypto::sha256(&raw);
+            let txn_hash = crypto::sha256(&txn.get_raw_data().write_to_bytes()?);
+
+            /*
+                        if txn.get_ret().len() > 1 {
+                            println!("# ! len(Transaction.ret) = {}", txn.get_ret().len());
+                            print!("# ! ret[1] = {:?}", txn.get_ret()[1]);
+                            println!(
+                                r#"
+            [[merkle-tree-patch]]
+            # block => {} txn => {}
+            txn = "{}"
+            tree-node-hash = "{}"
+            type = "extra-ret"
+            "#,
+                                num,
+                                i,
+                                hex::encode(txn_hash),
+                                hex::encode(txn_merkle_node)
+                            );
+                        }
+                        if let Some(ref ufields) = txn.get_raw_data().unknown_fields.fields {
+                            print!("# ! malformed raw_data {:?}", ufields);
+                            println!(
+                                r#"
+            [[merkle-tree-patch]]
+            # block => {} txn => {}
+            txn = "{}"
+            tree-node-hash = "{}"
+            type = "malformed-raw-data"
+            "#,
+                                num,
+                                i,
+                                hex::encode(txn_hash),
+                                hex::encode(txn_merkle_node)
+                            );
+                        } */
+            if let Some(ret) = txn.get_ret().get(0) {
+                if let Some(ref ufields) = ret.unknown_fields.fields {
+                    print!("# ! malformed ret {:?}", ufields);
+                    println!(
+                        r#"
+[[merkle-tree-patch]]
+# block => {} txn => {}
+txn = "{}"
+tree-node-hash = "{}"
+type = "malformed-ret"
+"#,
+                        num,
+                        i,
+                        hex::encode(txn_hash),
+                        hex::encode(txn_merkle_node)
+                    );
+                }
+            }
+            if let Some(ref ufields) = txn.unknown_fields.fields {
+                println!("# ! malformed txn {:?}", ufields);
+                print!("# ! malformed raw_data {:?}", txn.get_raw_data().unknown_fields.fields);
+                println!(
+                    r#"
+[[merkle-tree-patch]]
+# block => {} txn => {}
+txn = "{}"
+tree-node-hash = "{}"
+type = "malformed-txn"
+"#,
+                    num,
+                    i,
+                    hex::encode(txn_hash),
+                    hex::encode(txn_merkle_node)
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 fn get_merkle_tree(matches: &ArgMatches) -> Result<(), Error> {
     use crate::utils::crypto;
     use protobuf::Message;
+
+    if !matches.is_present("BLOCK") {
+        return dump_merkle_tree();
+    }
 
     let num = matches.value_of("BLOCK").unwrap().parse()?;
     let mut req = NumberMessage::new();
@@ -108,13 +232,16 @@ fn get_merkle_tree(matches: &ArgMatches) -> Result<(), Error> {
         if txn.get_ret().len() > 1 {
             eprintln!("      ! len(Transaction.ret) = {}", txn.get_ret().len());
         }
-        if let Some(ret) = txn.get_ret().get(0) {
+        for ret in txn.get_ret().iter() {
             if let Some(ref ufields) = ret.unknown_fields.fields {
                 eprintln!("      ! malformed ret {:?}", ufields);
             }
         }
         if let Some(ref ufields) = txn.get_raw_data().unknown_fields.fields {
             eprintln!("      ! malformed raw_data {:?}", ufields);
+        }
+        if let Some(ref ufields) = txn.unknown_fields.fields {
+            eprintln!("      ! malformed txn {:?}", ufields);
         }
     }
 
