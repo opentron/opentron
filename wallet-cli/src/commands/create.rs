@@ -63,16 +63,16 @@ pub fn create_zkey_offline() -> Result<(), Error> {
     let d = addr.diversifier().as_bytes();
 
     println!("d = {}", d.encode_hex::<String>());
-    println!("sk  => {}", sk.encode_hex::<String>());
+    println!("sk = {}", sk.encode_hex::<String>());
     println!("pk_d = {}", pk_d.encode_hex::<String>());
     println!("address = {}", addr);
 
-    println!("ask => {}", ask.encode_hex::<String>());
-    println!("nsk => {}", nsk.encode_hex::<String>());
-    println!("ovk => {}", ovk.encode_hex::<String>());
+    println!("ask = {}", ask.encode_hex::<String>());
+    println!("nsk = {}", nsk.encode_hex::<String>());
+    println!("ovk = {}", ovk.encode_hex::<String>());
 
-    println!("ak  = {}", ak.encode_hex::<String>());
-    println!("nk  = {}", nk.encode_hex::<String>());
+    println!("ak = {}", ak.encode_hex::<String>());
+    println!("nk = {}", nk.encode_hex::<String>());
     println!("ivk = {}", ivk.encode_hex::<String>());
 
     Ok(())
