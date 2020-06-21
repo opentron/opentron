@@ -396,6 +396,9 @@ fn get_account_resource(name: &str) -> Result<(), Error> {
         "! Free Bandwith Usage: {}/{}",
         payload.freeNetUsed, payload.freeNetLimit
     );
+    if payload.EnergyLimit > 0 {
+        eprintln!("! Energy Usage: {}/{}", payload.EnergyUsed, payload.EnergyLimit);
+    }
     eprintln!(
         "! Energy By Freezing    1_TRX = {:.5}",
         payload.TotalEnergyLimit as f64 / payload.TotalEnergyWeight as f64
