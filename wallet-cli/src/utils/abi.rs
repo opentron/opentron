@@ -34,7 +34,16 @@ pub fn encode_params(types: &[&str], values: &[String]) -> Result<Vec<u8>, Error
 }
 
 pub fn decode_params(types: &[&str], data: &str) -> Result<Vec<String>, Error> {
-    let types: Vec<ParamType> = types.iter().map(|s| Reader::read(s)).collect::<Result<_, _>>()?;
+    let types: Vec<ParamType> = types
+        .iter()
+        .map(|&s| {
+            if s == "trcToken" {
+                Reader::read("uint256")
+            } else {
+                Reader::read(s)
+            }
+        })
+        .collect::<Result<_, _>>()?;
     let data: Vec<u8> = Vec::from_hex(data)?;
     let tokens = decode(&types, &data)?;
 
