@@ -24,7 +24,16 @@ pub fn fnhash(fname: &str) -> [u8; 4] {
 pub fn encode_params(types: &[&str], values: &[String]) -> Result<Vec<u8>, Error> {
     assert_eq!(types.len(), values.len());
 
-    let types: Vec<ParamType> = types.iter().map(|s| Reader::read(s)).collect::<Result<_, _>>()?;
+    let types: Vec<ParamType> = types
+        .iter()
+        .map(|&s| {
+            if s == "trcToken" {
+                Reader::read("uint256")
+            } else {
+                Reader::read(s)
+            }
+        })
+        .collect::<Result<_, _>>()?;
     let params: Vec<_> = types.into_iter().zip(values.iter().map(|v| v as &str)).collect();
 
     let tokens = parse_tokens(&params, true)?;
