@@ -23,7 +23,7 @@ subcommands:
           args:
               - WHAT:
                     help: Check item
-                    possible_values: ["compact", "merkle_tree", "parent_hash"]
+                    # possible_values: ["compact", "merkle_tree", "parent_hash"]
 
     - fix:
           about: Misc fix command
