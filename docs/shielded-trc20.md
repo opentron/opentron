@@ -1,6 +1,6 @@
 # Shielded TRC20
 
-ver: 20200615
+ver: 20200703
 
 匿名 TRC20 币使用.
 
@@ -87,7 +87,7 @@ wallet/getzenpaymentaddress
 一个匿名 TRC20 合约, 必须绑定到一个已有的 TRC20 合约上. 如下是关键函数列表:
 
 ```text
-constructor (address trc20ContractAddress, uint256 scalingFactorLogarithm)
+constructor (address trc20ContractAddress, uint256 scalingFactorExponent)
 
 function burn(bytes32[10] input, bytes32[2] spendAuthoritySignature, uint256 rawValue, bytes32[2] bindingSignature, address payTo, bytes32[3] c)
     => burn(bytes32[10],bytes32[2],uint256,bytes32[2],address,bytes32[3]) [4d013fde]
@@ -106,24 +106,23 @@ function getPath(uint256 position) view returns (bytes32, bytes32[32])
 
 基于 TRON 对该套 API 的封装, 实际使用不需要关注 `burn`, `mint`, `transfer` 函数的参数, 只需通过函数签名和工具 API 返回的字节串调用合约即可.
 
-其中合约的构造函数传递了对应的 TRC20 合约地址, 以及一个 `scalingFactorLogarithm`, 用于表示匿名币到原 TRC20 的转换比例,
-但令人崩溃的是, 这个变量其实是 10 的指数(不是对数), 即: 传入 1, 则匿名币数额是 TRC20 的 1/10. 传入 0, 则是 1 比 1.
+其中合约的构造函数传递了对应的 TRC20 合约地址, 以及一个 `scalingFactorExponent`, 用于表示匿名币到原 TRC20 的转换比例,
+这个变量是 10 的指数(不是对数), 即: 传入 1, 则匿名币数额是 TRC20 的 1/10. 传入 0, 则是 1 比 1.
 
-且该合约没有暴露公开的 TRC20 合约地址, 缺失重要必要信息. 目测是设计缺陷.
+且该合约没有暴露公开的 TRC20 合约地址, 缺失重要必要信息. 目测是设计缺陷. 不过可以通过读取合约创建交易的末尾字节获得.
 
 ## 使用流程
 
 第一步, 部署合约, 调用合约构造函数完成初始化
 
-这里在 Nile 上部署了 `TEVN8mXfumcy2v3xGzjELSWMPRgBWZUhbB` 为一简单 TRC20 币.
+这里使用 Nile Testnet 的 JST TRC20 token `TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3`.
 
-对应的匿名 TRC20 合约地址是 `TGbsfpmaPuSqQyEgieQTd5aZN9XvEMga7e`. 构造函数参数为
-`(TEVN8mXfumcy2v3xGzjELSWMPRgBWZUhbB, 1)`. 所以 `scalingFactor` 是 10.
+对应的匿名 TRC20 合约地址是 `TEkQTDyZmbY6hngxdAsxzxy9r3bUNhRjdS`. 构造函数参数为
+`(TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3, 18)`. 所以 `scalingFactor` 是 10 ** 18.
 
-https://github.com/tronprotocol/solidity
-feature/add_shiled_precompiles_return_bytes32arr
+Solidity 编译器需要使用 https://github.com/tronprotocol/solidity 的 `develop` 分支.
 
-然后我们的初始地址 `TJRabPrwbZy45sbavfcjinPJC18kjpRTv8` 内有一堆代币. (第0步, 你得有钱)
+然后我们的初始地址 `TJRabPrwbZy45sbavfcjinPJC18kjpRTv8` 内有一堆代币. (通过 Nile Faucet 地址获取)
 
 ### 给 z 地址转账 - 铸币 mint
 
