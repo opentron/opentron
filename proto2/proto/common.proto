@@ -16,12 +16,22 @@ message BlockId {
   int64 number = 2;
 }
 
+enum ResourceCode {
+  BANDWIDTH = 0x00;
+  ENERGY = 0x01;
+}
+
 // for contract
 
 enum AccountType {
   Normal = 0;
   AssetIssue = 1;
   Contract = 2;
+}
+
+message Vote {
+  bytes vote_address = 1;
+  int64 vote_count = 2;
 }
 
 message SmartContract {

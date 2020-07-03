@@ -10,6 +10,7 @@ fn main() {
                 "proto/chain.proto",
                 "proto/channel.proto",
                 "proto/contract.proto",
+                "proto/state.proto",
             ],
             &["proto/"],
         )

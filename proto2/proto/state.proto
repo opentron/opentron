@@ -1,0 +1,175 @@
+syntax = "proto3";
+
+package proto.state;
+
+import "common.proto";
+import "chain.proto";
+
+message Account {
+  proto.common.AccountType type = 1;
+  string name = 2;
+  int64 creation_time = 3;
+  int64 balance = 4;
+  map<int64, int64> token_balance = 5;
+}
+
+message AccountResource {
+  int64 free_bandwidth_used = 1;
+  int64 free_bandwidth_limit = 2;
+  int64 frozen_bandwidth_used = 3;
+  int64 frozen_bandwidth_limit = 4;
+  int64 frozen_energy_used = 5;
+  int64 frozen_energy_limit = 6;
+}
+
+message AccountResourceDelegation {
+  bytes to_address = 1;
+  bytes from_address = 2;
+  int64 amount_for_bandwidth = 3;
+  int64 timestamp_for_bandwidth = 4;
+  int64 amount_for_energy = 5;
+  int64 timestamp_for_energy = 6;
+}
+
+message Votes {
+  repeated proto.common.Vote votes = 1;
+}
+
+message Witness {
+  bytes address = 1;
+  string url = 2;
+  bool is_producer = 3;
+  int64 vote_count = 4;
+  int64 total_produced = 5;
+  int64 total_missed = 6;
+  int64 latest_block_num = 7;
+  int64 latest_slot_num = 8;
+}
+
+message Proposal {
+  int64 proposal_id = 1;
+  bytes proposer_address = 2;
+  map<int64, int64> parameters = 3;
+  int64 expiration_time = 4;
+  int64 create_time = 5;
+  repeated bytes approver_addresses = 6;
+  enum State {
+    PENDING = 0;
+    DISAPPROVED = 1;
+    APPROVED = 2;
+    CANCELED = 3;
+  }
+  State state = 7;
+}
+
+message InternalTransaction {
+  // internalTransaction identity, the root InternalTransaction hash
+  // should equals to root transaction id.
+  bytes hash = 1;
+  // the one send trx (TBD: or token) via function
+  bytes caller_address = 2;
+  // the one recieve trx (TBD: or token) via function
+  bytes to_address = 3;
+  // call value
+  int64 call_value = 4;
+  // token id
+  int64 call_token_id = 5;
+  // trc10 value
+  int64 call_token_value = 6;
+  bytes data = 8;
+  bytes note = 7;
+  bool accepted = 9;
+}
+
+message AssetIssue {
+  message FrozenSupply {
+    int64 frozen_amount = 1;
+    int64 frozen_days = 2;
+  }
+
+  bytes owner_address = 1;
+  // changed: bytes
+  string name = 2;
+  // changed: bytes
+  string abbr = 3;
+  int64 total_supply = 4;
+  repeated FrozenSupply frozen_supply = 5;
+  int32 trx_num = 6;
+  int32 precision = 7;
+  int32 num = 8;
+  int64 start_time = 9;
+  int64 end_time = 10;
+  int64 order = 11;  // useless
+  int32 vote_score = 16;
+  // note: might be illegal utf8 bytes
+  bytes description = 20;
+  // changed: bytes
+  string url = 21;
+  int64 free_asset_net_limit = 22;
+  int64 public_free_asset_net_limit = 23;
+  int64 public_free_asset_net_usage = 24;
+  int64 public_latest_free_net_timestamp = 25;
+  string id = 41;
+}
+
+message TransactionLog {
+  bytes address = 1;
+  repeated bytes topics = 2;
+  bytes data = 3;
+}
+
+message TransactionReceipt {
+  message ResourceReceipt {
+    int64 energy_usage = 1;
+    int64 energy_fee = 2;
+    int64 origin_energy_usage = 3;
+    int64 energy_usage_total = 4;
+    int64 bandwidth_usage = 5;
+    // when create a new account, usage = 0, fee = 0.1 TRX
+    int64 bandwidth_fee = 6;
+    // 1_000_000
+    int64 multisig_fee = 7;
+    // 1024_000_000
+    int64 asset_issue_fee = 8;
+    // 1024_000_000
+    int64 exchange_create_fee = 9;
+    // 9999_000_000
+    int64 witness_create_fee = 10;
+    // 100_000_000
+    int64 account_permission_update_fee = 11;
+
+  }
+
+  bytes id = 1;
+  bool success = 2;
+  int64 block_number = 3;
+  int64 block_timestamp = 4;
+
+  int64 fee = 5;
+  ResourceReceipt resource_receipt = 6;
+
+  message ContractReceipt {
+    chain.Transaction.Result.ContractStatus status = 1;
+    // VM error message
+    bytes message = 10;
+    // created contract address
+    bytes created_address = 2;
+    bytes result = 3;
+    repeated InternalTransaction internal_transactions = 4;
+    repeated TransactionLog logs = 5;
+  }
+  message ExchangeReceipt {
+    int64 created_exchange_id = 1;
+    int64 received_amount = 2;
+    int64 injected_amount = 3;
+    int64 withdrawal_amount =4;
+  }
+
+  oneof result {
+    ContractReceipt contract = 7;
+    int64 created_asset_id = 8;
+    int64 withdrawal_amount = 9;
+    int64 unfrozen_amount = 10;
+    ExchangeReceipt exchange = 11;
+  }
+}

@@ -58,12 +58,8 @@ message VoteAssetContract {
 }
 
 message VoteWitnessContract {
-  message Vote {
-    bytes vote_address = 1;
-    int64 vote_count = 2;
-  }
   bytes owner_address = 1;
-  repeated Vote votes = 2;
+  repeated proto.common.Vote votes = 2;
   // not used
   bool is_support = 3;
 }
@@ -137,24 +133,18 @@ message ParticipateAssetIssueContract {
   int64 amount = 4;  // the amount of drops
 }
 
-enum ResourceCode {
-  BANDWIDTH = 0x00;
-  ENERGY = 0x01;
-}
-
 message FreezeBalanceContract {
   bytes owner_address = 1;
   int64 frozen_balance = 2;
   int64 frozen_duration = 3;
 
-  ResourceCode resource = 10;
+  proto.common.ResourceCode resource = 10;
   bytes receiver_address = 15;
 }
 
 message UnfreezeBalanceContract {
   bytes owner_address = 1;
-
-  ResourceCode resource = 10;
+  proto.common.ResourceCode resource = 10;
   bytes receiver_address = 15;
 }
 

@@ -65,3 +65,7 @@ pub mod channel {
 pub mod contract {
     include!(concat!(env!("OUT_DIR"), "/proto.contract.rs"));
 }
+
+pub mod state {
+    include!(concat!(env!("OUT_DIR"), "/proto.state.rs"));
+}
