@@ -13,17 +13,17 @@ use std::fs;
 use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Witness {
-    address: String,
-    url: String,
-    votes: i64,
+pub struct Witness {
+    pub address: String,
+    pub url: String,
+    pub votes: i64,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Alloc {
-    address: String,
-    name: String,
-    balance: i64,
+pub struct Alloc {
+    pub address: String,
+    pub name: String,
+    pub balance: i64,
 }
 
 impl Alloc {
@@ -60,13 +60,13 @@ impl Alloc {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GenesisConfig {
-    timestamp: i64,
+    pub timestamp: i64,
     #[serde(rename = "parentHash")]
     parent_hash: String,
-    witnesses: Vec<Witness>,
-    allocs: Vec<Alloc>,
     mantra: String,
     creator: String,
+    pub witnesses: Vec<Witness>,
+    pub allocs: Vec<Alloc>,
 }
 
 impl GenesisConfig {
