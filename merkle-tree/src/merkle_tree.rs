@@ -1,5 +1,5 @@
 use crate::tree::{LeavesIntoIterator, LeavesIterator, Tree};
-use primitives::H256;
+use primitive_types::H256;
 use crate::MerkleHasher;
 
 /// A Merkle tree is a binary tree, with values of type `T` at the leafs,

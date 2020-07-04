@@ -53,5 +53,5 @@ reqwest = { version = '0.10', default-features = false, features = ['json'] }
 # workspace
 proto2 = { path = '../proto2' }
 keys = { path = '../keys' }
-primitives = { path = '../primitives' }
+primitive-types = "0.7"
 chain = { path = '../chain' }

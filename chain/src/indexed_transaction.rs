@@ -1,5 +1,5 @@
 use crypto::sha256;
-use primitives::H256;
+use primitive_types::H256;
 use prost::Message;
 use std::cmp;
 use std::hash::{Hash, Hasher};

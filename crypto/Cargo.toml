@@ -8,4 +8,4 @@ edition = "2018"
 sha2 = "0.8.1"
 sha3 = "0.8.2"
 digest = "0.8.1"
-primitives = { path = '../primitives' }
+primitive-types = "0.7"

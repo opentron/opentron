@@ -1,6 +1,6 @@
 use futures::channel::oneshot;
 use log::info;
-use primitives::H256;
+use primitive_types::H256;
 use proto2::common::BlockId;
 use std::collections::HashSet;
 use std::error::Error;

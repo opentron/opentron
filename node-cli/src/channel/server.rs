@@ -9,7 +9,7 @@ use futures::sink::{Sink, SinkExt};
 use futures::stream::Stream;
 use keys::b58encode_check;
 use log::{debug, error, info, warn};
-use primitives::H256;
+use primitive_types::H256;
 use proto2::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
     Transactions,

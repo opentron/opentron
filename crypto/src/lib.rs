@@ -1,5 +1,5 @@
 use digest::Digest;
-use primitives::H256;
+use primitive_types::H256;
 use sha2::Sha256;
 use sha3::Keccak256;
 

@@ -2,7 +2,7 @@ use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
 use log::{error, info, warn};
-use primitives::H256;
+use primitive_types::H256;
 use prost::Message;
 use proto2::chain::ContractType;
 use rand::Rng;

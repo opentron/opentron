@@ -1,6 +1,6 @@
 use clap::ArgMatches;
 use log::info;
-use primitives::H256;
+use primitive_types::H256;
 use std::path::Path;
 
 use crate::config::Config;

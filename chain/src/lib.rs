@@ -1,4 +1,4 @@
-pub use primitives::H256;
+pub use primitive_types::H256;
 pub use proto2::chain::{Block, BlockHeader, Transaction};
 
 pub use indexed_block::IndexedBlock;

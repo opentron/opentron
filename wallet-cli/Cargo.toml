@@ -22,7 +22,7 @@ tonic = "0.2"
 rand = "0.7"
 itertools = "0.9"
 rpassword = "4"
-ethabi = "11"
+ethabi = "12"
 lazy_static = "1.4"
 
 proto = { path = "../proto" }
