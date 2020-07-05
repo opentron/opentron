@@ -9,7 +9,7 @@ use std::str;
 
 use crate::error::Error;
 
-pub const WALLETD_PID_FILE: &str = "/tmp/walletd.pid";
+pub const WALLETD_PID_FILE: &str = "./walletd.pid";
 
 pub fn ensure_walletd() -> Result<(), Error> {
     match get_walletd_pid() {

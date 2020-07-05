@@ -409,7 +409,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stderr = File::create("/tmp/walletd.err").unwrap();
 
     let daemonize = Daemonize::new()
-        .pid_file("/tmp/walletd.pid")
+        .pid_file("./walletd.pid")
         .stdout(stdout)
         .stderr(stderr);
     match daemonize.start() {
