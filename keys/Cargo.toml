@@ -1,7 +1,7 @@
 [package]
 name = "keys"
 version = "0.1.0"
-authors = ["Shuyu WANG <andelf@gmail.com>"]
+authors = ["Andelf <andelf@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,7 +9,8 @@ edition = "2018"
 [dependencies]
 base58 = "0.1"
 hex = "0.4"
-sha2 = "0.8"
-sha3 = "0.8"
+sha2 = "0.9"
+sha3 = "0.9"
+digest = "0.9"
 parity-secp256k1 = "0.7"
 rand = "0.7"

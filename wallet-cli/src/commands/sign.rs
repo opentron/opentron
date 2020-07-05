@@ -56,8 +56,8 @@ pub fn sign_message(matches: &ArgMatches) -> Result<(), Error> {
     raw_message.extend(origin_message);
 
     let mut hasher = Keccak256::new();
-    hasher.input(&raw_message);
-    let digest = hasher.result();
+    hasher.update(&raw_message);
+    let digest = hasher.finalize();
 
     assert_eq!(digest.len(), 32);
 

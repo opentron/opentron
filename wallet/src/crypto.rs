@@ -42,7 +42,7 @@ pub fn aes_decrypt(key: &[u8], cipher_text: &[u8]) -> Result<Vec<u8>, Error> {
 #[inline]
 pub fn sha512(input: &[u8]) -> [u8; 64] {
     let mut hasher = Sha512::new();
-    hasher.input(input);
+    hasher.update(input);
     // NOTE: From<GenericArray<u8, 64>> is not impl-ed for [u8; 64]
-    unsafe { mem::transmute(hasher.result()) }
+    unsafe { mem::transmute(hasher.finalize()) }
 }

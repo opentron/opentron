@@ -1,6 +1,7 @@
 use base58::{FromBase58, ToBase58};
 use hex::FromHex;
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
+use digest::Digest;
 use sha3::Keccak256;
 use std::convert::TryFrom;
 use std::fmt;
@@ -18,8 +19,8 @@ impl Address {
         let mut raw = [0x41; 21];
 
         let mut hasher = Keccak256::new();
-        hasher.input(public);
-        let digest = hasher.result();
+        hasher.update(public);
+        let digest = hasher.finalize();
 
         raw[1..21].copy_from_slice(&digest[digest.len() - 20..]);
 
@@ -83,6 +84,14 @@ impl TryFrom<&Vec<u8>> for Address {
     }
 }
 
+impl TryFrom<&str> for Address {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Address::from_str(value)
+    }
+}
+
 impl FromHex for Address {
     type Error = Error;
 
@@ -123,12 +132,12 @@ impl AsRef<[u8]> for Address {
 
 pub fn b58encode_check<T: AsRef<[u8]>>(raw: T) -> String {
     let mut hasher = Sha256::new();
-    hasher.input(raw.as_ref());
-    let digest1 = hasher.result();
+    hasher.update(raw.as_ref());
+    let digest1 = hasher.finalize();
 
     let mut hasher = Sha256::new();
-    hasher.input(&digest1);
-    let digest = hasher.result();
+    hasher.update(&digest1);
+    let digest = hasher.finalize();
 
     let mut raw = raw.as_ref().to_owned();
     raw.extend(&digest[..4]);
@@ -142,12 +151,12 @@ pub fn b58decode_check(s: &str) -> Result<Vec<u8>, Error> {
     let check = result.split_off(result.len() - 4);
 
     let mut hasher = Sha256::new();
-    hasher.input(&result);
-    let digest1 = hasher.result();
+    hasher.update(&result);
+    let digest1 = hasher.finalize();
 
     let mut hasher = Sha256::new();
-    hasher.input(&digest1);
-    let digest = hasher.result();
+    hasher.update(&digest1);
+    let digest = hasher.finalize();
 
     if check != &digest[..4] {
         Err(Error::InvalidChecksum)

@@ -18,7 +18,7 @@ impl ::merkle_tree::MerkleHasher for HashedSha256Hasher {
     }
 
     fn hash_nodes(left: &H256, right: &H256) -> H256 {
-        let result = Sha256::new().chain(left.as_bytes()).chain(right.as_bytes()).result();
+        let result = Sha256::new().chain(left.as_bytes()).chain(right.as_bytes()).finalize();
         unsafe { mem::transmute(result) }
     }
 }

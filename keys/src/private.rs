@@ -33,8 +33,8 @@ impl Private {
 
     pub fn sign(&self, data: &[u8]) -> Result<Signature, Error> {
         let mut hasher = Sha256::new();
-        hasher.input(data);
-        let digest = hasher.result();
+        hasher.update(data);
+        let digest = hasher.finalize();
 
         self.sign_digest(&digest)
     }

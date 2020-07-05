@@ -36,8 +36,8 @@ impl Public {
 
     pub fn verify(&self, data: &[u8], signature: &Signature) -> Result<(), Error> {
         let mut hasher = Sha256::new();
-        hasher.input(data);
-        let digest = hasher.result();
+        hasher.update(data);
+        let digest = hasher.finalize();
 
         self.verify_digest(&digest, signature)
     }
@@ -56,8 +56,8 @@ impl Public {
 
     pub fn recover(data: &[u8], signature: &Signature) -> Result<Public, Error> {
         let mut hasher = Sha256::new();
-        hasher.input(data);
-        let digest = hasher.result();
+        hasher.update(data);
+        let digest = hasher.finalize();
 
         Public::recover_digest(&digest, signature)
     }

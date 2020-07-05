@@ -10,4 +10,4 @@ edition = "2018"
 primitive-types = "0.7"
 
 [dev-dependencies]
-sha2 = "0.8"
+sha2 = "0.9"
