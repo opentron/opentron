@@ -962,9 +962,9 @@ dependencies = [
 
 [[package]]
 name = "grpc"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a60a5dcddc1fe95c580679d4924fb3e7466f33441eb444ca000afd5d81ae9f7e"
+checksum = "2632a201d4680b900494389747c9a8407d4fe85b0dbd8002cab55b649246b114"
 dependencies = [
  "base64 0.9.3",
  "bytes",
@@ -979,9 +979,9 @@ dependencies = [
 
 [[package]]
 name = "grpc-compiler"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d959eda75cd8128e11221f6135f2850bf12f2da224f6a52aba6e3dcdb9fc915"
+checksum = "28639c0bf54b98edbb908c113b0e24ed8443c921b090eee628cfd4ed28a9cd3d"
 dependencies = [
  "protobuf",
  "protobuf-codegen",
@@ -989,9 +989,9 @@ dependencies = [
 
 [[package]]
 name = "grpc-protobuf"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77ce2513aea6e5b3076008b8882bbdf3d776ffb0c2db53464b3c939227de8a39"
+checksum = "59e991b06899ac6b40399f9c83ed539f58da4007091b2972cd336b7e00098d8d"
 dependencies = [
  "bytes",
  "grpc",
@@ -1095,9 +1095,9 @@ checksum = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
 
 [[package]]
 name = "httpbis"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1d49907da40fc924bc6ef91f29e0e4dae2b69b01a340cfeb8ce12b2ad39aa14"
+checksum = "3d3e4404f8f87938a2db89336609bde64363f5a556b15af936343e7252c9648d"
 dependencies = [
  "bytes",
  "futures",
@@ -1852,9 +1852,9 @@ dependencies = [
 
 [[package]]
 name = "protoc-rust-grpc"
-version = "0.7.1"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "907c39331d4e66332b19f8283b1687c23c6f4fb3ef99bf9a9e4d3aaf585c3a98"
+checksum = "8c1e5a81f75b067037e8c5311088f083659591482eeb78083aa95cc4dbf416b3"
 dependencies = [
  "grpc-compiler",
  "protobuf",
@@ -2504,9 +2504,9 @@ checksum = "53953d2d3a5ad81d9f844a32f14ebb121f50b650cd59d0ee2a07cf13c617efed"
 
 [[package]]
 name = "tls-api"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c11d29d2c8329bc6a8ef4693b5bc71194629bbcf054a69f93ba0dbfca0e8cd8d"
+checksum = "4ebb4107c167a4087349fcf08aea4debc358fe69d60fe1df991781842cfe98a3"
 dependencies = [
  "log",
  "tokio",
@@ -2514,9 +2514,9 @@ dependencies = [
 
 [[package]]
 name = "tls-api-stub"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db95f49839aa0aa02e4912b6129d5d823635bfcba2951e474689785c407cd245"
+checksum = "6f8ff269def04f25ae84b9aac156a400b92c97018a184036548c91cedaafd783"
 dependencies = [
  "tls-api",
  "tokio",

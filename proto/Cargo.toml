@@ -11,8 +11,8 @@ with-serde = ["protobuf/with-serde", "serde"]
 [dependencies]
 bytes = "0.5"
 protobuf = { version = "2", features = ["with-serde"] }
-grpc = "0.7"
-grpc-protobuf = "0.7"
+grpc = "0.8"
+grpc-protobuf = "0.8"
 serde = { version = "1.0", optional = true, features = ["derive"] }
 
 [lib]
@@ -20,5 +20,5 @@ test = false
 doctest = false
 
 [build-dependencies]
-protoc-rust = "2.14"
-protoc-rust-grpc = "0.7"
+protoc-rust = "2.16"
+protoc-rust-grpc = "0.8"
