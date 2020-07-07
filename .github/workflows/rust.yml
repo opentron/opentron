@@ -16,3 +16,5 @@ jobs:
               run: cargo build -p walletd
             - name: Build wallet-cli
               run: cargo build -p wallet-cli
+            - name: Run tests
+              run: cargo test
