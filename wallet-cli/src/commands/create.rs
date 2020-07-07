@@ -1,10 +1,9 @@
 use clap::ArgMatches;
 use futures::executor;
 use hex::ToHex;
-use keys::KeyPair;
+use keys::{KeyPair, ZKey};
 use proto::api::EmptyMessage;
 use serde_json::json;
-use ztron_primitives::prelude::generate_zkey_pair;
 
 use crate::error::Error;
 use crate::utils::client;
@@ -49,32 +48,8 @@ pub fn create_zkey(matches: &ArgMatches) -> Result<(), Error> {
 }
 
 pub fn create_zkey_offline() -> Result<(), Error> {
-    let (addr, sk, esk, fvk) = generate_zkey_pair();
-
-    let ask = esk.ask.to_bytes();
-    let nsk = esk.nsk.to_bytes();
-    let ovk = esk.ovk.as_bytes();
-
-    let ak = fvk.vk.ak.to_bytes();
-    let nk = fvk.vk.nk.to_bytes();
-    let ivk = fvk.vk.ivk().to_bytes();
-
-    let pk_d = addr.pk_d().to_bytes();
-    let d = addr.diversifier().as_bytes();
-
-    println!("d = {}", d.encode_hex::<String>());
-    println!("sk = {}", sk.encode_hex::<String>());
-    println!("pk_d = {}", pk_d.encode_hex::<String>());
-    println!("address = {}", addr);
-
-    println!("ask = {}", ask.encode_hex::<String>());
-    println!("nsk = {}", nsk.encode_hex::<String>());
-    println!("ovk = {}", ovk.encode_hex::<String>());
-
-    println!("ak = {}", ak.encode_hex::<String>());
-    println!("nk = {}", nk.encode_hex::<String>());
-    println!("ivk = {}", ivk.encode_hex::<String>());
-
+    let zkey = ZKey::generate();
+    println!("{:#?}", zkey);
     Ok(())
 }
 

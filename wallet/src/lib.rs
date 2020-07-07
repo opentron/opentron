@@ -1,5 +1,5 @@
 use hex::{FromHex, ToHex};
-use keys::{Address, KeyPair, Private, Public, Signature};
+use keys::{Address, KeyPair, Private, Public, Signature, ZAddress, ZKey};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
@@ -8,7 +8,6 @@ use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
-use ztron_primitives::prelude::{generate_zkey_pair, ExpandedSpendingKey, FullViewingKey, PaymentAddress, JUBJUB};
 
 use config::determine_config_directory;
 pub use error::Error;
@@ -32,7 +31,7 @@ pub struct Wallet {
     // when unlocked
     crypto_key: Option<Vec<u8>>,
     keypairs: Option<Vec<KeyPair>>,
-    zaddrs: HashMap<PaymentAddress, Option<ZSecretKey>>,
+    zaddrs: HashMap<ZAddress, Option<ZSecretKey>>,
 }
 
 impl Wallet {
@@ -270,7 +269,7 @@ impl Wallet {
             .ok_or(Error::Runtime("matching public key not found"))
     }
 
-    pub fn import_zkey(&mut self, addr: PaymentAddress, sk: ZSecretKey) -> Result<(), Error> {
+    pub fn import_zkey(&mut self, addr: ZAddress, sk: ZSecretKey) -> Result<(), Error> {
         if self.is_locked() {
             return Err(Error::Runtime("unable to import key to a locked wallet"));
         }
@@ -279,39 +278,14 @@ impl Wallet {
         Ok(())
     }
 
-    pub fn create_zkey(&mut self) -> Result<(PaymentAddress, ZSecretKey), Error> {
-        let (addr, sk, _, _) = generate_zkey_pair();
-        self.import_zkey(addr.clone(), sk)?;
-        Ok((addr, sk))
+    pub fn create_zkey(&mut self) -> Result<(ZAddress, ZSecretKey), Error> {
+        let zkey = ZKey::generate();
+        self.import_zkey(zkey.payment_address().clone(), zkey.sk().clone())?;
+        Ok((zkey.payment_address().clone(), zkey.sk().clone()))
     }
 
-    pub fn list_zkeys(&self) -> Result<Vec<PaymentAddress>, Error> {
+    pub fn list_zkeys(&self) -> Result<Vec<ZAddress>, Error> {
         Ok(self.zaddrs.keys().cloned().collect())
-    }
-
-    pub fn get_expanded_spending_key(&self, addr: &PaymentAddress) -> Result<ExpandedSpendingKey, Error> {
-        if self.is_locked() {
-            return Err(Error::Runtime("unable to import key to a locked wallet"));
-        }
-
-        match self.zaddrs.get(addr) {
-            Some(&Some(ref sk)) => Ok(ExpandedSpendingKey::from_spending_key(sk)),
-            _ => Err(Error::Runtime("payment address not found in wallet")),
-        }
-    }
-
-    pub fn get_full_viewing_key(&self, addr: &PaymentAddress) -> Result<FullViewingKey, Error> {
-        if self.is_locked() {
-            return Err(Error::Runtime("unable to import key to a locked wallet"));
-        }
-
-        match self.zaddrs.get(addr) {
-            Some(&Some(ref sk)) => Ok(FullViewingKey::from_expanded_spending_key(
-                &ExpandedSpendingKey::from_spending_key(sk),
-                &JUBJUB,
-            )),
-            _ => Err(Error::Runtime("payment address not found in wallet")),
-        }
     }
 
     fn sync_to_wallet_file(&self) -> Result<(), Error> {
@@ -363,7 +337,7 @@ fn json_to_keys(val: &serde_json::Value) -> Result<HashSet<Public>, Error> {
     }
 }
 
-fn json_to_zkeys(val: &serde_json::Value) -> Result<HashMap<PaymentAddress, Option<ZSecretKey>>, Error> {
+fn json_to_zkeys(val: &serde_json::Value) -> Result<HashMap<ZAddress, Option<ZSecretKey>>, Error> {
     if val["version"] != json!(WALLET_FILE_VERSION.to_owned()) {
         return Err(Error::Runtime("malformed json, version not supported"));
     }
@@ -377,7 +351,7 @@ fn json_to_zkeys(val: &serde_json::Value) -> Result<HashMap<PaymentAddress, Opti
         .and_then(|obj| {
             obj.keys()
                 .map(|k| {
-                    k.parse::<PaymentAddress>()
+                    k.parse::<ZAddress>()
                         .and_then(|addr| Ok((addr, None)))
                         .map_err(Error::from)
                 })
@@ -402,7 +376,7 @@ fn encrypt_keypairs_to_json(keypairs: &Vec<KeyPair>, encrypt_key: &[u8]) -> Resu
 }
 
 fn encrypt_zkeys_to_json(
-    zkeys: &HashMap<PaymentAddress, Option<ZSecretKey>>,
+    zkeys: &HashMap<ZAddress, Option<ZSecretKey>>,
     encrypt_key: &[u8],
 ) -> Result<serde_json::Value, Error> {
     let mut result = json!({});
@@ -445,7 +419,7 @@ fn decrypt_wallet_json_to_keypairs(val: &serde_json::Value, decrypt_key: &[u8]) 
 fn decrypt_wallet_json_to_zkeys(
     val: &serde_json::Value,
     decrypt_key: &[u8],
-) -> Result<HashMap<PaymentAddress, Option<ZSecretKey>>, Error> {
+) -> Result<HashMap<ZAddress, Option<ZSecretKey>>, Error> {
     if val["version"] != json!(WALLET_FILE_VERSION.to_owned()) {
         return Err(Error::Runtime("malformed json"));
     }
@@ -465,10 +439,10 @@ fn decrypt_wallet_json_to_zkeys(
                         .and_then(|s| Vec::from_hex(s).map_err(Error::from))?;
                     let sk_raw = crypto::aes_decrypt(decrypt_key, &cipher)?;
                     let mut sk = ZSecretKey::default();
-                    (&mut sk).copy_from_slice(&sk_raw);
+                    sk.copy_from_slice(&sk_raw);
                     Ok((addr.parse()?, Some(sk)))
                 })
-                .collect::<Result<HashMap<PaymentAddress, Option<ZSecretKey>>, Error>>()
+                .collect::<Result<HashMap<ZAddress, Option<ZSecretKey>>, Error>>()
         })?;
     Ok(zkeys)
 }
@@ -507,16 +481,6 @@ mod tests {
         // println!("{:?}", w.zaddrs);
 
         let zaddr = w.zaddrs.keys().next().unwrap();
-        let esk = w.get_expanded_spending_key(zaddr).unwrap();
-        println!("ask => {:}", esk.ask.to_bytes().encode_hex::<String>());
-        println!("nsk => {:}", esk.nsk.to_bytes().encode_hex::<String>());
-        println!("ovk => {:}", esk.ovk.as_bytes().encode_hex::<String>());
-
-        let fvk = w.get_full_viewing_key(zaddr).unwrap();
-        println!("ak  => {:}", fvk.vk.ak.to_bytes().encode_hex::<String>());
-        println!("nk  => {:}", fvk.vk.nk.to_bytes().encode_hex::<String>());
-        println!("ivk => {:}", fvk.vk.ivk().to_bytes().encode_hex::<String>());
-
         assert!(fs::remove_file(w.wallet_file()).is_ok());
     }
 }

@@ -16,4 +16,3 @@ rand = "0.7"
 hex = "0.4"
 
 keys = { path = "../keys" }
-ztron_primitives = { path = "../ztron_primitives" }

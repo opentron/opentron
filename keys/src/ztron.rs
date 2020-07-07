@@ -1,6 +1,7 @@
 use bech32::{FromBase32, ToBase32};
 use ff::PrimeField;
 use pairing::bls12_381::Bls12;
+use std::hash::{Hash, Hasher};
 use std::io;
 use std::mem;
 use std::str::FromStr;
@@ -16,6 +17,7 @@ pub fn generate_rcm() -> Vec<u8> {
     rcm.to_repr().as_ref().to_vec()
 }
 
+#[derive(Clone, PartialEq)]
 pub struct ZAddress(PaymentAddress<Bls12>);
 
 impl ::std::fmt::Debug for ZAddress {
@@ -47,6 +49,14 @@ impl FromStr for ZAddress {
             .map(ZAddress)
     }
 }
+
+impl Hash for ZAddress {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.to_bytes().hash(state);
+    }
+}
+
+impl Eq for ZAddress {}
 
 impl ZAddress {
     pub fn pk_d(&self) -> Vec<u8> {
@@ -122,8 +132,8 @@ impl ZKey {
         }
     }
 
-    pub fn sk(&self) -> &[u8] {
-        &self.sk[..]
+    pub fn sk(&self) -> &[u8; 32] {
+        &self.sk
     }
 
     pub fn ask(&self) -> Vec<u8> {
@@ -199,7 +209,8 @@ mod tests {
         let zkey = ZKey::from_slice(
             &hex::decode("0be89fcec248ad504b798145f6785890cf2f7ffa49800fbb9a68240771157de2").unwrap(),
             &hex::decode("761e9ace60c7e96f1a4314").unwrap(),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert_eq!(
             zkey.payment_address().to_string(),
