@@ -16,12 +16,12 @@ pub struct Address([u8; 21]);
 
 impl Address {
     pub fn from_public(public: &Public) -> Address {
-        let mut raw = [0x41; 21];
 
         let mut hasher = Keccak256::new();
         hasher.update(public);
         let digest = hasher.finalize();
 
+        let mut raw = [0x41; 21];
         raw[1..21].copy_from_slice(&digest[digest.len() - 20..]);
 
         Address(raw)
@@ -45,6 +45,14 @@ impl Address {
         let mut inner = [0x41; 21];
         inner[1..21].copy_from_slice(raw);
         Address(inner)
+    }
+
+    pub fn from_bytes(raw: &[u8]) -> &Address {
+        assert!(raw.len() == 21);
+
+        unsafe {
+            std::mem::transmute(&raw[0])
+        }
     }
 }
 
