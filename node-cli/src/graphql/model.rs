@@ -157,25 +157,6 @@ pub(crate) struct Context {
     pub app: Arc<AppContext>,
 }
 
-impl<S> GraphQLType<S> for Context
-where
-    S: ScalarValue,
-{
-    type Context = Self;
-    type TypeInfo = ();
-
-    fn name(_: &()) -> Option<&str> {
-        Some("_Context")
-    }
-
-    fn meta<'r>(_: &(), registry: &mut Registry<'r, S>) -> MetaType<'r, S>
-    where
-        S: 'r,
-    {
-        registry.build_object_type::<Self>(&(), &[]).into_meta()
-    }
-}
-
 // To make our context usable by Juniper, we have to implement a marker trait.
 impl juniper::Context for Context {}
 
