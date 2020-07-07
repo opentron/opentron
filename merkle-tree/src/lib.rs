@@ -30,12 +30,12 @@ mod tests {
 
         fn hash(input: &Self::Input) -> H256 {
             let mut sha256 = Sha256::new();
-            sha256.input(input);
-            unsafe { mem::transmute(sha256.result()) }
+            sha256.update(input);
+            unsafe { mem::transmute(sha256.finalize()) }
         }
 
         fn hash_nodes(left: &H256, right: &H256) -> H256 {
-            let result = Sha256::new().chain(left.as_bytes()).chain(right.as_bytes()).result();
+            let result = Sha256::new().chain(left.as_bytes()).chain(right.as_bytes()).finalize();
             unsafe { mem::transmute(result) }
         }
     }
@@ -53,7 +53,7 @@ mod tests {
         let tree: MerkleTree<BytesSha256Hasher> = MerkleTree::from_vec(list);
         // sha256 of "0x00_00_00_00"
         assert_eq!(
-            &"0xdf3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+            &"df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
                 .parse::<H256>()
                 .unwrap(),
             tree.root_hash()
@@ -70,7 +70,7 @@ mod tests {
         //     'b40711a88c7039756fb8a73827eabe2c0fe5a0346ca7e0a104adc0fc764f528d'   # 00_00_00_01
         // )).hexdigest()
         assert_eq!(
-            &"0x430ebda8b2441cf6a796f7f2a9b3377ae2fc8b23fe022fc018bed864b0fa1815"
+            &"430ebda8b2441cf6a796f7f2a9b3377ae2fc8b23fe022fc018bed864b0fa1815"
                 .parse::<H256>()
                 .unwrap(),
             tree.root_hash()
@@ -91,7 +91,7 @@ mod tests {
         //     '433ebf5bc03dffa38536673207a21281612cef5faa9bc7a4d5b9be2fdb12cf1a'   # 00_00_00_02
         // )).hexdigest()
         assert_eq!(
-            &"0xbaab99a32bb15f1d10b9dd6958f98a729e8d237207b7d8b9e7789e382834d1eb"
+            &"baab99a32bb15f1d10b9dd6958f98a729e8d237207b7d8b9e7789e382834d1eb"
                 .parse::<H256>()
                 .unwrap(),
             tree.root_hash()

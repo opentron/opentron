@@ -480,7 +480,7 @@ mod tests {
         // println!("{:?}", w.keypairs);
         // println!("{:?}", w.zaddrs);
 
-        let zaddr = w.zaddrs.keys().next().unwrap();
+        let _zaddr = w.zaddrs.keys().next().unwrap();
         assert!(fs::remove_file(w.wallet_file()).is_ok());
     }
 }
