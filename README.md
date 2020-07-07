@@ -7,6 +7,8 @@ This project is under active development.
 - [x] wallet-cli (the full feature wallet/rpc client)
   - [x] walletd (the wallet daemon)
 - [ ] node-cli, under active development
+  - [x] sync with java-tron node
+  - [ ] transaction handling
 
 ## TODOs
 
@@ -21,17 +23,19 @@ This project is under active development.
   - [x] proto2: refactor the protobuf / ~~gRPC~~
     - your protobuf and gRPC definition sucks
   - [x] primitives
-    - [x] H265
+    - [x] use primitive-types
     - [x] Address, PublicKey, PrivateKey, Signature
   - [ ] config file
     - your config file sucks
     - [x] genesis block parsing
-    - [ ] toml config file parsing
+    - [x] toml config file parsing
+    - [ ] organize chain parameters
   - [ ] discover protocol
     - [x] demo works
   - [ ] channel protocol
     - [x] demo works
-    - [ ] sync
+    - [x] sync
+    - [ ] minor bug fix, timeout error
   - [ ] chain
     - [x] Block / Transaction
   - [ ] chainbase
@@ -41,6 +45,8 @@ This project is under active development.
   - [ ] mempool
   - [ ] consensus
   - [ ] EVM / TVM
+    - [x] 3.7 TVM <https://github.com/andelf/evm>
+    - [ ] 4.0 TVM with zksnark <https://github.com/andelf/librustzcash>
   - [ ] RPC replacement
     - will not support gRPC
     - might have json-rpc support
