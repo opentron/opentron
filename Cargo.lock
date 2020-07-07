@@ -520,6 +520,15 @@ checksum = "2f855e87e75a4799e18b8529178adcde6fd4f97c1449ff4821e747ff728bb102"
 
 [[package]]
 name = "crypto_api_chachapoly"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95b2ad7cab08fd71addba81df5077c49df208effdfb3118a1519f9cdeac5aaf2"
+dependencies = [
+ "crypto_api",
+]
+
+[[package]]
+name = "crypto_api_chachapoly"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19fc1fabcff68e7d49868d88eb65e6c314d85ea8307356c61d2a584160ba7775"
@@ -658,12 +667,37 @@ checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
 [[package]]
 name = "ff"
 version = "0.6.0"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+dependencies = [
+ "byteorder",
+ "ff_derive 0.6.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
+ "rand_core 0.5.1",
+ "subtle",
+]
+
+[[package]]
+name = "ff"
+version = "0.6.0"
 source = "git+https://github.com/zcash/librustzcash.git#b02cf3b467524fd40515f893d060b8f750d21a68"
 dependencies = [
  "byteorder",
- "ff_derive",
+ "ff_derive 0.6.0 (git+https://github.com/zcash/librustzcash.git)",
  "rand_core 0.5.1",
  "subtle",
+]
+
+[[package]]
+name = "ff_derive"
+version = "0.6.0"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+dependencies = [
+ "addchain",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -867,10 +901,22 @@ dependencies = [
 [[package]]
 name = "group"
 version = "0.6.0"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+dependencies = [
+ "byteorder",
+ "ff 0.6.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
+ "rand 0.7.3",
+ "rand_xorshift",
+ "subtle",
+]
+
+[[package]]
+name = "group"
+version = "0.6.0"
 source = "git+https://github.com/zcash/librustzcash.git#b02cf3b467524fd40515f893d060b8f750d21a68"
 dependencies = [
  "byteorder",
- "ff",
+ "ff 0.6.0 (git+https://github.com/zcash/librustzcash.git)",
  "rand 0.7.3",
  "rand_xorshift",
 ]
@@ -1203,12 +1249,16 @@ name = "keys"
 version = "0.1.0"
 dependencies = [
  "base58",
+ "bech32",
  "digest 0.9.0",
+ "ff 0.6.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
  "hex 0.4.2",
+ "pairing 0.16.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
  "parity-secp256k1",
  "rand 0.7.3",
  "sha2 0.9.1",
  "sha3",
+ "zcash_primitives",
 ]
 
 [[package]]
@@ -1477,11 +1527,23 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "pairing"
 version = "0.16.0"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+dependencies = [
+ "byteorder",
+ "ff 0.6.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
+ "group 0.6.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
+ "rand_core 0.5.1",
+ "subtle",
+]
+
+[[package]]
+name = "pairing"
+version = "0.16.0"
 source = "git+https://github.com/zcash/librustzcash.git#b02cf3b467524fd40515f893d060b8f750d21a68"
 dependencies = [
  "byteorder",
- "ff",
- "group",
+ "ff 0.6.0 (git+https://github.com/zcash/librustzcash.git)",
+ "group 0.6.0 (git+https://github.com/zcash/librustzcash.git)",
  "rand_core 0.5.1",
  "subtle",
 ]
@@ -3056,6 +3118,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e66366e18dc58b46801afbf2ca7661a9f59cc8c5962c29892b6039b4f86fa992"
 
 [[package]]
+name = "zcash_primitives"
+version = "0.2.0"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+dependencies = [
+ "aes 0.3.2",
+ "blake2b_simd",
+ "blake2s_simd",
+ "byteorder",
+ "crypto_api_chachapoly 0.2.2",
+ "ff 0.6.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
+ "fpe",
+ "hex 0.3.2",
+ "lazy_static",
+ "log",
+ "pairing 0.16.0 (git+https://github.com/andelf/librustzcash?branch=ztron)",
+ "rand 0.7.3",
+ "rand_core 0.5.1",
+ "sha2 0.8.1",
+ "subtle",
+]
+
+[[package]]
 name = "ztron_primitives"
 version = "0.2.0"
 dependencies = [
@@ -3064,14 +3148,14 @@ dependencies = [
  "blake2b_simd",
  "blake2s_simd",
  "byteorder",
- "crypto_api_chachapoly",
- "ff",
+ "crypto_api_chachapoly 0.4.2",
+ "ff 0.6.0 (git+https://github.com/zcash/librustzcash.git)",
  "fpe",
  "hex 0.4.2",
  "hex-literal",
  "lazy_static",
  "log",
- "pairing",
+ "pairing 0.16.0 (git+https://github.com/zcash/librustzcash.git)",
  "rand 0.7.3",
  "rand_core 0.5.1",
  "rand_xorshift",
