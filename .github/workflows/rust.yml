@@ -17,4 +17,4 @@ jobs:
             - name: Build wallet-cli
               run: cargo build -p wallet-cli
             - name: Run tests
-              run: cargo test
+              run: cargo test --exclude node-cli --workspace
