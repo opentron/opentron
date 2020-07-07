@@ -14,4 +14,4 @@ pub use keypair::KeyPair;
 pub use private::Private;
 pub use public::Public;
 pub use signature::Signature;
-pub use ztron::{ZAddress, ZKey};
+pub use ztron::{ZAddress, ZKey, generate_rcm};

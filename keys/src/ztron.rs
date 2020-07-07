@@ -8,6 +8,14 @@ use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey};
 use zcash_primitives::primitives::{Diversifier, PaymentAddress};
 use zcash_primitives::JUBJUB;
 
+pub fn generate_rcm() -> Vec<u8> {
+    use zcash_primitives::note_encryption::generate_esk;
+
+    let mut rng = rand::rngs::OsRng;
+    let rcm = generate_esk(&mut rng);
+    rcm.to_repr().as_ref().to_vec()
+}
+
 pub struct ZAddress(PaymentAddress<Bls12>);
 
 impl ::std::fmt::Debug for ZAddress {
@@ -78,22 +86,39 @@ impl ::std::fmt::Debug for ZKey {
 }
 
 impl ZKey {
-    pub fn new(sk: [u8; 32], d: [u8; 11]) -> Self {
+    pub fn new(sk: [u8; 32], d: [u8; 11]) -> Option<Self> {
         let esk = ExpandedSpendingKey::<Bls12>::from_spending_key(&sk);
         let fvk = FullViewingKey::from_expanded_spending_key(&esk, &JUBJUB);
         let d = Diversifier(d);
 
-        let address = fvk
-            .vk
-            .to_payment_address(d, &JUBJUB)
-            .expect("cannot generate payment address");
+        let address = fvk.vk.to_payment_address(d, &JUBJUB)?;
 
-        ZKey {
+        Some(ZKey {
             sk,
             d,
             esk,
             fvk,
             address: ZAddress(address),
+        })
+    }
+
+    pub fn from_slice(sk: &[u8], d: &[u8]) -> Option<Self> {
+        let mut raw_sk = [0u8; 32];
+        raw_sk.copy_from_slice(sk);
+        let mut raw_d = [0u8; 11];
+        raw_d.copy_from_slice(d);
+
+        Self::new(raw_sk, raw_d)
+    }
+
+    pub fn generate() -> Self {
+        let sk = rand::random::<[u8; 32]>();
+        loop {
+            let d = rand::random::<[u8; 11]>();
+            // or check: d.g_d::<Bls12>(&JUBJUB).is_some()
+            if let Some(zkey) = ZKey::new(sk, d) {
+                return zkey;
+            }
         }
     }
 
@@ -149,7 +174,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_ztron_address_parse() {
+    fn zkey_generate() {
+        let zkey = ZKey::generate();
+        println!("{:#?}", zkey);
+    }
+
+    #[test]
+    fn ztron_address_parse() {
         let zaddr: ZAddress = "ztron1wc0f4nnqcl5k7xjrznv662gv88tweqze2myeqf3g4hr9xv882y02f7mmteylu5gdlpx6qrj7s5t"
             .parse()
             .unwrap();
@@ -164,7 +195,20 @@ mod tests {
     }
 
     #[test]
-    fn test_ztron_zkey() {
+    fn zkey_from_slice() {
+        let zkey = ZKey::from_slice(
+            &hex::decode("0be89fcec248ad504b798145f6785890cf2f7ffa49800fbb9a68240771157de2").unwrap(),
+            &hex::decode("761e9ace60c7e96f1a4314").unwrap(),
+        ).unwrap();
+
+        assert_eq!(
+            zkey.payment_address().to_string(),
+            "ztron1wc0f4nnqcl5k7xjrznv662gv88tweqze2myeqf3g4hr9xv882y02f7mmteylu5gdlpx6qrj7s5t"
+        );
+    }
+
+    #[test]
+    fn ztron_zkey() {
         // A `curl https://api.nileex.io/wallet/getnewshieldedaddress`
         let mut sk = [0u8; 32];
         hex::decode_to_slice(
@@ -175,7 +219,7 @@ mod tests {
         let mut d = [0u8; 11];
         hex::decode_to_slice("761e9ace60c7e96f1a4314", &mut d[..]).unwrap();
 
-        let zkey = ZKey::new(sk, d);
+        let zkey = ZKey::new(sk, d).unwrap();
 
         println!("{:#?}", zkey);
         assert_eq!(
