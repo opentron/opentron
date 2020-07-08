@@ -350,9 +350,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.57"
+version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
+checksum = "f9a06fb2e53271d7c279ec1efea6ab691c35a2ae67ec0d91d7acec0caf13b518"
 
 [[package]]
 name = "cfb-mode"
@@ -698,7 +698,7 @@ checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
 [[package]]
 name = "ff"
 version = "0.6.0"
-source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#72010117131d87d564b5c4116f4931cb0e81fb23"
 dependencies = [
  "byteorder",
  "ff_derive",
@@ -709,7 +709,7 @@ dependencies = [
 [[package]]
 name = "ff_derive"
 version = "0.6.0"
-source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#72010117131d87d564b5c4116f4931cb0e81fb23"
 dependencies = [
  "addchain",
  "num-bigint",
@@ -951,7 +951,7 @@ dependencies = [
 [[package]]
 name = "group"
 version = "0.6.0"
-source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#72010117131d87d564b5c4116f4931cb0e81fb23"
 dependencies = [
  "byteorder",
  "ff",
@@ -1310,9 +1310,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.71"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9457b06509d27052635f90d6466700c65095fdf75409b3fbdd903e988b886f49"
+checksum = "a9f8082297d534141b30c8d39e9b1773713ab50fdbe4ff30f750d063b3bfd701"
 
 [[package]]
 name = "linked-hash-map"
@@ -1579,7 +1579,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "pairing"
 version = "0.16.0"
-source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#72010117131d87d564b5c4116f4931cb0e81fb23"
 dependencies = [
  "byteorder",
  "ff",
@@ -2812,9 +2812,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99bbad0de3fd923c9c3232ead88510b783e5a4d16a6154adffa3d53308de984c"
+checksum = "f0693bf8d6f2bf22c690fc61a9d21ac69efdbb894a17ed596b9af0f01e64b84b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3189,7 +3189,7 @@ checksum = "e66366e18dc58b46801afbf2ca7661a9f59cc8c5962c29892b6039b4f86fa992"
 [[package]]
 name = "zcash_primitives"
 version = "0.2.0"
-source = "git+https://github.com/andelf/librustzcash?branch=ztron#aa44ae7339589fbacc3a7eb7aad4151f936ec99d"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#72010117131d87d564b5c4116f4931cb0e81fb23"
 dependencies = [
  "aes 0.3.2",
  "blake2b_simd",
