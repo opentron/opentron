@@ -198,6 +198,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdcf67bb7ba7797a081cd19009948ab533af7c355d5caf1d08c777582d351e9c"
 
 [[package]]
+name = "bellman"
+version = "0.6.0"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#72010117131d87d564b5c4116f4931cb0e81fb23"
+dependencies = [
+ "bit-vec",
+ "blake2s_simd",
+ "byteorder",
+ "crossbeam",
+ "ff",
+ "futures 0.1.29",
+ "futures-cpupool",
+ "group",
+ "num_cpus",
+ "pairing",
+ "rand_core 0.5.1",
+ "subtle",
+]
+
+[[package]]
+name = "bit-vec"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02b4ff8b16e6076c3e14220b39fbc1fabb6737522281a388998046859400895f"
+
+[[package]]
 name = "bitflags"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -607,6 +632,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "directories"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72d337a64190607d4fcca2cb78982c5dd57f4916e19696b48a575fa746b6cb0f"
+dependencies = [
+ "libc",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "dirs"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -790,6 +825,12 @@ checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 
 [[package]]
 name = "futures"
+version = "0.1.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b980f2816d6ee8673b6517b52cb0e808a180efc92e5c19d02cdda79066703ef"
+
+[[package]]
+name = "futures"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e05b85ec287aac0dc34db7d4a569323df697f9c55b99b15d6b4ef8cde49f613"
@@ -818,6 +859,16 @@ name = "futures-core"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59f5fff90fd5d971f936ad674802482ba441b6f09ba5e15fd8b39145582ca399"
+
+[[package]]
+name = "futures-cpupool"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab90cde24b3319636588d0c35fe03b1333857621051837ed769faefb4c2162e4"
+dependencies = [
+ "futures 0.1.29",
+ "num_cpus",
+]
 
 [[package]]
 name = "futures-enum"
@@ -968,7 +1019,7 @@ checksum = "2632a201d4680b900494389747c9a8407d4fe85b0dbd8002cab55b649246b114"
 dependencies = [
  "base64 0.9.3",
  "bytes",
- "futures",
+ "futures 0.3.5",
  "httpbis",
  "log",
  "log-ndc",
@@ -1100,7 +1151,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d3e4404f8f87938a2db89336609bde64363f5a556b15af936343e7252c9648d"
 dependencies = [
  "bytes",
- "futures",
+ "futures 0.3.5",
  "log",
  "log-ndc",
  "net2",
@@ -1234,7 +1285,7 @@ dependencies = [
  "bson",
  "chrono",
  "fnv",
- "futures",
+ "futures 0.3.5",
  "futures-enum",
  "graphql-parser",
  "indexmap",
@@ -1261,7 +1312,7 @@ name = "juniper_hyper"
 version = "0.5.2"
 source = "git+https://github.com/graphql-rust/juniper.git#de3a79a1428238fdf645f92ae2eb62840c1c5304"
 dependencies = [
- "futures",
+ "futures 0.3.5",
  "hyper",
  "juniper",
  "serde_json",
@@ -1290,16 +1341,12 @@ name = "keys"
 version = "0.1.0"
 dependencies = [
  "base58",
- "bech32",
  "digest 0.9.0",
- "ff",
  "hex 0.4.2",
- "pairing",
  "parity-secp256k1",
  "rand 0.7.3",
  "sha2 0.9.1",
  "sha3",
- "zcash_primitives",
 ]
 
 [[package]]
@@ -1488,7 +1535,7 @@ dependencies = [
  "chrono",
  "clap",
  "ctrlc",
- "futures",
+ "futures 0.3.5",
  "hex 0.4.2",
  "hex-literal",
  "hyper",
@@ -2981,6 +3028,7 @@ dependencies = [
  "serde_json",
  "sha2 0.9.1",
  "thiserror",
+ "ztron",
 ]
 
 [[package]]
@@ -2990,7 +3038,7 @@ dependencies = [
  "chrono",
  "clap",
  "ethabi",
- "futures",
+ "futures 0.3.5",
  "grpc",
  "hex 0.4.2",
  "itertools 0.9.0",
@@ -3007,6 +3055,7 @@ dependencies = [
  "tokio",
  "tonic",
  "walletd",
+ "ztron",
 ]
 
 [[package]]
@@ -3015,13 +3064,14 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "daemonize",
- "futures",
+ "futures 0.3.5",
  "keys",
  "prost",
  "tokio",
  "tonic",
  "tonic-build",
  "wallet",
+ "ztron",
 ]
 
 [[package]]
@@ -3206,4 +3256,35 @@ dependencies = [
  "rand_core 0.5.1",
  "sha2 0.8.2",
  "subtle",
+]
+
+[[package]]
+name = "zcash_proofs"
+version = "0.2.0"
+source = "git+https://github.com/andelf/librustzcash?branch=ztron#72010117131d87d564b5c4116f4931cb0e81fb23"
+dependencies = [
+ "bellman",
+ "blake2b_simd",
+ "byteorder",
+ "directories",
+ "ff",
+ "pairing",
+ "rand_core 0.5.1",
+ "zcash_primitives",
+]
+
+[[package]]
+name = "ztron"
+version = "0.1.0"
+dependencies = [
+ "bech32",
+ "bellman",
+ "ff",
+ "hex 0.4.2",
+ "keys",
+ "pairing",
+ "rand 0.7.3",
+ "sha2 0.9.1",
+ "zcash_primitives",
+ "zcash_proofs",
 ]
