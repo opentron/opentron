@@ -18,7 +18,7 @@ pub fn generate_rcm() -> Vec<u8> {
 }
 
 #[derive(Clone, PartialEq)]
-pub struct ZAddress(PaymentAddress<Bls12>);
+pub struct ZAddress(pub PaymentAddress<Bls12>);
 
 impl ::std::fmt::Debug for ZAddress {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -72,9 +72,9 @@ impl ZAddress {
 
 pub struct ZKey {
     sk: [u8; 32],
-    d: Diversifier,
-    esk: ExpandedSpendingKey<Bls12>,
-    fvk: FullViewingKey<Bls12>,
+    pub d: Diversifier,
+    pub esk: ExpandedSpendingKey<Bls12>,
+    pub fvk: FullViewingKey<Bls12>,
     address: ZAddress,
 }
 

@@ -1,9 +1,10 @@
 use clap::ArgMatches;
 use futures::executor;
 use hex::ToHex;
-use keys::{KeyPair, ZKey};
+use keys::KeyPair;
 use proto::api::EmptyMessage;
 use serde_json::json;
+use ztron::keys::ZKey;
 
 use crate::error::Error;
 use crate::utils::client;

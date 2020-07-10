@@ -5,7 +5,7 @@ use std::sync::{Arc, RwLock};
 use tokio::runtime::Builder;
 use tonic::{transport::Server, Request, Response, Status};
 use wallet::Wallet;
-use keys::ZAddress;
+use ztron::keys::ZAddress;
 
 use api::local_wallet_server::{LocalWallet, LocalWalletServer};
 use api::{sign_digest_request::PrivateKeyOf, KeyPair};
@@ -385,10 +385,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stdout = File::create("/tmp/walletd.out").unwrap();
     let stderr = File::create("/tmp/walletd.err").unwrap();
 
-    let daemonize = Daemonize::new()
-        .pid_file("./walletd.pid")
-        .stdout(stdout)
-        .stderr(stderr);
+    let daemonize = Daemonize::new().pid_file("./walletd.pid").stdout(stdout).stderr(stderr);
     match daemonize.start() {
         Ok(_) => println!("Success, daemonized"),
         Err(e) => eprintln!("Error, {}", e),

@@ -28,3 +28,4 @@ lazy_static = "1.4"
 proto = { path = "../proto" }
 keys = { path = "../keys" }
 walletd = { path = "../walletd" }
+ztron = { path = "../ztron" }

@@ -13,8 +13,3 @@ sha3 = "0.9"
 digest = "0.9"
 parity-secp256k1 = "0.7"
 rand = "0.7"
-bech32 = "0.7"
-
-zcash_primitives = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-pairing = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-ff = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }

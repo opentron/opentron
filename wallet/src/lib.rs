@@ -1,5 +1,5 @@
 use hex::{FromHex, ToHex};
-use keys::{Address, KeyPair, Private, Public, Signature, ZAddress, ZKey};
+use keys::{Address, KeyPair, Private, Public, Signature};
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde_json::json;
@@ -8,6 +8,7 @@ use std::convert::TryFrom;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
+use ztron::keys::{ZAddress, ZKey};
 
 use config::determine_config_directory;
 pub use error::Error;

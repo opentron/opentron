@@ -16,6 +16,7 @@ futures = { version = "0.3", default-features = false, features = ["alloc"] }
 
 keys = { path = "../keys" }
 wallet = { path = "../wallet" }
+ztron = { path = "../ztron" }
 
 [build-dependencies]
 tonic-build = "0.2"
