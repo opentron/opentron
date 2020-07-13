@@ -35,6 +35,14 @@ impl ::std::fmt::Display for ZAddress {
     }
 }
 
+impl ::std::ops::Deref for ZAddress {
+    type Target = PaymentAddress<Bls12>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl FromStr for ZAddress {
     type Err = io::Error;
 
@@ -176,6 +184,14 @@ impl ZKey {
 
     pub fn payment_address(&self) -> &ZAddress {
         &self.address
+    }
+
+    pub fn expsk(&self) -> &ExpandedSpendingKey<Bls12> {
+        &self.esk
+    }
+
+    pub fn diversifier(&self) -> &Diversifier {
+        &self.d
     }
 }
 

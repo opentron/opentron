@@ -9,18 +9,21 @@ rand = "0.7"
 bech32 = "0.7"
 hex = "0.4"
 sha2 = "0.9"
+primitive-types = "0.7"
+lazy_static = "1.4"
+ethabi = "12"
+primitive-types = "0.7"
 
 keys = { path = "../keys" }
 
-# zcash_primitives = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-# zcash_proofs = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-# pairing = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-# ff = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-# bellman = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-# primitive-types = "0.7"
+zcash_primitives = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
+zcash_proofs = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
+pairing = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
+ff = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
+bellman = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
 
-zcash_primitives = { path = "../../librustzcash" }
-zcash_proofs = { path = "../../librustzcash" }
-pairing = { path = "../../librustzcash" }
-ff = { path = "../../librustzcash" }
-bellman = { path = "../../librustzcash" }
+#zcash_primitives = { path = "../../librustzcash/zcash_primitives" }
+#zcash_proofs = { path = "../../librustzcash/zcash_proofs" }
+#pairing = { path = "../../librustzcash/pairing" }
+#ff = { path = "../../librustzcash/ff" }
+#bellman = { path = "../../librustzcash/bellman" }
