@@ -12,7 +12,6 @@ sha2 = "0.9"
 primitive-types = "0.7"
 lazy_static = "1.4"
 ethabi = "12"
-primitive-types = "0.7"
 
 keys = { path = "../keys" }
 
