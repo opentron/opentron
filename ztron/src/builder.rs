@@ -486,7 +486,7 @@ impl<R: RngCore + CryptoRng> Builder<R> {
             return Err(Error::InvalidTransaction("too many sapling output"));
         }
 
-        let output = SaplingOutput::new(&mut self.rng, ovk, to.0, value, memo)?;
+        let output = SaplingOutput::new(&mut self.rng, ovk, (*to).clone(), value, memo)?;
         self.value_balance -= value;
         self.outputs.push(output);
 
