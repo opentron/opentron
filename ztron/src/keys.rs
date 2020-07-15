@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::io;
 use std::mem;
 use std::str::FromStr;
-use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey};
+use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
 use zcash_primitives::primitives::{Diversifier, PaymentAddress};
 use zcash_primitives::JUBJUB;
 
@@ -92,7 +92,7 @@ impl ::std::fmt::Debug for ZKey {
             .field("sk", &hex::encode(self.sk()))
             .field("ask", &hex::encode(self.ask()))
             .field("nsk", &hex::encode(self.nsk()))
-            .field("ovk", &hex::encode(self.ovk()))
+            .field("ovk", &hex::encode(&self.ovk().0[..]))
             .field("ak", &hex::encode(self.ak()))
             .field("nk", &hex::encode(self.nk()))
             .field("ivk", &hex::encode(self.ivk()))
@@ -152,8 +152,8 @@ impl ZKey {
         self.esk.nsk.to_repr().as_ref().to_vec()
     }
 
-    pub fn ovk(&self) -> &[u8] {
-        &self.esk.ovk.0[..]
+    pub fn ovk(&self) -> &OutgoingViewingKey {
+        &self.esk.ovk
     }
 
     pub fn ak(&self) -> Vec<u8> {

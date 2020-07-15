@@ -1,12 +1,12 @@
 //! Replacement of zcash_primitives::transaction::builder::Builder.
 
-use bellman::groth16::Proof;
+use crypto_api_chachapoly::ChachaPolyIetf;
 use ff::{Field, PrimeField};
 use keys::Address;
 use lazy_static::lazy_static;
-use pairing::bls12_381::{Bls12, Fr, FrRepr};
+use pairing::bls12_381::{Bls12, Fr};
 use primitive_types::U256;
-use rand::{rngs::OsRng, seq::SliceRandom, CryptoRng, RngCore};
+use rand::{rngs::OsRng, CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
 use zcash_primitives::jubjub::edwards;
 use zcash_primitives::jubjub::fs::{Fs, FsRepr};
@@ -16,18 +16,14 @@ use zcash_primitives::merkle_tree::MerklePath;
 use zcash_primitives::note_encryption::{Memo, SaplingNoteEncryption};
 use zcash_primitives::primitives::{Diversifier, Note, PaymentAddress};
 use zcash_primitives::prover::TxProver;
-use zcash_primitives::redjubjub::PrivateKey;
-use zcash_primitives::redjubjub::{PublicKey, Signature};
+use zcash_primitives::redjubjub::{PrivateKey, PublicKey, Signature};
 use zcash_primitives::sapling;
 use zcash_primitives::sapling::Node;
 use zcash_primitives::transaction::components::{Amount, GROTH_PROOF_SIZE};
 use zcash_primitives::JUBJUB;
 use zcash_proofs::prover::LocalTxProver;
-use zcash_proofs::sapling::SaplingProvingContext;
 
 use crate::keys::ZAddress;
-
-// pub use zcash_primitives::transaction::builder::Error;
 
 lazy_static! {
     pub static ref TX_PROVER: LocalTxProver = {
@@ -42,6 +38,7 @@ lazy_static! {
     };
 }
 
+// pub use zcash_primitives::transaction::builder::Error;
 #[derive(Debug, PartialEq)]
 pub enum Error {
     AnchorMismatch,
@@ -49,6 +46,8 @@ pub enum Error {
     ChangeIsNegative(Amount),
     InvalidAddress,
     InvalidAmount,
+    InvalidMerklePath,
+    InvalidRcm,
     NoChangeAddress,
     SpendProof,
     InvalidTransaction(&'static str),
@@ -61,6 +60,25 @@ impl ::std::fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+pub fn parse_merkle_path(path: &[u8], position: u64) -> Result<MerklePath<Node>, Error> {
+    let mut formated_path = Vec::with_capacity(1065);
+    formated_path.push(0x20); // depth = 32
+    for seg in path.chunks(32) {
+        formated_path.push(0x20); // length = 32
+        formated_path.extend_from_slice(seg);
+    }
+    // position in LE
+    formated_path.extend_from_slice(&position.to_le_bytes()[..]);
+    assert_eq!(formated_path.len(), 1065);
+    MerklePath::from_slice(&formated_path).map_err(|_| Error::InvalidMerklePath)
+}
+
+pub fn parse_rcm(value: &[u8]) -> Result<Fs, Error> {
+    let mut r = FsRepr::default();
+    r.as_mut().copy_from_slice(value);
+    Fs::from_repr(r).ok_or(Error::InvalidRcm)
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TransactionType {
@@ -293,12 +311,102 @@ fn abi_encode_transfer(spends: &[SpendDescription], outputs: &[OutputDescription
     ethabi::encode(&parameters)
 }
 
+fn abi_encode_burn(
+    spend_desc: &SpendDescription,
+    maybe_output: Option<&OutputDescription>,
+    transparent_output: &TransparentOutput,
+    binding_sig: &Signature,
+    burn_cipher: &[u8; 80],
+) -> Vec<u8> {
+    use ethabi::Token;
+
+    //input: nf, anchor, cv, rk, proof
+    //output: cm, cv, epk, proof
+    //function burn(
+    //    bytes32[10] calldata input,
+    //    bytes32[2] calldata spendAuthoritySignature,
+    //    uint256 rawValue,
+    //    bytes32[2] calldata bindingSignature,
+    //    address payTo,
+    //    bytes32[3] calldata burnCipher, // encryptBurnMessageByOvk(ovk, toAmount, transparentToAddress);
+    //    bytes32[9][] calldata output,
+    //    bytes32[21][] calldata c)
+
+    let input = {
+        let mut raw = Vec::with_capacity(10 * 32);
+        raw.extend_from_slice(&spend_desc.nullifier[..]);
+        raw.extend_from_slice(spend_desc.anchor.to_repr().as_ref());
+        spend_desc.cv.write(&mut raw).unwrap();
+        spend_desc.rk.write(&mut raw).unwrap();
+        raw.extend_from_slice(&spend_desc.zkproof[..]);
+        Token::FixedBytes(raw)
+    };
+    let spend_auth_sig = {
+        let mut raw = Vec::with_capacity(64);
+        spend_desc.spend_auth_sig.as_ref().unwrap().write(&mut raw).unwrap();
+        Token::FixedBytes(raw)
+    };
+    let raw_value = {
+        let mut raw = [0u8; 32];
+        transparent_output.amount.to_big_endian(&mut raw[..]);
+        Token::FixedBytes(raw.to_vec())
+    };
+    let binding_signature = {
+        let mut raw = Vec::with_capacity(64);
+        binding_sig.write(&mut raw).unwrap();
+        Token::FixedBytes(raw)
+    };
+    let pay_to = {
+        let mut raw = [0u8; 32];
+        raw[12..].copy_from_slice(transparent_output.address.as_tvm_bytes());
+        // FIXME: should use Token::Address
+        Token::FixedBytes(raw.to_vec())
+    };
+    let burn_cipher = Token::FixedBytes(burn_cipher.to_vec());
+    let output = Token::Array(
+        maybe_output
+            .iter()
+            .map(|output_desc| {
+                let mut raw = Vec::with_capacity(9 * 32);
+                raw.extend_from_slice(output_desc.cmu.to_repr().as_ref());
+                output_desc.cv.write(&mut raw).unwrap();
+                output_desc.ephemeral_key.write(&mut raw).unwrap();
+                raw.extend_from_slice(&output_desc.zkproof[..]);
+                Token::FixedBytes(raw)
+            })
+            .collect(),
+    );
+    let c = Token::Array(
+        maybe_output
+            .iter()
+            .map(|output_desc| {
+                let mut raw = Vec::with_capacity(21 * 32);
+                raw.extend_from_slice(&output_desc.enc_ciphertext[..]);
+                raw.extend_from_slice(&output_desc.out_ciphertext[..]);
+                Token::FixedBytes(raw)
+            })
+            .collect(),
+    );
+
+    let parameters = [
+        input,
+        spend_auth_sig,
+        raw_value,
+        binding_signature,
+        pay_to,
+        burn_cipher,
+        output,
+        c,
+    ];
+    ethabi::encode(&parameters)
+}
+
 /// Generates a Transaction from its inputs and outputs.
 pub struct Builder<R: RngCore + CryptoRng> {
     rng: R,
     contract_address: Address,
     scaling_factor: U256,
-    value_balance: Amount,
+    pub value_balance: Amount,
     anchor: Option<Fr>,
     spends: Vec<SaplingSpend>,
     outputs: Vec<SaplingOutput>,
@@ -471,7 +579,7 @@ impl<R: RngCore + CryptoRng> Builder<R> {
 
         let mut parameter = vec![0u8; 32];
 
-        let raw_value = U256::exp10(18); // value * scaleFactor
+        let raw_value = U256::from(shielded_output_value) * U256::exp10(18); // value * scaleFactor
         raw_value.to_big_endian(&mut parameter[..32]);
 
         parameter.extend_from_slice(output_desc.cmu.to_repr().as_ref());
@@ -489,14 +597,11 @@ impl<R: RngCore + CryptoRng> Builder<R> {
     }
 
     fn build_transfer(self, prover: &impl TxProver) -> Result<Vec<u8>, Error> {
-        println!("val bal => {:?}", self.value_balance);
         if self.value_balance != Amount::zero() {
             return Err(Error::InvalidAmount);
         }
 
         let mut ctx = prover.new_sapling_proving_context();
-
-        println!("generating proofs...");
 
         let mut spend_descs: Vec<_> = self
             .spends
@@ -509,8 +614,6 @@ impl<R: RngCore + CryptoRng> Builder<R> {
             .iter()
             .map(|output| output.generate_output_proof(&mut ctx, prover))
             .collect();
-
-        println!("generating proofs... done");
 
         let mut transaction_data = Vec::with_capacity(1024);
         transaction_data.extend_from_slice(self.contract_address.as_tvm_bytes());
@@ -544,8 +647,6 @@ impl<R: RngCore + CryptoRng> Builder<R> {
             hasher.finalize()
         };
 
-        println!("sighash => {:?}", hex::encode(&sighash));
-
         for (desc, spend) in spend_descs.iter_mut().zip(self.spends.iter()) {
             desc.generate_spend_sig(spend, sighash.as_ref());
         }
@@ -560,8 +661,25 @@ impl<R: RngCore + CryptoRng> Builder<R> {
         Ok(abi_encode_transfer(&spend_descs, &output_descs, &binding_sig))
     }
 
+    fn encrypt_burn_message(&self) -> Result<[u8; 80], Error> {
+        // encryptBurnMessageByOvk
+        let ovk = self.spends[0].expsk.ovk;
+        let mut plaintext = [0u8; 64];
+        let t_output = self.transparent_output.as_ref().unwrap();
+        t_output.amount.to_big_endian(&mut plaintext[..32]);
+        plaintext[32..32 + 21].copy_from_slice(t_output.address.as_bytes());
+
+        let mut output = [0u8; 80];
+        assert_eq!(
+            ChachaPolyIetf::aead_cipher()
+                .seal_to(&mut output, &plaintext, &[], &ovk.0[..], &[0u8; 12])
+                .unwrap(),
+            80
+        );
+        Ok(output)
+    }
+
     fn build_burn(self, prover: &impl TxProver) -> Result<Vec<u8>, Error> {
-        println!("val bal => {:?}", self.value_balance);
         if self.value_balance.is_negative() {
             return Err(Error::InvalidAmount);
         }
@@ -571,8 +689,61 @@ impl<R: RngCore + CryptoRng> Builder<R> {
             return Err(Error::InvalidTransaction("input & output amount mismatch"));
         }
 
-        unimplemented!()
+        let mut ctx = prover.new_sapling_proving_context();
 
+        let mut spend_desc = self.spends[0].generate_spend_proof(&mut ctx, prover);
+
+        let maybe_output_desc = if self.outputs.len() == 1 {
+            Some(self.outputs[0].generate_output_proof(&mut ctx, prover))
+        } else {
+            None
+        };
+
+        let mut transaction_data = Vec::with_capacity(1024);
+        transaction_data.extend_from_slice(self.contract_address.as_tvm_bytes());
+        // encodeSpendDescriptionWithoutSpendAuthSig
+        transaction_data.extend_from_slice(&spend_desc.nullifier[..]);
+        transaction_data.extend_from_slice(spend_desc.anchor.to_repr().as_ref());
+        spend_desc.cv.write(&mut transaction_data).unwrap();
+        spend_desc.rk.write(&mut transaction_data).unwrap();
+        transaction_data.extend_from_slice(&spend_desc.zkproof[..]);
+
+        if let Some(ref output_desc) = maybe_output_desc {
+            // encodeReceiveDescriptionWithoutC
+            transaction_data.extend_from_slice(output_desc.cmu.to_repr().as_ref());
+            output_desc.cv.write(&mut transaction_data).unwrap();
+            output_desc.ephemeral_key.write(&mut transaction_data).unwrap();
+            transaction_data.extend_from_slice(&output_desc.zkproof[..]);
+            // encodeCencCout
+            transaction_data.extend_from_slice(&output_desc.enc_ciphertext[..]);
+            transaction_data.extend_from_slice(&output_desc.out_ciphertext[..]);
+            transaction_data.extend(&[0u8; 12]);
+        }
+
+        transaction_data.extend_from_slice(self.transparent_output.as_ref().unwrap().address.as_tvm_bytes());
+        transaction_data.extend_from_slice(&i64::from(self.value_balance).to_be_bytes()[..]);
+
+        let sighash = {
+            let mut hasher = Sha256::new();
+            hasher.update(&transaction_data);
+            hasher.finalize()
+        };
+
+        spend_desc.generate_spend_sig(&self.spends[0], sighash.as_ref());
+
+        let binding_sig = prover
+            .binding_sig(&mut ctx, self.value_balance, sighash.as_ref())
+            .map_err(|_| Error::BindingSig)?;
+
+        let burn_ciphertext = self.encrypt_burn_message()?;
+
+        Ok(abi_encode_burn(
+            &spend_desc,
+            maybe_output_desc.as_ref(),
+            self.transparent_output.as_ref().unwrap(),
+            &binding_sig,
+            &burn_ciphertext,
+        ))
     }
 
     pub fn build(self, prover: &impl TxProver) -> Result<(TransactionType, Vec<u8>), Error> {
