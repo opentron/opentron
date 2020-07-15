@@ -266,7 +266,7 @@ mod tests {
             "bf2504458518201d0ca7290c63c668eaab3ce24627d8e407a84ea06cb5d2b50d"
         );
         assert_eq!(
-            hex::encode(zkey.ovk()),
+            hex::encode(&zkey.ovk().0[..]),
             "1c6dc699064b093f2e753b1b23b924e598823c482f163a28446d6b640cb884c6"
         );
         assert_eq!(
