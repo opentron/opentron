@@ -392,3 +392,52 @@ pub fn verify_burn_proof(data: &[u8]) -> Option<bool> {
     }
     Some(true)
 }
+
+/// pedersenhash, merklehash
+pub fn pedersen_hash(data: &[u8]) -> Option<Vec<u8>> {
+    use std::convert::TryInto;
+
+    let mut it = AbiArgIterator::new(data);
+
+    let level: usize = it.next_u256()?.try_into().ok()?;
+    let left = {
+        let mut f = FrRepr::default();
+        f.as_mut().copy_from_slice(it.next_byte32()?);
+        f
+    };
+    let right = {
+        let mut f = FrRepr::default();
+        f.as_mut().copy_from_slice(it.next_byte32()?);
+        f
+    };
+
+    let result = merkle_hash(level, &left, &right);
+    Some(result.as_ref().to_vec())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pedersen_hash() {
+        let a = hex::decode("05655316a07e6ec8c9769af54ef98b30667bfb6302b32987d552227dae86a087").unwrap();
+        let b = hex::decode("06041357de59ba64959d1b60f93de24dfe5ea1e26ed9e8a73d35b225a1845ba7").unwrap();
+
+        let a_repr = {
+            let mut f = FrRepr::default();
+            f.as_mut().copy_from_slice(&a);
+            f
+        };
+        let b_repr = {
+            let mut f = FrRepr::default();
+            f.as_mut().copy_from_slice(&b);
+            f
+        };
+        let result = merkle_hash(25, &a_repr, &b_repr);
+        assert_eq!(
+            hex::encode(result.as_ref()),
+            "61a50a5540b4944da27cbd9b3d6ec39234ba229d2c461f4d719bc136573bf45b"
+        );
+    }
+}
