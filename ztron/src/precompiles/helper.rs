@@ -76,6 +76,10 @@ impl<'a> AbiArgIterator<'a> {
     }
 
     pub fn next_array_of_byte32(&mut self) -> Option<Vec<&'a [u8]>> {
+        self.next_array_of_fixed_words(1)
+    }
+
+    pub fn next_array_of_fixed_words(&mut self, n: usize ) -> Option<Vec<&'a [u8]>> {
         // memory offset
         let mut local_offset: usize = self.next_u256()?.try_into().ok()?;
 
@@ -86,7 +90,7 @@ impl<'a> AbiArgIterator<'a> {
             local_offset += WORD_SIZE;
 
             let mut inner = AbiArgIterator::new(&self.data[local_offset..]);
-            (0..len).map(|_| inner.next_byte32()).collect()
+            (0..len).map(|_| inner.next_words_as_bytes(n)).collect()
         } else {
             Some(vec![])
         }

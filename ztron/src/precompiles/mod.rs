@@ -5,15 +5,14 @@
 // 0000000000000000000000000000000000000000000000000000000001000004 - pedersenHash
 
 use bellman::groth16::{Parameters, PreparedVerifyingKey, Proof};
-use ff::{Field, PrimeField};
+use ff::PrimeField;
 use lazy_static::lazy_static;
 use pairing::bls12_381::{Bls12, Fr, FrRepr};
 use primitive_types::U256;
 use zcash_primitives::jubjub::edwards;
-use zcash_primitives::jubjub::fs::{Fs, FsRepr};
 use zcash_primitives::jubjub::Unknown;
-use zcash_primitives::merkle_tree::{CommitmentTree, Hashable, IncrementalWitness, MerklePath};
-use zcash_primitives::redjubjub::Signature;
+use zcash_primitives::merkle_tree::Hashable;
+use zcash_primitives::redjubjub::{PublicKey, Signature};
 use zcash_primitives::sapling::{merkle_hash, Node};
 use zcash_primitives::transaction::components::Amount;
 use zcash_primitives::JUBJUB;
@@ -22,7 +21,7 @@ use zcash_proofs::sapling::SaplingVerificationContext;
 
 use self::helper::AbiArgIterator;
 
-mod helper;
+pub mod helper;
 
 struct SaplingParameters {
     spend_vk: PreparedVerifyingKey<Bls12>,
@@ -158,18 +157,18 @@ fn insert_leaf_to_merkle_tree(mut frontier: [[u8; 32]; 33], leaf_index: usize, l
     result
 }
 
-pub fn verify_mint_proof(input: &[u8]) -> Option<Vec<u8>> {
+pub fn verify_mint_proof(data: &[u8]) -> Option<Vec<u8>> {
     // (bytes32 cm, bytes32 cv, bytes32 epk, bytes32[6] proof,
     //  bytes32[2] binding_sig, uint256 value, bytes32 sighash,
     //  bytes32[33] frontier, uint256 leaf_count)
-    let mut it = AbiArgIterator::new(input);
+    let mut it = AbiArgIterator::new(data);
 
     let cm = it.next_byte32()?;
     let cv = it.next_byte32()?;
     let epk = it.next_byte32()?;
     let zkproof = it.next_words_as_bytes(6)?;
 
-    let bingding_sig = it.next_words_as_bytes(2)?;
+    let binding_sig = it.next_words_as_bytes(2)?;
     let value = it.next_u256()?;
     let sighash = it.next_byte32()?;
 
@@ -192,7 +191,7 @@ pub fn verify_mint_proof(input: &[u8]) -> Option<Vec<u8>> {
     }
 
     // librustzcashSaplingFinalCheck
-    let bingding_sig = Signature::read(bingding_sig).ok()?;
+    let binding_sig = Signature::read(binding_sig).ok()?;
     let value_balance = Amount::from_i64(-(value.as_u64() as i64)).ok()?;
     let sighash = {
         let mut raw = [0u8; 32];
@@ -200,7 +199,7 @@ pub fn verify_mint_proof(input: &[u8]) -> Option<Vec<u8>> {
         raw
     };
 
-    if !ctx.final_check(value_balance, &sighash, bingding_sig, &JUBJUB) {
+    if !ctx.final_check(value_balance, &sighash, binding_sig, &JUBJUB) {
         return None;
     }
 
@@ -218,12 +217,180 @@ pub fn verify_mint_proof(input: &[u8]) -> Option<Vec<u8>> {
     return Some(insert_leaf_to_merkle_tree(frontier, leaf_count.as_usize(), &leafs));
 }
 
-pub fn verify_transfer_proof(input: &[u8]) -> Option<Vec<u8>> {
-    unimplemented!()
+pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
+    // (bytes32[10][] input, bytes32[2][] spend_auth_sig, bytes32[9][] output,
+    //  bytes32[2] binding_sig, bytes32 sighash,
+    //  bytes32[33] frontier, uint256 leafCount)
+    let mut it = AbiArgIterator::new(data);
+
+    let inputs = it.next_array_of_fixed_words(10)?;
+    let spend_auth_sigs = it.next_array_of_fixed_words(2)?;
+
+    if inputs.len() != spend_auth_sigs.len() {
+        eprintln!("input parameter mismatch");
+        return None;
+    }
+
+    let outputs = it.next_array_of_fixed_words(9)?;
+
+    let binding_sig = it.next_words_as_bytes(2)?;
+    let sighash = {
+        let mut raw = [0u8; 32];
+        raw.copy_from_slice(it.next_byte32()?);
+        raw
+    };
+
+    let value = it.next_u256()?; // always 0
+
+    let frontier = it.next_words_as_bytes(33)?;
+    let leaf_count = it.next_u256()?;
+
+    let mut ctx = SaplingVerificationContext::new();
+
+    // check spend - librustzcashSaplingCheckSpendNew
+    // input: nf, anchor, cv, rk, proof
+    for (&input, &spend_auth_sig) in inputs.iter().zip(spend_auth_sigs.iter()) {
+        let mut iit = AbiArgIterator::new(input);
+
+        let nullifier = {
+            let mut raw = [0u8; 32];
+            raw.copy_from_slice(iit.next_byte32()?);
+            raw
+        };
+        let anchor = iit.next_byte32()?;
+        let cv = iit.next_byte32()?;
+        let rk = iit.next_byte32()?;
+        let zkproof = iit.next_words_as_bytes(6)?;
+
+        let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB).ok()?;
+        let anchor = Fr::from_repr(bytes_to_fr_repr(anchor))?;
+
+        let rk = PublicKey::<Bls12>::read(rk, &JUBJUB).ok()?;
+        let spend_auth_sig = Signature::read(spend_auth_sig).ok()?;
+
+        let zkproof = Proof::<Bls12>::read(zkproof).ok()?;
+
+        if !ctx.check_spend(
+            cv,
+            anchor,
+            &nullifier,
+            rk,
+            &sighash,
+            spend_auth_sig,
+            zkproof,
+            &SAPLING_PARAMETERS.spend_vk,
+            &JUBJUB,
+        ) {
+            println!("spend verify failed");
+            return None;
+        }
+    }
+
+    // check output - librustzcashSaplingCheckOutputNew
+    // output: cm, cv, epk, proof
+    let mut leafs: Vec<[u8; 32]> = Vec::with_capacity(2);
+    for output in outputs {
+        let mut oit = AbiArgIterator::new(output);
+
+        let cm = oit.next_byte32()?;
+        let cv = oit.next_byte32()?;
+        let epk = oit.next_byte32()?;
+        let zkproof = oit.next_words_as_bytes(6)?;
+
+        let cm = Fr::from_repr(bytes_to_fr_repr(cm))?;
+        let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB).ok()?;
+        let epk = edwards::Point::<Bls12, Unknown>::read(epk, &JUBJUB).ok()?;
+        let zkproof = Proof::<Bls12>::read(zkproof).ok()?;
+
+        if !ctx.check_output(cv, cm, epk, zkproof, &SAPLING_PARAMETERS.output_vk, &JUBJUB) {
+            println!("output verify failed");
+            return None;
+        }
+
+        leafs.push([0u8; 32]);
+        leafs.last_mut().map(|leaf| leaf.copy_from_slice(cm.to_repr().as_ref()));
+    }
+
+    // check binding sig - librustzcashSaplingFinalCheckNew
+
+    // normally 0
+    let value_balance = Amount::from_i64(value.as_u64() as i64).ok()?;
+    let binding_sig = Signature::read(binding_sig).ok()?;
+
+    if !ctx.final_check(value_balance, &sighash, binding_sig, &JUBJUB) {
+        println!("final check failed");
+        return None;
+    }
+
+    // insertLeaves
+    let frontier = {
+        let mut ret = [[0u8; 32]; 33];
+        for (buf, val) in ret.iter_mut().zip(frontier.chunks(32)) {
+            buf.copy_from_slice(val);
+        }
+        ret
+    };
+    return Some(insert_leaf_to_merkle_tree(frontier, leaf_count.as_usize(), &leafs));
 }
 
-pub fn verify_burn_proof(input: &[u8]) -> Option<Vec<u8>> {
-    unimplemented!()
+pub fn verify_burn_proof(data: &[u8]) -> Option<bool> {
+    // (bytes32[10] input, bytes32[2] spendAuthoritySignature, uint256 value,
+    // bytes32[2] bindingSignature, bytes32 signHash)
+    // input: nf, anchor, cv, rk, proof
+
+    let mut it = AbiArgIterator::new(data);
+
+    let nullifier = {
+        let mut raw = [0u8; 32];
+        raw.copy_from_slice(it.next_byte32()?);
+        raw
+    };
+    let anchor = it.next_byte32()?;
+    let cv = it.next_byte32()?;
+    let rk = it.next_byte32()?;
+    let zkproof = it.next_words_as_bytes(6)?;
+    let spend_auth_sig = it.next_words_as_bytes(2)?;
+    let value = it.next_u256()?;
+    let binding_sig = it.next_words_as_bytes(2)?;
+    let sighash = {
+        let mut raw = [0u8; 32];
+        raw.copy_from_slice(it.next_byte32()?);
+        raw
+    };
+
+    let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB).ok()?;
+    let anchor = Fr::from_repr(bytes_to_fr_repr(anchor))?;
+    let rk = PublicKey::<Bls12>::read(rk, &JUBJUB).ok()?;
+    let spend_auth_sig = Signature::read(spend_auth_sig).ok()?;
+    let zkproof = Proof::<Bls12>::read(zkproof).ok()?;
+
+    let mut ctx = SaplingVerificationContext::new();
+
+    // librustzcashSaplingCheckSpend
+    if !ctx.check_spend(
+        cv,
+        anchor,
+        &nullifier,
+        rk,
+        &sighash,
+        spend_auth_sig,
+        zkproof,
+        &SAPLING_PARAMETERS.spend_vk,
+        &JUBJUB,
+    ) {
+        println!("spend verify failed");
+        return None;
+    }
+
+    // librustzcashSaplingFinalCheck
+    let value_balance = Amount::from_i64(value.as_u64() as i64).ok()?;
+    let binding_sig = Signature::read(binding_sig).ok()?;
+
+    if !ctx.final_check(value_balance, &sighash, binding_sig, &JUBJUB) {
+        println!("final check failed");
+        return None;
+    }
+    Some(true)
 }
 
 #[cfg(test)]
@@ -232,8 +399,7 @@ mod tests {
 
     #[test]
     fn test_verify_mint_proof() {
-        let raw = "a4a318b818080697617d9cc681624570570b1ff2d76d126ef11d59d5845d5f39297543de8c3536545890e96bc16ef5a76c7f85e7f9d626d8d31c8d05652ad0be5a1135a5e85bf8b89a482050b69899898314914a0d1556b5c30b50f499e5b3188b474e588ac50837de987e15b65cee71742fa83d78b526820b4d1858c8a76a514c8d6b9978f92c392e4bd892a77dec41a129f3e38f452e1cb68ad34ad4d685c68567ba5b5b516e30986ab23d33c80bd670c46f8fcef9dba9b3cbbf0d2568533210c2f81270762e71dbef95d0189d06ad0760cac8effe21732a8eb5c69a29070d9db9b85e311cb30dc24e2b23e20fffdc9017c6edac380c4092c1eea85856b55168944f2c6fba78f68dc3ea172a97369654995c090e8e1b2bdfaacff0bf1e47a233c9c087fe4428578fc65db6aeaad4d4ccba124d6f4a247ab08af5a999a994d24dd249b890259cd18542a17b4a773ec678e4efebfd138e25e16546c790f2c2040000000000000000000000000000000000000000000000000000000000000001354a47315acce4ed131b7884426e62371b9415a103b1ee2495e7f062d37188480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
-
+        let raw = include_str!("./mint.hex").trim();
         let input = hex::decode(raw).unwrap();
 
         println!("len = {} {}", input.len(), input.len() as f64 / 32.0);
@@ -242,5 +408,29 @@ mod tests {
         for word in ret.chunks(32) {
             println!("=> {}", hex::encode(word));
         }
+    }
+
+    #[test]
+    fn test_verify_transfer_proof() {
+        let raw = include_str!("./transfer.hex").trim();
+        let input = hex::decode(raw).unwrap();
+
+        println!("len = {} {}", input.len(), input.len() as f64 / 32.0);
+
+        let ret = verify_transfer_proof(&input).unwrap();
+        for word in ret.chunks(32) {
+            println!("=> {}", hex::encode(word));
+        }
+    }
+
+    #[test]
+    fn test_verify_burn_proof() {
+        let raw = include_str!("./burn.hex").trim();
+        let input = hex::decode(raw).unwrap();
+
+        println!("len = {} {}", input.len(), input.len() as f64 / 32.0);
+
+        let ret = verify_burn_proof(&input).unwrap();
+        println!("ret => {:?}", ret);
     }
 }
