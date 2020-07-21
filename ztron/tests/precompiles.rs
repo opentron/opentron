@@ -9,8 +9,9 @@ fn test_verify_mint_proof() {
 
     println!("len={} words={}", input.len(), input.len() as f64 / 32.0);
 
-    let ret = verify_mint_proof(&input).unwrap();
-    for word in ret.chunks(32) {
+    let ret = verify_mint_proof(&input);
+    assert!(ret.is_ok());
+    for word in ret.unwrap().chunks(32) {
         println!("=> {}", hex::encode(word));
     }
 }
@@ -22,8 +23,9 @@ fn test_verify_transfer_proof() {
 
     println!("len={} words={}", input.len(), input.len() as f64 / 32.0);
 
-    let ret = verify_transfer_proof(&input).unwrap();
-    for word in ret.chunks(32) {
+    let ret = verify_transfer_proof(&input);
+    assert!(ret.is_ok());
+    for word in ret.unwrap().chunks(32) {
         println!("=> {}", hex::encode(word));
     }
 }
@@ -35,8 +37,9 @@ fn test_verify_transfer_proof_1_to_2() {
 
     println!("len={} words={}", input.len(), input.len() as f64 / 32.0);
 
-    let ret = verify_transfer_proof(&input).unwrap();
-    for word in ret.chunks(32) {
+    let ret = verify_transfer_proof(&input);
+    assert!(ret.is_ok());
+    for word in ret.unwrap().chunks(32) {
         println!("=> {}", hex::encode(word));
     }
 }
@@ -48,7 +51,7 @@ fn test_verify_burn_proof() {
 
     println!("len={} words={}", input.len(), input.len() as f64 / 32.0);
 
-    let verified = verify_burn_proof(&input).unwrap();
-    println!("ret => {:?}", verified);
-    assert!(verified);
+    let ret = verify_burn_proof(&input);
+    println!("ret => {:?}", ret);
+    assert!(ret.is_ok());
 }

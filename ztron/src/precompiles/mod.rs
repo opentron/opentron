@@ -23,6 +23,7 @@ use self::helper::AbiArgIterator;
 
 pub mod helper;
 
+#[allow(dead_code)]
 struct SaplingParameters {
     spend_vk: PreparedVerifyingKey<Bls12>,
     output_vk: PreparedVerifyingKey<Bls12>,
@@ -53,7 +54,42 @@ lazy_static! {
     };
 }
 
-const TREE_WIDTH: usize = 0x100000000;
+/// Error while running a precompile.
+#[derive(Debug)]
+pub enum Error {
+    /// ABI decode error, invalid input.
+    AbiDecode,
+    /// Invalid value for librustzcash.
+    InvalidValue,
+    /// Error while `check_spend`.
+    CheckSpend,
+    /// Error while `check_output`.
+    ChecknOutput,
+    /// Error while `final_check`.
+    FinalCheck,
+    /// Io error.
+    Io(std::io::Error),
+    /// Customized error message.
+    Runtime(&'static str),
+}
+
+impl ::std::fmt::Display for Error {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl From<std::option::NoneError> for Error {
+    fn from(_: std::option::NoneError) -> Self {
+        Error::InvalidValue
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(inner: std::io::Error) -> Self {
+        Error::Io(inner)
+    }
+}
 
 /// Get frontier slot from leaf index, i.e. current leaf count, from 0.
 fn get_frontier_slot(index: usize) -> usize {
@@ -83,6 +119,8 @@ fn bytes_to_fr_repr(raw: &[u8]) -> FrRepr {
 }
 
 fn insert_leaf_to_merkle_tree(mut frontier: [[u8; 32]; 33], leaf_index: usize, leafs: &[[u8; 32]]) -> Vec<u8> {
+    const TREE_WIDTH: usize = 0x100000000;
+
     let slots: Vec<usize> = (0..leafs.len()).map(|i| get_frontier_slot(leaf_index + i)).collect();
     let mut result = {
         let mut result_len = 32;
@@ -127,7 +165,6 @@ fn insert_leaf_to_merkle_tree(mut frontier: [[u8; 32]; 33], leaf_index: usize, l
             };
 
             let hash_value = merkle_hash(level - 1, &left, &right);
-            // println!("hash_value => {:?}", hash_value);
 
             node_value[..].copy_from_slice(hash_value.as_ref());
             result[offset..offset + 32].copy_from_slice(hash_value.as_ref());
@@ -157,7 +194,7 @@ fn insert_leaf_to_merkle_tree(mut frontier: [[u8; 32]; 33], leaf_index: usize, l
     result
 }
 
-pub fn verify_mint_proof(data: &[u8]) -> Option<Vec<u8>> {
+pub fn verify_mint_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
     // (bytes32 cm, bytes32 cv, bytes32 epk, bytes32[6] proof,
     //  bytes32[2] binding_sig, uint256 value, bytes32 sighash,
     //  bytes32[33] frontier, uint256 leaf_count)
@@ -166,13 +203,13 @@ pub fn verify_mint_proof(data: &[u8]) -> Option<Vec<u8>> {
     let cm = it.next_byte32()?;
     let cv = it.next_byte32()?;
     let epk = it.next_byte32()?;
-    let zkproof = it.next_words_as_bytes(6)?;
+    let zkproof = it.next_fixed_words(6)?;
 
-    let binding_sig = it.next_words_as_bytes(2)?;
+    let binding_sig = it.next_fixed_words(2)?;
     let value = it.next_u256()?;
-    let sighash = it.next_byte32()?;
+    let sighash = it.next_byte32_as_array()?;
 
-    let frontier = it.next_words_as_bytes(33)?;
+    let frontier = it.next_fixed_words(33)?;
     // current leaf count
     let leaf_count = it.next_u256()?;
 
@@ -180,27 +217,22 @@ pub fn verify_mint_proof(data: &[u8]) -> Option<Vec<u8>> {
 
     // librustzcashSaplingCheckOutput
     let cm = Fr::from_repr(bytes_to_fr_repr(cm))?;
-    let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB).ok()?;
-    let epk = edwards::Point::<Bls12, Unknown>::read(epk, &JUBJUB).ok()?;
-    let zkproof = Proof::<Bls12>::read(zkproof).ok()?;
+    let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
+    let epk = edwards::Point::<Bls12, Unknown>::read(epk, &JUBJUB)?;
+    let zkproof = Proof::<Bls12>::read(zkproof)?;
 
     let mut ctx = SaplingVerificationContext::new();
 
     if !ctx.check_output(cv, cm, epk, zkproof, &SAPLING_PARAMETERS.output_vk, &JUBJUB) {
-        return None;
+        return Err(Error::ChecknOutput);
     }
 
     // librustzcashSaplingFinalCheck
-    let binding_sig = Signature::read(binding_sig).ok()?;
-    let value_balance = Amount::from_i64(-(value.as_u64() as i64)).ok()?;
-    let sighash = {
-        let mut raw = [0u8; 32];
-        raw.copy_from_slice(sighash);
-        raw
-    };
+    let binding_sig = Signature::read(binding_sig)?;
+    let value_balance = Amount::from_i64(-(value.as_u64() as i64)).map_err(|_| Error::InvalidValue)?;
 
     if !ctx.final_check(value_balance, &sighash, binding_sig, &JUBJUB) {
-        return None;
+        return Err(Error::FinalCheck);
     }
 
     // insertLeaves
@@ -214,10 +246,10 @@ pub fn verify_mint_proof(data: &[u8]) -> Option<Vec<u8>> {
     let mut leafs = [[0u8; 32]];
     leafs[0].copy_from_slice(cm.to_repr().as_ref());
 
-    return Some(insert_leaf_to_merkle_tree(frontier, leaf_count.as_usize(), &leafs));
+    Ok(insert_leaf_to_merkle_tree(frontier, leaf_count.as_usize(), &leafs))
 }
 
-pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
+pub fn verify_transfer_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
     // (bytes32[10][] input, bytes32[2][] spend_auth_sig, bytes32[9][] output,
     //  bytes32[2] binding_sig, bytes32 sighash,
     //  bytes32[33] frontier, uint256 leafCount)
@@ -227,22 +259,17 @@ pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
     let spend_auth_sigs = it.next_array_of_fixed_words(2)?;
 
     if inputs.len() != spend_auth_sigs.len() {
-        eprintln!("input parameter mismatch");
-        return None;
+        return Err(Error::Runtime("input and spend_auth_sig are of different length"));
     }
 
     let outputs = it.next_array_of_fixed_words(9)?;
 
-    let binding_sig = it.next_words_as_bytes(2)?;
-    let sighash = {
-        let mut raw = [0u8; 32];
-        raw.copy_from_slice(it.next_byte32()?);
-        raw
-    };
+    let binding_sig = it.next_fixed_words(2)?;
+    let sighash = it.next_byte32_as_array()?;
 
     let value = it.next_u256()?; // always 0
 
-    let frontier = it.next_words_as_bytes(33)?;
+    let frontier = it.next_fixed_words(33)?;
     let leaf_count = it.next_u256()?;
 
     let mut ctx = SaplingVerificationContext::new();
@@ -252,23 +279,19 @@ pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
     for (&input, &spend_auth_sig) in inputs.iter().zip(spend_auth_sigs.iter()) {
         let mut iit = AbiArgIterator::new(input);
 
-        let nullifier = {
-            let mut raw = [0u8; 32];
-            raw.copy_from_slice(iit.next_byte32()?);
-            raw
-        };
+        let nullifier = iit.next_byte32_as_array()?;
         let anchor = iit.next_byte32()?;
         let cv = iit.next_byte32()?;
         let rk = iit.next_byte32()?;
-        let zkproof = iit.next_words_as_bytes(6)?;
+        let zkproof = iit.next_fixed_words(6)?;
 
-        let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB).ok()?;
+        let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
         let anchor = Fr::from_repr(bytes_to_fr_repr(anchor))?;
 
-        let rk = PublicKey::<Bls12>::read(rk, &JUBJUB).ok()?;
-        let spend_auth_sig = Signature::read(spend_auth_sig).ok()?;
+        let rk = PublicKey::<Bls12>::read(rk, &JUBJUB)?;
+        let spend_auth_sig = Signature::read(spend_auth_sig)?;
 
-        let zkproof = Proof::<Bls12>::read(zkproof).ok()?;
+        let zkproof = Proof::<Bls12>::read(zkproof)?;
 
         if !ctx.check_spend(
             cv,
@@ -281,8 +304,7 @@ pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
             &SAPLING_PARAMETERS.spend_vk,
             &JUBJUB,
         ) {
-            println!("spend verify failed");
-            return None;
+            return Err(Error::CheckSpend);
         }
     }
 
@@ -295,16 +317,15 @@ pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
         let cm = oit.next_byte32()?;
         let cv = oit.next_byte32()?;
         let epk = oit.next_byte32()?;
-        let zkproof = oit.next_words_as_bytes(6)?;
+        let zkproof = oit.next_fixed_words(6)?;
 
         let cm = Fr::from_repr(bytes_to_fr_repr(cm))?;
-        let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB).ok()?;
-        let epk = edwards::Point::<Bls12, Unknown>::read(epk, &JUBJUB).ok()?;
-        let zkproof = Proof::<Bls12>::read(zkproof).ok()?;
+        let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
+        let epk = edwards::Point::<Bls12, Unknown>::read(epk, &JUBJUB)?;
+        let zkproof = Proof::<Bls12>::read(zkproof)?;
 
         if !ctx.check_output(cv, cm, epk, zkproof, &SAPLING_PARAMETERS.output_vk, &JUBJUB) {
-            println!("output verify failed");
-            return None;
+            return Err(Error::ChecknOutput);
         }
 
         leafs.push([0u8; 32]);
@@ -312,14 +333,12 @@ pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
     }
 
     // check binding sig - librustzcashSaplingFinalCheckNew
-
     // normally 0
-    let value_balance = Amount::from_i64(value.as_u64() as i64).ok()?;
-    let binding_sig = Signature::read(binding_sig).ok()?;
+    let value_balance = Amount::from_i64(value.as_u64() as i64).map_err(|_| Error::InvalidValue)?;
+    let binding_sig = Signature::read(binding_sig)?;
 
     if !ctx.final_check(value_balance, &sighash, binding_sig, &JUBJUB) {
-        println!("final check failed");
-        return None;
+        return Err(Error::FinalCheck);
     }
 
     // insertLeaves
@@ -330,39 +349,33 @@ pub fn verify_transfer_proof(data: &[u8]) -> Option<Vec<u8>> {
         }
         ret
     };
-    return Some(insert_leaf_to_merkle_tree(frontier, leaf_count.as_usize(), &leafs));
+
+    Ok(insert_leaf_to_merkle_tree(frontier, leaf_count.as_usize(), &leafs))
 }
 
-pub fn verify_burn_proof(data: &[u8]) -> Option<bool> {
+pub fn verify_burn_proof(data: &[u8]) -> Result<(), Error> {
     // (bytes32[10] input, bytes32[2] spendAuthoritySignature, uint256 value,
     // bytes32[2] bindingSignature, bytes32 signHash)
     // input: nf, anchor, cv, rk, proof
 
     let mut it = AbiArgIterator::new(data);
 
-    let nullifier = {
-        let mut raw = [0u8; 32];
-        raw.copy_from_slice(it.next_byte32()?);
-        raw
-    };
+    let nullifier = it.next_byte32_as_array()?;
     let anchor = it.next_byte32()?;
     let cv = it.next_byte32()?;
     let rk = it.next_byte32()?;
-    let zkproof = it.next_words_as_bytes(6)?;
-    let spend_auth_sig = it.next_words_as_bytes(2)?;
-    let value = it.next_u256()?;
-    let binding_sig = it.next_words_as_bytes(2)?;
-    let sighash = {
-        let mut raw = [0u8; 32];
-        raw.copy_from_slice(it.next_byte32()?);
-        raw
-    };
+    let zkproof = it.next_fixed_words(6)?;
 
-    let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB).ok()?;
+    let spend_auth_sig = it.next_fixed_words(2)?;
+    let value = it.next_u256()?;
+    let binding_sig = it.next_fixed_words(2)?;
+    let sighash = it.next_byte32_as_array()?;
+
+    let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
     let anchor = Fr::from_repr(bytes_to_fr_repr(anchor))?;
-    let rk = PublicKey::<Bls12>::read(rk, &JUBJUB).ok()?;
-    let spend_auth_sig = Signature::read(spend_auth_sig).ok()?;
-    let zkproof = Proof::<Bls12>::read(zkproof).ok()?;
+    let rk = PublicKey::<Bls12>::read(rk, &JUBJUB)?;
+    let spend_auth_sig = Signature::read(spend_auth_sig)?;
+    let zkproof = Proof::<Bls12>::read(zkproof)?;
 
     let mut ctx = SaplingVerificationContext::new();
 
@@ -378,41 +391,32 @@ pub fn verify_burn_proof(data: &[u8]) -> Option<bool> {
         &SAPLING_PARAMETERS.spend_vk,
         &JUBJUB,
     ) {
-        println!("spend verify failed");
-        return None;
+        return Err(Error::CheckSpend);
     }
 
     // librustzcashSaplingFinalCheck
-    let value_balance = Amount::from_i64(value.as_u64() as i64).ok()?;
-    let binding_sig = Signature::read(binding_sig).ok()?;
+    let value_balance = Amount::from_i64(value.as_u64() as i64).map_err(|_| Error::InvalidValue)?;
+    let binding_sig = Signature::read(binding_sig)?;
 
     if !ctx.final_check(value_balance, &sighash, binding_sig, &JUBJUB) {
-        println!("final check failed");
-        return None;
+        return Err(Error::FinalCheck);
     }
-    Some(true)
+
+    Ok(())
 }
 
 /// pedersenhash, merklehash
-pub fn pedersen_hash(data: &[u8]) -> Option<Vec<u8>> {
+pub fn pedersen_hash(data: &[u8]) -> Result<Vec<u8>, Error> {
     use std::convert::TryInto;
 
     let mut it = AbiArgIterator::new(data);
 
-    let level: usize = it.next_u256()?.try_into().ok()?;
-    let left = {
-        let mut f = FrRepr::default();
-        f.as_mut().copy_from_slice(it.next_byte32()?);
-        f
-    };
-    let right = {
-        let mut f = FrRepr::default();
-        f.as_mut().copy_from_slice(it.next_byte32()?);
-        f
-    };
+    let level: usize = it.next_u256()?.try_into().map_err(|s| Error::Runtime(s))?;
+    let left = bytes_to_fr_repr(it.next_byte32()?);
+    let right = bytes_to_fr_repr(it.next_byte32()?);
 
     let result = merkle_hash(level, &left, &right);
-    Some(result.as_ref().to_vec())
+    Ok(result.as_ref().to_vec())
 }
 
 #[cfg(test)]
