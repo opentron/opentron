@@ -79,12 +79,6 @@ impl ::std::fmt::Display for Error {
     }
 }
 
-impl From<std::option::NoneError> for Error {
-    fn from(_: std::option::NoneError) -> Self {
-        Error::InvalidValue
-    }
-}
-
 impl From<std::io::Error> for Error {
     fn from(inner: std::io::Error) -> Self {
         Error::Io(inner)
@@ -112,10 +106,15 @@ fn get_frontier_slot(index: usize) -> usize {
 }
 
 #[inline]
-fn bytes_to_fr_repr(raw: &[u8]) -> FrRepr {
+fn le_bytes_to_fr_repr(raw: &[u8]) -> FrRepr {
     let mut f = FrRepr::default();
     f.as_mut().copy_from_slice(raw);
     f
+}
+
+#[inline]
+fn le_bytes_to_fr(raw: &[u8]) -> Result<Fr, Error> {
+    Fr::from_repr(le_bytes_to_fr_repr(raw)).ok_or(Error::InvalidValue)
 }
 
 fn insert_leaf_to_merkle_tree(mut frontier: [[u8; 32]; 33], leaf_index: usize, leafs: &[[u8; 32]]) -> Vec<u8> {
@@ -153,12 +152,12 @@ fn insert_leaf_to_merkle_tree(mut frontier: [[u8; 32]; 33], leaf_index: usize, l
 
         for level in 1..=slot {
             let (left, right) = if node_index % 2 == 0 {
-                let left = bytes_to_fr_repr(&frontier[level - 1]);
-                let right = bytes_to_fr_repr(&node_value);
+                let left = le_bytes_to_fr_repr(&frontier[level - 1]);
+                let right = le_bytes_to_fr_repr(&node_value);
                 node_index = (node_index - 1) / 2;
                 (left, right)
             } else {
-                let left = bytes_to_fr_repr(&node_value);
+                let left = le_bytes_to_fr_repr(&node_value);
                 let right = Fr::from(Node::empty_root(level - 1)).to_repr();
                 node_index = node_index / 2;
                 (left, right)
@@ -176,12 +175,12 @@ fn insert_leaf_to_merkle_tree(mut frontier: [[u8; 32]; 33], leaf_index: usize, l
 
     for level in *slots.last().unwrap() + 1..=32 {
         let (left, right) = if node_index % 2 == 0 {
-            let left = bytes_to_fr_repr(&frontier[level - 1]);
-            let right = bytes_to_fr_repr(&node_value);
+            let left = le_bytes_to_fr_repr(&frontier[level - 1]);
+            let right = le_bytes_to_fr_repr(&node_value);
             node_index = (node_index - 1) / 2;
             (left, right)
         } else {
-            let left = bytes_to_fr_repr(&node_value);
+            let left = le_bytes_to_fr_repr(&node_value);
             let right = Fr::from(Node::empty_root(level - 1)).to_repr();
             node_index = node_index / 2;
             (left, right)
@@ -216,7 +215,7 @@ pub fn verify_mint_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
     assert!(it.is_ended());
 
     // librustzcashSaplingCheckOutput
-    let cm = Fr::from_repr(bytes_to_fr_repr(cm))?;
+    let cm = le_bytes_to_fr(cm)?;
     let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
     let epk = edwards::Point::<Bls12, Unknown>::read(epk, &JUBJUB)?;
     let zkproof = Proof::<Bls12>::read(zkproof)?;
@@ -251,23 +250,20 @@ pub fn verify_mint_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
 
 pub fn verify_transfer_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
     // (bytes32[10][] input, bytes32[2][] spend_auth_sig, bytes32[9][] output,
-    //  bytes32[2] binding_sig, bytes32 sighash,
+    //  bytes32[2] binding_sig, bytes32 sighash, uint256 value,
     //  bytes32[33] frontier, uint256 leafCount)
     let mut it = AbiArgIterator::new(data);
 
     let inputs = it.next_array_of_fixed_words(10)?;
     let spend_auth_sigs = it.next_array_of_fixed_words(2)?;
-
     if inputs.len() != spend_auth_sigs.len() {
         return Err(Error::Runtime("input and spend_auth_sig are of different length"));
     }
 
     let outputs = it.next_array_of_fixed_words(9)?;
-
     let binding_sig = it.next_fixed_words(2)?;
     let sighash = it.next_byte32_as_array()?;
-
-    let value = it.next_u256()?; // always 0
+    let value = it.next_u256()?;
 
     let frontier = it.next_fixed_words(33)?;
     let leaf_count = it.next_u256()?;
@@ -286,7 +282,7 @@ pub fn verify_transfer_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
         let zkproof = iit.next_fixed_words(6)?;
 
         let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
-        let anchor = Fr::from_repr(bytes_to_fr_repr(anchor))?;
+        let anchor = le_bytes_to_fr(anchor)?;
 
         let rk = PublicKey::<Bls12>::read(rk, &JUBJUB)?;
         let spend_auth_sig = Signature::read(spend_auth_sig)?;
@@ -319,7 +315,7 @@ pub fn verify_transfer_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
         let epk = oit.next_byte32()?;
         let zkproof = oit.next_fixed_words(6)?;
 
-        let cm = Fr::from_repr(bytes_to_fr_repr(cm))?;
+        let cm = le_bytes_to_fr(cm)?;
         let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
         let epk = edwards::Point::<Bls12, Unknown>::read(epk, &JUBJUB)?;
         let zkproof = Proof::<Bls12>::read(zkproof)?;
@@ -372,7 +368,7 @@ pub fn verify_burn_proof(data: &[u8]) -> Result<(), Error> {
     let sighash = it.next_byte32_as_array()?;
 
     let cv = edwards::Point::<Bls12, Unknown>::read(cv, &JUBJUB)?;
-    let anchor = Fr::from_repr(bytes_to_fr_repr(anchor))?;
+    let anchor = le_bytes_to_fr(anchor)?;
     let rk = PublicKey::<Bls12>::read(rk, &JUBJUB)?;
     let spend_auth_sig = Signature::read(spend_auth_sig)?;
     let zkproof = Proof::<Bls12>::read(zkproof)?;
@@ -412,8 +408,8 @@ pub fn pedersen_hash(data: &[u8]) -> Result<Vec<u8>, Error> {
     let mut it = AbiArgIterator::new(data);
 
     let level: usize = it.next_u256()?.try_into().map_err(|s| Error::Runtime(s))?;
-    let left = bytes_to_fr_repr(it.next_byte32()?);
-    let right = bytes_to_fr_repr(it.next_byte32()?);
+    let left = le_bytes_to_fr_repr(it.next_byte32()?);
+    let right = le_bytes_to_fr_repr(it.next_byte32()?);
 
     let result = merkle_hash(level, &left, &right);
     Ok(result.as_ref().to_vec())
