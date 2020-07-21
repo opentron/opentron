@@ -46,7 +46,8 @@ This project is under active development.
   - [ ] consensus
   - [ ] EVM / TVM
     - [x] 3.7 TVM <https://github.com/andelf/evm>
-    - [ ] 4.0 TVM with zksnark <https://github.com/andelf/librustzcash>
+    - [x] 4.0 TVM with zksnark: `ztron` crate
+    - [ ] massive tests
   - [ ] RPC replacement
     - will not support gRPC
     - might have json-rpc support
