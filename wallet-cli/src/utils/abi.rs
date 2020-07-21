@@ -5,8 +5,10 @@ use ethabi::token::{LenientTokenizer, StrictTokenizer, Token, Tokenizer};
 use ethabi::{decode, encode};
 use hex::{FromHex, ToHex};
 use keys::Address;
-use proto::core::SmartContract_ABI_Entry as AbiEntry;
-use proto::core::SmartContract_ABI_Entry_StateMutabilityType as StateMutabilityType;
+use proto::core::{
+    SmartContract_ABI_Entry as AbiEntry, SmartContract_ABI_Entry_EntryType as AbiEntryType,
+    SmartContract_ABI_Entry_StateMutabilityType as StateMutabilityType,
+};
 use std::fmt::Write as FmtWrite;
 
 use crate::error::Error;
@@ -101,19 +103,14 @@ pub fn entry_to_method_name(entry: &AbiEntry) -> String {
 
 pub fn entry_to_method_name_pretty(entry: &AbiEntry) -> Result<String, Error> {
     let mut pretty = match entry.get_field_type() {
-        ::proto::core::SmartContract_ABI_Entry_EntryType::Function => "function".to_owned(),
-        ::proto::core::SmartContract_ABI_Entry_EntryType::Event => "event".to_owned(),
-        ::proto::core::SmartContract_ABI_Entry_EntryType::Constructor => "constructor".to_owned(),
-        ::proto::core::SmartContract_ABI_Entry_EntryType::Fallback => {
-            if entry.get_payable() {
-                "function".to_owned()
-            } else {
-                "".to_owned()
-            }
-        }
+        AbiEntryType::Function | AbiEntryType::Fallback => "function".to_owned(),
+        AbiEntryType::Event => "event".to_owned(),
+        AbiEntryType::Constructor => "constructor".to_owned(),
         _ => "".to_owned(),
     };
-    write!(pretty, " {:}", entry.get_name())?;
+    if entry.get_field_type() != AbiEntryType::Fallback {
+        write!(pretty, " {:}", entry.get_name())?;
+    }
     write!(
         pretty,
         "({})",
