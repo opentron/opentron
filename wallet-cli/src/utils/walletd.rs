@@ -1,4 +1,5 @@
 //! Interact with walletd daemon.
+#![allow(unused_imports, dead_code)]
 
 use std::env;
 use std::fs;
@@ -11,6 +12,7 @@ use crate::error::Error;
 
 pub const WALLETD_PID_FILE: &str = "./walletd.pid";
 
+#[cfg(not(target_os = "windows"))]
 pub fn ensure_walletd() -> Result<(), Error> {
     match get_walletd_pid() {
         Ok(_pid) => {
@@ -22,6 +24,12 @@ pub fn ensure_walletd() -> Result<(), Error> {
             run_walletd()
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+pub fn ensure_walletd() -> Result<(), Error> {
+    eprintln!("warning: must run walletd manually");
+    Ok(())
 }
 
 #[cfg(target_os = "macos")]
