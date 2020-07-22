@@ -2,4 +2,7 @@
 trash/
 backup/
 data
+
+# personal backup
 trash.*
+*._rc
