@@ -3,11 +3,21 @@
 OpenTron is an implementation of the Tron blockchain written in Rust. This project is under active development and is
 not ready for general use.
 
-- [x] wallet-cli (the full feature wallet/rpc client)
-  - [x] walletd (the wallet daemon)
-- [ ] node-cli, under active development
-  - [x] sync with java-tron node
-  - [ ] transaction handling
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+
+- [Rationale](#rationale)
+- [Roadmap](#roadmap)
+  - [TODOs](#todos)
+- [Quickstart](#quickstart)
+- [wallet-cli](#wallet-cli)
+  - [All System Contracts Support and corresponding wallet-cli commands](#all-system-contracts-support-and-corresponding-wallet-cli-commands)
+  - [Chain Lookup](#chain-lookup)
+  - [Local Wallet Management](#local-wallet-management)
+  - [Common Transaction Options](#common-transaction-options)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Rationale
 
@@ -34,6 +44,13 @@ not ready for general use.
 
 ## Roadmap
 
+- [x] wallet-cli (the full feature wallet/rpc client)
+  - [x] walletd (the wallet daemon)
+- [ ] node-cli, under active development
+
+  - [x] sync with java-tron node
+  - [ ] transaction handling
+
 - [x] Block data sync, only blocks (raw transactions), without transaction info and any other state data. Handle chain fork and block Merkle tree verification.
 - [ ] Simple transaction broadcast, without much verification, just broadcast transactions to the network as quickly as possible(an airdrop tool can be made from it)
 - [ ] Handle transaction verification. all state data will be available. (difficult, EVM engine, resource consumption mode, witness/vote/proposal, chain parameter are all handled at this stage, to make the state data identical as java-tron )
@@ -41,9 +58,7 @@ not ready for general use.
 - [ ] Build a event API layer upon state data.
 - [ ] block mining logic (difficult, DPoS mining, need resource to become an SR)
 
-See TODOs for more details.
-
-## TODOs
+### TODOs
 
 - [x] wallet-cli
 
