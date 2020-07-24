@@ -6,7 +6,6 @@ not ready for general use.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Rationale](#rationale)
 - [Roadmap](#roadmap)
   - [TODOs](#todos)
@@ -104,24 +103,29 @@ not ready for general use.
 
 ## Quickstart
 
+See [INSTALL.md](./INSTALL.md) for more detailed information.
+
 ```console
-> # install rust-nightly
+> # Install rust-nightly
 > curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain nightly
 > rustup component add rustfmt
 
-> # install protoc
+> # Install protoc
 > brew install protobuf  # macOS
 > sudo pacman -S protobuf  # ArchLinux
 > sudo apt install protobuf-compiler libprotobuf-dev # Ubuntu / Debian
 
-> # get code
+> # Install RocksDB
+> brew install rocksdb  # macOS
+
+> # Get code
 > git clone --recurse-submodules https://github.com/oikos-cash/OpenTron.git
 
-> # compile tools
+> # Compile tools
 > cd ./OpenTron/
 > cargo build --all
 
-> # time to rock !!!
+> # Time to rock!!!
 > ./target/debug/wallet-cli --help
 
 > # or use testnet toolset
