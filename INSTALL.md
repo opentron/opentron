@@ -10,7 +10,7 @@ $ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/pro
 $ unzip protoc-3.11.4-linux-x86_64.zip
 $ sudo cp -rv bin include /usr/local
 
-$ git clone https://github.com/andelf/rust-tron.git
+$ git clone https://github.com/oikos-cash/OpenTron.git
 $ cd rust-tron
 
 $ cargo build --all
