@@ -10,17 +10,38 @@ jobs:
             - uses: actions/checkout@v2
               with:
                   submodules: true
-            - name: Install protobuf
-              run: sudo apt-get install protobuf-compiler libprotobuf-dev
+
+            - name: Install dependencies
+              run: sudo apt-get install protobuf-compiler libprotobuf-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
+
+            - name: Cache RocksDB build
+              id: cache-rocksdb
+              uses: actions/cache@v2
+              with:
+                  path: /usr/local
+                  key: rocksdb-v6.7.3
+
             - name: Install RocksDB
+              if: steps.cache-rocksdb.outputs.cache-hit != 'true'
               run: |
-                sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
-                git clone https://github.com/facebook/rocksdb.git
-                cd rocksdb
-                git checkout v6.7.3
-                sudo make install-shared
+                  git clone https://github.com/facebook/rocksdb.git
+                  cd rocksdb
+                  git checkout v6.7.3
+                  sudo make install-shared
+
+            - name: Cache ztron-params
+              id: cache-ztron-params
+              uses: actions/cache@v2
+              with:
+                  path: ./ztron-params
+                  key: ztron-params
+
             - name: Download ztron-params
+              if: steps.cache-ztron-params.outputs.cache-hit != 'true'
               run: |
-                ./scripts/download-ztron-params.sh
+                  ./scripts/download-ztron-params.sh
+
             - name: Run tests
               run: cargo test --workspace
+              env:
+                  LD_LIBRARY_PATH: /usr/local/lib
