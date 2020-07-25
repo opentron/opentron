@@ -18,7 +18,12 @@ jobs:
               id: cache-rocksdb
               uses: actions/cache@v2
               with:
-                  path: /usr/local
+                  path: |
+                    /usr/local/lib/librocksdb.so.6.7.3
+                    /usr/local/lib/librocksdb.so.6.7
+                    /usr/local/lib/librocksdb.so.6
+                    /usr/local/lib/librocksdb.so
+                    /usr/local/include/rocksdb
                   key: rocksdb-v6.7.3
 
             - name: Install RocksDB
