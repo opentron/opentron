@@ -16,7 +16,7 @@ jobs:
 
             - name: Chown of RockDB cache
               run: |
-                  chown -R $(whoami) /usr/local/lib /usr/local/include
+                  sudo chown -R $(whoami) /usr/local/lib /usr/local/include
 
             - name: Cache RocksDB build
               id: cache-rocksdb
