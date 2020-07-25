@@ -105,7 +105,7 @@ See [INSTALL.md](./INSTALL.md) for more detailed information.
 > cd ./OpenTron/
 > cargo build --all
 
-> cargo run -- --config opentron/conf.nile.toml
+> cargo run -- --config config/conf.nile.toml
 ```
 
 ## License

@@ -27,9 +27,11 @@ pub struct AppContext {
 
 impl AppContext {
     pub fn from_config<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
-        let config = Config::load_from_file(path)?;
+        let config = Config::load_from_file(&path)?;
 
-        let genesis_config = GenesisConfig::load_from_file(&config.chain.genesis)?;
+        let genesis_path = path.as_ref().parent().unwrap().join(&config.chain.genesis);
+
+        let genesis_config = GenesisConfig::load_from_file(&genesis_path)?;
         let genesis_blk = genesis_config.to_indexed_block()?;
 
         let db = ChainDB::new(&config.storage.data_dir);

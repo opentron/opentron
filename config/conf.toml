@@ -5,14 +5,16 @@ log-file = ''
 sync-check = false
 
 [storage]
-data-dir = './data.nile'
+# related to run path
+data-dir = './data'
 engine = 'rocksdb'
 
 [chain]
-genesis = './genesis.nile.json'
-p2p-version = 201910292
-maintenance-interval = '600s'
-proposal-expire-time = '600s'
+# related to current config file
+genesis = 'genesis.json'
+p2p-version = 11111
+maintenance-interval = '6h'
+proposal-expire-time = '3d'
 
 [chain.tvm]
 save-internal-txn = true
@@ -36,10 +38,40 @@ enable = true
 endpoint = "0.0.0.0:3000"
 
 [protocol]
-seed-nodes = ['47.90.214.183:18888']
+seed-nodes = [
+    '54.236.37.243:18888',
+    '52.53.189.99:18888',
+    '18.196.99.16:18888',
+    '34.253.187.192:18888',
+    '52.56.56.149:18888',
+    '35.180.51.163:18888',
+    '54.252.224.209:18888',
+    '18.228.15.36:18888',
+    '52.15.93.92:18888',
+    '34.220.77.106:18888',
+    '13.127.47.162:18888',
+    '13.124.62.58:18888',
+    '13.229.128.108:18888',
+    '35.182.37.246:18888',
+    '34.200.228.125:18888',
+    '18.220.232.201:18888',
+    '13.57.30.186:18888',
+    '35.165.103.105:18888',
+    '18.184.238.21:18888',
+    '34.250.140.143:18888',
+    '35.176.192.130:18888',
+    '52.47.197.188:18888',
+    '52.62.210.100:18888',
+    '13.231.4.243:18888',
+    '18.231.76.29:18888',
+    '35.154.90.144:18888',
+    '13.125.210.234:18888',
+    '13.250.40.82:18888',
+    '35.183.101.48:18888',
+]
 
 [protocol.discovery]
-enable = false
+enable = true
 persist = true
 # udp discovery
 endpoint = '0.0.0.0:18888'
@@ -49,30 +81,27 @@ active-nodes = []
 
 [protocol.channel]
 enable = true
-enable-passive = false
+enable-passive = true
 enable-active = true
-# 1 to 2000
-# 100 for java-tron
-sync-batch-size = 2000
+sync-batch = 500
 # tcp channel
 endpoint = '0.0.0.0:18888'
 advertised-endpoint = ''
 # connect in any case
 active-nodes = [
-    # "182.92.154.46:18888",
-    "119.23.35.152:18888",
-    "47.75.218.79:18888",
-    "47.252.17.40:18888",
-    "47.252.19.181:18888",
-    "47.90.243.177:18888",
-    "47.90.214.183:18888",
-    "47.252.73.173:18888",
-    "34.216.199.10:18888",
-    "34.216.199.10:18888",
+    "47.75.249.4:18888",
+    "47.75.128.222:18888",
+    "47.52.59.134:18888",
+    "47.75.38.234:18888",
+    "47.52.23.94:18888",
+    "47.52.72.180:18888",
+    "47.75.74.31:18888",
+    "47.75.77.31:18888",
+    "47.75.65.115:18888",
 ]
 # accept in any case
 passive-nodes = []
-max-active-connections = 2
+max-active-connections = 4
 
 [witness]
 private-key = ""
