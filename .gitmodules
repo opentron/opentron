@@ -1,3 +1,0 @@
-[submodule "proto/protocol"]
-	path = proto/protocol
-	url = https://github.com/tronprotocol/protocol

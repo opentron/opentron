@@ -11,7 +11,7 @@ ctrlc = { version = "3", features = ["termination"] }
 # logger
 log = "0.4"
 slog = "2.5"
-slog-term = "2.5"
+slog-term = "2.6"
 slog-async = "2.5"
 slog-stdlog = "4.0"
 slog-scope = "4.3"
@@ -37,21 +37,21 @@ juniper = { version = "0.14", git = "https://github.com/graphql-rust/juniper.git
 juniper_hyper = { version = "0.5.2", git = "https://github.com/graphql-rust/juniper.git" }
 hyper = "0.13"
 # db
-#rocks = { version = "0.1.7", git = "https://github.com/bh1xuw/rust-rocks.git" }
+# rocks = { version = "0.1.7", git = "https://github.com/bh1xuw/rust-rocks.git" }
 rocks = "0.1.8"
 # misc
+primitive-types = "0.7"
 num_cpus = "1.13.0"
 rand = '0.7'
 chrono = '0.4'
 toml = '0.5'
 hex = '0.4'
 sha2 = '0.9'
-hex-literal = '0.2'
+hex-literal = '0.3'
 byteorder = '1.3'
 bytes = '0.5'
 reqwest = { version = '0.10', default-features = false, features = ['json'] }
 # workspace
 proto2 = { path = '../proto2' }
 keys = { path = '../keys' }
-primitive-types = "0.7"
 chain = { path = '../chain' }
