@@ -1621,53 +1621,6 @@ subcommands:
                               help: Use offline ztron library to generate address
                               long: offline
 
-    - shielded:
-          about: Manage shielded transactions and shielded notes
-          settings: *default_settings
-          subcommands:
-              - debug:
-                    about: debug rocks
-              - scan:
-                    about: Scan notes on chain
-                    args:
-                        - ADDR:
-                              help: Shielded address of the note
-                              required: true
-                              value_name: z-addr
-                        - incoming:
-                              help: Incoming notes, i.e. received TRZ tokens
-                        - outcoming:
-                              help: Outcoming notes, i.e. spent TRZ tokens
-                              conflicts_with:
-                                  - incoming
-                        - start:
-                              help: Block num to start scan
-                        - end:
-                              help: Block num to end scan, (default, current block)
-
-              - transfer:
-                    about: Initiates a shielded transaction, amount can be 'auto'
-                    args:
-                        - from:
-                              help: The address or note for sending TRZ coins
-                              short: f
-                              long: from
-                              multiple: true
-                              required: true
-                              value_names:
-                                  - ADDRESS
-                                  - AMOUNT
-
-                        - to:
-                              help: The address for receiving TRZ coins
-                              short: t
-                              long: to
-                              multiple: true
-                              required: true
-                              value_names:
-                                  - ADDRESS
-                                  - AMOUNT
-
     - wallet:
           about: Subcommand used to interact with the local wallet
           settings: *default_settings
