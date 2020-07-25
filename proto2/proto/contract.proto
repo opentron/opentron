@@ -6,6 +6,8 @@ package proto.contract;
 import "google/protobuf/any.proto";
 import "common.proto";
 
+// # Account
+
 message AccountCreateContract {
   bytes owner_address = 1;
   bytes account_address = 2;
@@ -20,12 +22,20 @@ message AccountUpdateContract {
   bytes owner_address = 2;
 }
 
-// Set account id if the account has no id. Account id is unique and case
-// insensitive.
+// Set account id if the account has no id. Account id is unique and case insensitive.
 message SetAccountIdContract {
   bytes account_id = 1;
   bytes owner_address = 2;
 }
+
+message AccountPermissionUpdateContract {
+  bytes owner_address = 1;
+  proto.common.Permission owner = 2;  // empty means invalidate
+  proto.common.Permission witness = 3;
+  repeated proto.common.Permission actives = 4;  // empty means invalidate
+}
+
+// # TRX transfer
 
 message TransferContract {
   bytes owner_address = 1;
@@ -33,62 +43,17 @@ message TransferContract {
   int64 amount = 3;
 }
 
-message ShieldAddress {
-  bytes private_address = 1;
-  bytes public_address = 2;
-}
+// # TRC10
 
 message TransferAssetContract {
   // this field is token name before the proposal ALLOW_SAME_TOKEN_NAME's
   // activation, otherwise it is token id and token should be in string format.
   // used as asset id str as bytes, LEN = 7 bytes: 100xx
   // changed: bytes
-  string asset_name = 1;
   bytes owner_address = 2;
   bytes to_address = 3;
+  string asset_name = 1;
   int64 amount = 4;
-}
-
-message VoteAssetContract {
-  bytes owner_address = 1;
-  repeated bytes vote_address = 2;
-  // renamed: support
-  bool is_support = 3;
-  int32 count = 5;
-}
-
-message VoteWitnessContract {
-  bytes owner_address = 1;
-  repeated proto.common.Vote votes = 2;
-  // not used
-  bool is_support = 3;
-}
-
-message UpdateSettingContract {
-  bytes owner_address = 1;
-  bytes contract_address = 2;
-  int64 consume_user_resource_percent = 3;
-}
-
-message UpdateEnergyLimitContract {
-  bytes owner_address = 1;
-  bytes contract_address = 2;
-  int64 origin_energy_limit = 3;
-}
-
-message ClearABIContract {
-  bytes owner_address = 1;
-  bytes contract_address = 2;
-}
-
-message WitnessCreateContract {
-  bytes owner_address = 1;
-  bytes url = 2;
-}
-
-message WitnessUpdateContract {
-  bytes owner_address = 1;
-  bytes update_url = 12;
 }
 
 message AssetIssueContract {
@@ -133,27 +98,12 @@ message ParticipateAssetIssueContract {
   int64 amount = 4;  // the amount of drops
 }
 
-message FreezeBalanceContract {
+message VoteAssetContract {
   bytes owner_address = 1;
-  int64 frozen_balance = 2;
-  int64 frozen_duration = 3;
-
-  proto.common.ResourceCode resource = 10;
-  bytes receiver_address = 15;
-}
-
-message UnfreezeBalanceContract {
-  bytes owner_address = 1;
-  proto.common.ResourceCode resource = 10;
-  bytes receiver_address = 15;
-}
-
-message UnfreezeAssetContract {
-  bytes owner_address = 1;
-}
-
-message WithdrawBalanceContract {
-  bytes owner_address = 1;
+  repeated bytes vote_address = 2;
+  // renamed: support
+  bool is_support = 3;
+  int32 count = 5;
 }
 
 message UpdateAssetContract {
@@ -164,22 +114,39 @@ message UpdateAssetContract {
   int64 new_public_limit = 5;
 }
 
-message ProposalCreateContract {
+message UnfreezeAssetContract {
   bytes owner_address = 1;
-  map<int64, int64> parameters = 2;
 }
 
-message ProposalApproveContract {
+// # Witness
+
+message WitnessCreateContract {
   bytes owner_address = 1;
-  int64 proposal_id = 2;
-  // renamed: is_add_approval
-  bool is_approval = 3;  // add or remove approval
+  bytes url = 2;
 }
 
-message ProposalDeleteContract {
+message WitnessUpdateContract {
   bytes owner_address = 1;
-  int64 proposal_id = 2;
+  bytes update_url = 12;
 }
+
+message UpdateBrokerageContract {
+  bytes owner_address = 1;
+  int32 brokerage = 2;  // in percent
+}
+
+message VoteWitnessContract {
+  bytes owner_address = 1;
+  repeated proto.common.Vote votes = 2;
+  // not used
+  bool is_support = 3;
+}
+
+message WithdrawBalanceContract {
+  bytes owner_address = 1;
+}
+
+// # Smart Contract
 
 message CreateSmartContract {
   bytes owner_address = 1;
@@ -197,22 +164,60 @@ message TriggerSmartContract {
   int64 call_token_id = 6;
 }
 
-/*
-message BuyStorageContract {
+message UpdateSettingContract {
   bytes owner_address = 1;
-  int64 quant = 2; // trx quantity for buy storage (in sun)
+  bytes contract_address = 2;
+  int64 consume_user_resource_percent = 3;
 }
 
-message BuyStorageBytesContract {
+message UpdateEnergyLimitContract {
   bytes owner_address = 1;
-  int64 bytes = 2; // storage bytes for buy
+  bytes contract_address = 2;
+  int64 origin_energy_limit = 3;
 }
 
-message SellStorageContract {
+message ClearABIContract {
   bytes owner_address = 1;
-  int64 storage_bytes = 2;
+  bytes contract_address = 2;
 }
-*/
+
+// # Resource
+
+message FreezeBalanceContract {
+  bytes owner_address = 1;
+  int64 frozen_balance = 2;
+  int64 frozen_duration = 3;
+
+  proto.common.ResourceCode resource = 10;
+  bytes receiver_address = 15;
+}
+
+message UnfreezeBalanceContract {
+  bytes owner_address = 1;
+  proto.common.ResourceCode resource = 10;
+  bytes receiver_address = 15;
+}
+
+// # Proposal
+
+message ProposalCreateContract {
+  bytes owner_address = 1;
+  map<int64, int64> parameters = 2;
+}
+
+message ProposalApproveContract {
+  bytes owner_address = 1;
+  int64 proposal_id = 2;
+  // renamed: is_add_approval
+  bool is_approval = 3;
+}
+
+message ProposalDeleteContract {
+  bytes owner_address = 1;
+  int64 proposal_id = 2;
+}
+
+// # Exchange
 
 message ExchangeCreateContract {
   bytes owner_address = 1;
@@ -244,14 +249,19 @@ message ExchangeTransactionContract {
   int64 expected = 5;
 }
 
-message AccountPermissionUpdateContract {
+/*
+message BuyStorageContract {
   bytes owner_address = 1;
-  proto.common.Permission owner = 2;  // empty means invalidate
-  proto.common.Permission witness = 3;
-  repeated proto.common.Permission actives = 4;  // empty means invalidate
+  int64 quant = 2; // trx quantity for buy storage (in sun)
 }
 
-message UpdateBrokerageContract {
+message BuyStorageBytesContract {
   bytes owner_address = 1;
-  int32 brokerage = 2;  // in percent
+  int64 bytes = 2; // storage bytes for buy
 }
+
+message SellStorageContract {
+  bytes owner_address = 1;
+  int64 storage_bytes = 2;
+}
+*/
