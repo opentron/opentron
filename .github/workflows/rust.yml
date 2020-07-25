@@ -12,12 +12,15 @@ jobs:
                   submodules: true
             - name: Install protobuf
               run: sudo apt-get install protobuf-compiler libprotobuf-dev
+            - name: Install RocksDB
+              run: |
+                sudo apt-get install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
+                git clone https://github.com/facebook/rocksdb.git
+                cd rocksdb
+                git checkout v6.7.3
+                sudo make install-shared
             - name: Download ztron-params
               run: |
                 ./scripts/download-ztron-params.sh
-            - name: Build walletd
-              run: cargo build -p walletd
-            - name: Build wallet-cli
-              run: cargo build -p wallet-cli
             - name: Run tests
-              run: cargo test --exclude node-cli --workspace
+              run: cargo test --workspace
