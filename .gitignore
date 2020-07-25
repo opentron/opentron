@@ -1,9 +1,10 @@
 /target
 /ztron-params
-trash/
 backup/
-data
+data/
+data.nile/
 
-# personal backup
+# backup files
+trash/
 trash.*
 *._rc
