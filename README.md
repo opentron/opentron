@@ -6,15 +6,16 @@ not ready for general use.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Rationale](#rationale)
-- [Roadmap](#roadmap)
-  - [TODOs](#todos)
-- [Quickstart](#quickstart)
-- [wallet-cli](#wallet-cli)
-  - [All System Contracts Support and corresponding wallet-cli commands](#all-system-contracts-support-and-corresponding-wallet-cli-commands)
-  - [Chain Lookup](#chain-lookup)
-  - [Local Wallet Management](#local-wallet-management)
-  - [Common Transaction Options](#common-transaction-options)
+- [OpenTron](#opentron)
+  - [Rationale](#rationale)
+  - [Roadmap](#roadmap)
+    - [TODOs](#todos)
+  - [Quickstart](#quickstart)
+  - [wallet-cli](#wallet-cli)
+    - [All System Contracts Support and corresponding wallet-cli commands](#all-system-contracts-support-and-corresponding-wallet-cli-commands)
+    - [Chain Lookup](#chain-lookup)
+    - [Local Wallet Management](#local-wallet-management)
+    - [Common Transaction Options](#common-transaction-options)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -43,9 +44,9 @@ not ready for general use.
 
 ## Roadmap
 
-- [x] wallet-cli (the full feature wallet/rpc client)
+- [x] wallet-cli (the full-featured wallet/rpc client)
   - [x] walletd (the wallet daemon)
-- [ ] node-cli, under active development
+- [ ] opentron, under active development
 
   - [x] sync with java-tron node
   - [ ] transaction handling
@@ -61,11 +62,6 @@ not ready for general use.
 
 - [x] wallet-cli
 
-  - [ ] shielded transaction
-    - [x] demo works
-    - [ ] shielded notes management
-    - [ ] real subcommand
-
 - [ ] Full Tron Protocol implementation
   - [x] proto2: refactor the protobuf / ~~gRPC~~
   - [x] primitives
@@ -74,14 +70,13 @@ not ready for general use.
   - [ ] config file
     - [x] genesis block parsing
     - [x] toml config file parsing
-    - [ ] organize chain parameters
-  - [ ] discover protocol
-    - [x] demo works
+    - [ ] reorganize chain parameters
+  - [x] discover protocol
   - [ ] channel protocol
     - [x] demo works
     - [x] sync
-    - [ ] minor bug fix, timeout error
-  - [ ] chain
+    - [ ] TODO: minor bug fix, timeout error
+  - [x] chain
     - [x] Block / Transaction
   - [ ] chainbase
     - [ ] memory
@@ -91,15 +86,12 @@ not ready for general use.
   - [ ] EVM / TVM
     - [x] 3.7 TVM <https://github.com/andelf/evm>
     - [x] 4.0 TVM with zksnark: `ztron` crate
-    - [ ] massive tests
+    - [ ] massive tests against resource usage
   - [ ] RPC replacement
     - will not support gRPC
     - might have json-rpc support
-  - [ ] shielded transaction
-    - [ ] ztron
-  - [ ] SM2 / SM3 support
-    - [x] [sm2](https://docs.rs/sm2/)
-    - [x] [sm3](https://docs.rs/sm3/)
+  - [ ] shielded trc20 transaction
+    - [x] ztron
 
 ## Quickstart
 
@@ -173,17 +165,15 @@ A command-line tool which let developers interact Tron Protocol as well as deplo
   - [ ] ExchangeInjectContract
   - [ ] ExchangeWithdrawContract
   - [ ] ExchangeTransactionContract
-- ShieldedTransfer
-  - [ ] ShieldedTransferContract
 - ~~Deprecated~~
   - Storage deprecated
     - BuyStorageContract
     - BuyStorageBytesContract
     - SellStorageContract
-  - Deprecated account
-    - SetAccountIdContract - id useless?
-    - AccountCreateContract - transfering creates account
-  - VoteAssetContract
+- Won't support
+  - [ ] SetAccountIdContract - Is accountId useless?
+  - [ ] AccountCreateContract - transfering creates account
+  - [ ] VoteAssetContract
 
 ### Chain Lookup
 
