@@ -1526,46 +1526,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "node-cli"
-version = "0.1.0"
-dependencies = [
- "byteorder",
- "bytes",
- "chain",
- "chrono",
- "clap",
- "ctrlc",
- "futures 0.3.5",
- "hex 0.4.2",
- "hex-literal",
- "hyper",
- "juniper",
- "juniper_hyper",
- "keys",
- "log",
- "num_cpus",
- "primitive-types",
- "prost",
- "prost-types",
- "proto2",
- "rand 0.7.3",
- "reqwest",
- "rocks",
- "serde",
- "serde_json",
- "sha2 0.9.1",
- "slog",
- "slog-async",
- "slog-scope",
- "slog-scope-futures",
- "slog-stdlog",
- "slog-term",
- "tokio",
- "tokio-util",
- "toml",
-]
-
-[[package]]
 name = "num-bigint"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1622,6 +1582,46 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "opentron"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "chain",
+ "chrono",
+ "clap",
+ "ctrlc",
+ "futures 0.3.5",
+ "hex 0.4.2",
+ "hex-literal",
+ "hyper",
+ "juniper",
+ "juniper_hyper",
+ "keys",
+ "log",
+ "num_cpus",
+ "primitive-types",
+ "prost",
+ "prost-types",
+ "proto2",
+ "rand 0.7.3",
+ "reqwest",
+ "rocks",
+ "serde",
+ "serde_json",
+ "sha2 0.9.1",
+ "slog",
+ "slog-async",
+ "slog-scope",
+ "slog-scope-futures",
+ "slog-stdlog",
+ "slog-term",
+ "tokio",
+ "tokio-util",
+ "toml",
+]
 
 [[package]]
 name = "pairing"
