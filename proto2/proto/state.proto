@@ -66,17 +66,19 @@ message InternalTransaction {
   // internalTransaction identity, the root InternalTransaction hash
   // should equals to root transaction id.
   bytes hash = 1;
-  // the one send trx (TBD: or token) via function
+  // the one send trx, or token or call via function
   bytes caller_address = 2;
-  // the one recieve trx (TBD: or token) via function
+  // the one recieve trx, or token or call via function
   bytes to_address = 3;
   // call value
   int64 call_value = 4;
   // token id
   int64 call_token_id = 5;
-  // trc10 value
+  // token value
   int64 call_token_value = 6;
+  // call data
   bytes data = 8;
+  // caller function name: call, suicide
   bytes note = 7;
   bool accepted = 9;
 }
