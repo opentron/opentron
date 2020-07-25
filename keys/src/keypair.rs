@@ -1,14 +1,17 @@
+//! A KeyPair type is for generating and saving private/public key pairs.
+use std::fmt;
+
 use rand::rngs::OsRng;
 use secp256k1::key;
 use secp256k1::Secp256k1;
 use std::convert::TryFrom;
-use std::fmt;
 
 use crate::address::Address;
 use crate::error::Error;
 use crate::private::Private;
 use crate::public::Public;
 
+/// A KeyPair combines a private key and its corresponding public key.
 #[derive(Debug, Hash, Clone)]
 pub struct KeyPair {
     private: Private,
@@ -31,6 +34,7 @@ impl KeyPair {
         Address::from_public(&self.public)
     }
 
+    /// Construct key pair from private key.
     pub fn from_private(private: Private) -> Result<Self, Error> {
         let public = Public::from_private(&private)?;
         Ok(KeyPair { private, public })
@@ -48,6 +52,7 @@ impl KeyPair {
         }
     }
 
+    /// Generates a new random KeyPair.
     pub fn generate() -> Self {
         let mut rng = OsRng;
         let secp = Secp256k1::new();

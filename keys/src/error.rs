@@ -1,15 +1,24 @@
-use secp256k1::Error as Secp256k1Error;
+//! Key Errors.
 use std::fmt;
 
+use secp256k1::Error as Secp256k1Error;
+
+/// Key Errors.
 #[derive(Debug, PartialEq)]
 pub enum Error {
+    /// Public key format error.
     InvalidPublic,
-    InvalidSecret,
+    /// Digest data format error.
     InvalidMessage,
+    /// Signature data format error.
     InvalidSignature,
+    /// Invalid checksum of base58check.
     InvalidChecksum,
+    /// Private key format error.
     InvalidPrivate,
+    /// Invalid address format.
     InvalidAddress,
+    /// Unable to generate a key pair.
     FailedKeyGeneration,
 }
 
@@ -17,7 +26,6 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let msg = match *self {
             Error::InvalidPublic => "Invalid Public",
-            Error::InvalidSecret => "Invalid Secret",
             Error::InvalidMessage => "Invalid Message",
             Error::InvalidSignature => "Invalid Signature",
             Error::InvalidChecksum => "Invalid Checksum",
@@ -36,7 +44,7 @@ impl From<Secp256k1Error> for Error {
     fn from(e: Secp256k1Error) -> Self {
         match e {
             Secp256k1Error::InvalidPublicKey => Error::InvalidPublic,
-            Secp256k1Error::InvalidSecretKey => Error::InvalidSecret,
+            Secp256k1Error::InvalidSecretKey => Error::InvalidPrivate,
             Secp256k1Error::InvalidMessage => Error::InvalidMessage,
             _ => Error::InvalidSignature,
         }

@@ -1,21 +1,25 @@
-use hex::{FromHex, ToHex};
-use secp256k1::key::{PublicKey, SecretKey};
-use secp256k1::{Message, RecoverableSignature, RecoveryId, Secp256k1};
-use sha2::{Digest, Sha256};
+//! The Public Key.
+
 use std::convert::TryFrom;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
+use hex::{FromHex, ToHex};
+use secp256k1::key::{PublicKey, SecretKey};
+use secp256k1::{Message, RecoverableSignature, RecoveryId, Secp256k1};
+use sha2::{Digest, Sha256};
+
 use crate::error::Error;
 use crate::private::Private;
 use crate::signature::Signature;
 
-/// Raw public key
+/// Public key of Secp256k1.
 #[derive(Clone)]
 pub struct Public([u8; 64]);
 
 impl Public {
+    /// Verifies a signature of a digest.
     pub fn verify_digest(&self, digest: &[u8], signature: &Signature) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
@@ -34,6 +38,7 @@ impl Public {
             .map_err(Error::from)
     }
 
+    /// Verifies a signature of raw data.
     pub fn verify(&self, data: &[u8], signature: &Signature) -> Result<(), Error> {
         let mut hasher = Sha256::new();
         hasher.update(data);
@@ -42,6 +47,7 @@ impl Public {
         self.verify_digest(&digest, signature)
     }
 
+    /// Recovers a public key from signature and digest.
     pub fn recover_digest(digest: &[u8], signature: &Signature) -> Result<Public, Error> {
         let secp = Secp256k1::new();
         let rsig =
@@ -54,6 +60,7 @@ impl Public {
         Ok(Public(key))
     }
 
+    /// Recovers a public key from signature and raw data.
     pub fn recover(data: &[u8], signature: &Signature) -> Result<Public, Error> {
         let mut hasher = Sha256::new();
         hasher.update(data);
@@ -62,6 +69,7 @@ impl Public {
         Public::recover_digest(&digest, signature)
     }
 
+    /// Public key from private key.
     pub fn from_private(private: &Private) -> Result<Public, Error> {
         let secp = Secp256k1::new();
 
@@ -74,6 +82,7 @@ impl Public {
         Ok(Public(key))
     }
 
+    /// As raw public key bytes. Full format without a type prefix.
     pub fn as_bytes(&self) -> &[u8] {
         &self.0[..]
     }

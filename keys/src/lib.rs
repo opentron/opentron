@@ -1,5 +1,7 @@
 //! Tron Protocol Keys
 
+#![deny(missing_docs)]
+
 mod address;
 mod error;
 mod keypair;

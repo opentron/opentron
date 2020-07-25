@@ -1,21 +1,23 @@
-//! Secret with different format support
+//! The Private Key.
+
+use std::convert::TryFrom;
+use std::fmt;
+use std::str::FromStr;
 
 use hex::{FromHex, ToHex};
 use secp256k1::key::SecretKey;
 use secp256k1::{Message, Secp256k1};
 use sha2::{Digest, Sha256};
-use std::convert::TryFrom;
-use std::fmt;
-use std::str::FromStr;
 
 use crate::error::Error;
 use crate::signature::Signature;
 
-/// Private key of Secp256k1
+/// Private key of Secp256k1.
 #[derive(PartialEq, Hash, Clone)]
 pub struct Private([u8; 32]);
 
 impl Private {
+    /// Sign digest data with the private key.
     pub fn sign_digest(&self, digest: &[u8]) -> Result<Signature, Error> {
         let secp = Secp256k1::new();
         let secret_key = SecretKey::from_slice(&secp, &self.0).expect("32 bytes, within curve order");
@@ -31,6 +33,7 @@ impl Private {
         Ok(Signature::from(raw))
     }
 
+    /// Sign raw data with the private key.
     pub fn sign(&self, data: &[u8]) -> Result<Signature, Error> {
         let mut hasher = Sha256::new();
         hasher.update(data);
@@ -39,6 +42,7 @@ impl Private {
         self.sign_digest(&digest)
     }
 
+    /// As raw bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.0[..]
     }

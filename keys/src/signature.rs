@@ -1,10 +1,13 @@
-use hex::{FromHex, ToHex};
-use std::convert::TryFrom;
+//! A signature signed by some private key.
 use std::iter;
 use std::{fmt, ops, str};
 
+use hex::{FromHex, ToHex};
+use std::convert::TryFrom;
+
 use crate::error::Error;
 
+/// A Signature of Secp256k1. The `v`(rec_id) is different from Ethereum.
 #[derive(Clone)]
 pub struct Signature([u8; 65]);
 
@@ -35,6 +38,7 @@ impl Signature {
         self.s() <= &LOW_SIG_THRESHOLD[..]
     }
 
+    /// As raw signature bytes.
     pub fn as_bytes(&self) -> &[u8] {
         &self.0[..]
     }

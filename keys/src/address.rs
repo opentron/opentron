@@ -1,58 +1,67 @@
+//! The address type and decode/encode functions.
+use std::fmt;
+use std::str::FromStr;
+
 use base58::{FromBase58, ToBase58};
+use digest::Digest;
 use hex::FromHex;
 use sha2::Sha256;
-use digest::Digest;
 use sha3::Keccak256;
 use std::convert::TryFrom;
-use std::fmt;
-use std::str::FromStr; // .parse
 
 use crate::error::Error;
 use crate::private::Private;
 use crate::public::Public;
 
+/// The mainnet uses 0x41('A') as address type prefix.
+const ADDRESS_TYPE_PREFIX: u8 = 0x41;
+
+/// Address of Tron, saved in 21-byte format.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Address([u8; 21]);
 
 impl Address {
+    /// Address of a public key.
     pub fn from_public(public: &Public) -> Address {
-
         let mut hasher = Keccak256::new();
         hasher.update(public);
         let digest = hasher.finalize();
 
-        let mut raw = [0x41; 21];
+        let mut raw = [ADDRESS_TYPE_PREFIX; 21];
         raw[1..21].copy_from_slice(&digest[digest.len() - 20..]);
 
         Address(raw)
     }
 
+    /// Address of a private key.
     pub fn from_private(private: &Private) -> Address {
         Address::from_public(&Public::from_private(private).expect("public from private; qed"))
     }
 
+    /// As raw 21-byte address.
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
+    /// As 20-byte address that compatiable with Ethereum.
     pub fn as_tvm_bytes(&self) -> &[u8] {
         &self.0[1..]
     }
 
+    /// Address from 20-byte address that compatiable with Ethereum.
     pub fn from_tvm_bytes(raw: &[u8]) -> Self {
         assert!(raw.len() == 20);
 
-        let mut inner = [0x41; 21];
+        let mut inner = [ADDRESS_TYPE_PREFIX; 21];
         inner[1..21].copy_from_slice(raw);
         Address(inner)
     }
 
+    /// Address rom raw 21-byte.
     pub fn from_bytes(raw: &[u8]) -> &Address {
         assert!(raw.len() == 21);
 
-        unsafe {
-            std::mem::transmute(&raw[0])
-        }
+        unsafe { std::mem::transmute(&raw[0]) }
     }
 }
 
@@ -115,9 +124,9 @@ impl FromStr for Address {
     where
         Self: Sized,
     {
-        if s.len() == 34 && s.as_bytes()[0] == b'T' {
+        if s.len() == 34 {
             b58decode_check(s).and_then(Address::try_from)
-        } else if s.len() == 42 && s.starts_with("41") {
+        } else if s.len() == 42 && s[..2] == hex::encode(&[ADDRESS_TYPE_PREFIX]) {
             Vec::from_hex(s)
                 .map_err(|_| Error::InvalidAddress)
                 .and_then(Address::try_from)
@@ -126,6 +135,7 @@ impl FromStr for Address {
                 .map_err(|_| Error::InvalidAddress)
                 .and_then(Address::try_from)
         } else {
+            println!("len ={} {}", s.len(), s.as_bytes()[0]);
             Err(Error::InvalidAddress)
         }
     }
@@ -138,6 +148,7 @@ impl AsRef<[u8]> for Address {
     }
 }
 
+/// Base58check encode.
 pub fn b58encode_check<T: AsRef<[u8]>>(raw: T) -> String {
     let mut hasher = Sha256::new();
     hasher.update(raw.as_ref());
@@ -152,7 +163,7 @@ pub fn b58encode_check<T: AsRef<[u8]>>(raw: T) -> String {
     raw.to_base58()
 }
 
-// FIXME: better isolated to a crate
+/// Base58check decode.
 pub fn b58decode_check(s: &str) -> Result<Vec<u8>, Error> {
     let mut result = s.from_base58().map_err(|_| Error::InvalidAddress)?;
 
@@ -175,8 +186,8 @@ pub fn b58decode_check(s: &str) -> Result<Vec<u8>, Error> {
 
 #[cfg(test)]
 mod tests {
-    use hex::ToHex;
     use super::*;
+    use hex::ToHex;
 
     #[test]
     fn test_address() {
