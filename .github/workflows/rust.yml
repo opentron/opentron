@@ -14,16 +14,20 @@ jobs:
             - name: Install dependencies
               run: sudo apt-get install protobuf-compiler libprotobuf-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
 
+            - name: Chown of RockDB cache
+              run: |
+                  chown -R $(whoami) /usr/local/lib /usr/local/include
+
             - name: Cache RocksDB build
               id: cache-rocksdb
               uses: actions/cache@v2
               with:
                   path: |
-                    /usr/local/lib/librocksdb.so.6.7.3
-                    /usr/local/lib/librocksdb.so.6.7
-                    /usr/local/lib/librocksdb.so.6
-                    /usr/local/lib/librocksdb.so
-                    /usr/local/include/rocksdb
+                      /usr/local/lib/librocksdb.so.6.7.3
+                      /usr/local/lib/librocksdb.so.6.7
+                      /usr/local/lib/librocksdb.so.6
+                      /usr/local/lib/librocksdb.so
+                      /usr/local/include/rocksdb
                   key: rocksdb-v6.7.3
 
             - name: Install RocksDB
