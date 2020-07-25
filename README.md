@@ -11,6 +11,8 @@ not ready for general use.
   - [Roadmap](#roadmap)
     - [TODOs](#todos)
   - [Quickstart](#quickstart)
+  - [License](#license)
+    - [Contribution](#contribution)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -105,3 +107,18 @@ See [INSTALL.md](./INSTALL.md) for more detailed information.
 
 > cargo run -- --config opentron/conf.nile.toml
 ```
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any
+additional terms or conditions.
