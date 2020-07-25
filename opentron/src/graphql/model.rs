@@ -1,8 +1,6 @@
 use chain::{IndexedBlock, IndexedTransaction};
 use chrono::{DateTime, TimeZone, Utc};
-use juniper::meta::MetaType;
 use juniper::FieldResult;
-use juniper::{GraphQLType, Registry, ScalarValue};
 use keys::Address;
 use primitive_types::H256;
 use std::convert::TryFrom;

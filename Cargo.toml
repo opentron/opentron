@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "node-cli",
+    "opentron",
     "wallet-cli",
     "walletd",
 ]

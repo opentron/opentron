@@ -1,5 +1,5 @@
 [package]
-name = 'node-cli'
+name = 'opentron'
 version = '0.1.0'
 authors = ['andelf <andelf@gmail.com>']
 edition = '2018'

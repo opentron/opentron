@@ -1,3 +1,4 @@
+// NOTE: Embedding slog macros and select! requires increasing recursion_limit.
 #![recursion_limit = "1024"]
 
 use futures::channel::oneshot;
@@ -13,11 +14,11 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::sync::broadcast;
 
-use node_cli::channel::server::channel_server;
-use node_cli::context::AppContext;
-use node_cli::discovery::server::discovery_server;
-use node_cli::graphql::server::graphql_server;
-use node_cli::util::get_my_ip;
+use opentron::channel::server::channel_server;
+use opentron::context::AppContext;
+use opentron::discovery::server::discovery_server;
+use opentron::graphql::server::graphql_server;
+use opentron::util::get_my_ip;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ! init app command line arguments
@@ -48,11 +49,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match matches.subcommand() {
         ("check", Some(arg_matches)) => {
-            let fut = node_cli::commands::check::main(config_file, arg_matches);
+            let fut = opentron::commands::check::main(config_file, arg_matches);
             rt.block_on(fut)
         }
         ("fix", Some(arg_matches)) => {
-            let fut = node_cli::commands::fix::main(config_file, arg_matches);
+            let fut = opentron::commands::fix::main(config_file, arg_matches);
             rt.block_on(fut)
         }
         _ => {
