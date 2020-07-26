@@ -1,10 +1,9 @@
 //! A schema consists of two types: a query object and a mutation object.
 
-use chrono::{Duration, Utc};
-use juniper::FieldResult;
+use juniper::graphql_value;
+use juniper::{FieldError, FieldResult};
 
-use super::contract::{Contract, TransferContract};
-use super::model::{Block, Context, NodeInfo, RawTransaction, Transaction, UnsignedTransaction};
+use super::model::{Block, Context, NodeInfo, Transaction};
 
 pub(crate) struct Query;
 
@@ -44,42 +43,51 @@ pub(crate) struct Mutation;
 
 #[juniper::graphql_object(Context = Context)]
 impl Mutation {
-    fn transfer(
-        ctx: &Context,
-        owner: String,
-        to: String,
-        amount: f64,
-        mut option: Option<ContractOptions>,
-    ) -> FieldResult<UnsignedTransaction> {
-        let contract = TransferContract {
-            owner_address: owner,
-            to_address: to,
-            amount,
+    /// Broadcast a transaction with its signatures.
+    fn broadcast(_ctx: &Context, raw: String, signatures: Vec<String>) -> FieldResult<Transaction> {
+        use chain::IndexedTransaction;
+        use prost::Message;
+        use proto2::chain::{transaction::Raw as RawTransaction, Transaction};
+
+        let raw = hex::decode(&raw).map_err(|e| {
+            FieldError::new(
+                "fail to parse raw transaction as hex",
+                graphql_value!({
+                    "internal_error": (e.to_string())
+                }),
+            )
+        })?;
+
+        let buf = &raw[..];
+
+        let raw_txn = RawTransaction::decode(buf).map_err(|e| {
+            FieldError::new(
+                "fail to parse raw transaction as protobuf",
+                graphql_value!({
+                    "internal_error": (e.to_string())
+                }),
+            )
+        })?;
+
+        let txn = Transaction {
+            raw_data: Some(raw_txn),
+            signatures: signatures
+                .iter()
+                .map(|sig| hex::decode(sig))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| {
+                    FieldError::new(
+                        "fail to parse signatures",
+                        graphql_value!({
+                            "internal_error": (e.to_string())
+                        }),
+                    )
+                })?,
+            ..Default::default()
         };
-
-        let ref_block_id = ctx.app.db.highest_block()?.block_id();
-        let memo = option.as_mut().and_then(|opt| opt.memo.take());
-        let permission_id = option
-            .as_mut()
-            .and_then(|opt| opt.permission_id.take())
-            .unwrap_or_default();
-        let fee_limit = option.as_mut().and_then(|opt| opt.fee_limit.take()).unwrap_or_default();
-
-        let raw_txn = RawTransaction {
-            contract: Contract::TransferContract(contract),
-            timestamp: Some(Utc::now()),
-            expiration: Utc::now() + Duration::minutes(10),
-            ref_block_bytes: hex::encode(&ref_block_id.hash[6..8]),
-            ref_block_hash: hex::encode(&ref_block_id.hash[8..16]),
-            permission_id,
-            fee_limit,
-            memo,
-        };
-
-        Ok(UnsignedTransaction {
-            id: Default::default(),
-            inner: raw_txn,
-        })
+        let txn = IndexedTransaction::from_raw(txn);
+        // TODO: broadcast
+        Ok(txn.into())
     }
 }
 
