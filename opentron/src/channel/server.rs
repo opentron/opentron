@@ -306,7 +306,8 @@ async fn sync_channel_handler(
     mut reader: impl Stream<Item = Result<ChannelMessage, io::Error>> + Unpin,
     mut writer: impl Sink<ChannelMessage, Error = io::Error> + Unpin,
 ) -> Result<(), Box<dyn Error>> {
-    const BATCH: usize = 500;
+    let config = &ctx.config.protocol.channel;
+    let batch_size = config.sync_batch_size;
 
     let mut done = {
         let mut peers = ctx.peers.write().unwrap();
@@ -447,8 +448,8 @@ async fn sync_channel_handler(
 
                         last_block_number = last_block_id.number;
 
-                        let tail = if syncing_block_ids.len() >= BATCH {
-                            syncing_block_ids.split_off(BATCH)
+                        let tail = if syncing_block_ids.len() >= batch_size {
+                            syncing_block_ids.split_off(batch_size)
                         } else {
                             vec![]
                         };
@@ -507,9 +508,9 @@ async fn sync_channel_handler(
                                 };
                                 writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
                             } else if block.number() == last_block_number_in_this_batch {
-                                info!("sync next bulk of blocks from {} batch={}", block.number(), BATCH);
-                                let tail = if syncing_block_ids.len() >= BATCH {
-                                    syncing_block_ids.split_off(BATCH)
+                                info!("sync next bulk of blocks from {} batch={}", block.number(), batch_size);
+                                let tail = if syncing_block_ids.len() >= batch_size {
+                                    syncing_block_ids.split_off(batch_size)
                                 } else {
                                     vec![]
                                 };
