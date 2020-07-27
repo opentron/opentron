@@ -66,6 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 // NOTE: #[tokio::main] conflicts with slog_scope, cause data race in global static resource release.
 async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
     let mut ctx = AppContext::from_config(config_file)?;
+    info!("load config => \n{:#?}", ctx.config);
     ctx.outbound_ip = get_my_ip().await?;
     info!("outbound ip address: {}", ctx.outbound_ip);
     let ctx = Arc::new(ctx);
