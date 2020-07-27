@@ -2,13 +2,30 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-pub const CONFIG_FILE: &str = "./conf.toml";
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub struct ChainParameterConfig {
+    allow_creation_of_contracts: bool,
+    allow_multisig: bool,
+    allow_adaptive_energy: bool,
+    allow_delegate_resource: bool,
+    allow_duplicate_asset_names: bool,
+    allow_tvm_transfer_trc10_upgrade: bool,
+    allow_tvm_constantinople_upgrade: bool,
+    allow_tvm_solidity_059_upgrade: bool,
+    allow_shielded_trc20_transaction: bool,
+    // forbid-transfer-to-contract = false
+    energy_fee: Option<i64>,
+}
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ChainConfig {
     pub genesis: String,
     pub p2p_version: i32,
+    pub maintenance_interval: String,
+    pub proposal_expiration_duration: String,
+    pub parameter: ChainParameterConfig,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -53,36 +70,16 @@ pub struct GraphQLConfig {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct MerkleTreePatch {
-    pub txn: String,
-    pub tree_node_hash: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub chain: ChainConfig,
     pub storage: StorageConfig,
     pub protocol: ProtocolConfig,
     pub graphql: GraphQLConfig,
-    pub merkle_tree_patch: Option<Vec<MerkleTreePatch>>,
 }
 
 impl Config {
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(path)?;
         Ok(toml::from_str(&content)?)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    #[ignore]
-    fn test_config_parse() {
-        let content = fs::read_to_string(CONFIG_FILE).unwrap();
-        let config: Config = toml::from_str(&content).unwrap();
-        println!("yep => {:?}", config);
     }
 }
