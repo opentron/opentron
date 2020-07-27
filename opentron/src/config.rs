@@ -5,17 +5,18 @@ use std::path::Path;
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ChainParameterConfig {
-    allow_creation_of_contracts: bool,
-    allow_multisig: bool,
-    allow_adaptive_energy: bool,
-    allow_delegate_resource: bool,
-    allow_duplicate_asset_names: bool,
-    allow_tvm_transfer_trc10_upgrade: bool,
-    allow_tvm_constantinople_upgrade: bool,
-    allow_tvm_solidity_059_upgrade: bool,
-    allow_shielded_trc20_transaction: bool,
+    pub maintenance_interval: i64,
+    pub allow_creation_of_contracts: bool,
+    pub allow_multisig: bool,
+    pub allow_adaptive_energy: bool,
+    pub allow_delegate_resource: bool,
+    pub allow_duplicate_asset_names: bool,
+    pub allow_tvm_transfer_trc10_upgrade: bool,
+    pub allow_tvm_constantinople_upgrade: bool,
+    pub allow_tvm_solidity_059_upgrade: bool,
+    pub allow_shielded_trc20_transaction: bool,
     // forbid-transfer-to-contract = false
-    energy_fee: Option<i64>,
+    pub energy_fee: Option<i64>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -23,7 +24,6 @@ pub struct ChainParameterConfig {
 pub struct ChainConfig {
     pub genesis: String,
     pub p2p_version: i32,
-    pub maintenance_interval: String,
     pub proposal_expiration_duration: String,
     pub parameter: ChainParameterConfig,
 }
@@ -51,6 +51,7 @@ pub struct ChannelProtoConfig {
     pub advertised_endpoint: String,
     pub active_nodes: Vec<String>,
     pub max_active_connections: u32,
+    pub sync_batch_size: usize,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

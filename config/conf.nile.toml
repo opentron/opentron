@@ -14,13 +14,14 @@ engine = 'rocksdb'
 genesis = 'genesis.nile.json'
 p2p-version = 201910292
 
-maintenance-interval = '600s'
 proposal-expiration-duration = '600s'
 
 [chain.tvm]
 save-internal-txn = true
 
 [chain.parameter]
+# in ms, 6m
+maintenance-interval = 600_000
 # PrivateNet: true
 allow-creation-of-contracts = false
 # PrivateNet: true
