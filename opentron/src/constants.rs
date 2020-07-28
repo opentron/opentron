@@ -34,8 +34,15 @@ pub enum BlockVersion {
     /// Also applies to all blocks before around #2300000.
     Genesis = 0,
     Unknown1290 = 1,
-    Unknown1442 = 2,
-    Unknown1485 = 3,
+    // PR #1442
+    Odyssey3_0_1 = 2,
+    // PR #1485
+    Odyssey3_1_0 = 3,
+    /// Special Check after block #4727890 (enery.limit.block.num).
+    /// When block.version == 5,
+    /// it makes block use new energy to handle transaction when block number >= 4727890L.
+    /// Otherwise version !=5, skip.
+    ///
     /// - Support Of Resource Delegation.
     /// - UpdateEnergyLimitContract
     /// - TotalEnergyLimit
@@ -62,6 +69,8 @@ pub enum BlockVersion {
     Odyssey3_6_5 = 9,
     /// - ForbidTransferToContract
     Odyssey3_6_6 = 10,
+    // Note: This version has only non-core API changes.
+    Odyssey3_7 = 15,
     /// - AllowTvmShieldedUpgrade
     GreatVoyage4_0_0 = 16,
 }
