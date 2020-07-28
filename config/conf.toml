@@ -23,8 +23,6 @@ save-internal-txn = true
 # in ms, 6h
 maintenance-interval = 21600_000
 # PrivateNet: true
-allow-creation-of-contracts = false
-# PrivateNet: true
 allow-multisig = false
 # PrivateNet: true
 allow-adaptive-energy = false
@@ -34,13 +32,15 @@ allow-delegate-resource = false
 allow-duplicate-asset-names = false
 # The TVM upgrade
 # PrivateNet: true
+allow-tvm = false
+# PrivateNet: true
 allow-tvm-transfer-trc10-upgrade = false
 # PrivateNet: true
 allow-tvm-constantinople-upgrade = false
 # PrivateNet: true
 allow-tvm-solidity-059-upgrade = false
 # PrivateNet: true
-allow-shielded-trc20-transaction = false
+allow-tvm-shielded-upgrade = false
 
 # Default: 100, PrivateNet: 10
 #energy-fee = 100

@@ -6,15 +6,15 @@ use std::path::Path;
 #[serde(rename_all = "kebab-case")]
 pub struct ChainParameterConfig {
     pub maintenance_interval: i64,
-    pub allow_creation_of_contracts: bool,
     pub allow_multisig: bool,
     pub allow_adaptive_energy: bool,
     pub allow_delegate_resource: bool,
     pub allow_duplicate_asset_names: bool,
+    pub allow_tvm: bool,
     pub allow_tvm_transfer_trc10_upgrade: bool,
     pub allow_tvm_constantinople_upgrade: bool,
     pub allow_tvm_solidity_059_upgrade: bool,
-    pub allow_shielded_trc20_transaction: bool,
+    pub allow_tvm_shielded_upgrade: bool,
     // forbid-transfer-to-contract = false
     pub energy_fee: Option<i64>,
 }
