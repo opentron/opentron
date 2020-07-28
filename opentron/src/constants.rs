@@ -28,6 +28,50 @@ pub const MAX_TRANSACTION_EXPIRATION: usize = 24 * 60 * 60 * 1_000;
 
 pub const DEFAULT_ORIGIN_ENERGY_LIMIT: usize = 10_000_000;
 
+// Not that dynamic store
+
+pub const FREE_BANDWIDTH: usize = 5000;
+
+/// Renamed: TotalSignNum
+pub const MAX_NUM_OF_KEYS_IN_MULTISIG: usize = 5;
+
+pub const MAX_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: usize = 3;
+pub const MIN_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: usize = 3;
+
+/// Max number of `FronzenSupply` in AssetIssue.
+pub const MAX_NUM_OF_FROZEN_SUPPLIES_IN_ASSET_ISSUE: usize = 10;
+
+pub const MAX_NUM_OF_FRONZEN_DAYS_IN_ASSET_ISSUE: usize = 3652;
+pub const MIN_NUM_OF_FRONZEN_DAYS_IN_ASSET_ISSUE: usize = 1;
+
+pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
+
+/// Renamed: OneDayNetLimit, restrict both free_asset_net_limit and public_free_asset_net_limit.
+pub const MAX_FREE_BANDWIDTH_IN_ASSET_ISSUE: usize = 57_600_000_000;
+
+// Renamed: ExchangeBalanceLimit
+pub const MAX_EXCHANGE_BALANCE: usize = 1_000_000_000_000_000;
+
+// 3s, in ms.
+pub const BLOCK_PRODUCING_INTERVAL: usize = 3_000;
+// 1d, in ms.
+pub const RESOURCE_WINDOW_SIZE: usize =  24 * 3600 * 1000;
+/// Precision used in resource calculation.
+pub const RESOURCE_PRECISION: usize = 1_000_000;
+
+// * Adaptive Energy
+// if TotalEnergyAverageUsage > TotalEnergyTargetLimit:
+//    decrease TotalEnergyCurrentLimit to 99/100
+// else
+//    increase TotalEnergyCurrentLimit to 1000/999
+//
+// FYI: Limit / Weight = price
+pub const ADAPTIVE_ENERGY_DECREASE_RATE_NUMERATOR: i64 = 99;
+pub const ADAPTIVE_ENERGY_DECREASE_RATE_DENOMINATOR: i64 = 100;
+
+pub const ADAPTIVE_ENERGY_INCREASE_RATE_NUMERATOR: i64 = 1000;
+pub const ADAPTIVE_ENERGY_INCREASE_RATE_DENOMINATOR: i64 = 999;
+
 /// Block versions. These versions match version names on github release page(or PR numbers).
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BlockVersion {
