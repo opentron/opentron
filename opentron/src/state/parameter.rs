@@ -10,6 +10,8 @@ pub enum ChainParameter {
     ///
     /// Range: [3 * 27 * 1000, 24 * 3600 * 1000] (27x3s ~ 1d)
     MaintenanceInterval = 0,
+    /// Max execution duration of a TVM transaction(smart contract creation and triggering).
+    ///
     /// Default: 50, in ms
     ///
     /// Renamed: `MaxCpuTimeOfOneTx`
@@ -175,13 +177,13 @@ pub enum ChainParameter {
     StandbyWitnessPayPerBlock = 31,
 
     // TVM updates
-    /// v3.2 update. CALLTOKEN, TOKENBALANCE, CALLTOKENVALUE, CALLTOKENID.
+    /// TVM v3.2 update. CALLTOKEN, TOKENBALANCE, CALLTOKENVALUE, CALLTOKENID.
     ///
     /// Requires: `AllowSameTokenName`
     ///
     /// Default: config, 0
     AllowTvmTransferTrc10Upgrade = 18,
-    /// Shift instructions, CREATE2, EXTCODEHASH. ClearABI, forbid delegate resource to contract.
+    /// TVM with shift instructions, CREATE2, EXTCODEHASH. ClearABI, forbid delegate resource to contract.
     ///
     /// Renamed: `AllowTvmConstantinople`
     ///
@@ -191,7 +193,7 @@ pub enum ChainParameter {
     ///
     /// Default: config, 0
     AllowTvmConstantinopleUpgrade = 26,
-    /// With `batchvalidatesign`, `validatemultisign`, `iscontract` support.
+    /// TVM with `batchvalidatesign`, `validatemultisign`, `iscontract` support.
     ///
     /// Renamed: `AllowTvmSolidity059`
     ///
@@ -201,7 +203,7 @@ pub enum ChainParameter {
     ///
     /// Default: config, 0
     AllowTvmSolidity059Upgrade = 32,
-    /// Librustzcash Shielded precompiles update.
+    /// TVM with librustzcash Shielded precompiles upgrade.
     ///
     /// Renamed: `AllowShieldedTRC20Transaction`
     ///
@@ -210,7 +212,8 @@ pub enum ChainParameter {
     /// Default: config, 0
     AllowTvmShieldedUpgrade = 39,
 
-    // useless
+    /// Useless.
+    ///
     /// Enabled: 3.6
     ///
     /// Default: 0
