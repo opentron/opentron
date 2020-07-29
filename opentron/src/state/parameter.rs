@@ -124,6 +124,8 @@ pub enum ChainParameter {
     /// Enabled by EnergyLimit update, Deprecated by 3.2.2.
     ///
     /// Default: 50_000_000_000
+    ///
+    /// Note: uselesss now
     TotalEnergyLimit = 17,
     /// Enabled: 3.2.2
     ///

@@ -11,7 +11,7 @@ pub const MAX_BLOCK_SIZE: usize = 2_000_000;
 /// Max block size in channel protocol handler.
 pub const MAX_ACCEPTABLE_BLOCK_SIZE: usize = MAX_BLOCK_SIZE + 1000;
 
-pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_0;
+pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
 
 pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: usize = 2;
 
@@ -115,6 +115,14 @@ pub enum BlockVersion {
     Odyssey3_6_6 = 10,
     // Note: This version has only non-core API changes.
     Odyssey3_7 = 15,
-    /// - AllowTvmShieldedUpgrade
+    /// Shielded TVM precompiles.
+    ///
+    /// - support AllowTvmShieldedUpgrade config
     GreatVoyage4_0_0 = 16,
+    /// First hard fork based on timestamp. Fork at 1596780000_000, at least 22 SRs.
+    ///
+    /// See-also: https://github.com/tronprotocol/java-tron/pull/3314
+    ///
+    /// - support AllowTvmShieldedUpgrade proposal
+    GreatVoyage4_0_1 = 17,
 }
