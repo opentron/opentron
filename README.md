@@ -1,4 +1,4 @@
-# OpenTron
+![OpenTron logo](./assets/logo-medium.png)
 
 OpenTron is an implementation of the Tron blockchain written in Rust. This project is under active development and is
 not ready for general use.
@@ -6,17 +6,14 @@ not ready for general use.
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [OpenTron](#opentron)
-  - [Rationale](#rationale)
-  - [Roadmap](#roadmap)
-    - [TODOs](#todos)
-  - [Quickstart](#quickstart)
-  - [License](#license)
-    - [Contribution](#contribution)
+- [Rationale](#rationale)
+- [Roadmap](#roadmap)
+  - [TODOs](#todos)
+- [Quickstart](#quickstart)
+- [License](#license)
+  - [Contribution](#contribution)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-![OpenTron logo](./assets/logo-medium.png)
 
 ## Rationale
 
