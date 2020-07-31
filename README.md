@@ -16,6 +16,8 @@ not ready for general use.
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
+![OpenTron logo](./assets/logo-medium.png)
+
 ## Rationale
 
 1. Decentralised
