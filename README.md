@@ -1,4 +1,5 @@
 ![OpenTron logo](./assets/logo-medium.png)
+[![Chat on Telegram](https://img.shields.io/badge/opentron-Chat%20on%20Telegram-blue)](https://t.me/opentron)
 
 OpenTron is an implementation of the Tron blockchain written in Rust. This project is under active development and is
 not ready for general use.
