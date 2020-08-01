@@ -27,7 +27,7 @@ not ready for general use.
 2. High performance
 
    API calls to java-tron nodes often results in CPU timeouts and other "out of resource" related errors. This is partly
-   due to java-tron being written in Java, a garbage collected language that runs on a virtual machine. OpenRust is
+   due to java-tron being written in Java, a garbage collected language that runs on a virtual machine. OpenTron is
    written in Rust, a modern compiled language that is increasingly adopted for blockchain and systems development due
    to its high performance, safety and modern design.
 
