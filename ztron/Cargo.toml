@@ -16,12 +16,13 @@ crypto_api_chachapoly = "0.2.1"
 
 keys = { path = "../keys" }
 
-zcash_primitives = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-zcash_proofs = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-pairing = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-ff = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
-bellman = { git = "https://github.com/andelf/librustzcash", branch = "ztron" }
+zcash_primitives = { git = "https://github.com/opentron/librustzcash", branch = "tron" }
+zcash_proofs = { git = "https://github.com/opentron/librustzcash", branch = "tron" }
+pairing = { git = "https://github.com/opentron/librustzcash", branch = "tron" }
+ff = { git = "https://github.com/opentron/librustzcash", branch = "tron" }
+bellman = { git = "https://github.com/opentron/librustzcash", branch = "tron" }
 
+# For Local Devs:
 #zcash_primitives = { path = "../../librustzcash/zcash_primitives" }
 #zcash_proofs = { path = "../../librustzcash/zcash_proofs" }
 #pairing = { path = "../../librustzcash/pairing" }
