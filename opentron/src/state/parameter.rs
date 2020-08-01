@@ -331,7 +331,7 @@ impl ChainParameter {
             (AllowTvm, config.allow_tvm as i64),
             (ForbidTransferToContract, 0),
             (BandwidthFee, 10),
-            (EnergyFee, config.energy_fee.unwrap_or(100)),
+            (EnergyFee, config.energy_fee),
             (WitnessCreateFee, 9999_000_000),
             (AccountCreateFee, 100_000),
             (AccountPermissionUpdateFee, 100_000_000),
