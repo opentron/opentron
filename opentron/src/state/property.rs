@@ -49,7 +49,7 @@ pub enum DynamicProperty {
     GlobalFreeBandwidthUsed,
     /// Renamed: PublicNetTime = 0
     GlobalFreeBandwidthLastUsedTimestamp,
-    //
+    // * Unused and deprecated
     // ! Why a block scoped variable is saved to store?
     // BlockEnergyUsage
 

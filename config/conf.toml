@@ -15,32 +15,32 @@ genesis = 'genesis.json'
 p2p-version = 11111
 
 proposal-expiration-duration = '3d'
-
-[chain.tvm]
-save-internal-txn = true
+# block-producing-interval = '3s'
 
 [chain.parameter]
 # in ms, 6h
 maintenance-interval = 21600_000
+
+# NOTE: All following are enabled by proposals.
 # PrivateNet: true
-allow-multisig = false
+#allow-multisig = false
 # PrivateNet: true
-allow-adaptive-energy = false
+#allow-adaptive-energy = false
 # PrivateNet: true
-allow-delegate-resource = false
+#allow-delegate-resource = false
 # PrivateNet: true
-allow-duplicate-asset-names = false
+#allow-duplicate-asset-names = false
 # The TVM upgrade
 # PrivateNet: true
-allow-tvm = false
+#allow-tvm = false
 # PrivateNet: true
-allow-tvm-transfer-trc10-upgrade = false
+#allow-tvm-transfer-trc10-upgrade = false
 # PrivateNet: true
-allow-tvm-constantinople-upgrade = false
+#allow-tvm-constantinople-upgrade = false
 # PrivateNet: true
-allow-tvm-solidity-059-upgrade = false
+#allow-tvm-solidity-059-upgrade = false
 # PrivateNet: true
-allow-tvm-shielded-upgrade = false
+#allow-tvm-shielded-upgrade = false
 
 # Default: 100, PrivateNet: 10
 #energy-fee = 100
