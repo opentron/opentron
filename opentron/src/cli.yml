@@ -1,7 +1,7 @@
-name: node-cli
+name: opentron
 version: "0.1.0"
-author: Shuyu WANG <andelf@gmail.com>
-about: Tron Protocol node command line util
+author: OpenTron Developers <info@opentron.org>
+about: Tron Protocol Full Node Implementation.
 settings: &default_settings
     - DisableHelpSubcommand
     - VersionlessSubcommands
