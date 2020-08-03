@@ -4,6 +4,8 @@ use crate::config::ChainParameterConfig;
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ChainParameter {
     // Core chain parameters.
+    /// The maintenance interval of SRs.
+    ///
     /// Renamed: `MaintenanceTimeInterval`
     ///
     /// Default: 6h, 21600000 in ms
@@ -51,6 +53,9 @@ pub enum ChainParameter {
     /// Default: 0
     ///
     /// Mainnet: 0
+    ///
+    /// Note: Never appear as a proposal. Hidden in tronscan, but is avaliable as config options in java-tron.
+    /// Block #8222293 has this field.
     AllowAccountStateRoot = 25,
     /// This enables TVM and allows creation of smart contracts.
     ///
@@ -83,10 +88,14 @@ pub enum ChainParameter {
     ///
     /// Mainnet: 10
     EnergyFee = 11,
+    /// The cost of applying to be an SR account.
+    ///
     /// Renamed: `AccountUpgradeCost`
     ///
     /// Default: 9999_000_000
     WitnessCreateFee = 1,
+    /// Account creation fee.
+    ///
     /// Used in `CreateAccount`, `Transfer`, `TransferAsset`.
     ///
     /// Renamed: `CreateAccountFee`
@@ -125,13 +134,13 @@ pub enum ChainParameter {
     ///
     /// Default: 50_000_000_000
     ///
-    /// Note: uselesss now
+    /// Note: uselesss now, but
     TotalEnergyLimit = 17,
     /// Enabled: 3.2.2
     ///
     /// Default: 50_000_000_000
     ///
-    /// Mainnet: 90_000_000_000
+    /// Mainnet: 90_000_000_000 (via proposal)
     TotalEnergyCurrentLimit = 19,
     /// Default: config, 0
     ///
@@ -152,6 +161,8 @@ pub enum ChainParameter {
     AdaptiveResourceLimitMultiplier = 29,
 
     // Witness rewards. Standby witness = 27 active witnesses + 100 partner witnesses.
+    /// SR block generation reward.
+    ///
     /// Default: 32_000_000
     ///
     /// Mainnet: 16_000_000
@@ -298,7 +309,8 @@ impl ChainParameter {
             (CreateNewAccountFeeInSystemContract, 0),
             (CreateNewAccountBandwidthRate, 1),
             (TotalEnergyLimit, 50_000_000_000),
-            (TotalEnergyCurrentLimit, 50_000_000_000),
+            // = TotalEnergyLimit
+            // (TotalEnergyCurrentLimit, 50_000_000_000),
             (AllowAdaptiveEnergy, 0),
             (AdaptiveResourceLimitTargetRatio, 14400),
             (AdaptiveResourceLimitMultiplier, 1_000),
@@ -341,6 +353,7 @@ impl ChainParameter {
             (CreateNewAccountFeeInSystemContract, 0),
             (CreateNewAccountBandwidthRate, 1),
             (TotalEnergyLimit, 50_000_000_000),
+            // Same as TotalEnergyLimit,
             (TotalEnergyCurrentLimit, 50_000_000_000),
             (AllowAdaptiveEnergy, config.allow_adaptive_energy as i64),
             (AdaptiveResourceLimitTargetRatio, 14400),
@@ -361,4 +374,17 @@ impl ChainParameter {
             (AllowProtoFilterNum, 0),
         ];
     }
+
+    /*
+    pub fn initial_value_hook(
+        &self,
+        params: &HashMap<ChainParameter, i64>,
+        _props: &HashMap<DynamicProperty, i64>,
+    ) -> Option<i64> {
+        match *self {
+            ChainParameter::TotalEnergyCurrentLimit => Some(params[&ChainParameter::TotalEnergyLimit]),
+            _ => None,
+        }
+    }
+    */
 }

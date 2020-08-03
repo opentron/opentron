@@ -1,3 +1,10 @@
+use std::collections::HashMap;
+
+use super::ChainParameter;
+
+/// Used for DB migrations. Corresponding key is `DynamicProperty::DbVersion`.
+const CURRENT_DB_VERSION: i64 = 1;
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum DynamicProperty {
     /// For migration.
@@ -14,7 +21,7 @@ pub enum DynamicProperty {
     // * Latest Block
     LatestBlockTimestamp,
     LatestBlockNumber,
-    LatestBlockHash,
+    // LatestBlockHash,
     LatestSolidBlockNumber,
 
     // StateFlag, is in maintenance?
@@ -28,7 +35,6 @@ pub enum DynamicProperty {
     ///
     /// Default: 43_200_000_000
     TotalBandwidthLimit,
-
 
     // * Adaptive Energy
     /// Accumulator frozen energy.
@@ -48,7 +54,7 @@ pub enum DynamicProperty {
     /// Renamed: PublicNetUsage = 0
     GlobalFreeBandwidthUsed,
     /// Renamed: PublicNetTime = 0
-    GlobalFreeBandwidthLastUsedTimestamp,
+    GlobalFreeBandwidthLastTimestamp,
     // * Unused and deprecated
     // ! Why a block scoped variable is saved to store?
     // BlockEnergyUsage
@@ -74,4 +80,44 @@ pub enum DynamicProperty {
     // ActivePermissionMask,
 
     // Unused in mainnet: TotalShieldedPoolValue
+}
+
+impl DynamicProperty {
+    pub fn default_properties() -> impl IntoIterator<Item = (DynamicProperty, i64)> {
+        use self::DynamicProperty::*;
+
+        return vec![
+            (DbVersion, CURRENT_DB_VERSION),
+            (NextTokenId, 1000001),
+            (NextProposalId, 1),
+            (NextExchangeId, 1),
+            // LatestBlockTimestamp,
+            // LatestBlockNumber,
+            // LatestBlockHash,
+            // LatestSolidBlockNumber,
+
+            // BlockFilledSlotsIndex // BLOCK_FILLED_SLOTS_NUMBER???
+            (TotalBandwidthWeight, 0),
+            (TotalBandwidthLimit, 43_200_000_000),
+            (TotalEnergyWeight, 0),
+            // Default: ChainParameter::TotalEnergyLimit / 14400, when accessed
+            // (TotalEnergyTargetLimit, 90_000_000_000 / 14400)
+            (TotalEnergyAverageUsage, 0),
+            (TotalEnergyAverageTime, 0),
+            (GlobalFreeBandwidthLimit, 14_400_000_000),
+            (GlobalFreeBandwidthUsed, 0),
+            (GlobalFreeBandwidthLastTimestamp, 0),
+        ];
+    }
+
+    pub fn initial_value_hook(
+        &self,
+        params: &HashMap<ChainParameter, i64>,
+        _props: &HashMap<DynamicProperty, i64>,
+    ) -> Option<i64> {
+        match *self {
+            DynamicProperty::TotalEnergyTargetLimit => Some(params[&ChainParameter::TotalEnergyLimit] / 14400),
+            _ => None,
+        }
+    }
 }
