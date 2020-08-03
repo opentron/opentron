@@ -56,6 +56,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let fut = opentron::commands::fix::main(config_file, arg_matches);
             rt.block_on(fut)
         }
+        ("dev", Some(arg_matches)) => {
+            let fut = opentron::commands::dev::main(config_file, arg_matches);
+            rt.block_on(fut)
+        }
         _ => {
             let fut = run(config_file);
             rt.block_on(fut)

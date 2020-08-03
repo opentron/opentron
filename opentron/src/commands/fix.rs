@@ -1,6 +1,6 @@
 use clap::ArgMatches;
-use std::path::Path;
 use log::info;
+use std::path::Path;
 
 use crate::config::Config;
 use crate::db::ChainDB;
