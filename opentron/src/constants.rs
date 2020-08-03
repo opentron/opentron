@@ -1,36 +1,48 @@
+//* Chain parameters.
+
+pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
+
+/// Will postpone txns if block size exceeds 2MiB.
+/// So in theory, max txns/block is around 7700, max tps is around 2500.
+pub const MAX_BLOCK_SIZE: usize = 2_000_000;
+
+// 3s, in ms.
+pub const BLOCK_PRODUCING_INTERVAL: usize = 3_000;
+
+/// Max block size in channel protocol handler.
+pub const MAX_ACCEPTABLE_BLOCK_SIZE: usize = MAX_BLOCK_SIZE + 1000;
+
+pub const FREE_BANDWIDTH: usize = 5000;
+
+//* Witness and block producing.
 pub const MAX_NUM_OF_ACTIVE_WITNESSES: usize = 27;
 pub const MAX_NUM_OF_STANDBY_WITNESSES: usize = 127;
 
 // 27 * 70% = 18.9, so a solid block is one verified by 19 witnesses.
 pub const SOLID_THRESHOLD_PERCENT: usize = 70;
 
-/// Will postpone txns if block size exceeds 2MiB.
-/// So in theory, max txns/block is around 7700, max tps is around 2500.
-pub const MAX_BLOCK_SIZE: usize = 2_000_000;
-
-/// Max block size in channel protocol handler.
-pub const MAX_ACCEPTABLE_BLOCK_SIZE: usize = MAX_BLOCK_SIZE + 1000;
-
-pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
-
 pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: usize = 2;
 
-/// Max number of votes in a `VoteWitness` is 30.
-pub const MAX_NUM_OF_VOTES: usize = 30;
+/// Renamed: WitnessAllowanceFrozenTime
+pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
+
+/// in percent
+pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
+
+//* Transactions
 
 /// 500KB
 pub const MAX_TRANSACTION_SIZE: usize = 500 * 1024;
 
 pub const MAX_TRANSACTION_RESULT_SIZE: usize = 64;
 
+/// Max number of votes in a `VoteWitness` is 30.
+pub const MAX_NUM_OF_VOTES: usize = 30;
+
 /// 1d, in ms.
 pub const MAX_TRANSACTION_EXPIRATION: usize = 24 * 60 * 60 * 1_000;
 
 pub const DEFAULT_ORIGIN_ENERGY_LIMIT: usize = 10_000_000;
-
-// Not that dynamic store
-
-pub const FREE_BANDWIDTH: usize = 5000;
 
 /// Renamed: TotalSignNum
 pub const MAX_NUM_OF_KEYS_IN_MULTISIG: usize = 5;
@@ -44,18 +56,14 @@ pub const MAX_NUM_OF_FROZEN_SUPPLIES_IN_ASSET_ISSUE: usize = 10;
 pub const MAX_NUM_OF_FRONZEN_DAYS_IN_ASSET_ISSUE: usize = 3652;
 pub const MIN_NUM_OF_FRONZEN_DAYS_IN_ASSET_ISSUE: usize = 1;
 
-pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
-
 /// Renamed: OneDayNetLimit, restrict both free_asset_net_limit and public_free_asset_net_limit.
 pub const MAX_FREE_BANDWIDTH_IN_ASSET_ISSUE: usize = 57_600_000_000;
 
 // Renamed: ExchangeBalanceLimit
 pub const MAX_EXCHANGE_BALANCE: usize = 1_000_000_000_000_000;
 
-// 3s, in ms.
-pub const BLOCK_PRODUCING_INTERVAL: usize = 3_000;
 // 1d, in ms.
-pub const RESOURCE_WINDOW_SIZE: usize =  24 * 3600 * 1000;
+pub const RESOURCE_WINDOW_SIZE: usize = 24 * 3600 * 1000;
 /// Precision used in resource calculation.
 pub const RESOURCE_PRECISION: usize = 1_000_000;
 

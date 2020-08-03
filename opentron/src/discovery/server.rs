@@ -13,8 +13,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net;
 use tokio::net::UdpSocket;
-use tokio::sync::broadcast;
 use tokio::pin;
+use tokio::sync::broadcast;
 
 use super::protocol::{DiscoveryMessage, DiscoveryMessageTransport};
 use crate::context::AppContext;

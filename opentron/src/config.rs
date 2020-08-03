@@ -62,15 +62,23 @@ fn default_proposal_expiration_duration() -> String {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct StorageConfig {
+    /// Path to ChainDB.
     #[serde(default = "default_data_dir")]
     pub data_dir: String,
     // TODO: impl a different engine
     #[serde(default = "Default::default")]
     pub engine: String,
+    /// Path to StateDB.
+    #[serde(default = "default_state_data_dir")]
+    pub state_data_dir: String,
 }
 
 fn default_data_dir() -> String {
     "./data".into()
+}
+
+fn default_state_data_dir() -> String {
+    "./data.state".into()
 }
 
 #[derive(Deserialize, Serialize, Debug)]

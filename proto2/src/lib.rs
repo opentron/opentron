@@ -9,7 +9,7 @@ pub mod common {
             let block_number = BE::read_u64(&block_hash[..8]);
             BlockId {
                 hash: block_hash,
-                number: block_number as i64
+                number: block_number as i64,
             }
         }
     }

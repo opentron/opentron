@@ -606,9 +606,9 @@ impl ChainDB {
                     hex::encode(&header.raw.raw_data.as_ref().unwrap().parent_hash)
                 );
                 if parent_block_number == header.number() as u64 {
-                    return Ok(CheckResult::ForkAt(parent_block_number))
+                    return Ok(CheckResult::ForkAt(parent_block_number));
                 } else {
-                    return Ok(CheckResult::BreakAt(parent_block_number))
+                    return Ok(CheckResult::BreakAt(parent_block_number));
                 }
             }
             if header.number() % 10000 == 0 {

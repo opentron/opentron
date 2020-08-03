@@ -38,3 +38,5 @@ subcommands:
                     takes_value: true
                     long: fork
                     value_name: NUM
+    - dev:
+          about: Dev command
