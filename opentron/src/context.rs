@@ -17,6 +17,7 @@ pub struct AppContext {
     pub node_id: Vec<u8>,
     pub genesis_block_id: Option<BlockId>,
     pub config: Config,
+    pub genesis_config: GenesisConfig,
     pub db: ChainDB,
     pub running: Arc<AtomicBool>,
     pub num_active_connections: AtomicU32,
@@ -59,6 +60,7 @@ impl AppContext {
         Ok(AppContext {
             db,
             config,
+            genesis_config,
             node_id,
             outbound_ip: String::new(),
             genesis_block_id: Some(genesis_block_id),
