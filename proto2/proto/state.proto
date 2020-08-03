@@ -5,24 +5,32 @@ package proto.state;
 import "common.proto";
 import "chain.proto";
 
+message AccountResource {
+  int64 free_bandwidth_used = 1;
+  // Normally free bandwidth limit is a const defined in code, 5000.
+  int64 free_bandwidth_limit = 2;
+  int64 free_bandwidth_last_timestamp = 3;
+  int64 frozen_bandwidth_used = 4;
+  int64 frozen_bandwidth_limit = 5;
+  int64 fronzen_bandwidth_last_timestamp = 6;
+  int64 energy_used = 7;
+  int64 energy_limit = 8;
+  int64 energy_last_timestamp = 9;
+  map<int64, int64> asset_bandwidth_used = 10;
+  map<int64, int64> asset_bandwidth_limit = 11;
+  map<int64, int64> asset_bandwidth_last_timestamp = 12;
+}
+
 message Account {
   proto.common.AccountType type = 1;
   string name = 2;
   int64 creation_time = 3;
   int64 balance = 4;
   map<int64, int64> token_balance = 5;
+  AccountResource resource = 6;
 }
 
-message AccountResource {
-  int64 free_bandwidth_used = 1;
-  int64 free_bandwidth_limit = 2;
-  int64 frozen_bandwidth_used = 3;
-  int64 frozen_bandwidth_limit = 4;
-  int64 frozen_energy_used = 5;
-  int64 frozen_energy_limit = 6;
-}
-
-message AccountResourceDelegation {
+message ResourceDelegation {
   bytes to_address = 1;
   bytes from_address = 2;
   int64 amount_for_bandwidth = 3;
@@ -38,7 +46,8 @@ message Votes {
 message Witness {
   bytes address = 1;
   string url = 2;
-  bool is_producer = 3;
+  // renamed: is_jobs
+  bool is_active = 3;
   int64 vote_count = 4;
   int64 total_produced = 5;
   int64 total_missed = 6;
@@ -62,6 +71,7 @@ message Proposal {
   State state = 7;
 }
 
+// Internal transaction of smart contract call.
 message InternalTransaction {
   // internalTransaction identity, the root InternalTransaction hash
   // should equals to root transaction id.
@@ -83,7 +93,8 @@ message InternalTransaction {
   bool accepted = 9;
 }
 
-message AssetIssue {
+// renamed: AssetIssue
+message Asset {
   message FrozenSupply {
     int64 frozen_amount = 1;
     int64 frozen_days = 2;
@@ -101,25 +112,30 @@ message AssetIssue {
   int32 num = 8;
   int64 start_time = 9;
   int64 end_time = 10;
-  int64 order = 11;  // useless
-  int32 vote_score = 16;
-  // note: might be illegal utf8 bytes
+  // NOTE: might be illegal utf8 bytes
   bytes description = 20;
   // changed: bytes
   string url = 21;
-  int64 free_asset_net_limit = 22;
-  int64 public_free_asset_net_limit = 23;
-  int64 public_free_asset_net_usage = 24;
-  int64 public_latest_free_net_timestamp = 25;
+  int64 free_asset_bandwidth_limit = 22;
+  int64 public_free_asset_bandwidth_limit = 23;
+  int64 public_free_asset_bandwidth_used = 24;
+  int64 public_free_asset_bandwidth_last_timestamp = 25;
   string id = 41;
+  // useless
+  int64 OBSOLETE_order = 11;
+  int32 OBSOLETE_vote_score = 16;
 }
 
 message TransactionLog {
+  // contract address
   bytes address = 1;
+  // <<hash of topic signature, [indexed parameter]>>
   repeated bytes topics = 2;
+  // <<[non-indexed parameter]>>
   bytes data = 3;
 }
 
+// renamed: TransactionInfo
 message TransactionReceipt {
   message ResourceReceipt {
     int64 energy_usage = 1;
@@ -139,7 +155,6 @@ message TransactionReceipt {
     int64 witness_create_fee = 10;
     // 100_000_000
     int64 account_permission_update_fee = 11;
-
   }
 
   bytes id = 1;
@@ -164,7 +179,7 @@ message TransactionReceipt {
     int64 created_exchange_id = 1;
     int64 received_amount = 2;
     int64 injected_amount = 3;
-    int64 withdrawal_amount =4;
+    int64 withdrawal_amount = 4;
   }
 
   oneof result {

@@ -58,10 +58,16 @@ message Authority {
 enum ContractType {
   reserved 21, 22, 23;
   reserved "BuyStorageContract", "BuyStorageBytesContract", "SellStorageContract";
+  // NOTE: unused or deprecated
+  // BuyStorageContract = 21;
+  // BuyStorageBytesContract = 22;
+  // SellStorageContract = 23;
+  // GetContract = 32;
+  // VoteAssetContract = 3;
+  // CustomContract = 20;
   AccountCreateContract = 0;
   TransferContract = 1;
   TransferAssetContract = 2;
-  VoteAssetContract = 3;
   VoteWitnessContract = 4;
   WitnessCreateContract = 5;
   AssetIssueContract = 6;
@@ -77,13 +83,8 @@ enum ContractType {
   ProposalApproveContract = 17;
   ProposalDeleteContract = 18;
   SetAccountIdContract = 19;
-  CustomContract = 20;
-  // BuyStorageContract = 21;
-  // BuyStorageBytesContract = 22;
-  // SellStorageContract = 23;
   CreateSmartContract = 30;
   TriggerSmartContract = 31;
-  // GetContract = 32;
   UpdateSettingContract = 33;
   ExchangeCreateContract = 41;
   ExchangeInjectContract = 42;
@@ -142,15 +143,6 @@ message Transaction {
     // renamed: contractRet
     ContractStatus contract_status = 3;
 
-    // NOTE: 2018/08/02 block=1102553
-    // Then it was wrongly deleted, and wrongly used
-    // e.g. txn: 97d6802de90da0d7e680c184c5780c4396b45ae8df83e69e05c5ae7d3fca3987
-    // there might be empty bytes, which will be omitted by protobuf encoder
-    // `oneof` forces encoding of default empty value.
-    oneof OBSOLETE_resource_receipt_wrapper {
-      bytes OBSOLETE_resource_receipt = 4;
-    }
-
     // renamed: assetIssueID
     string asset_issue_id = 14;
     int64 withdraw_amount = 15;
@@ -160,6 +152,15 @@ message Transaction {
     int64 exchange_withdraw_another_amount = 20;
     int64 exchange_id = 21;
     int64 shielded_transaction_fee = 22;
+
+    // NOTE: 2018/08/02 block=1102553
+    // Then it was wrongly deleted, and wrongly used
+    // e.g. txn: 97d6802de90da0d7e680c184c5780c4396b45ae8df83e69e05c5ae7d3fca3987
+    // there might be empty bytes, which will be omitted by protobuf encoder
+    // `oneof` forces encoding of default empty value.
+    oneof OBSOLETE_resource_receipt_wrapper {
+      bytes OBSOLETE_resource_receipt = 4;
+    }
   }
 
   message Raw {
@@ -173,11 +174,13 @@ message Transaction {
     // max size = 512000
     bytes data = 10;
     // only support size = 1, repeated list here for extension
-    // changed: from repeated to optional
+    // changed: from repeated to optional(default for proto3)
     Contract contract = 11;
     // scripts not used
     bytes scripts = 12;
     int64 timestamp = 14;
+    int64 fee_limit = 18;
+
     // in commit ae0075bd6d433f6bfb2ecbb74e5f380ee819dbc8
     // in txn a5262325574c1cd4f0b7e0ea3d099d8546f47c72f8c165b792971f52d67d436c
     // there might be an encoded default`0`:
@@ -185,14 +188,14 @@ message Transaction {
     oneof OBSOLETE_max_cpu_usage_wrapper {
       int64 OBSOLETE_max_cpu_usage = 15;
     }
-    int64 fee_limit = 18;
   }
 
   Raw raw_data = 1;
   // normally size = 1, repeated list here for multi-sig extension
   repeated bytes signatures = 2;
   // renamed: ret
-  // NOTE: many malformed transactions with len(result) = 2
+  // NOTE: Many malformed transactions with len(result) = 2.
+  // NOTE: Cannot make it a non-repeated, since only last will be returned, while the first is the actual result.
   repeated Result result = 5;
   // NOTE: guess from wrong format
   // in txn 17e597a68ea38205ca3d6724fc9733563d60879fc2118a52303f515fa1f36fec

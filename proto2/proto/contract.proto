@@ -76,7 +76,7 @@ message AssetIssueContract {
   int64 end_time = 10;
   int64 order = 11;  // useless
   int32 vote_score = 16;
-  // note: might be illegal utf8 bytes
+  // NOTE: might be illegal utf8 bytes
   bytes description = 20;
   // changed: bytes
   string url = 21;
@@ -98,6 +98,7 @@ message ParticipateAssetIssueContract {
   int64 amount = 4;  // the amount of drops
 }
 
+/* note unused
 message VoteAssetContract {
   bytes owner_address = 1;
   repeated bytes vote_address = 2;
@@ -105,6 +106,7 @@ message VoteAssetContract {
   bool is_support = 3;
   int32 count = 5;
 }
+*/
 
 message UpdateAssetContract {
   bytes owner_address = 1;
