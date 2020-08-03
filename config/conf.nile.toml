@@ -8,6 +8,7 @@ sync-check = false
 # related to run path
 data-dir = './data.nile'
 engine = 'rocksdb'
+state-data-dir = './data.state.nile'
 
 [chain]
 # related to current config file
