@@ -17,7 +17,7 @@ use crate::public::Public;
 const ADDRESS_TYPE_PREFIX: u8 = 0x41;
 
 /// Address of Tron, saved in 21-byte format.
-#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(PartialEq, Eq, Clone, Hash)]
 pub struct Address([u8; 21]);
 
 impl Address {
@@ -68,6 +68,14 @@ impl Address {
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         b58encode_check(&self.0).fmt(f)
+    }
+}
+
+impl ::std::fmt::Debug for Address {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        f.debug_tuple("Address")
+         .field(&self.to_string())
+         .finish()
     }
 }
 
