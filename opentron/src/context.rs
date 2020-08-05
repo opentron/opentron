@@ -18,7 +18,7 @@ pub struct AppContext {
     pub genesis_block_id: Option<BlockId>,
     pub config: Config,
     pub genesis_config: GenesisConfig,
-    pub db: ChainDB,
+    pub chain_db: ChainDB,
     pub running: Arc<AtomicBool>,
     pub num_active_connections: AtomicU32,
     pub recent_blk_ids: RwLock<HashSet<H256>>,
@@ -35,30 +35,30 @@ impl AppContext {
         let genesis_config = GenesisConfig::load_from_file(&genesis_path)?;
         let genesis_blk = genesis_config.to_indexed_block()?;
 
-        let db = ChainDB::new(&config.storage.data_dir);
+        let chain_db = ChainDB::new(&config.storage.data_dir);
 
-        if !db.has_block(&genesis_blk) {
-            if let Ok(_) = db.get_genesis_block() {
+        if !chain_db.has_block(&genesis_blk) {
+            if let Ok(_) = chain_db.get_genesis_block() {
                 panic!("genesis block config is inconsistent with db");
             }
-            db.insert_block(&genesis_blk)?;
+            chain_db.insert_block(&genesis_blk)?;
             info!("inserted genesis block to db");
         }
-        db.report_status();
+        chain_db.report_status();
 
         let genesis_block_id = BlockId {
             number: 0,
             hash: genesis_blk.header.hash.as_ref().to_owned(),
         };
 
-        let node_id = db.get_node_id();
+        let node_id = chain_db.get_node_id();
         info!("node id => {}", hex::encode(&node_id));
         info!("p2p version => {}", config.chain.p2p_version);
         info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
         info!("chain db loaded");
 
         Ok(AppContext {
-            db,
+            chain_db,
             config,
             genesis_config,
             node_id,

@@ -160,7 +160,7 @@ impl juniper::Context for Context {}
 
 impl Context {
     pub fn get_node_info(&self) -> NodeInfo {
-        let ref db = self.app.db;
+        let ref db = self.app.chain_db;
         NodeInfo {
             code_version: "0.1.0".to_owned(),
             syncing: *self.app.syncing.read().unwrap(),
@@ -177,10 +177,10 @@ impl Context {
             (Some(_), Some(_)) => return Err("either query by id or block num".into()),
             (Some(id), _) => {
                 let block_id = H256::from_slice(&hex::decode(&id)?);
-                self.app.db.get_block_by_hash(&block_id)?
+                self.app.chain_db.get_block_by_hash(&block_id)?
             }
-            (_, Some(num)) => self.app.db.get_block_by_number(num as _)?,
-            (None, None) => self.app.db.highest_block()?,
+            (_, Some(num)) => self.app.chain_db.get_block_by_number(num as _)?,
+            (None, None) => self.app.chain_db.highest_block()?,
         };
 
         let IndexedBlock { header, transactions } = block;
@@ -205,7 +205,7 @@ impl Context {
 
     pub fn get_transaction(&self, id: String) -> FieldResult<Transaction> {
         let txn_id = H256::from_slice(&hex::decode(&id)?);
-        let txn = self.app.db.get_transaction_by_id(&txn_id).map(From::from)?;
+        let txn = self.app.chain_db.get_transaction_by_id(&txn_id).map(From::from)?;
         Ok(txn)
     }
 }

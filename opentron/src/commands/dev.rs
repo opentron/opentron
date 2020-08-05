@@ -19,7 +19,7 @@ pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> 
     state_db.init_genesis(&ctx.genesis_config, &ctx.config.chain)?;
 
     for i in 1..10 {
-        let blk = ctx.db.get_block_by_number(i)?;
+        let blk = ctx.chain_db.get_block_by_number(i)?;
 
        // state_db.apply_block(&blk);
     }

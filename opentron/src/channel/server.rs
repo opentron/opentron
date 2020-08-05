@@ -126,7 +126,7 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
                     warn!("active connection service closed");
                     break;
                 }
-                ctx.db.await_background_jobs();
+                ctx.chain_db.await_background_jobs();
                 if !ctx.running.load(Ordering::Relaxed) {
                     warn!("active connection service closed");
                     break;
@@ -191,8 +191,8 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
             node_id: ctx.node_id.clone(),
         });
 
-    let block_height = ctx.db.get_block_height();
-    let block_headers = ctx.db.get_block_headers_by_number(block_height as u64);
+    let block_height = ctx.chain_db.get_block_height();
+    let block_headers = ctx.chain_db.get_block_headers_by_number(block_height as u64);
     if block_headers.len() != 1 {
         panic!("TODO: should handle fork");
     }
@@ -201,7 +201,7 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
     info!("handshake with block id {}", head_block_id.as_ref().unwrap());
 
     let _solid_block_id = if block_height > 27 {
-        ctx.db
+        ctx.chain_db
             .get_block_by_number(block_height as u64 - 20)
             .map(|blk| blk.block_id())
             .ok()
@@ -316,7 +316,7 @@ async fn sync_channel_handler(
         rx.fuse()
     };
 
-    let highest_block = ctx.db.get_block_by_number(ctx.db.get_block_height() as u64).ok();
+    let highest_block = ctx.chain_db.get_block_by_number(ctx.chain_db.get_block_height() as u64).ok();
     let highest_block_id = highest_block
         .as_ref()
         .map(|blk| blk.block_id())
@@ -491,16 +491,16 @@ async fn sync_channel_handler(
                             }
 
                             ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
-                            if !ctx.db.has_block(&block)  {
-                                ctx.db.insert_block(&block)?;
-                                ctx.db.update_block_height(block.number());
+                            if !ctx.chain_db.has_block(&block)  {
+                                ctx.chain_db.insert_block(&block)?;
+                                ctx.chain_db.update_block_height(block.number());
                             } else {
                                 warn!("block exists in db");
                             }
                         }
                         if syncing {
                             if block.number() == last_block_number {
-                                ctx.db.report_status();
+                                ctx.chain_db.report_status();
                                 info!("sync next bulk of blocks from {}", block.number());
                                 let inv = BlockInventory {
                                     ids: vec![block.block_id()],
@@ -535,7 +535,7 @@ async fn sync_channel_handler(
                         info!("sync request {:?}", ids.iter().map(|blk_id| blk_id.number).collect::<Vec<_>>());
                         let unfork_id = ids.iter()
                             .rev()
-                            .find(|blk_id| ctx.db.has_block_id(&H256::from_slice(&blk_id.hash)));
+                            .find(|blk_id| ctx.chain_db.has_block_id(&H256::from_slice(&blk_id.hash)));
 
                         match unfork_id {
                             None => {
@@ -547,10 +547,10 @@ async fn sync_channel_handler(
                             }
                             Some(unfork_id) => {
                                 info!("unfork id => {}", unfork_id);
-                                let block_height = ctx.db.get_block_height();
+                                let block_height = ctx.chain_db.get_block_height();
                                 let max_block_num = block_height.min(unfork_id.number + SYNC_FETCH_BATCH_NUM);
                                 let reply_ids:Vec<BlockId> =
-                                    ctx.db.block_hashes_from(
+                                    ctx.chain_db.block_hashes_from(
                                         &unfork_id.hash, (max_block_num - unfork_id.number) as usize + 1)
                                     .into_iter()
                                     .map(|block_hash| BlockId::from(block_hash))
@@ -579,7 +579,7 @@ async fn sync_channel_handler(
                             return Ok(());
                         }
                         for id in ids.iter().map(|raw| H256::from_slice(&*raw)) {
-                            let block = ctx.db.get_block_by_id(&id)?;
+                            let block = ctx.chain_db.get_block_by_id(&id)?;
                             tx.send(ChannelMessage::Block(block.into())).await?;
                         }
                         info!("sent {} blocks", ids.len());

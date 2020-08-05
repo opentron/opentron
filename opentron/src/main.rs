@@ -86,9 +86,9 @@ async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
                 let _ = done.send(());
             }
             ctx.running.store(false, Ordering::SeqCst);
-            ctx.db.report_status();
+            ctx.chain_db.report_status();
             unsafe {
-                ctx.db.prepare_close();
+                ctx.chain_db.prepare_close();
             }
             let _ = termination_tx.send(());
         }
