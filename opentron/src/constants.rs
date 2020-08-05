@@ -7,7 +7,7 @@ pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
 pub const MAX_BLOCK_SIZE: usize = 2_000_000;
 
 // 3s, in ms.
-pub const BLOCK_PRODUCING_INTERVAL: usize = 3_000;
+pub const BLOCK_PRODUCING_INTERVAL: i64 = 3_000;
 
 /// Max block size in channel protocol handler.
 pub const MAX_ACCEPTABLE_BLOCK_SIZE: usize = MAX_BLOCK_SIZE + 1000;
