@@ -187,6 +187,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "chain-db"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "chain",
+ "hex 0.4.2",
+ "log",
+ "num_cpus",
+ "primitive-types",
+ "prost",
+ "proto2",
+ "rand",
+ "rocks",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -233,6 +250,21 @@ dependencies = [
  "either",
  "memchr",
  "unreachable",
+]
+
+[[package]]
+name = "config"
+version = "0.1.0"
+dependencies = [
+ "chain",
+ "hex 0.4.2",
+ "keys",
+ "prost",
+ "prost-types",
+ "proto2",
+ "serde",
+ "serde_json",
+ "toml",
 ]
 
 [[package]]
@@ -653,12 +685,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
-name = "hex-literal"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc38ca401ca1b8d89ff1185e39a132e5c4f86d844c0cf6364251576f2d7fa0c1"
-
-[[package]]
 name = "http"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1044,12 +1070,13 @@ dependencies = [
  "byteorder",
  "bytes",
  "chain",
+ "chain-db",
  "chrono",
  "clap",
+ "config",
  "ctrlc",
  "futures",
  "hex 0.4.2",
- "hex-literal",
  "hyper",
  "juniper",
  "juniper_hyper",
@@ -1062,7 +1089,6 @@ dependencies = [
  "proto2",
  "rand",
  "reqwest",
- "rocks",
  "serde",
  "serde_json",
  "sha2",
@@ -1072,9 +1098,9 @@ dependencies = [
  "slog-scope-futures",
  "slog-stdlog",
  "slog-term",
+ "state",
  "tokio",
  "tokio-util",
- "toml",
 ]
 
 [[package]]
@@ -1624,6 +1650,22 @@ dependencies = [
  "libc",
  "redox_syscall",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "state"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "bytes",
+ "config",
+ "keys",
+ "log",
+ "num_cpus",
+ "primitive-types",
+ "prost",
+ "proto2",
+ "rocks",
 ]
 
 [[package]]
