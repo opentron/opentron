@@ -1,6 +1,9 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+
+use serde::{Deserialize, Serialize};
+
+pub mod genesis;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -135,5 +138,20 @@ impl Config {
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(path)?;
         Ok(toml::from_str(&content)?)
+    }
+
+    pub fn load_from_str(content: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(toml::from_str(content)?)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_default_mainnet_config() {
+        assert!(Config::load_from_str(include_str!("../conf.toml")).is_ok());
     }
 }

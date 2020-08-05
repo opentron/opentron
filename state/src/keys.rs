@@ -216,7 +216,7 @@ impl Key<Vec<Address>> for ResourceDelegationIndex {
 }
 
 // TODO: Votes should be stored with epoch round as prefix, which simplifies maintenance round.
-/// Votes: <<Address>> => [Vote]
+/// `Votes: <<Address>> => [Vote]`
 #[derive(Debug)]
 pub struct Votes(Address);
 

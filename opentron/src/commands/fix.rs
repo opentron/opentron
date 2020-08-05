@@ -1,9 +1,9 @@
-use clap::ArgMatches;
-use log::info;
 use std::path::Path;
 
-use crate::config::Config;
-use crate::db::ChainDB;
+use clap::ArgMatches;
+use log::info;
+use chain_db::ChainDB;
+use config::Config;
 
 pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::load_from_file(config_path)?;

@@ -6,6 +6,8 @@ use std::iter;
 use std::path::Path;
 
 use ::keys::Address;
+use config::genesis::GenesisConfig;
+use config::ChainConfig;
 use log::info;
 use proto2::common::AccountType;
 use proto2::state as state_pb;
@@ -14,8 +16,9 @@ use rocks::prelude::*;
 use super::keys;
 use super::ChainParameter;
 use super::DynamicProperty;
-use crate::config::ChainConfig;
-use crate::genesis::GenesisConfig;
+// use crate::constants;
+
+pub type BoxError = Box<dyn ::std::error::Error>;
 
 pub trait KeyValueDB {
     type Column;
@@ -154,6 +157,10 @@ impl OverlayDB {
     pub fn write(&mut self, wb: OverlayWriteBatch) -> io::Result<()> {
         self.layers.push_back(wb);
         Ok(())
+    }
+
+    pub fn push_layer(&mut self, wb: OverlayWriteBatch) {
+        self.layers.push_back(wb);
     }
 
     pub fn solidify_layers(&mut self) -> Result<(), BoxError> {
@@ -368,10 +375,14 @@ impl StateDB {
     }
 }
 
-pub type BoxError = Box<dyn ::std::error::Error>;
-
 impl StateDB {
-    pub fn put_key<T, K: keys::Key<T>>(&self, wb: &mut OverlayWriteBatch, key: K, value: T) -> Result<(), BoxError> {
+    pub fn new_layer(&mut self) -> &mut OverlayWriteBatch {
+        self.db.push_layer(OverlayWriteBatch::with_capacity(4 * 1024));
+        self.db.layers.back_mut().unwrap()
+    }
+
+    pub fn put_key<T, K: keys::Key<T>>(&mut self, key: K, value: T) -> Result<(), BoxError> {
+        let wb = self.db.layers.back_mut().unwrap();
         wb.put(&self.cols[K::COL], key.key().as_ref(), &*K::value(&value));
         Ok(())
     }
@@ -393,27 +404,26 @@ impl StateDB {
             return Ok(());
         }
 
-        let mut wb = OverlayWriteBatch::with_capacity(4 * 1024);
+        self.new_layer();
 
         for (k, v) in ChainParameter::default_parameters_from_config(&chain.parameter) {
-            self.put_key(&mut wb, k, v)?;
+            self.put_key(k, v)?;
         }
         for (k, v) in DynamicProperty::default_properties() {
-            self.put_key(&mut wb, k, v)?;
+            self.put_key(k, v)?;
         }
 
-        self.apply_genesis_config(&mut wb, genesis)?;
+        self.apply_genesis_config(genesis)?;
 
         // WitnessSchedule is inited in first maintenance cycle.
         // self.put_key(&mut wb, keys::WitnessSchedule, value: T)
 
-        self.db.write(wb)?;
         self.db.solidify_layers()?;
         info!("inited state-db from genesis");
         Ok(())
     }
 
-    pub fn apply_genesis_config(&self, wb: &mut OverlayWriteBatch, genesis: &GenesisConfig) -> Result<(), BoxError> {
+    fn apply_genesis_config(&mut self, genesis: &GenesisConfig) -> Result<(), BoxError> {
         for witness in &genesis.witnesses {
             let addr = witness.address.parse::<Address>()?;
             println!("{:?}", witness);
@@ -427,7 +437,7 @@ impl StateDB {
             };
             let key = keys::Witness(addr.clone());
 
-            self.put_key(wb, key, wit)?;
+            self.put_key(key, wit)?;
 
             let key = keys::Account(addr);
             let acct = state_pb::Account {
@@ -435,7 +445,7 @@ impl StateDB {
                 r#type: AccountType::Normal as i32,
                 ..Default::default()
             };
-            self.put_key(wb, key, acct)?;
+            self.put_key(key, acct)?;
         }
 
         for alloc in &genesis.allocs {
@@ -450,12 +460,36 @@ impl StateDB {
             };
 
             let key = keys::Account(addr);
-            self.put_key(wb, key, acct)?;
+            self.put_key(key, acct)?;
         }
 
         let genesis_block = genesis.to_indexed_block()?;
-        self.put_key(wb, keys::LatestBlockHash, *genesis_block.hash())?;
+        self.put_key(keys::LatestBlockHash, *genesis_block.hash())?;
 
         Ok(())
     }
+
+    /*fn get_absolut_slot(timestamp: i64) -> i64 {
+         (timestamp - 0) / constants::BLOCK_PRODUCING_INTERVAL
+    }
+
+    pub fn apply_block(&mut self, block: &IndexedBlock) -> Result<(), BoxError> {
+        // DPoSService.java
+        // statisticManager.applyBlock
+        // maintenanceManager.applyBlock
+        // updateSolidBlock
+
+        // statisticManager
+        let addr = Address::from_bytes(block.witness());
+        println!("witness => {:?}", addr);
+
+        if let Some(mut witness) = self.get(&keys::Witness(*addr))? {
+            witness.total_produced += 1;
+            witness.latest_block_num = block.number();
+            witness.latest_slot_num = Self::get_absolut_slot(block.header.timestamp());
+            println!("wit => {:?}", witness);
+        }
+
+        Ok(())
+    }*/
 }

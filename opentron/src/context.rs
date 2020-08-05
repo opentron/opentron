@@ -1,16 +1,16 @@
-use futures::channel::oneshot;
-use log::info;
-use primitive_types::H256;
-use proto2::common::BlockId;
 use std::collections::HashSet;
 use std::error::Error;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::{Arc, RwLock};
 
-use crate::config::Config;
-use crate::db::ChainDB;
-use crate::genesis::GenesisConfig;
+use chain_db::ChainDB;
+use futures::channel::oneshot;
+use log::info;
+use primitive_types::H256;
+use proto2::common::BlockId;
+use config::Config;
+use config::genesis::GenesisConfig;
 
 pub struct AppContext {
     pub outbound_ip: String,

@@ -1,4 +1,4 @@
-use crate::config::ChainParameterConfig;
+use config::ChainParameterConfig;
 
 /// Chain parameters, known as proposals, can be changed via proposal.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]

@@ -5,6 +5,7 @@ use super::ChainParameter;
 /// Used for DB migrations. Corresponding key is `DynamicProperty::DbVersion`.
 const CURRENT_DB_VERSION: i64 = 1;
 
+/// Dynamic properties of a living chain.
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum DynamicProperty {
     /// For migration.

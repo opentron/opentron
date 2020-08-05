@@ -4,7 +4,7 @@ use std::path::Path;
 
 // use crate::config::Config;
 // use crate::db::ChainDB;
-use crate::state::db::StateDB;
+use state::db::StateDB;
 use crate::context::AppContext;
 
 pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
@@ -17,6 +17,12 @@ pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> 
     // info!("genesis config => {:#?}", ctx.genesis_config);
 
     state_db.init_genesis(&ctx.genesis_config, &ctx.config.chain)?;
+
+    for i in 1..10 {
+        let blk = ctx.db.get_block_by_number(i)?;
+
+       // state_db.apply_block(&blk);
+    }
 
     Ok(())
 }

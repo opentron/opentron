@@ -1,3 +1,7 @@
+use std::error::Error;
+use std::fs;
+use std::path::Path;
+
 use chain::IndexedBlock;
 use keys::Address;
 use prost::Message;
@@ -8,9 +12,6 @@ use proto2::chain::{
 };
 use proto2::contract::TransferContract;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
-use std::fs;
-use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Witness {
@@ -75,6 +76,10 @@ impl GenesisConfig {
         Ok(serde_json::from_str(&content)?)
     }
 
+    pub fn load_from_str(content: &str) -> Result<Self, Box<dyn Error>> {
+        Ok(serde_json::from_str(&content)?)
+    }
+
     fn to_block_header(&self) -> BlockHeader {
         let raw_header = BlockHeaderRaw {
             number: 0,
@@ -127,9 +132,8 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn load_genesis_json() {
-        let content = fs::read_to_string("./genesis.json").unwrap();
+        let content = include_str!("../genesis.json");
         let conf: GenesisConfig = serde_json::from_str(&content).unwrap();
 
         let block = conf.to_indexed_block().unwrap();
