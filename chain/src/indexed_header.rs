@@ -2,9 +2,9 @@ use byteorder::{ByteOrder, BE};
 use crypto::sha256;
 use primitive_types::H256;
 use prost::Message;
-use std::cmp;
-
 use proto2::chain::BlockHeader;
+use proto2::common::BlockId;
+use std::cmp;
 
 #[derive(Clone, Debug)]
 pub struct IndexedBlockHeader {
@@ -33,6 +33,13 @@ impl IndexedBlockHeader {
 
     pub fn timestamp(&self) -> i64 {
         self.raw.raw_data.as_ref().unwrap().timestamp
+    }
+
+    pub fn block_id(&self) -> BlockId {
+        BlockId {
+            number: self.number(),
+            hash: self.hash.as_bytes().to_vec(),
+        }
     }
 
     pub fn verify(&self) -> bool {

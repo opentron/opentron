@@ -192,11 +192,11 @@ async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> R
         });
 
     let block_height = ctx.db.get_block_height();
-    let head_block_id = ctx
-        .db
-        .get_block_by_number(block_height as u64)
-        .map(|blk| blk.block_id())
-        .ok();
+    let block_headers = ctx.db.get_block_headers_by_number(block_height as u64);
+    if block_headers.len() != 1 {
+        panic!("TODO: should handle fork");
+    }
+    let head_block_id = Some(block_headers[0].block_id());
 
     info!("handshake with block id {}", head_block_id.as_ref().unwrap());
 
