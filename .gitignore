@@ -2,7 +2,9 @@
 /ztron-params
 backup/
 data/
-data.nile/
+data.*/
+
+peers.json
 
 # backup files
 trash/
