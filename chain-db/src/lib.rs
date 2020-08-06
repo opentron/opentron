@@ -98,17 +98,21 @@ impl ChainDB {
         }
     }
 
+    pub fn reset_node_id(&self) -> Vec<u8> {
+        let mut rng = rand::thread_rng();
+        let mut node_id = vec![b'A'; 64];
+        rng.fill(&mut node_id[32..]);
+        self.default
+            .put(WriteOptions::default_instance(), b"NODE_ID", &node_id)
+            .unwrap();
+        node_id
+    }
+
     pub fn get_node_id(&self) -> Vec<u8> {
         if let Ok(node_id) = self.default.get(ReadOptions::default_instance(), b"NODE_ID") {
             node_id.to_vec()
         } else {
-            let mut rng = rand::thread_rng();
-            let mut node_id = vec![b'A'; 64];
-            rng.fill(&mut node_id[32..]);
-            self.default
-                .put(WriteOptions::default_instance(), b"NODE_ID", &node_id)
-                .unwrap();
-            node_id
+            self.reset_node_id()
         }
     }
 
