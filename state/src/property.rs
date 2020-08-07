@@ -24,6 +24,7 @@ pub enum DynamicProperty {
     LatestBlockNumber,
     // LatestBlockHash,
     LatestSolidBlockNumber,
+    IsMaintenance,
 
     // StateFlag, is in maintenance?
     // TODO fill slots
@@ -93,9 +94,10 @@ impl DynamicProperty {
             (NextProposalId, 1),
             (NextExchangeId, 1),
             // LatestBlockTimestamp,
-            // LatestBlockNumber,
-            // LatestBlockHash,
-            // LatestSolidBlockNumber,
+            // will be overwriten when apply genesis block
+            (LatestBlockNumber, -1),
+            (LatestSolidBlockNumber, -1),
+            (IsMaintenance, 0),
 
             // BlockFilledSlotsIndex // BLOCK_FILLED_SLOTS_NUMBER???
             (TotalBandwidthWeight, 0),
