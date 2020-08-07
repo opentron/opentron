@@ -1,9 +1,11 @@
-use crypto::sha256;
-use primitive_types::H256;
-use prost::Message;
 use std::cmp;
+use std::convert::TryFrom;
 use std::hash::{Hash, Hasher};
 
+use crypto::sha256;
+use keys::{Address, Public, Signature};
+use primitive_types::H256;
+use prost::Message;
 use proto2::chain::Transaction;
 
 #[derive(Default, Clone, Debug)]
@@ -29,6 +31,22 @@ impl IndexedTransaction {
     {
         let transaction = Transaction::from(transaction);
         Self::new(get_transaction_hash(&transaction), transaction)
+    }
+
+    /// Recover owner address.
+    pub fn recover_owner(&self) -> Result<Vec<Address>, keys::Error> {
+        let mut buf = Vec::with_capacity(255);
+        self.raw.raw_data.as_ref().unwrap().encode(&mut buf).unwrap();
+
+        self.raw
+            .signatures
+            .iter()
+            .map(|raw_sig| {
+                Signature::try_from(raw_sig)
+                    .and_then(|sig| Public::recover(&buf, &sig))
+                    .map(|pk| Address::from_public(&pk))
+            })
+            .collect()
     }
 
     pub fn verify(&self) -> bool {
