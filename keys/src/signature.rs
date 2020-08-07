@@ -115,6 +115,14 @@ impl TryFrom<Vec<u8>> for Signature {
     }
 }
 
+impl TryFrom<&Vec<u8>> for Signature {
+    type Error = Error;
+
+    fn try_from(v: &Vec<u8>) -> Result<Self, Error> {
+        Signature::try_from(&v[..])
+    }
+}
+
 impl From<[u8; 65]> for Signature {
     fn from(v: [u8; 65]) -> Self {
         Signature(v)
