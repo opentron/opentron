@@ -29,6 +29,9 @@ pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
 /// in percent
 pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
 
+/// Renamed: BLOCK_FILLED_SLOTS_NUMBER
+pub const NUM_OF_BLOCK_FILLED_SLOTS: i64 = 128;
+
 //* Transactions
 
 /// 500KB
