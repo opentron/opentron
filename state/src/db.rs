@@ -234,10 +234,37 @@ impl OverlayDB {
         None
     }
 
-    /// Iterate over the data for a given column.
-    pub fn iter<'a>(&'a self, _col: &ColumnFamilyHandle) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
-        // let mut deleted: HashSet<&[u8]> = HashSet::new();
-        unimplemented!("might not used")
+    pub fn for_each<F>(&self, col: &ColumnFamilyHandle, mut func: F)
+    where
+        F: FnMut(&[u8], &[u8]) -> (),
+    {
+        let mut visited: HashSet<&[u8]> = HashSet::new();
+
+        for layer in self.layers.iter().rev() {
+            if let Some(cache) = layer.cache.get(&col.id()) {
+                for (key, value) in cache.iter() {
+                    if visited.contains(&**key) {
+                        continue;
+                    }
+                    visited.insert(key);
+                    match value {
+                        Some(val) => {
+                            func(key, val);
+                        }
+                        None => {
+                            visited.insert(key);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (key, value) in self.inner.new_iterator_cf(&ReadOptions::default(), col) {
+            if !visited.contains(key) {
+                continue;
+            }
+            func(key, value);
+        }
     }
 
     /// Iterate over the data for a given column, returning all key/value pairs
@@ -424,14 +451,22 @@ impl StateDB {
             .expect("key must exist")
     }
 
+    pub fn for_each<T, K: keys::Key<T>, F>(&self, mut func: F)
+    where
+        F: FnMut(&K, &T) -> (),
+    {
+        self.db.for_each(&self.cols[K::COL], move |key, value| {
+            func(&K::parse_key(key), &K::parse_value(value))
+        });
+    }
+
     pub fn init_genesis(&mut self, genesis: &GenesisConfig, chain: &ChainConfig) -> Result<(), BoxError> {
         if let Some(ver) = self.get(&keys::DynamicProperty::DbVersion)? {
             info!("state-db is already inited, ver: {}", ver);
             // TODO: check migration here
-            let latest_block_hash = self.get(&keys::LatestBlockHash)?.expect("db inited");
+            let latest_block_hash = self.must_get(&keys::LatestBlockHash);
             info!("latest block hash {:?}", latest_block_hash);
-
-            info!("block num {:?}", self.get(&DynamicProperty::LatestBlockNumber));
+            info!("block num {:?}", self.must_get(&DynamicProperty::LatestBlockNumber));
 
             return Ok(());
         }
@@ -504,34 +539,18 @@ impl StateDB {
         self.put_key(DynamicProperty::LatestBlockTimestamp, genesis_block.header.timestamp())?;
         self.put_key(DynamicProperty::LatestSolidBlockNumber, 0)?;
 
+        // default block filled slots
+        // TODO: use BLOCK_FILLED_SLOTS_NUMBER from constants
+        self.put_key(keys::BlockFilledSlots, vec![1; 128])?;
+
         // from most votes to least votes
         witnesses.sort_by(|w1, w2| w2.1.cmp(&w1.1));
+        // TODO: use 80 (default value from constants)
         let scheduled_witnesses = witnesses.into_iter().map(|w| (w.0, 80)).collect();
-        self.put_key(keys::WitnessSchedule, scheduled_witnesses);
+        self.put_key(keys::WitnessSchedule, scheduled_witnesses)?;
 
         Ok(())
     }
-
-    /*
-    pub fn apply_block(&mut self, block: &IndexedBlock) -> Result<(), BoxError> {
-        // DPoSService.java
-        // statisticManager.applyBlock
-        // maintenanceManager.applyBlock
-        // updateSolidBlock
-
-        // statisticManager
-        let addr = Address::from_bytes(block.witness());
-        println!("witness => {:?}", addr);
-
-        if let Some(mut witness) = self.get(&keys::Witness(*addr))? {
-            witness.total_produced += 1;
-            witness.latest_block_num = block.number();
-            witness.latest_slot_num = Self::get_absolut_slot(block.header.timestamp());
-            println!("wit => {:?}", witness);
-        }
-
-        Ok(())
-    }*/
 }
 
 pub struct ReadOnlySolidStateDB {
