@@ -28,6 +28,7 @@ message Account {
   int64 balance = 4;
   map<int64, int64> token_balance = 5;
   AccountResource resource = 6;
+  int64 latest_operation_timestamp = 7;
 }
 
 message ResourceDelegation {
