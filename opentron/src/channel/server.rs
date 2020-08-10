@@ -46,13 +46,13 @@ pub async fn channel_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<()
         passive_channel_service(ctx, signal).with_logger(logger)
     };
 
-    let outgoing_wervice = {
+    let outgoing_service = {
         let ctx = ctx.clone();
         let logger = slog_scope::logger().new(o!("direction" => "outgoing"));
         active_channel_service(ctx).with_logger(logger)
     };
 
-    let _ = join!(incomming_service, outgoing_wervice);
+    let _ = join!(incomming_service, outgoing_service);
 
     Ok(())
 }
