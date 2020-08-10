@@ -178,6 +178,7 @@ version = "0.1.0"
 dependencies = [
  "byteorder",
  "crypto",
+ "keys",
  "merkle-tree",
  "primitive-types",
  "prost",
@@ -1451,9 +1452,9 @@ dependencies = [
 
 [[package]]
 name = "rocks"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b970bcd91f0ec19f95a9ce758e9324f6bf035cd7024c640f5b35f32e518a3624"
+checksum = "1a56262b8e1b501b466b8901409a7aee23f158c91715a4da13ea005ee4fdda58"
 dependencies = [
  "lazy_static",
  "rocks-sys",
@@ -1461,9 +1462,9 @@ dependencies = [
 
 [[package]]
 name = "rocks-sys"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c663feb2f1ce296fbecfd985ba84ba92e719f9377530fecddcc317ec167c2d3"
+checksum = "222dc00109645d859001f437505c18a2f4d72d2f2347579e641f0f9b8aa79d40"
 dependencies = [
  "cc",
  "cmake",
