@@ -3,5 +3,5 @@ pub use property::DynamicProperty;
 
 pub mod db;
 pub mod keys;
-mod parameter;
+pub mod parameter;
 mod property;

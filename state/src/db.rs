@@ -14,8 +14,8 @@ use proto2::state as state_pb;
 use rocks::prelude::*;
 
 use super::keys;
-use super::ChainParameter;
 use super::DynamicProperty;
+use super::parameter::default_parameters_from_config;
 
 pub type BoxError = Box<dyn ::std::error::Error>;
 
@@ -472,7 +472,7 @@ impl StateDB {
 
         self.new_layer();
 
-        for (k, v) in ChainParameter::default_parameters_from_config(&chain.parameter) {
+        for (k, v) in default_parameters_from_config(&chain.parameter) {
             self.put_key(k, v)?;
         }
         for (k, v) in DynamicProperty::default_properties() {

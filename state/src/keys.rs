@@ -39,7 +39,7 @@ impl Key<i64> for ChainParameter {
 
     fn key(&self) -> Self::Target {
         let mut raw = [b'p'; 9];
-        BE::write_u64(&mut raw[1..], self.to_i32() as u64);
+        BE::write_u64(&mut raw[1..], *self as u64);
         raw.to_vec()
     }
 
