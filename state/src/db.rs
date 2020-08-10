@@ -539,13 +539,18 @@ impl StateDB {
         self.put_key(DynamicProperty::LatestSolidBlockNumber, 0)?;
 
         // default block filled slots
-        // TODO: use BLOCK_FILLED_SLOTS_NUMBER from constants
-        self.put_key(keys::BlockFilledSlots, vec![1; 128])?;
+        self.put_key(
+            keys::BlockFilledSlots,
+            vec![1; constants::NUM_OF_BLOCK_FILLED_SLOTS as usize],
+        )?;
 
         // from most votes to least votes
         witnesses.sort_by(|w1, w2| w2.1.cmp(&w1.1));
         // TODO: use 80 (default value from constants)
-        let scheduled_witnesses = witnesses.into_iter().map(|w| (w.0, 80)).collect();
+        let scheduled_witnesses = witnesses
+            .into_iter()
+            .map(|w| (w.0, constants::DEFAULT_BROKERAGE_RATE))
+            .collect();
         self.put_key(keys::WitnessSchedule, scheduled_witnesses)?;
 
         Ok(())

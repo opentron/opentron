@@ -11,8 +11,8 @@ bytes = '0.5'
 prost = '0.6'
 primitive-types = "0.7"
 num_cpus = "1.13.0"
+rocks = "0.1.9"
 keys = { path = '../keys' }
 proto2 = { path = '../proto2' }
 config = { path = '../config' }
-rocks = "0.1.9"
-# rocks = { version = "0.1.8", path = "../../../BH1XUW/rust-rocks" }
+constants = { path = '../constants' }
