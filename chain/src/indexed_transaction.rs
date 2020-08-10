@@ -49,6 +49,10 @@ impl IndexedTransaction {
             .collect()
     }
 
+    pub fn expiration(&self) -> i64 {
+        self.raw.raw_data.as_ref().unwrap().expiration
+    }
+
     pub fn verify(&self) -> bool {
         get_transaction_hash(&self.raw) == self.hash
     }
