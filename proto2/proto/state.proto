@@ -9,16 +9,16 @@ message AccountResource {
   int64 free_bandwidth_used = 1;
   // Normally free bandwidth limit is a const defined in code, 5000.
   int64 free_bandwidth_limit = 2;
-  int64 free_bandwidth_last_timestamp = 3;
+  int64 free_bandwidth_latest_timestamp = 3;
   int64 frozen_bandwidth_used = 4;
   int64 frozen_bandwidth_limit = 5;
-  int64 fronzen_bandwidth_last_timestamp = 6;
+  int64 fronzen_bandwidth_latest_timestamp = 6;
   int64 energy_used = 7;
   int64 energy_limit = 8;
-  int64 energy_last_timestamp = 9;
+  int64 energy_latest_timestamp = 9;
   map<int64, int64> asset_bandwidth_used = 10;
   map<int64, int64> asset_bandwidth_limit = 11;
-  map<int64, int64> asset_bandwidth_last_timestamp = 12;
+  map<int64, int64> asset_bandwidth_latest_timestamp = 12;
 }
 
 message Account {
@@ -135,29 +135,23 @@ message TransactionLog {
   bytes data = 3;
 }
 
+message ResourceReceipt {
+  int64 energy_usage = 1;
+  int64 energy_fee = 2;
+  int64 origin_energy_usage = 3;
+  int64 energy_usage_total = 4;
+
+  int64 bandwidth_usage = 5;
+  // when create a new account, usage = 0, fee = 0.1 TRX
+  int64 bandwidth_fee = 6;
+
+  // Oneof: asset issue, exchange create, witness create, account permission update.
+  int64 contract_fee = 7;
+}
+
 // renamed: TransactionInfo
 message TransactionReceipt {
-  message ResourceReceipt {
-    int64 energy_usage = 1;
-    int64 energy_fee = 2;
-    int64 origin_energy_usage = 3;
-    int64 energy_usage_total = 4;
-    int64 bandwidth_usage = 5;
-    // when create a new account, usage = 0, fee = 0.1 TRX
-    int64 bandwidth_fee = 6;
-    // 1_000_000
-    int64 multisig_fee = 7;
-    // 1024_000_000
-    int64 asset_issue_fee = 8;
-    // 1024_000_000
-    int64 exchange_create_fee = 9;
-    // 9999_000_000
-    int64 witness_create_fee = 10;
-    // 100_000_000
-    int64 account_permission_update_fee = 11;
-  }
-
-  bytes id = 1;
+  bytes hash = 1;
   bool success = 2;
   int64 block_number = 3;
   int64 block_timestamp = 4;

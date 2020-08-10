@@ -9,4 +9,13 @@ impl Account {
             ..Default::default()
         }
     }
+
+    pub fn adjust_balance(&mut self, diff: i64) -> Result<(), ()> {
+        if let Some(new_balance) = self.balance.checked_add(diff) {
+            self.balance = new_balance;
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
 }
