@@ -25,9 +25,12 @@ pub enum DynamicProperty {
     // LatestBlockHash,
     LatestSolidBlockNumber,
 
+    IsMaintenance,
+    NextMaintenanceTime,
+
     // StateFlag, is in maintenance?
     // TODO fill slots
-    // BlockFilledSlotsIndex // BLOCK_FILLED_SLOTS_NUMBER???
+    BlockFilledSlotsIndex,
 
     // * Bandwidth
     /// Renamed: TotalNetWeight
@@ -55,7 +58,7 @@ pub enum DynamicProperty {
     /// Renamed: PublicNetUsage = 0
     GlobalFreeBandwidthUsed,
     /// Renamed: PublicNetTime = 0
-    GlobalFreeBandwidthLastTimestamp,
+    GlobalFreeBandwidthLatestTimestamp,
     // * Unused and deprecated
     // ! Why a block scoped variable is saved to store?
     // BlockEnergyUsage
@@ -93,21 +96,25 @@ impl DynamicProperty {
             (NextProposalId, 1),
             (NextExchangeId, 1),
             // LatestBlockTimestamp,
-            // LatestBlockNumber,
-            // LatestBlockHash,
-            // LatestSolidBlockNumber,
-
-            // BlockFilledSlotsIndex // BLOCK_FILLED_SLOTS_NUMBER???
+            // will be overwriten when apply genesis block
+            (LatestBlockNumber, -1),
+            (LatestSolidBlockNumber, -1),
+            // * maintenance
+            (IsMaintenance, 0),
+            // FIXME: should be after genesis timestamp
+            (NextMaintenanceTime, 0),
+            (BlockFilledSlotsIndex, 0),
+            // * bandwidth
             (TotalBandwidthWeight, 0),
             (TotalBandwidthLimit, 43_200_000_000),
             (TotalEnergyWeight, 0),
+            (GlobalFreeBandwidthLimit, 14_400_000_000),
+            (GlobalFreeBandwidthUsed, 0),
+            (GlobalFreeBandwidthLatestTimestamp, 0),
             // Default: ChainParameter::TotalEnergyLimit / 14400, when accessed
             // (TotalEnergyTargetLimit, 90_000_000_000 / 14400)
             (TotalEnergyAverageUsage, 0),
             (TotalEnergyAverageTime, 0),
-            (GlobalFreeBandwidthLimit, 14_400_000_000),
-            (GlobalFreeBandwidthUsed, 0),
-            (GlobalFreeBandwidthLastTimestamp, 0),
         ];
     }
 

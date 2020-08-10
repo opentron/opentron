@@ -12,7 +12,7 @@ pub const BLOCK_PRODUCING_INTERVAL: i64 = 3_000;
 /// Max block size in channel protocol handler.
 pub const MAX_ACCEPTABLE_BLOCK_SIZE: usize = MAX_BLOCK_SIZE + 1000;
 
-pub const FREE_BANDWIDTH: usize = 5000;
+pub const FREE_BANDWIDTH: i64 = 5000;
 
 //* Witness and block producing.
 pub const MAX_NUM_OF_ACTIVE_WITNESSES: usize = 27;
@@ -21,13 +21,16 @@ pub const MAX_NUM_OF_STANDBY_WITNESSES: usize = 127;
 // 27 * 70% = 18.9, so a solid block is one verified by 19 witnesses.
 pub const SOLID_THRESHOLD_PERCENT: usize = 70;
 
-pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: usize = 2;
+pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: i64 = 2;
 
 /// Renamed: WitnessAllowanceFrozenTime
 pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
 
 /// in percent
 pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
+
+/// Renamed: BLOCK_FILLED_SLOTS_NUMBER
+pub const NUM_OF_BLOCK_FILLED_SLOTS: i64 = 128;
 
 //* Transactions
 
@@ -40,7 +43,7 @@ pub const MAX_TRANSACTION_RESULT_SIZE: usize = 64;
 pub const MAX_NUM_OF_VOTES: usize = 30;
 
 /// 1d, in ms.
-pub const MAX_TRANSACTION_EXPIRATION: usize = 24 * 60 * 60 * 1_000;
+pub const MAX_TRANSACTION_EXPIRATION: i64 = 24 * 60 * 60 * 1_000;
 
 pub const DEFAULT_ORIGIN_ENERGY_LIMIT: usize = 10_000_000;
 
@@ -63,9 +66,9 @@ pub const MAX_FREE_BANDWIDTH_IN_ASSET_ISSUE: usize = 57_600_000_000;
 pub const MAX_EXCHANGE_BALANCE: usize = 1_000_000_000_000_000;
 
 // 1d, in ms.
-pub const RESOURCE_WINDOW_SIZE: usize = 24 * 3600 * 1000;
+pub const RESOURCE_WINDOW_SIZE: i64 = 24 * 3600 * 1000;
 /// Precision used in resource calculation.
-pub const RESOURCE_PRECISION: usize = 1_000_000;
+pub const RESOURCE_PRECISION: i64 = 1_000_000;
 
 // * Adaptive Energy
 // if TotalEnergyAverageUsage > TotalEnergyTargetLimit:

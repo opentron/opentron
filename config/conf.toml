@@ -6,7 +6,9 @@ sync-check = false
 
 [storage]
 # related to run path
-data-dir = './data'
+data-dir = './data/chaindb'
+state-data-dir = './data/statedb'
+state-cache-dir = './data/cache'
 engine = 'rocksdb'
 
 [chain]

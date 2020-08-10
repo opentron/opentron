@@ -1,12 +1,15 @@
+use std::cmp;
+use std::collections::HashMap;
+use std::convert::TryFrom;
+
 use byteorder::{ByteOrder, BE};
 use crypto::sha256;
+use keys::{Address, Public, Signature};
 use primitive_types::H256;
 use prost::Message;
 use proto2::chain::{Block, BlockHeader, Transaction};
 use proto2::common::BlockId;
 use rayon::prelude::*;
-use std::cmp;
-use std::collections::HashMap;
 
 use crate::merkle_root::MerkleTree;
 use crate::{IndexedBlockHeader, IndexedTransaction};
@@ -85,6 +88,23 @@ impl IndexedBlock {
 
     pub fn witness(&self) -> &[u8] {
         &self.header.raw.raw_data.as_ref().unwrap().witness_address
+    }
+
+    /// Recover witness from block signature.
+    pub fn recover_witness(&self) -> Result<Address, keys::Error> {
+        let mut buf = Vec::with_capacity(255);
+        self.header.raw.raw_data.as_ref().unwrap().encode(&mut buf).unwrap();
+        let sig = Signature::try_from(&self.header.raw.witness_signature)?;
+
+        Ok(Address::from_public(&Public::recover(&buf, &sig)?))
+    }
+
+    pub fn timestamp(&self) -> i64 {
+        self.header.raw.raw_data.as_ref().unwrap().timestamp
+    }
+
+    pub fn parent_hash(&self) -> &[u8] {
+        &self.header.raw.raw_data.as_ref().unwrap().parent_hash
     }
 
     pub fn into_raw_block(self) -> Block {

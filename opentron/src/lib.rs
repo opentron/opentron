@@ -7,3 +7,4 @@ pub mod context;
 pub mod discovery;
 pub mod graphql;
 pub mod util;
+pub mod manager;

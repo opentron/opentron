@@ -6,9 +6,10 @@ sync-check = false
 
 [storage]
 # related to run path
-data-dir = './data.nile'
+data-dir = './data.nile/chaindb'
 engine = 'rocksdb'
-state-data-dir = './data.state.nile'
+state-data-dir = './data.nile/statedb'
+state-cache-dir = './data.nile/cache'
 
 [chain]
 # related to current config file
@@ -62,7 +63,7 @@ endpoint = '0.0.0.0:18888'
 active-nodes = []
 
 [protocol.channel]
-enable = false
+enable = true
 enable-passive = false
 enable-active = true
 # 1 to 2000

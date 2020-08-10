@@ -3,6 +3,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+pub use genesis::GenesisConfig;
+
 pub mod genesis;
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -74,14 +76,20 @@ pub struct StorageConfig {
     /// Path to StateDB.
     #[serde(default = "default_state_data_dir")]
     pub state_data_dir: String,
+    #[serde(default = "default_state_cache_dir")]
+    pub state_cache_dir: String,
 }
 
 fn default_data_dir() -> String {
-    "./data".into()
+    "./data/chaindb".into()
 }
 
 fn default_state_data_dir() -> String {
-    "./data.state".into()
+    "./data/statedb".into()
+}
+
+fn default_state_cache_dir() -> String {
+    "./data/cache".into()
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -144,7 +152,6 @@ impl Config {
         Ok(toml::from_str(content)?)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

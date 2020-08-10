@@ -13,7 +13,7 @@ pub use super::parameter::ChainParameter;
 pub use super::property::DynamicProperty;
 
 /// Should be used to get database key associated with given value.
-pub trait Key<T> {
+pub trait Key<T>: Sized {
     /// The db key associated with this value.
     type Target: AsRef<[u8]>;
     const COL: usize = 0;
@@ -26,6 +26,11 @@ pub trait Key<T> {
 
     /// Parse db value.
     fn parse_value(raw: &[u8]) -> T;
+
+    /// Parse db key.
+    fn parse_key(_raw: &[u8]) -> Self {
+        unimplemented!()
+    }
 }
 
 impl Key<i64> for ChainParameter {
@@ -111,10 +116,32 @@ impl Key<H256> for LatestBlockHash {
     }
 
     fn parse_value(raw: &[u8]) -> H256 {
-        if raw.len()  != 32 {
+        if raw.len() != 32 {
             panic!("malformed kLatestBlockHash");
         }
         H256::from_slice(raw)
+    }
+}
+
+#[derive(Debug)]
+pub struct BlockFilledSlots;
+
+// Value is 0-1 vec.
+impl Key<Vec<u8>> for BlockFilledSlots {
+    type Target = &'static str;
+    const COL: usize = super::db::COL_DEFAULT;
+
+    // Same as DynamicProperty
+    fn key(&self) -> Self::Target {
+        "ksaveBlockFilledSlots"
+    }
+
+    fn value(val: &Vec<u8>) -> Cow<[u8]> {
+        (&val[..]).into()
+    }
+
+    fn parse_value(raw: &[u8]) -> Vec<u8> {
+        raw.to_vec()
     }
 }
 
@@ -218,7 +245,7 @@ impl Key<Vec<Address>> for ResourceDelegationIndex {
 // TODO: Votes should be stored with epoch round as prefix, which simplifies maintenance round.
 /// `Votes: <<Address>> => [Vote]`
 #[derive(Debug)]
-pub struct Votes(Address);
+pub struct Votes(pub Address);
 
 impl Key<pb::Votes> for Votes {
     type Target = Vec<u8>;
@@ -237,7 +264,12 @@ impl Key<pb::Votes> for Votes {
     fn parse_value(raw: &[u8]) -> pb::Votes {
         pb::Votes::decode(raw).unwrap()
     }
+
+    fn parse_key(raw: &[u8]) -> Self {
+        Votes(*Address::from_bytes(raw))
+    }
 }
+
 #[derive(Debug)]
 pub struct Contract(Address);
 
@@ -346,7 +378,7 @@ impl Key<pb::Asset> for Asset {
 }
 
 #[derive(Debug)]
-pub struct TransactionReceipt(H256);
+pub struct TransactionReceipt(pub H256);
 
 impl Key<pb::TransactionReceipt> for TransactionReceipt {
     type Target = Vec<u8>;

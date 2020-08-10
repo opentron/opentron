@@ -13,3 +13,4 @@ primitive-types = "0.7"
 proto2 = { path = '../proto2' }
 crypto = { path = "../crypto" }
 merkle-tree = { path = '../merkle-tree' }
+keys = { path = "../keys" }
