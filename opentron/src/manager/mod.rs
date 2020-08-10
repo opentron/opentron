@@ -100,13 +100,8 @@ impl Manager {
             panic!("only accepts block number > 1");
         }
         // 1. verify witness signature
-        if self.my_witness.is_empty() || block.witness() != self.my_witness {
+        if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
             let recovered = block.recover_witness()?;
-            /*println!(
-                "recovered => {} block => {}",
-                recovered,
-                ::keys::b58encode_check(block.witness())
-            );*/
             if self.state_db.get(&keys::ChainParameter::AllowMultisig)?.unwrap() == 1 {
                 panic!("TODO: handle multisig witness");
             }
