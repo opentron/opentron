@@ -559,6 +559,36 @@ impl ChainDB {
             .map(move |header| self.get_block_from_header(header).unwrap())
     }
 
+    pub fn ref_block_hashes_of_block_num(&self, num: i64) -> Vec<H256> {
+        if num < 65536 {
+            self.block_headers()
+                .take(num as usize + 1)
+                .map(|head| head.hash)
+                .collect()
+        } else {
+            let mut lower_bound = [0u8; 32];
+            BE::write_u64(&mut lower_bound[..8], num as u64 - 65535);
+            let mut upper_bound = [0xff_u8; 32];
+            BE::write_u64(&mut upper_bound[..8], num as u64);
+
+            let mut ref_hashes = self
+                .block_header
+                .new_iterator(
+                    &ReadOptions::default()
+                        .iterate_lower_bound(&lower_bound[..])
+                        .iterate_upper_bound(&upper_bound[..]),
+                )
+                .keys()
+                .map(|raw_hash| H256::from_slice(raw_hash))
+                .collect::<Vec<_>>();
+
+            let wrap_pos = 65536 - (num + 1) % 65536;
+            let mut new_ref_hashes = ref_hashes.split_off(wrap_pos as usize);
+            new_ref_hashes.extend(ref_hashes);
+            new_ref_hashes
+        }
+    }
+
     pub fn get_parent_hash_verified_block_number(&self) -> u64 {
         self.default
             .get(ReadOptions::default_instance(), b"PARENT_HASH_VERIFIED")
