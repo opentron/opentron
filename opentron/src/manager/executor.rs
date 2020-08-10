@@ -7,6 +7,7 @@ use primitive_types::H256;
 use proto2::chain::{transaction::result::ContractStatus, ContractType};
 use proto2::contract as contract_pb;
 use proto2::state::{ResourceReceipt, TransactionReceipt};
+use state::keys;
 
 use super::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
 use super::processors::BandwidthProcessor;
@@ -89,7 +90,10 @@ impl<'m> TransactionExecutor<'m> {
         let recover_addrs = txn.recover_owner().expect("error while verifying signature");
 
         debug!("cntr type => {:?}", cntr_type);
-        debug!("TODO: verify signagures and multisig, recover_addrs => {:?}", recover_addrs);
+        debug!(
+            "TODO: verify signagures and multisig, recover_addrs => {:?}",
+            recover_addrs
+        );
 
         // NOTE: Routine to handle transactions of builtin contracts:
         //
@@ -115,6 +119,10 @@ impl<'m> TransactionExecutor<'m> {
                     b58encode_check(&cntr.to_address),
                     cntr.amount
                 );
+                // TOOD: handle multisig, for now, use simple method
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
@@ -127,6 +135,28 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
 
                 Ok(ctx.into())
+            }
+            ContractType::ProposalCreateContract => {
+                let cntr = contract_pb::ProposalCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                // TOOD: handle multisig, for now, use simple method
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Proposal by {} {:?}",
+                    b58encode_check(&cntr.owner_address),
+                    cntr.parameters
+                        .iter()
+                        .map(|(&k, v)| (keys::ChainParameter::from_i32(k as i32).unwrap(), v))
+                        .collect::<std::collections::HashMap<_, _>>()
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                // debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+
+                unimplemented!()
             }
             ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
                 // smart contract status
