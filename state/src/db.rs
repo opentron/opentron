@@ -16,7 +16,6 @@ use rocks::prelude::*;
 use super::keys;
 use super::ChainParameter;
 use super::DynamicProperty;
-// use crate::constants;
 
 pub type BoxError = Box<dyn ::std::error::Error>;
 

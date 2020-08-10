@@ -11,7 +11,6 @@ use std::convert::TryFrom;
 
 use self::executor::TransactionExecutor;
 use self::maintenance::MaintenanceManager;
-use crate::constants;
 
 pub mod actuators;
 pub mod executor;

@@ -2,7 +2,6 @@
 
 pub mod channel;
 pub mod commands;
-pub mod constants;
 pub mod context;
 pub mod discovery;
 pub mod graphql;

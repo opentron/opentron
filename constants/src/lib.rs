@@ -1,4 +1,4 @@
-//* Chain parameters.
+//* Chain constants.
 
 pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
 

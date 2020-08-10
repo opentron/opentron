@@ -11,7 +11,6 @@ use state::keys;
 use super::actuators::BuiltinContractExt;
 use super::executor::TransactionContext;
 use super::Manager;
-use crate::constants;
 
 pub struct BandwidthProcessor<'m> {
     manager: &'m mut Manager,
