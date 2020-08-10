@@ -111,7 +111,7 @@ impl Key<H256> for LatestBlockHash {
     }
 
     fn parse_value(raw: &[u8]) -> H256 {
-        if raw.len()  != 32 {
+        if raw.len() != 32 {
             panic!("malformed kLatestBlockHash");
         }
         H256::from_slice(raw)
@@ -346,7 +346,7 @@ impl Key<pb::Asset> for Asset {
 }
 
 #[derive(Debug)]
-pub struct TransactionReceipt(H256);
+pub struct TransactionReceipt(pub H256);
 
 impl Key<pb::TransactionReceipt> for TransactionReceipt {
     type Target = Vec<u8>;

@@ -51,6 +51,13 @@ pub struct OverlayWriteBatch {
     cache: HashMap<u32, BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
 }
 
+impl std::ops::Deref for OverlayWriteBatch {
+    type Target = WriteBatch;
+    fn deref(&self) -> &Self::Target {
+        &self.wb
+    }
+}
+
 impl OverlayWriteBatch {
     pub fn new() -> Self {
         OverlayWriteBatch {
@@ -273,6 +280,92 @@ impl Drop for StateDB {
     }
 }
 
+fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
+    vec![
+        ColumnFamilyDescriptor::new(
+            DEFAULT_COLUMN_FAMILY_NAME,
+            ColumnFamilyOptions::default()
+                .optimize_for_small_db()
+                .optimize_for_point_lookup(32)
+                .num_levels(2)
+                .compression(CompressionType::NoCompression),
+        ),
+        // address => Account
+        ColumnFamilyDescriptor::new("account", ColumnFamilyOptions::default().optimize_for_point_lookup(128)),
+        // address => AccountResource
+        /*ColumnFamilyDescriptor::new(
+            "account-resource",
+            ColumnFamilyOptions::default().optimize_for_point_lookup(128),
+        ),*/
+        // to_address => AccountResourceDelegation
+        ColumnFamilyDescriptor::new(
+            "resource-delegation",
+            ColumnFamilyOptions::default().optimize_for_point_lookup(128),
+        ),
+        // from_address => [to_address]
+        ColumnFamilyDescriptor::new(
+            "resource-delegation-index",
+            ColumnFamilyOptions::default().optimize_for_point_lookup(128),
+        ),
+        // address => Votes
+        ColumnFamilyDescriptor::new("account-votes", ColumnFamilyOptions::default()),
+        // address => Contract
+        ColumnFamilyDescriptor::new("contract", ColumnFamilyOptions::default().optimize_for_point_lookup(32)),
+        // address => Code
+        ColumnFamilyDescriptor::new(
+            "contract-code",
+            ColumnFamilyOptions::default().optimize_for_point_lookup(128),
+        ),
+        // <<contract_address: Address, storage_key: H256>> => H256
+        ColumnFamilyDescriptor::new(
+            "contract-storage",
+            ColumnFamilyOptions::default()
+                .optimize_for_point_lookup(32)
+                .prefix_extractor_fixed(32),
+        ),
+        // <<Address>> => Witness
+        ColumnFamilyDescriptor::new(
+            "witness",
+            ColumnFamilyOptions::default()
+                .optimize_for_small_db()
+                .optimize_for_point_lookup(16)
+                .num_levels(2)
+                .compression(CompressionType::NoCompression),
+        ),
+        // <<id: u64>> => Proposal
+        ColumnFamilyDescriptor::new(
+            "proposal",
+            ColumnFamilyOptions::default()
+                .optimize_for_small_db()
+                .optimize_for_point_lookup(16)
+                .num_levels(2)
+                .compression(CompressionType::NoCompression),
+        ),
+        // <<id: u64>> => Asset
+        ColumnFamilyDescriptor::new(
+            "asset",
+            ColumnFamilyOptions::default()
+                .optimize_for_small_db()
+                .optimize_for_point_lookup(16),
+        ),
+        // <<txid: H256>> -> TransactionReceipt
+        ColumnFamilyDescriptor::new(
+            "transaction-receipt",
+            ColumnFamilyOptions::default().optimize_for_point_lookup(16),
+        ),
+        // <<txid: H256>> -> InternalTransaction
+        ColumnFamilyDescriptor::new(
+            "internal-transaction",
+            ColumnFamilyOptions::default().optimize_for_point_lookup(16),
+        ),
+        // <<Address, Topic: H256, [IndexedParam]>> => Transaction
+        ColumnFamilyDescriptor::new(
+            "transaction-log",
+            ColumnFamilyOptions::default().prefix_extractor_fixed(32),
+        ),
+    ]
+}
+
 impl StateDB {
     pub fn new<P: AsRef<Path>>(db_path: P) -> StateDB {
         let db_options = DBOptions::default()
@@ -282,89 +375,7 @@ impl StateDB {
             .allow_mmap_reads(true) // for Cuckoo table
             .max_open_files(1024);
 
-        let column_families = vec![
-            ColumnFamilyDescriptor::new(
-                DEFAULT_COLUMN_FAMILY_NAME,
-                ColumnFamilyOptions::default()
-                    .optimize_for_small_db()
-                    .optimize_for_point_lookup(32)
-                    .num_levels(2)
-                    .compression(CompressionType::NoCompression),
-            ),
-            // address => Account
-            ColumnFamilyDescriptor::new("account", ColumnFamilyOptions::default().optimize_for_point_lookup(128)),
-            // address => AccountResource
-            /*ColumnFamilyDescriptor::new(
-                "account-resource",
-                ColumnFamilyOptions::default().optimize_for_point_lookup(128),
-            ),*/
-            // to_address => AccountResourceDelegation
-            ColumnFamilyDescriptor::new(
-                "resource-delegation",
-                ColumnFamilyOptions::default().optimize_for_point_lookup(128),
-            ),
-            // from_address => [to_address]
-            ColumnFamilyDescriptor::new(
-                "resource-delegation-index",
-                ColumnFamilyOptions::default().optimize_for_point_lookup(128),
-            ),
-            // address => Votes
-            ColumnFamilyDescriptor::new("account-votes", ColumnFamilyOptions::default()),
-            // address => Contract
-            ColumnFamilyDescriptor::new("contract", ColumnFamilyOptions::default().optimize_for_point_lookup(32)),
-            // address => Code
-            ColumnFamilyDescriptor::new(
-                "contract-code",
-                ColumnFamilyOptions::default().optimize_for_point_lookup(128),
-            ),
-            // <<contract_address: Address, storage_key: H256>> => H256
-            ColumnFamilyDescriptor::new(
-                "contract-storage",
-                ColumnFamilyOptions::default()
-                    .optimize_for_point_lookup(32)
-                    .prefix_extractor_fixed(32),
-            ),
-            // <<Address>> => Witness
-            ColumnFamilyDescriptor::new(
-                "witness",
-                ColumnFamilyOptions::default()
-                    .optimize_for_small_db()
-                    .optimize_for_point_lookup(16)
-                    .num_levels(2)
-                    .compression(CompressionType::NoCompression),
-            ),
-            // <<id: u64>> => Proposal
-            ColumnFamilyDescriptor::new(
-                "proposal",
-                ColumnFamilyOptions::default()
-                    .optimize_for_small_db()
-                    .optimize_for_point_lookup(16)
-                    .num_levels(2)
-                    .compression(CompressionType::NoCompression),
-            ),
-            // <<id: u64>> => Asset
-            ColumnFamilyDescriptor::new(
-                "asset",
-                ColumnFamilyOptions::default()
-                    .optimize_for_small_db()
-                    .optimize_for_point_lookup(16),
-            ),
-            // <<txid: H256>> -> TransactionReceipt
-            ColumnFamilyDescriptor::new(
-                "transaction-receipt",
-                ColumnFamilyOptions::default().optimize_for_point_lookup(16),
-            ),
-            // <<txid: H256>> -> InternalTransaction
-            ColumnFamilyDescriptor::new(
-                "internal-transaction",
-                ColumnFamilyOptions::default().optimize_for_point_lookup(16),
-            ),
-            // <<Address, Topic: H256, [IndexedParam]>> => Transaction
-            ColumnFamilyDescriptor::new(
-                "transaction-log",
-                ColumnFamilyOptions::default().prefix_extractor_fixed(32),
-            ),
-        ];
+        let column_families = col_descs_for_state_db();
 
         let (db, cols) = DB::open_with_column_families(&db_options, db_path, column_families).unwrap();
 
@@ -381,8 +392,19 @@ impl StateDB {
         self.db.layers.back_mut().unwrap()
     }
 
+    pub fn solidify_layer(&mut self) {
+        self.db
+            .layers
+            .pop_front()
+            .map(|wb| self.db.inner.write(WriteOptions::default_instance(), &wb));
+    }
+
     pub fn put_key<T, K: keys::Key<T>>(&mut self, key: K, value: T) -> Result<(), BoxError> {
-        let wb = self.db.layers.back_mut().unwrap();
+        let wb = self
+            .db
+            .layers
+            .back_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no db layers found"))?;
         wb.put(&self.cols[K::COL], key.key().as_ref(), &*K::value(&value));
         Ok(())
     }
@@ -394,12 +416,22 @@ impl StateDB {
             .map_err(|e| e.into())
     }
 
+    pub fn must_get<T, K: keys::Key<T>>(&self, key: &K) -> T {
+        self.db
+            .get(&self.cols[K::COL], key.key().as_ref())
+            .map(|maybe_raw| maybe_raw.map(|raw| K::parse_value(&raw)))
+            .expect("corrupted db")
+            .expect("key must exist")
+    }
+
     pub fn init_genesis(&mut self, genesis: &GenesisConfig, chain: &ChainConfig) -> Result<(), BoxError> {
         if let Some(ver) = self.get(&keys::DynamicProperty::DbVersion)? {
-            info!("state-db in already inited ver: {}", ver);
+            info!("state-db is already inited, ver: {}", ver);
             // TODO: check migration here
             let latest_block_hash = self.get(&keys::LatestBlockHash)?.expect("db inited");
             info!("latest block hash {:?}", latest_block_hash);
+
+            info!("block num {:?}", self.get(&DynamicProperty::LatestBlockNumber));
 
             return Ok(());
         }
@@ -424,6 +456,7 @@ impl StateDB {
     }
 
     fn apply_genesis_config(&mut self, genesis: &GenesisConfig) -> Result<(), BoxError> {
+        let mut witnesses: Vec<(Address, i64)> = vec![];
         for witness in &genesis.witnesses {
             let addr = witness.address.parse::<Address>()?;
             println!("{:?}", witness);
@@ -435,7 +468,7 @@ impl StateDB {
                 is_active: true,
                 ..Default::default()
             };
-            let key = keys::Witness(addr.clone());
+            let key = keys::Witness(addr);
 
             self.put_key(key, wit)?;
 
@@ -446,6 +479,8 @@ impl StateDB {
                 ..Default::default()
             };
             self.put_key(key, acct)?;
+
+            witnesses.push((addr, witness.votes));
         }
 
         for alloc in &genesis.allocs {
@@ -465,14 +500,19 @@ impl StateDB {
 
         let genesis_block = genesis.to_indexed_block()?;
         self.put_key(keys::LatestBlockHash, *genesis_block.hash())?;
+        self.put_key(DynamicProperty::LatestBlockNumber, 0)?;
+        self.put_key(DynamicProperty::LatestBlockTimestamp, genesis_block.header.timestamp())?;
+        self.put_key(DynamicProperty::LatestSolidBlockNumber, 0)?;
+
+        // from most votes to least votes
+        witnesses.sort_by(|w1, w2| w2.1.cmp(&w1.1));
+        let scheduled_witnesses = witnesses.into_iter().map(|w| (w.0, 80)).collect();
+        self.put_key(keys::WitnessSchedule, scheduled_witnesses);
 
         Ok(())
     }
 
-    /*fn get_absolut_slot(timestamp: i64) -> i64 {
-         (timestamp - 0) / constants::BLOCK_PRODUCING_INTERVAL
-    }
-
+    /*
     pub fn apply_block(&mut self, block: &IndexedBlock) -> Result<(), BoxError> {
         // DPoSService.java
         // statisticManager.applyBlock
@@ -492,4 +532,43 @@ impl StateDB {
 
         Ok(())
     }*/
+}
+
+pub struct ReadOnlySolidStateDB {
+    db: DB,
+    cols: Vec<ColumnFamily>,
+}
+
+unsafe impl Send for ReadOnlySolidStateDB {}
+unsafe impl Sync for ReadOnlySolidStateDB {}
+
+impl ReadOnlySolidStateDB {
+    pub fn new<P1: AsRef<Path>, P2: AsRef<Path>>(db_path: P1, tmp_path: P2) -> StateDB {
+        let db_options = DBOptions::default()
+            .increase_parallelism(num_cpus::get() as _)
+            .allow_mmap_reads(true) // for Cuckoo table
+            .max_open_files(1024);
+
+        let column_families = col_descs_for_state_db();
+
+        let (db, cols) =
+            DB::open_as_secondary_with_column_families(&db_options, db_path, tmp_path, column_families).unwrap();
+
+        StateDB {
+            db: OverlayDB::new(db),
+            cols,
+        }
+    }
+
+    pub fn get<T, K: keys::Key<T>>(&self, key: &K) -> Result<Option<T>, BoxError> {
+        self.db
+            .get_cf(ReadOptions::default_instance(), &self.cols[K::COL], key.key().as_ref())
+            .map(|raw| Some(K::parse_value(&raw)))
+            .or_else(|e| if e.is_not_found() { Ok(None) } else { Err(e) })
+            .map_err(|e| e.into())
+    }
+
+    pub fn catch_up_with_primary(&self) {
+        let _ = self.db.try_catch_up_with_primary();
+    }
 }
