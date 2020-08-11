@@ -52,8 +52,9 @@ message Witness {
   int64 vote_count = 4;
   int64 total_produced = 5;
   int64 total_missed = 6;
-  int64 latest_block_num = 7;
-  int64 latest_slot_num = 8;
+  int64 latest_block_number = 7;
+  int64 latest_slot_number = 8;
+  int32 latest_block_version = 9;
 }
 
 message Proposal {

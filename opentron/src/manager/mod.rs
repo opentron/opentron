@@ -308,7 +308,7 @@ impl Manager {
         }
         let mut block_nums: Vec<_> = wit_addrs
             .into_iter()
-            .map(|(addr, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_num)
+            .map(|(addr, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
             .collect();
 
         block_nums.sort();
@@ -449,8 +449,10 @@ impl WitnessStatisticManager<'_> {
         let mut wit = self.manager.state_db.must_get(&keys::Witness(wit_addr));
 
         wit.total_produced += 1;
-        wit.latest_block_num = block.number();
-        wit.latest_slot_num = self.manager.get_absolute_slot(block.timestamp());
+        wit.latest_block_number = block.number();
+        wit.latest_slot_number = self.manager.get_absolute_slot(block.timestamp());
+        // NOTE: This is used for fork controller.
+        wit.latest_block_version = block.version();
 
         self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
 
