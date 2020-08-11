@@ -13,6 +13,7 @@ use super::executor::TransactionContext;
 use super::Manager;
 
 mod transfer;
+mod proposal;
 
 pub trait BuiltinContractExt: Message + Default + Sized {
     fn owner_address(&self) -> &[u8];
@@ -49,39 +50,6 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
         0
     }
 }
-
-
-impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
-    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
-
-        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
-
-        let maybe_acct = manager.state_db.get(&keys::Account(owner_address)).map_err(|_| "db query error")?;
-        if maybe_acct.is_none() {
-            return Err("account not exists".into());
-        }
-
-        let maybe_wit = manager.state_db.get(&keys::Witness(owner_address)).map_err(|_| "db query error")?;
-        if maybe_wit.is_none() {
-            return Err("account is not a witness".into());
-        }
-
-        if self.parameters.is_empty() {
-            return Err("empty parameter".into());
-        }
-
-        // TODO: validate parameter entry
-
-
-        Ok(())
-    }
-
-    // TODO: for now, use String as Error type
-    fn execute(&self, _manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
-        unimplemented!()
-    }
-}
-
 
 
 
