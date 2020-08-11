@@ -4,6 +4,7 @@ use block_version::BlockVersion;
 
 pub mod block_version;
 
+/// Current block version for produced block.
 pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
 
 /// Will postpone txns if block size exceeds 2MiB.

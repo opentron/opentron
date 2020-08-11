@@ -5,7 +5,7 @@ pub enum ForkPolicy {
     AtBlock { block_number: i64 },
     // passOld
     Old,
-    // passNew, after 4.0.0
+    // passNew(>4.0.0)
     New { timestamp: i64, minimum_upgraded: usize },
 }
 
@@ -68,7 +68,7 @@ impl BlockVersion {
     pub fn fork_policy(&self) -> ForkPolicy {
         match *self {
             BlockVersion::Odyssey3_2 => ForkPolicy::AtBlock { block_number: 4727890 },
-            BlockVersion::GreatVoyage4_0_0 => ForkPolicy::New {
+            BlockVersion::GreatVoyage4_0_1 => ForkPolicy::New {
                 // GMT 2020-08-07 06:00:00
                 timestamp: 1596780000_000,
                 minimum_upgraded: 22,
