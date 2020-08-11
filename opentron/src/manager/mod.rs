@@ -133,6 +133,13 @@ impl Manager {
             // println!("TODO: handle fork");
         }
 
+        if block.version() > constants::CURRENT_BLOCK_VERSION as i32 {
+            warn!(
+                "encounter newer block version, YOU MUST UPGRADE OpenTron. block_version={}",
+                block.version()
+            );
+        }
+
         // basic check finished, begin process block
         self.state_db.new_layer();
 
