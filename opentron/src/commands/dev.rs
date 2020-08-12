@@ -22,8 +22,10 @@ pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> 
     let mut start_time = Utc::now().timestamp_millis();
     let mut n_blocks = 0;
 
-    for i in 1..30000 {
-        // for i in 28514..30000 {
+    let start_block = db_manager.latest_block_number() as u64 + 1;
+
+    for i in start_block..30000 {
+        //for i in 28514..30000 {
         let blk = ctx.chain_db.get_block_by_number(i)?;
 
         db_manager.push_block(&blk)?;
