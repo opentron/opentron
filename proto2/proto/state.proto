@@ -8,7 +8,7 @@ import "chain.proto";
 message AccountResource {
   int64 free_bandwidth_used = 1;
   // Normally free bandwidth limit is a const defined in code, 5000.
-  int64 free_bandwidth_limit = 2;
+  // int64 free_bandwidth_limit = 2;
   int64 free_bandwidth_latest_timestamp = 3;
   int64 frozen_bandwidth_used = 4;
   int64 frozen_bandwidth_limit = 5;
