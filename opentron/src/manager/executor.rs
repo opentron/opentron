@@ -162,6 +162,30 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::ProposalApproveContract => {
+                let cntr = contract_pb::ProposalApproveContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                // TOOD: handle multisig, for now, use simple method
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Approve Proposal #{} by {} {}",
+                    cntr.proposal_id,
+                    b58encode_check(cntr.owner_address()),
+                    cntr.is_approval
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                {
+                    let mut bw_proc = BandwidthProcessor::new(self.manager);
+                    bw_proc.consume(txn, &cntr, &mut ctx)?;
+                }
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
                 // smart contract status
                 let contract_status = txn

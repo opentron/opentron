@@ -5,7 +5,7 @@ use constants::block_version::BlockVersion;
 use log::info;
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::contract as contract_pb;
-use proto2::state::Proposal;
+use proto2::state::{proposal::State as ProposalState, Proposal};
 use state::keys;
 use state::keys::ChainParameter;
 
@@ -40,7 +40,6 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
             return Err("empty parameter".into());
         }
 
-        // TODO: validate parameter entry
         for (&key, &value) in self.parameters.iter() {
             ProposalUtil::new(manager).validate(key, value)?
         }
@@ -49,7 +48,6 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
         Ok(())
     }
 
-    // TODO: for now, use String as Error type
     fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
         let owner_address = Address::try_from(&self.owner_address).unwrap();
 
@@ -81,7 +79,69 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
             .map_err(|_| "db insert error")?;
         manager
             .state_db
-            .put_key(keys::DynamicProperty::NextExchangeId, proposal_id + 1)
+            .put_key(keys::DynamicProperty::NextProposalId, proposal_id + 1)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::default())
+    }
+}
+
+impl BuiltinContractExecutorExt for contract_pb::ProposalApproveContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        // NOTE: witness implies account, so no need to check account
+        let maybe_wit = manager
+            .state_db
+            .get(&keys::Witness(owner_address))
+            .map_err(|_| "db query error")?;
+        if maybe_wit.is_none() {
+            return Err("account is not a witness".into());
+        }
+
+        let next_proposal_id = manager.state_db.must_get(&keys::DynamicProperty::NextProposalId);
+        if self.proposal_id >= next_proposal_id {
+            return Err("proposal does not exist".into());
+        }
+
+        let maybe_proposal = manager
+            .state_db
+            .get(&keys::Proposal(self.proposal_id))
+            .map_err(|_| "db query error")?;
+        if let Some(proposal) = maybe_proposal {
+            if manager.latest_block_timestamp() >= proposal.expiration_time {
+                return Err("proposal has expired".into());
+            }
+            if proposal.state == ProposalState::Cancelled as i32 {
+                return Err("proposal is cancelled".into());
+            }
+            if !self.is_approval && !proposal.approver_addresses.contains(&self.owner_address.to_vec()) {
+                return Err("cannot disapprove without former approval".into());
+            }
+        } else {
+            return Err("proposal does not exist".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+
+        let mut proposal = manager.state_db.must_get(&keys::Proposal(self.proposal_id));
+
+        if self.is_approval {
+            proposal.approver_addresses.push(owner_address.as_bytes().to_vec());
+        } else {
+            proposal.approver_addresses = proposal
+                .approver_addresses
+                .into_iter()
+                .filter(|addr| &addr[..] != owner_address.as_bytes())
+                .collect();
+        }
+        manager
+            .state_db
+            .put_key(keys::Proposal(self.proposal_id), proposal)
             .map_err(|_| "db insert error")?;
 
         Ok(TransactionResult::default())
@@ -183,7 +243,7 @@ impl ProposalUtil<'_> {
             AllowTvmShieldedUpgrade => {
                 self.require_version(BlockVersion::GreatVoyage4_0_1)?;
                 self.accept_bool(value)
-            } // _ => unimplemented!("unhandled proposal parameter"),
+            }
         }
     }
 
