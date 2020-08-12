@@ -10,7 +10,7 @@ pub enum ForkPolicy {
 }
 
 /// Block versions. These versions match version names on github release page(or PR numbers).
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
 pub enum BlockVersion {
     /// Also applies to all blocks before around #2300000.
     Genesis = 0,
