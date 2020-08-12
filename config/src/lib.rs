@@ -7,7 +7,7 @@ pub use genesis::GenesisConfig;
 
 pub mod genesis;
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct ChainParameterConfig {
@@ -46,7 +46,7 @@ fn default_energy_fee() -> i64 {
     100
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct ChainConfig {
@@ -55,15 +55,15 @@ pub struct ChainConfig {
     #[serde(default = "Default::default")]
     pub p2p_version: i32,
     #[serde(default = "default_proposal_expiration_duration")]
-    pub proposal_expiration_duration: String,
+    pub proposal_expiration_duration: i64,
     pub parameter: ChainParameterConfig,
 }
 
-fn default_proposal_expiration_duration() -> String {
-    "259200000".into()
+fn default_proposal_expiration_duration() -> i64 {
+    259200_000
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct StorageConfig {
@@ -92,14 +92,14 @@ fn default_state_cache_dir() -> String {
     "./data/cache".into()
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct DiscoveryProtoConfig {
     pub enable: bool,
     pub endpoint: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct ChannelProtoConfig {
     pub enable: bool,
@@ -117,7 +117,7 @@ fn default_sync_batch_size() -> usize {
     200
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct ProtocolConfig {
     pub seed_nodes: Vec<String>,
@@ -125,7 +125,7 @@ pub struct ProtocolConfig {
     pub channel: ChannelProtoConfig,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub struct GraphQLConfig {
@@ -133,7 +133,7 @@ pub struct GraphQLConfig {
     pub endpoint: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub chain: ChainConfig,
