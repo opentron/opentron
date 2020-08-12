@@ -6,6 +6,7 @@ impl Account {
     pub fn new(block_timestamp: i64) -> Self {
         Account {
             creation_time: block_timestamp,
+            resource: Some(Default::default()),
             ..Default::default()
         }
     }
