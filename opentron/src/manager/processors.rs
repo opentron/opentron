@@ -174,7 +174,6 @@ impl<'m> BandwidthProcessor<'m> {
         {
             let mut resource = if acct.resource.is_none() {
                 acct.resource = Some(Default::default());
-                acct.resource.as_mut().map(|r| r.free_bandwidth_limit = free_bw_limit);
                 acct.resource.as_mut().unwrap()
             } else {
                 acct.resource.as_mut().unwrap()

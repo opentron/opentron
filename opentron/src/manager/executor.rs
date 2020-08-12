@@ -112,6 +112,10 @@ impl<'m> TransactionExecutor<'m> {
         match cntr_type {
             ContractType::TransferContract => {
                 let cntr = contract_pb::TransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                // TOOD: handle multisig, for now, use simple method
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
 
                 debug!(
                     "=> transfer from {} to {} with amount {}",
@@ -119,10 +123,6 @@ impl<'m> TransactionExecutor<'m> {
                     b58encode_check(&cntr.to_address),
                     cntr.amount
                 );
-                // TOOD: handle multisig, for now, use simple method
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
@@ -154,9 +154,13 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
-                // debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
-
-                unimplemented!()
+                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                {
+                    let mut bw_proc = BandwidthProcessor::new(self.manager);
+                    bw_proc.consume(txn, &cntr, &mut ctx)?;
+                }
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
             }
             ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
                 // smart contract status

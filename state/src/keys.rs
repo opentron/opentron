@@ -29,7 +29,7 @@ pub trait Key<T>: Sized {
 
     /// Parse db key.
     fn parse_key(_raw: &[u8]) -> Self {
-        unimplemented!()
+        unreachable!()
     }
 }
 
@@ -333,14 +333,14 @@ impl Key<H256> for ContractStorage {
 }
 
 #[derive(Debug)]
-pub struct Proposal(u64);
+pub struct Proposal(pub i64);
 
 impl Key<pb::Proposal> for Proposal {
     type Target = Vec<u8>;
     const COL: usize = super::db::COL_PROPOSAL;
 
     fn key(&self) -> Self::Target {
-        self.0.to_be_bytes().to_vec()
+        (self.0 as u64).to_be_bytes().to_vec()
     }
 
     fn value(val: &pb::Proposal) -> Cow<[u8]> {

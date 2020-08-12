@@ -1,19 +1,14 @@
 //! Transaction actuators.
 
-use std::convert::TryFrom;
-
-use ::keys::Address;
 use prost::Message;
 use prost_types::Any;
 use proto2::chain::{transaction::Result as TransactionResult, ContractType};
-use proto2::contract as contract_pb;
-use state::keys;
 
 use super::executor::TransactionContext;
 use super::Manager;
 
-mod transfer;
 mod proposal;
+mod transfer;
 
 pub trait BuiltinContractExt: Message + Default + Sized {
     fn owner_address(&self) -> &[u8];
@@ -41,7 +36,7 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
 
     // TODO: for now, use String as Error type
     fn execute(&self, _manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
-        unimplemented!()
+        unimplemented!("TODO: support builtin contract type {:?}", self.type_code())
     }
 
     /// Extra fee paid for specific type of builtin contract. Like asset issue, account permission update.
@@ -50,8 +45,6 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
         0
     }
 }
-
-
 
 /// Impl BuiltinContractExt for builtin contract protobufs.
 macro_rules! impl_contract_ext_for {
