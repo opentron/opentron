@@ -68,7 +68,7 @@ message Proposal {
     PENDING = 0;
     DISAPPROVED = 1;
     APPROVED = 2;
-    CANCELED = 3;
+    CANCELLED = 3;
   }
   State state = 7;
 }
