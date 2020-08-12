@@ -14,8 +14,8 @@ use proto2::state as state_pb;
 use rocks::prelude::*;
 
 use super::keys;
-use super::DynamicProperty;
 use super::parameter::default_parameters_from_config;
+use super::DynamicProperty;
 
 pub type BoxError = Box<dyn ::std::error::Error>;
 
@@ -510,6 +510,7 @@ impl StateDB {
             let acct = state_pb::Account {
                 creation_time: genesis.timestamp,
                 r#type: AccountType::Normal as i32,
+                resource: Some(Default::default()),
                 ..Default::default()
             };
             self.put_key(key, acct)?;
@@ -525,6 +526,7 @@ impl StateDB {
                 balance: alloc.balance,
                 creation_time: genesis.timestamp,
                 r#type: AccountType::Normal as i32,
+                resource: Some(Default::default()),
                 ..Default::default()
             };
 
