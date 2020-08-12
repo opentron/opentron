@@ -26,7 +26,10 @@ pub const MAX_NUM_OF_STANDBY_WITNESSES: usize = 127;
 // 27 * 70% = 18.9, so a solid block is one verified by 19 witnesses.
 pub const SOLID_THRESHOLD_PERCENT: usize = 70;
 
-pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: i64 = 2;
+pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: usize = 2;
+
+// An SR should produce this much blocks then next.
+pub const NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND: usize = 1;
 
 /// Renamed: WitnessAllowanceFrozenTime
 pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
@@ -35,7 +38,7 @@ pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
 pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
 
 /// Renamed: BLOCK_FILLED_SLOTS_NUMBER
-pub const NUM_OF_BLOCK_FILLED_SLOTS: i64 = 128;
+pub const NUM_OF_BLOCK_FILLED_SLOTS: usize = 128;
 
 //* Transactions
 

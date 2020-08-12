@@ -13,6 +13,7 @@ use self::executor::TransactionExecutor;
 use self::maintenance::MaintenanceManager;
 
 pub mod actuators;
+pub mod controllers;
 pub mod executor;
 pub mod maintenance;
 pub mod processors;
@@ -38,6 +39,7 @@ pub struct Manager {
     block_energy_usage: i64,
     // TaPoS check, size = 65536, 2MB.
     ref_block_hashes: Vec<H256>,
+    config: Config,
 }
 
 impl Manager {
@@ -63,6 +65,7 @@ impl Manager {
             my_witness: vec![],
             block_energy_usage: 0,
             ref_block_hashes: Vec::with_capacity(65536),
+            config: config.clone(),
         }
     }
 
@@ -113,7 +116,7 @@ impl Manager {
             return Err(new_error("verify block merkle root hash failed"));
         }
 
-        // consensusInterface.receiveBlock = DposService.receiverBlock
+        // TODO consensusInterface.receiveBlock = DposService.receiverBlock
         // StateManager.receiverBlock
         // TODO: check dup block?
 
@@ -143,8 +146,10 @@ impl Manager {
         // basic check finished, begin process block
         self.state_db.new_layer();
 
-        // . applyBlock
+        // applyBlock = processBlock + updateFork
         self.process_block(block)?;
+
+        // TODO: updateFork(here)
 
         self.state_db.solidify_layer();
 
@@ -366,7 +371,7 @@ impl Manager {
         }
 
         if self.is_latest_block_maintenance() {
-            slot += constants::NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE;
+            slot += constants::NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE as i64;
         }
 
         let mut ts = self.latest_block_timestamp();
@@ -374,9 +379,18 @@ impl Manager {
         ts + constants::BLOCK_PRODUCING_INTERVAL * slot
     }
 
-    fn get_scheduled_witness(&self, slot: i64) -> Address {
-        const SINGLE_REPEAT: usize = 1;
+    fn get_active_witnesses(&self) -> Vec<Address> {
+        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+        if witnesses.is_empty() {
+            panic!("no witness found");
+        }
+        if witnesses.len() > constants::MAX_NUM_OF_ACTIVE_WITNESSES {
+            let _ = witnesses.split_off(constants::MAX_NUM_OF_ACTIVE_WITNESSES);
+        }
+        witnesses.into_iter().map(|wit| wit.0).collect()
+    }
 
+    fn get_scheduled_witness(&self, slot: i64) -> Address {
         let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
         if witnesses.is_empty() {
             panic!("no witness found");
@@ -387,8 +401,8 @@ impl Manager {
         let curr_slot = self.get_absolute_slot(self.latest_block_timestamp()) + slot;
         assert!(curr_slot >= 0, "slot must be positive");
 
-        let mut idx = (curr_slot as usize) % (witnesses.len() * SINGLE_REPEAT);
-        idx /= SINGLE_REPEAT;
+        let mut idx = (curr_slot as usize) % (witnesses.len() * constants::NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND);
+        idx /= constants::NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND;
         witnesses[idx].0
     }
 
@@ -477,11 +491,11 @@ impl WitnessStatisticManager<'_> {
             self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
 
             self.filled_slots[self.filled_slots_index as usize] = 0;
-            self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS;
+            self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
         }
         // current block is filled
         self.filled_slots[self.filled_slots_index as usize] = 1;
-        self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS;
+        self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
 
         self.manager
             .state_db
