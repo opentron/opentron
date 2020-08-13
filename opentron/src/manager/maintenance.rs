@@ -90,7 +90,17 @@ impl MaintenanceManager<'_> {
             .unwrap();
         Ok(())
     }
+
+    // Remove vote counts in genesis config.
     fn remove_power_of_gr(&mut self) -> Result<(), String> {
-        unimplemented!()
+        for gr_wit in &self.manager.genesis_config.witnesses {
+            let addr = gr_wit.address.parse::<Address>().expect("address format error");
+
+            let mut witness = self.manager.state_db.must_get(&keys::Witness(addr));
+            witness.vote_count -= gr_wit.votes;
+            self.manager.state_db.put_key(keys::Witness(addr), witness).map_err(|_| "insert db error")?;
+        }
+        self.manager.state_db.put_key(keys::ChainParameter::RemovePowerOfGr, -1).map_err(|_| "insert db error")?;
+        Ok(())
     }
 }

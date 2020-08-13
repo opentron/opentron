@@ -41,6 +41,7 @@ pub struct Manager {
     // TaPoS check, size = 65536, 2MB.
     ref_block_hashes: Vec<H256>,
     config: Config,
+    genesis_config: GenesisConfig,
 }
 
 impl Manager {
@@ -67,6 +68,7 @@ impl Manager {
             block_energy_usage: 0,
             ref_block_hashes: Vec::with_capacity(65536),
             config: config.clone(),
+            genesis_config: genesis_config.clone(),
         }
     }
 
@@ -106,7 +108,7 @@ impl Manager {
         if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
             let recovered = block.recover_witness()?;
             if self.state_db.get(&keys::ChainParameter::AllowMultisig)?.unwrap() == 1 {
-                panic!("TODO: handle multisig witness");
+                // warn!("TODO: handle multisig witness");
             }
             if recovered.as_bytes() != block.witness() {
                 return Err(new_error("verifying block witness signature failed"));
