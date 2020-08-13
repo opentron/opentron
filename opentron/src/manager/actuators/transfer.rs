@@ -18,7 +18,7 @@ impl BuiltinContractExecutorExt for contract_pb::TransferContract {
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
         let to_address = Address::try_from(&self.to_address).map_err(|_| "invalid to_address")?;
 
-        let mut fee = self.fee();
+        let mut fee = self.fee(manager);
 
         if owner_address == to_address {
             return Err("cannot transfer to oneself".into());

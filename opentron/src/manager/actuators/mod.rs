@@ -9,6 +9,7 @@ use super::Manager;
 
 mod proposal;
 mod transfer;
+mod witness;
 
 pub trait BuiltinContractExt: Message + Default + Sized {
     fn owner_address(&self) -> &[u8];
@@ -41,7 +42,7 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
 
     /// Extra fee paid for specific type of builtin contract. Like asset issue, account permission update.
     #[inline]
-    fn fee(&self) -> i64 {
+    fn fee(&self, _manager: &Manager) -> i64 {
         0
     }
 }

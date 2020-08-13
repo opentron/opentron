@@ -8,6 +8,7 @@ use proto2::chain::{transaction::result::ContractStatus, ContractType};
 use proto2::contract as contract_pb;
 use proto2::state::{ResourceReceipt, TransactionReceipt};
 use state::keys;
+use std::str;
 
 use super::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
 use super::processors::BandwidthProcessor;
@@ -128,10 +129,9 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate(self.manager, &mut ctx)?;
                 debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
 
-                {
-                    let mut bw_proc = BandwidthProcessor::new(self.manager);
-                    bw_proc.consume(txn, &cntr, &mut ctx)?;
-                }
+                let mut bw_proc = BandwidthProcessor::new(self.manager);
+                bw_proc.consume(txn, &cntr, &mut ctx)?;
+
                 debug!("context => {:?}", ctx);
 
                 Ok(ctx.into())
@@ -155,10 +155,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
                 debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
-                {
-                    let mut bw_proc = BandwidthProcessor::new(self.manager);
-                    bw_proc.consume(txn, &cntr, &mut ctx)?;
-                }
+
+                let mut bw_proc = BandwidthProcessor::new(self.manager);
+                bw_proc.consume(txn, &cntr, &mut ctx)?;
+
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -179,10 +179,30 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
                 debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
-                {
-                    let mut bw_proc = BandwidthProcessor::new(self.manager);
-                    bw_proc.consume(txn, &cntr, &mut ctx)?;
+
+                let mut bw_proc = BandwidthProcessor::new(self.manager);
+                bw_proc.consume(txn, &cntr, &mut ctx)?;
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::WitnessCreateContract => {
+                let cntr = contract_pb::WitnessCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
                 }
+                debug!(
+                    "=> New Witness {} url={:?}",
+                    b58encode_check(cntr.owner_address()),
+                    str::from_utf8(&cntr.url)
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+
+                let mut bw_proc = BandwidthProcessor::new(self.manager);
+                bw_proc.consume(txn, &cntr, &mut ctx)?;
+
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -195,7 +215,6 @@ impl<'m> TransactionExecutor<'m> {
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
                     .unwrap_or_default();
                 debug!("contract_status => {:?}", contract_status);
-
                 unimplemented!()
             }
             _ => unimplemented!(),
