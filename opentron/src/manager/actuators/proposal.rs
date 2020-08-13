@@ -51,7 +51,7 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
     fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
         let owner_address = Address::try_from(&self.owner_address).unwrap();
 
-        let proposal_id = manager.state_db.must_get(&keys::DynamicProperty::NextProposalId);
+        let proposal_id = manager.state_db.must_get(&keys::DynamicProperty::LatestProposalId) + 1;
         let now = manager.latest_block_timestamp();
         let expiration_time = {
             let maintenance_interval = manager.state_db.must_get(&keys::ChainParameter::MaintenanceInterval);
@@ -79,7 +79,7 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
             .map_err(|_| "db insert error")?;
         manager
             .state_db
-            .put_key(keys::DynamicProperty::NextProposalId, proposal_id + 1)
+            .put_key(keys::DynamicProperty::LatestProposalId, proposal_id)
             .map_err(|_| "db insert error")?;
 
         Ok(TransactionResult::default())
@@ -99,8 +99,8 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalApproveContract {
             return Err("account is not a witness".into());
         }
 
-        let next_proposal_id = manager.state_db.must_get(&keys::DynamicProperty::NextProposalId);
-        if self.proposal_id >= next_proposal_id {
+        let latest_proposal_id = manager.state_db.must_get(&keys::DynamicProperty::LatestProposalId);
+        if self.proposal_id > latest_proposal_id {
             return Err("proposal does not exist".into());
         }
 

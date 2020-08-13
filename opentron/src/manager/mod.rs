@@ -11,6 +11,7 @@ use std::convert::TryFrom;
 
 use self::executor::TransactionExecutor;
 use self::maintenance::MaintenanceManager;
+use self::controllers::ProposalController;
 
 pub mod actuators;
 pub mod controllers;
@@ -169,7 +170,7 @@ impl Manager {
         // NOTE: won't pre-check transaction signature. useless.
 
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
-        // TODO: handle accountState - AccountStateCallBack.java
+        // TODO: handle accountState - AccountStateCallBack
         for txn in &block.transactions {
             info!("transaction => {:?}", txn.hash);
             self.process_transaction(&txn, block)?;
@@ -182,6 +183,9 @@ impl Manager {
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
             // TODO
+            info!("begin maintenance");
+            ProposalController::new(self).process_proposals()?;
+            info!("maintenance done");
         }
 
         // 7. consensus.applyBlock (DposService.applyBlock)

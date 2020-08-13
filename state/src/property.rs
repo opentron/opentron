@@ -14,8 +14,8 @@ pub enum DynamicProperty {
     // * Next Global IDs
     /// 1000001
     NextTokenId,
-    /// 1
-    NextProposalId,
+    /// 0, starts from 1
+    LatestProposalId,
     /// 1
     NextExchangeId,
 
@@ -93,7 +93,7 @@ impl DynamicProperty {
         return vec![
             (DbVersion, CURRENT_DB_VERSION),
             (NextTokenId, 1000001),
-            (NextProposalId, 1),
+            (LatestProposalId, 0),
             (NextExchangeId, 1),
             // LatestBlockTimestamp,
             // will be overwriten when apply genesis block

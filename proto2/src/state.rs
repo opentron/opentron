@@ -2,6 +2,8 @@ include!(concat!(env!("OUT_DIR"), "/proto.state.rs"));
 
 pub use crate::common::SmartContract;
 
+use self::proposal::State as ProposalState;
+
 impl Account {
     pub fn new(block_timestamp: i64) -> Self {
         Account {
@@ -17,6 +19,24 @@ impl Account {
             Ok(())
         } else {
             Err(())
+        }
+    }
+}
+
+impl Proposal {
+    pub fn is_processed(&self) -> bool {
+        if self.state == ProposalState::Disapproved as i32 || self.state == ProposalState::Approved as i32 {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        if self.state == ProposalState::Cancelled as i32 {
+            true
+        } else {
+            false
         }
     }
 }
