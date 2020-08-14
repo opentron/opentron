@@ -189,9 +189,9 @@ impl Key<pb::Account> for Account {
     }
 }
 
-// to, from
+/// Resource delegation, from_address, to_address.
 #[derive(Debug)]
-pub struct ResourceDelegation(Address, Address);
+pub struct ResourceDelegation(pub Address, pub Address);
 
 impl Key<pb::ResourceDelegation> for ResourceDelegation {
     type Target = Vec<u8>;
@@ -212,8 +212,9 @@ impl Key<pb::ResourceDelegation> for ResourceDelegation {
     }
 }
 
+/// Reverse index for resource delegation info, to_address.
 #[derive(Debug)]
-pub struct ResourceDelegationIndex(Address);
+pub struct ResourceDelegationIndex(pub Address);
 
 impl Key<Vec<Address>> for ResourceDelegationIndex {
     type Target = Vec<u8>;

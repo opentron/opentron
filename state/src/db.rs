@@ -323,12 +323,12 @@ fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
             "account-resource",
             ColumnFamilyOptions::default().optimize_for_point_lookup(128),
         ),*/
-        // to_address => AccountResourceDelegation
+        // <<from_address, to_address>> => AccountResourceDelegation
         ColumnFamilyDescriptor::new(
             "resource-delegation",
             ColumnFamilyOptions::default().optimize_for_point_lookup(128),
         ),
-        // from_address => [to_address]
+        // to_address => [from_address]
         ColumnFamilyDescriptor::new(
             "resource-delegation-index",
             ColumnFamilyOptions::default().optimize_for_point_lookup(128),
