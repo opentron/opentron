@@ -58,8 +58,8 @@ pub const DEFAULT_ORIGIN_ENERGY_LIMIT: usize = 10_000_000;
 /// Renamed: TotalSignNum
 pub const MAX_NUM_OF_KEYS_IN_MULTISIG: usize = 5;
 
-pub const MAX_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: usize = 3;
-pub const MIN_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: usize = 3;
+pub const MAX_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
+pub const MIN_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
 
 /// Max number of `FronzenSupply` in AssetIssue.
 pub const MAX_NUM_OF_FROZEN_SUPPLIES_IN_ASSET_ISSUE: usize = 10;
