@@ -5,6 +5,7 @@ use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use log::debug;
 use primitive_types::H256;
 use proto2::chain::{transaction::result::ContractStatus, ContractType};
+use proto2::common::ResourceCode;
 use proto2::contract as contract_pb;
 use proto2::state::{ResourceReceipt, TransactionReceipt};
 use state::keys;
@@ -206,6 +207,28 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::FreezeBalanceContract => {
+                let cntr = contract_pb::FreezeBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Freeze Resource {} amount={} resource={:?}",
+                    b58encode_check(cntr.owner_address()),
+                    cntr.frozen_balance,
+                    ResourceCode::from_i32(cntr.resource).unwrap()
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                let mut bw = BandwidthProcessor::new(self.manager);
+                bw.consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            // TVM
             ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
                 // smart contract status
                 let contract_status = txn

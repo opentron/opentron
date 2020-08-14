@@ -8,6 +8,7 @@ use super::executor::TransactionContext;
 use super::Manager;
 
 mod proposal;
+mod resource;
 mod transfer;
 mod witness;
 
