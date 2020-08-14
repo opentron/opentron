@@ -29,15 +29,19 @@ message Account {
   map<int64, int64> token_balance = 5;
   AccountResource resource = 6;
   int64 latest_operation_timestamp = 7;
+  int64 frozen_amount_for_bandwidth = 8;
+  int64 frozen_amount_for_energy = 9;
+  int64 delegated_frozen_amount_for_bandwidth = 10;
+  int64 delegated_frozen_amount_for_energy = 11;
 }
 
 message ResourceDelegation {
   bytes to_address = 1;
   bytes from_address = 2;
   int64 amount_for_bandwidth = 3;
-  int64 timestamp_for_bandwidth = 4;
+  int64 expiration_timestamp_for_bandwidth = 4;
   int64 amount_for_energy = 5;
-  int64 timestamp_for_energy = 6;
+  int64 expiration_timestamp_for_energy = 6;
 }
 
 message Votes {
