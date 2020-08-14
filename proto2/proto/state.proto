@@ -31,8 +31,11 @@ message Account {
   int64 latest_operation_timestamp = 7;
   int64 frozen_amount_for_bandwidth = 8;
   int64 frozen_amount_for_energy = 9;
+  // delegated in bandwidth
   int64 delegated_frozen_amount_for_bandwidth = 10;
+  // delegated in energy
   int64 delegated_frozen_amount_for_energy = 11;
+  int64 delegated_out_amount = 12;
 }
 
 message ResourceDelegation {

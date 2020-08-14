@@ -104,6 +104,7 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
                     self.frozen_balance,
                     expire_time,
                 )?;
+                owner_acct.delegated_out_amount += self.frozen_balance;
             } else {
                 delegate_resource(
                     manager,

@@ -21,6 +21,10 @@ impl Account {
             Err(())
         }
     }
+
+    pub fn tron_power(&self) -> i64 {
+        self.frozen_amount_for_bandwidth + self.frozen_amount_for_energy + self.delegated_out_amount
+    }
 }
 
 impl Proposal {
