@@ -85,7 +85,6 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
         const DAY_IN_MS: i64 = 86_400_000;
 
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
-        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
 
         let now = manager.latest_block_timestamp();
         let duration = self.frozen_duration * DAY_IN_MS;
@@ -104,26 +103,12 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
                     self.frozen_balance,
                     expire_time,
                 )?;
-                owner_acct.delegated_out_amount += self.frozen_balance;
             } else {
-                delegate_resource(
-                    manager,
-                    owner_addr,
-                    owner_addr,
-                    resource_type,
-                    self.frozen_balance,
-                    expire_time,
-                )?;
+                freeze_resource(manager, owner_addr, resource_type, self.frozen_balance, expire_time)?;
             }
         } else {
             unreachable!("already verified");
         }
-
-        owner_acct.adjust_balance(-self.frozen_balance).unwrap();
-        manager
-            .state_db
-            .put_key(keys::Account(owner_addr), owner_acct)
-            .map_err(|e| e.to_string())?;
 
         Ok(TransactionResult::default())
     }
@@ -189,31 +174,109 @@ fn delegate_resource(
             .map_err(|_| "db insert error")?;
     }
 
-    // handle account resource
+    // handle to_account resource
     let mut to_acct = manager.state_db.must_get(&keys::Account(to));
-    if from == to {
-        match resouce_code {
-            ResourceCode::Bandwidth => {
-                to_acct.frozen_amount_for_bandwidth += amount;
-            }
-            ResourceCode::Energy => {
-                to_acct.frozen_amount_for_energy += amount;
-            }
+    match resouce_code {
+        ResourceCode::Bandwidth => {
+            to_acct.delegated_frozen_amount_for_bandwidth += amount;
         }
-    } else {
-        match resouce_code {
-            ResourceCode::Bandwidth => {
-                to_acct.delegated_frozen_amount_for_bandwidth += amount;
-            }
-            ResourceCode::Energy => {
-                to_acct.delegated_frozen_amount_for_energy += amount;
-            }
+        ResourceCode::Energy => {
+            to_acct.delegated_frozen_amount_for_energy += amount;
+        }
+    }
+    manager
+        .state_db
+        .put_key(keys::Account(to), to_acct)
+        .map_err(|_| "db insert error")?;
+
+    // handle from_account balance
+    let mut from_acct = manager.state_db.must_get(&keys::Account(from));
+    from_acct.delegated_out_amount += amount;
+    from_acct.adjust_balance(-amount).unwrap();
+    manager
+        .state_db
+        .put_key(keys::Account(from), from_acct)
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn freeze_resource(
+    manager: &mut Manager,
+    from: Address,
+    resouce_code: ResourceCode,
+    amount: i64,
+    expired_time: i64,
+) -> Result<(), String> {
+    let key = keys::ResourceDelegation(from, from);
+
+    let maybe_delegated = manager.state_db.get(&key).map_err(|_| "db query error")?;
+    let mut delegated = maybe_delegated.unwrap_or_else(|| ResourceDelegation {
+        to_address: from.as_bytes().to_vec(),
+        from_address: from.as_bytes().to_vec(),
+        ..Default::default()
+    });
+
+    let weight_key;
+
+    match resouce_code {
+        ResourceCode::Bandwidth => {
+            delegated.amount_for_bandwidth += amount;
+            delegated.expiration_timestamp_for_bandwidth = expired_time;
+
+            weight_key = keys::DynamicProperty::TotalBandwidthWeight;
+        }
+        ResourceCode::Energy => {
+            delegated.amount_for_energy += amount;
+            delegated.expiration_timestamp_for_energy = expired_time;
+
+            weight_key = keys::DynamicProperty::TotalEnergyWeight;
         }
     }
 
     manager
         .state_db
-        .put_key(keys::Account(to), to_acct)
+        .put_key(key, delegated)
+        .map_err(|_| "db insert error")?;
+
+    let old_total_weight = manager.state_db.must_get(&weight_key);
+    manager
+        .state_db
+        .put_key(weight_key, old_total_weight + amount / 1_000_000)
+        .map_err(|_| "db insert error")?;
+
+    // handle delegated-resource-index
+    let maybe_indexed_addrs = manager
+        .state_db
+        .get(&keys::ResourceDelegationIndex(from))
+        .map_err(|_| "db query error")?;
+    let mut indexed_addrs = maybe_indexed_addrs.unwrap_or_default();
+
+    if !indexed_addrs.contains(&from) {
+        indexed_addrs.push(from);
+        manager
+            .state_db
+            .put_key(keys::ResourceDelegationIndex(from), indexed_addrs)
+            .map_err(|_| "db insert error")?;
+    }
+
+    // handle account resource
+    let mut from_acct = manager.state_db.must_get(&keys::Account(from));
+
+    match resouce_code {
+        ResourceCode::Bandwidth => {
+            from_acct.frozen_amount_for_bandwidth += amount;
+        }
+        ResourceCode::Energy => {
+            from_acct.frozen_amount_for_energy += amount;
+        }
+    }
+
+    // handle account balance
+    from_acct.adjust_balance(-amount).unwrap();
+
+    manager
+        .state_db
+        .put_key(keys::Account(from), from_acct)
         .map_err(|_| "db insert error")?;
     Ok(())
 }
