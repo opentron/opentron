@@ -228,6 +228,30 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::VoteWitnessContract => {
+                let cntr = contract_pb::VoteWitnessContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Vote Witness from {} votes: {:?}",
+                    b58encode_check(cntr.owner_address()),
+                    cntr.votes
+                        .iter()
+                        .map(|vote| (b58encode_check(&vote.vote_address), vote.vote_count))
+                        .collect::<std::collections::HashMap<_, _>>()
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                let mut bw = BandwidthProcessor::new(self.manager);
+                bw.consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+
+                unimplemented!("TODO: VoteWitnessContract")
+            }
             // TVM
             ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
                 // smart contract status

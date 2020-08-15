@@ -3,10 +3,11 @@ use std::convert::TryFrom;
 use ::keys::Address;
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::contract as contract_pb;
-use proto2::state::Witness;
+use proto2::state::{Votes, Witness};
 use state::keys;
 
 use super::super::executor::TransactionContext;
+use super::super::governance::reward::RewardController;
 use super::super::Manager;
 use super::BuiltinContractExecutorExt;
 
@@ -80,5 +81,72 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessCreateContract {
 
     fn fee(&self, manager: &Manager) -> i64 {
         manager.state_db.must_get(&keys::ChainParameter::WitnessCreateFee)
+    }
+}
+
+impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        if self.votes.is_empty() {
+            return Err("no votes".into());
+        }
+        if self.votes.len() > constants::MAX_NUM_OF_VOTES {
+            return Err("exceeds maximum number of votes".into());
+        }
+
+        let mut total_vote_count = 0_i64;
+        for vote in &self.votes {
+            let candidate_addr = Address::try_from(&vote.vote_address).map_err(|_| "invalid vote_address")?;
+            if vote.vote_count <= 0 {
+                return Err("vote count must be greater than 0".into());
+            }
+            // witness implies account
+            let maybe_witness = state_db
+                .get(&keys::Witness(candidate_addr))
+                .map_err(|_| "db query error")?;
+            if maybe_witness.is_none() {
+                return Err("witness not found".into());
+            }
+            total_vote_count = total_vote_count
+                .checked_add(vote.vote_count)
+                .ok_or("mathematical overflow")?;
+        }
+
+        let maybe_owner_acct = state_db
+            .get(&keys::Account(owner_address))
+            .map_err(|_| "error while querying db")?;
+        if maybe_owner_acct.is_none() {
+            return Err("owner account is not on chain".into());
+        }
+        let owner_acct = maybe_owner_acct.unwrap();
+
+        // 1_TRX for 1_TP
+        let tp = owner_acct.tron_power();
+        if total_vote_count > tp {
+            return Err(format!(
+                "total number of votes is greater than account's tron power, {} > {}",
+                total_vote_count, tp
+            ));
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        // countVoteAccount
+        let owner_addr = Address::try_from(&self.owner_address).unwrap();
+
+        // delegationService.withdrawReward(ownerAddress);
+        RewardController::new(manager).update_voting_reward(owner_addr)?;
+
+        manager
+            .state_db
+            .put_key(keys::Votes(owner_addr), Votes { votes: self.votes.clone() })
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::default())
     }
 }
