@@ -165,6 +165,10 @@ impl Key<pb::Witness> for Witness {
     fn parse_value(raw: &[u8]) -> pb::Witness {
         pb::Witness::decode(raw).unwrap()
     }
+
+    fn parse_key(raw: &[u8]) -> Self {
+        Witness(*Address::from_bytes(raw))
+    }
 }
 
 #[derive(Debug)]
