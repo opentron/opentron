@@ -435,6 +435,16 @@ impl StateDB {
         Ok(())
     }
 
+    pub fn delete_key<T, K: keys::Key<T>>(&mut self, key: &K) -> Result<(), BoxError> {
+        let wb = self
+            .db
+            .layers
+            .back_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no db layers found"))?;
+        wb.delete(&self.cols[K::COL], key.key().as_ref());
+        Ok(())
+    }
+
     pub fn get<T, K: keys::Key<T>>(&self, key: &K) -> Result<Option<T>, BoxError> {
         self.db
             .get(&self.cols[K::COL], key.key().as_ref())
