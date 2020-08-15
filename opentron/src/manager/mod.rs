@@ -178,16 +178,13 @@ impl Manager {
             self.process_transaction(&txn, block)?;
         }
 
-        // 4. Adaptive energy processor: TODO
+        // 4. Adaptive energy processor: TODO, no energy implemented
 
         // 5. Block reward - payReward(block): TODO
 
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
-            // TODO
-            info!("begin maintenance");
             ProposalController::new(self).process_proposals()?;
-            info!("maintenance done");
         }
 
         // 7. consensus.applyBlock (DposService.applyBlock)

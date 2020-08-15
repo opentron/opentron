@@ -249,8 +249,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut bw = BandwidthProcessor::new(self.manager);
                 bw.consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-
-                unimplemented!("TODO: VoteWitnessContract")
+                Ok(ctx.into())
             }
             // TVM
             ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {

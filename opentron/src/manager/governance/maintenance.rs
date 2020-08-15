@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 use ::keys::Address;
 use chain::IndexedBlock;
 use log::debug;
+use proto2::state::Witness;
 use state::keys;
 
 use super::super::Manager;
@@ -25,7 +28,7 @@ impl MaintenanceManager<'_> {
 
         if is_maintenance {
             if block.number() != 1 {
-                self.do_maintenance(block)?;
+                self.do_maintenance()?;
             }
             // updateNextMaintenanceTime
             self.increase_next_maintenance_time(next_maintenance_time, block.timestamp())?;
@@ -37,39 +40,85 @@ impl MaintenanceManager<'_> {
         Ok(())
     }
 
-    fn do_maintenance(&mut self, block: &IndexedBlock) -> Result<(), String> {
-        // 0: default
+    fn do_maintenance(&mut self) -> Result<(), String> {
+        // 0: default (unremoved)
         // 1: remove now
         // -1: removed
         if self.manager.state_db.must_get(&keys::ChainParameter::RemovePowerOfGr) == 1 {
             self.remove_power_of_gr()?;
         }
 
-        let _votes = self.count_votes();
+        // TODO: only count votes of last epoch
+        let votes = self.count_votes()?;
+        if !votes.is_empty() {
+            let old_active_witnesses = self.manager.get_active_witnesses();
 
-        // TODO: handle vote
-        // unimplemented!()
-        debug!("TODO: handle do_maintenance(votes counting) at block #{}", block.number());
+            // FIXME: handle votes, unvotes
+            let mut witnesses: HashMap<Address, Witness> = HashMap::new();
+            for (&wit_addr, &vote_count) in votes.iter() {
+                let mut wit = witnesses
+                    .entry(wit_addr)
+                    .or_insert_with(|| self.manager.state_db.must_get(&keys::Witness(wit_addr)));
+                wit.vote_count = vote_count;
+            }
+
+            for (wit_addr, wit) in witnesses.into_iter() {
+                // debug!("witness {} vote = {}", wit_addr, wit.vote_count);
+                self.manager
+                    .state_db
+                    .put_key(keys::Witness(wit_addr), wit)
+                    .map_err(|_| "db insert error")?;
+            }
+
+            self.update_witness_schedule();
+
+            let new_active_witnesses = self.manager.get_active_witnesses();
+
+            if old_active_witnesses != new_active_witnesses {
+                for (idx, (old_wit_addr, new_wit_addr)) in
+                    old_active_witnesses.iter().zip(new_active_witnesses.iter()).enumerate()
+                {
+                    if old_wit_addr != new_wit_addr {
+                        debug!("active witness #{} change {} => {}", idx, old_wit_addr, new_wit_addr);
+                    }
+                }
+            }
+
+            // lagacy incentiveManager.reward(newWitnessAddressList)
+            // Only when AllowChangeDelegation = false
+            if self
+                .manager
+                .state_db
+                .must_get(&keys::ChainParameter::AllowChangeDelegation) ==
+                0
+            {
+                self.legacy_reward_standby_witnesses()
+            }
+            // TODO: update Witness.is_active
+        }
+
         Ok(())
     }
 
-    fn count_votes(&self) -> Vec<(Address, i64)> {
-        use std::collections::HashMap;
-
+    fn count_votes(&self) -> Result<HashMap<Address, i64>, String> {
         let mut votes: HashMap<Address, i64> = HashMap::new();
 
         // value is a &state_pb::Votes
+        if self.manager.state_db.must_get(&keys::ChainParameter::RemovePowerOfGr) != -1 {
+            unimplemented!("TODO: the voting logic requires refactor");
+        }
+
         {
             let votes = &mut votes;
             self.manager.state_db.for_each(move |key: &keys::Votes, value| {
-                debug!("got votes key => {:?} {:?}", key, value);
+                debug!("got votes key => {:?} votes={}", key, value.votes.len());
                 for vote in value.votes.iter() {
                     *votes.entry(*Address::from_bytes(&vote.vote_address)).or_default() += vote.vote_count;
                 }
             });
         }
-        // TODO: unimplemented!()
-        vec![]
+
+        Ok(votes)
     }
 
     // in DynamicPropertiesStore.java
@@ -99,9 +148,99 @@ impl MaintenanceManager<'_> {
 
             let mut witness = self.manager.state_db.must_get(&keys::Witness(addr));
             witness.vote_count -= gr_wit.votes;
-            self.manager.state_db.put_key(keys::Witness(addr), witness).map_err(|_| "insert db error")?;
+            self.manager
+                .state_db
+                .put_key(keys::Witness(addr), witness)
+                .map_err(|_| "insert db error")?;
         }
-        self.manager.state_db.put_key(keys::ChainParameter::RemovePowerOfGr, -1).map_err(|_| "insert db error")?;
+        self.manager
+            .state_db
+            .put_key(keys::ChainParameter::RemovePowerOfGr, -1)
+            .map_err(|_| "insert db error")?;
         Ok(())
+    }
+
+    // DposService.updateWitness
+    fn update_witness_schedule(&mut self) {
+        let mut wit_votes: Vec<(Address, i64)> = Vec::new();
+
+        {
+            let wit_votes = &mut wit_votes;
+            self.manager.state_db.for_each(move |key: &keys::Witness, value| {
+                wit_votes.push((key.0, value.vote_count));
+            });
+        }
+
+        // NOTE: This is different from java-tron, with raw address as final fallback sorting key.
+        wit_votes.sort_by_cached_key(|&(addr, vote_count)| {
+            (
+                vote_count,
+                java_bytestring_hash_code(addr.as_bytes()),
+                addr.as_bytes().to_vec(),
+            )
+        });
+        wit_votes.reverse();
+        let sched = wit_votes
+            .iter()
+            .map(|&(addr, _votes)| (addr, constants::DEFAULT_BROKERAGE_RATE))
+            .collect();
+        self.manager.state_db.put_key(keys::WitnessSchedule, sched).unwrap();
+    }
+
+    /// `IncentiveManager.reward`, only when `AllowChangeDelegation = false`.
+    fn legacy_reward_standby_witnesses(&mut self) {
+        unimplemented!()
+    }
+}
+
+/// `hashCode()` for `com.google.protobuf.ByteString`.
+///
+/// NOTE: This is a really bad design mistake in java-tron, and is still vulnerable.
+/// One must not depend on hash of object for stable sorting order.
+/// And the serialized object must be used for last sorting key.
+///
+/// NOTE: Java has no unsigned integer/byte support. so `byte` is `i8`.
+///
+/// See-also: https://github.com/protocolbuffers/protobuf/blob/v3.4.0/java/core/src/main/java/com/google/protobuf/Internal.java
+///
+/// See-also: https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html
+fn java_bytestring_hash_code(bs: &[u8]) -> i32 {
+    /* // Original logic from com.google.protobuf.ByteString:
+    fn partial_hash(bs: &[u8], mut h: i32, offset: i32, length: i32) -> i32 {
+        for i in offset..(offset + length) {
+            h = h.wrapping_mul(31).wrapping_add(bs[i as usize] as i8 as i32);
+        }
+        h
+    }
+    let h = partial_hash(bs, bs.len() as i32, 0, bs.len() as i32);
+    if h == 0 {
+        1
+    } else {
+        h
+    } */
+
+    match bs
+        .iter()
+        .fold(bs.len() as i32, |h, &b| h.wrapping_mul(31).wrapping_add(b as i8 as i32))
+    {
+        0 => 1,
+        h => h,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_java_bytestring_hash_code() {
+        assert_eq!(java_bytestring_hash_code(&[]), 1);
+        assert_eq!(java_bytestring_hash_code(&[0x23]), 66);
+        assert_eq!(java_bytestring_hash_code(&[0x23, 0x66]), 3109);
+        assert_eq!(java_bytestring_hash_code(&hex::decode("41f5").unwrap()), 3926);
+        assert_eq!(
+            java_bytestring_hash_code(&hex::decode("41f57bbf6b0c6530eea1f3c5718ebb0c4cdbde2c79").unwrap()),
+            -797585552
+        );
     }
 }
