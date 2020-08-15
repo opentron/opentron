@@ -3,8 +3,9 @@ use chain::IndexedBlock;
 use log::debug;
 use state::keys;
 
-use super::Manager;
+use super::super::Manager;
 
+/// Massive thing done during maintenance.
 pub struct MaintenanceManager<'m> {
     manager: &'m mut Manager,
 }

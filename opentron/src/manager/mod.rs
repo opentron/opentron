@@ -9,16 +9,15 @@ use state::db::StateDB;
 use state::keys;
 use std::convert::TryFrom;
 
-use self::executor::TransactionExecutor;
-use self::maintenance::MaintenanceManager;
 use self::controllers::ProposalController;
+use self::executor::TransactionExecutor;
+use self::governance::maintenance::MaintenanceManager;
 
 pub mod actuators;
 pub mod controllers;
 pub mod executor;
-pub mod maintenance;
-pub mod processors;
 pub mod governance;
+pub mod processors;
 
 type Error = Box<dyn ::std::error::Error>;
 type Result<T, E = Error> = ::std::result::Result<T, E>;
