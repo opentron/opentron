@@ -18,6 +18,7 @@ pub mod controllers;
 pub mod executor;
 pub mod maintenance;
 pub mod processors;
+pub mod governance;
 
 type Error = Box<dyn ::std::error::Error>;
 type Result<T, E = Error> = ::std::result::Result<T, E>;
