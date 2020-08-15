@@ -259,7 +259,7 @@ impl OverlayDB {
         }
 
         for (key, value) in self.inner.new_iterator_cf(&ReadOptions::default(), col) {
-            if !visited.contains(key) {
+            if visited.contains(key) {
                 continue;
             }
             func(key, value);
