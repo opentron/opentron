@@ -23,7 +23,7 @@ impl Account {
     }
 
     pub fn tron_power(&self) -> i64 {
-        self.frozen_amount_for_bandwidth + self.frozen_amount_for_energy + self.delegated_out_amount
+        (self.frozen_amount_for_bandwidth + self.frozen_amount_for_energy + self.delegated_out_amount) / 1_000_000
     }
 }
 
