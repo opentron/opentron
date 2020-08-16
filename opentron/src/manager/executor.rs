@@ -12,7 +12,7 @@ use state::keys;
 use std::str;
 
 use super::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
-use super::processors::BandwidthProcessor;
+use super::resource::BandwidthProcessor;
 use super::Manager;
 
 pub struct TransactionContext<'a> {
