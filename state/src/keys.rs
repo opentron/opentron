@@ -361,14 +361,14 @@ impl Key<pb::Proposal> for Proposal {
 
 /// TRC10.
 #[derive(Debug)]
-pub struct Asset(u64);
+pub struct Asset(pub i64);
 
 impl Key<pb::Asset> for Asset {
     type Target = Vec<u8>;
     const COL: usize = super::db::COL_ASSET;
 
     fn key(&self) -> Self::Target {
-        self.0.to_be_bytes().to_vec()
+        (self.0 as u64).to_be_bytes().to_vec()
     }
 
     fn value(val: &pb::Asset) -> Cow<[u8]> {
