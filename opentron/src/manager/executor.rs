@@ -1,5 +1,7 @@
 //! Transaction executor.
 
+use std::str;
+
 use ::keys::b58encode_check;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use log::{debug, error, warn};
@@ -9,7 +11,6 @@ use proto2::common::ResourceCode;
 use proto2::contract as contract_pb;
 use proto2::state::{ResourceReceipt, TransactionReceipt};
 use state::keys;
-use std::str;
 
 use super::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
 use super::resource::BandwidthProcessor;
@@ -247,6 +248,24 @@ impl<'m> TransactionExecutor<'m> {
 
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::AssetIssueContract => {
+                let cntr = contract_pb::AssetIssueContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!("=> Issue Asset by {}: {:?}", b58encode_check(&cntr.owner_address()), cntr);
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                // TODO: Fill TransactionReceipt with newly created asset token_id.
                 Ok(ctx.into())
             }
             // TVM

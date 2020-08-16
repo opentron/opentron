@@ -36,6 +36,7 @@ message Account {
   // delegated in energy
   int64 delegated_frozen_amount_for_energy = 11;
   int64 delegated_out_amount = 12;
+  int64 issued_asset_id = 13;
 }
 
 message ResourceDelegation {
@@ -104,9 +105,10 @@ message InternalTransaction {
 
 // renamed: AssetIssue
 message Asset {
+  // NOTE: This is different from contract.Asset.FrozenSupply.
   message FrozenSupply {
     int64 frozen_amount = 1;
-    int64 frozen_days = 2;
+    int64 frozen_expiry_timestamp = 2;
   }
 
   bytes owner_address = 1;
@@ -129,10 +131,8 @@ message Asset {
   int64 public_free_asset_bandwidth_limit = 23;
   int64 public_free_asset_bandwidth_used = 24;
   int64 public_free_asset_bandwidth_last_timestamp = 25;
-  string id = 41;
-  // useless
-  int64 OBSOLETE_order = 11;
-  int32 OBSOLETE_vote_score = 16;
+  // changed: string
+  int64 id = 41;
 }
 
 message TransactionLog {

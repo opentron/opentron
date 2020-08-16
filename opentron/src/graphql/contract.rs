@@ -364,9 +364,9 @@ impl From<ContractPb> for Contract {
                     start_time: Utc.timestamp(cntr.start_time / 1_000, cntr.start_time as u32 % 1_000 * 1_000_000),
                     end_time: Utc.timestamp(cntr.end_time / 1_000, cntr.end_time as u32 % 1_000 * 1_000_000),
                     /// FreeAssetNetLimit
-                    free_bandwidth: cntr.free_asset_net_limit as _,
+                    free_bandwidth: cntr.free_asset_bandwidth_limit as _,
                     /// PublicFreeAssetNetLimit
-                    public_free_bandwidth: cntr.public_free_asset_net_limit as _,
+                    public_free_bandwidth: cntr.public_free_asset_bandwidth_limit as _,
                 };
                 Contract::AssetIssueContract(inner)
             }

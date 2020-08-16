@@ -7,6 +7,7 @@ use proto2::chain::{transaction::Result as TransactionResult, ContractType};
 use super::executor::TransactionContext;
 use super::Manager;
 
+mod asset;
 mod proposal;
 mod resource;
 mod transfer;
