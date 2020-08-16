@@ -72,7 +72,7 @@ impl<'m> BandwidthProcessor<'m> {
 
         // NOTE: first use frozen bw, then free bw
 
-        if self.consume_frozen_bandwidth(&owner_acct, byte_size, now, ctx) {
+        if self.consume_frozen_bandwidth(owner_address, &owner_acct, byte_size, now, ctx) {
             return Ok(());
         }
 
@@ -107,20 +107,44 @@ impl<'m> BandwidthProcessor<'m> {
     }
 
     // Renamed: useAccountNet
-    fn consume_frozen_bandwidth(&self, acct: &Account, nbytes: i64, now: i64, _ctx: &mut TransactionContext) -> bool {
+    fn consume_frozen_bandwidth(
+        &mut self,
+        addr: Address,
+        acct: &Account,
+        nbytes: i64,
+        now: i64,
+        _ctx: &mut TransactionContext,
+    ) -> bool {
         let bw_usage = acct.resource.as_ref().unwrap().frozen_bandwidth_used;
-        let bw_latest_ts = acct.resource.as_ref().unwrap().fronzen_bandwidth_latest_timestamp;
-        let bw_limit = self.calc_global_bandwidth_limit(acct);
+        let bw_latest_ts = acct.resource.as_ref().unwrap().frozen_bandwidth_latest_timestamp;
+        let bw_limit = self.calculate_global_bandwidth_limit(acct);
 
-        let new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
+        let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
 
         if nbytes > bw_limit - new_bw_usage {
             debug!("frozen bandwidth is insufficient, will try use free bandwidth");
             return false;
         }
 
-        // TODO: freeze bw
-        unimplemented!()
+        // consume frozen/delegated bw
+        let latest_op_ts = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::LatestBlockTimestamp);
+        new_bw_usage = adjust_usage(new_bw_usage, nbytes, now, now);
+
+        let mut acct = acct.clone();
+        acct.latest_operation_timestamp = latest_op_ts;
+        {
+            let mut resource = acct.resource.as_mut().unwrap();
+
+            resource.frozen_bandwidth_used = new_bw_usage;
+            resource.frozen_bandwidth_latest_timestamp = now;
+        }
+
+        debug!("account bw: {}/{}", new_bw_usage, bw_limit);
+        self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+        true
     }
 
     // Renamed: useFreeNet.
@@ -236,21 +260,36 @@ impl<'m> BandwidthProcessor<'m> {
         let res = acct.resource.as_ref().cloned().unwrap_or_default();
 
         let bw_usage = res.frozen_bandwidth_used;
-        let bw_latest_ts = res.fronzen_bandwidth_latest_timestamp;
-        let bw_limit = self.calc_global_bandwidth_limit(acct);
+        let bw_latest_ts = res.frozen_bandwidth_latest_timestamp;
+        let bw_limit = self.calculate_global_bandwidth_limit(acct);
 
         let new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
 
         // if freeze bw is enough
         if nbytes * new_acct_bw_ratio <= bw_limit - new_bw_usage {
-            // TODO: freeze
+            debug!("TODO: handle freeze bw in account creation")
         }
         false
     }
 
-    fn calc_global_bandwidth_limit(&self, _acct: &Account) -> i64 {
-        // TODO: handle resource freeze
-        return 0;
+    fn calculate_global_bandwidth_limit(&self, acct: &Account) -> i64 {
+        let amount_for_bw = acct.amount_for_bandwidth();
+        if amount_for_bw < 1_000_000 {
+            return 0;
+        }
+        let bw_weight = amount_for_bw / 1_000_000;
+        let total_bw_limit = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::TotalBandwidthLimit);
+        let total_bw_weight = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::TotalBandwidthWeight);
+        if total_bw_weight == 0 {
+            return 0;
+        }
+        return (bw_weight as f64 * (total_bw_limit as f64 / total_bw_weight as f64)) as i64;
     }
 }
 
@@ -265,7 +304,7 @@ fn adjust_usage(latest_usage: i64, new_usage: i64, latest_ts: i64, new_ts: i64) 
     const PRECISION: i64 = constants::RESOURCE_PRECISION;
 
     let mut average_latest_usage = divide_ceil(latest_usage * PRECISION, WINDOW_SIZE);
-    let average_new_usage = divide_ceil(new_usage, WINDOW_SIZE);
+    let average_new_usage = divide_ceil(new_usage * PRECISION, WINDOW_SIZE);
 
     if latest_ts != new_ts {
         assert!(new_ts > latest_ts);

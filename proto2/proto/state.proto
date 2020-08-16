@@ -12,7 +12,7 @@ message AccountResource {
   int64 free_bandwidth_latest_timestamp = 3;
   int64 frozen_bandwidth_used = 4;
   int64 frozen_bandwidth_limit = 5;
-  int64 fronzen_bandwidth_latest_timestamp = 6;
+  int64 frozen_bandwidth_latest_timestamp = 6;
   int64 energy_used = 7;
   int64 energy_limit = 8;
   int64 energy_latest_timestamp = 9;
