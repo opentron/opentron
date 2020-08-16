@@ -206,6 +206,7 @@ impl<'m> BandwidthProcessor<'m> {
             resource.free_bandwidth_latest_timestamp = free_bw_latest_ts;
         }
         acct.latest_operation_timestamp = lastes_op_ts;
+        debug!("account free bw: {}/{}", new_free_bw_usage, 5000);
 
         self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
 
@@ -267,7 +268,7 @@ impl<'m> BandwidthProcessor<'m> {
 
         // if freeze bw is enough
         if nbytes * new_acct_bw_ratio <= bw_limit - new_bw_usage {
-            debug!("TODO: handle freeze bw in account creation")
+            unimplemented!("TODO: handle freeze bw in account creation")
         }
         false
     }
