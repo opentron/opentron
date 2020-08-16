@@ -44,6 +44,17 @@ pub mod chain {
                 .finish()
         }
     }
+
+    impl transaction::Result {
+        pub fn success() -> Self {
+            use self::transaction::result::ContractStatus;
+
+            transaction::Result {
+                contract_status: ContractStatus::Success as i32,
+                ..Default::default()
+            }
+        }
+    }
 }
 
 pub mod discovery {
