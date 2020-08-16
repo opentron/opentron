@@ -76,7 +76,7 @@ impl ProposalController<'_> {
     pub fn process_proposals(&mut self) -> Result<(), String> {
         let latest_proposal_id = self.manager.state_db.must_get(&keys::DynamicProperty::LatestProposalId);
         if latest_proposal_id == 0 {
-            info!("no proposal yet");
+            debug!("no proposal yet");
             return Ok(());
         }
 

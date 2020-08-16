@@ -45,7 +45,6 @@ impl<'m> BandwidthProcessor<'m> {
         };
         let byte_size = byte_size as i64;
 
-        debug!("txn {:?} bandwidth cost={}", txn.hash, byte_size);
         ctx.bandwidth_usage = byte_size;
 
         let now = self.manager.get_head_slot();
@@ -59,7 +58,7 @@ impl<'m> BandwidthProcessor<'m> {
                 self.consume_fee_for_new_account_creation(&owner_address, &owner_acct, ctx)
             {
                 // covers all bw expense
-                debug!("create new account!");
+                debug!("created new account!");
                 return Ok(());
             } else {
                 return Err("insufficient balance to create new account".into());
