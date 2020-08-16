@@ -2,9 +2,9 @@
 
 use ::keys::b58encode_check;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
-use log::debug;
+use log::{debug, error, warn};
 use primitive_types::H256;
-use proto2::chain::{transaction::result::ContractStatus, ContractType};
+use proto2::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto2::common::ResourceCode;
 use proto2::contract as contract_pb;
 use proto2::state::{ResourceReceipt, TransactionReceipt};
@@ -90,12 +90,13 @@ impl<'m> TransactionExecutor<'m> {
         let cntr = txn.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
         let cntr_type = ContractType::from_i32(cntr.r#type).expect("unhandled system contract type");
         let recover_addrs = txn.recover_owner().expect("error while verifying signature");
+        let maybe_result = txn.raw.result.get(0);
 
         debug!("cntr type => {:?}", cntr_type);
-        debug!(
-            "TODO: verify signagures and multisig, recover_addrs => {:?}",
-            recover_addrs
-        );
+        // debug!(
+        //    "TODO: verify signagures and multisig, recover_addrs => {:?}",
+        //    recover_addrs
+        // );
 
         // NOTE: Routine to handle transactions of builtin contracts:
         //
@@ -128,13 +129,11 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
-                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
 
-                let mut bw_proc = BandwidthProcessor::new(self.manager);
-                bw_proc.consume(txn, &cntr, &mut ctx)?;
-
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-
                 Ok(ctx.into())
             }
             ContractType::ProposalCreateContract => {
@@ -155,11 +154,10 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
-                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
 
-                let mut bw_proc = BandwidthProcessor::new(self.manager);
-                bw_proc.consume(txn, &cntr, &mut ctx)?;
-
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -179,11 +177,10 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
-                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
 
-                let mut bw_proc = BandwidthProcessor::new(self.manager);
-                bw_proc.consume(txn, &cntr, &mut ctx)?;
-
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -199,11 +196,10 @@ impl<'m> TransactionExecutor<'m> {
                 );
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
-                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
 
-                let mut bw_proc = BandwidthProcessor::new(self.manager);
-                bw_proc.consume(txn, &cntr, &mut ctx)?;
-
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -222,9 +218,10 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
-                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
-                let mut bw = BandwidthProcessor::new(self.manager);
-                bw.consume(txn, &cntr, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -235,7 +232,7 @@ impl<'m> TransactionExecutor<'m> {
                 }
 
                 debug!(
-                    "=> Vote Witness from {} votes: {:?}",
+                    "=> Vote Witness by {} votes: {:?}",
                     b58encode_check(cntr.owner_address()),
                     cntr.votes
                         .iter()
@@ -245,19 +242,17 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
-                debug!("execute => {:?}", cntr.execute(self.manager, &mut ctx)?);
-                let mut bw = BandwidthProcessor::new(self.manager);
-                bw.consume(txn, &cntr, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
             // TVM
             ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
                 // smart contract status
-                let contract_status = txn
-                    .raw
-                    .result
-                    .get(0)
+                let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
                     .unwrap_or_default();
                 debug!("contract_status => {:?}", contract_status);
@@ -266,4 +261,20 @@ impl<'m> TransactionExecutor<'m> {
             _ => unimplemented!(),
         }
     }
+}
+
+#[inline]
+fn check_transaction_result(exec_result: &TransactionResult, maybe_result: &Option<&TransactionResult>) -> bool {
+    if let Some(result) = maybe_result {
+        if result != &exec_result {
+            error!(
+                "execution result mismatch, expected: {:?}, got: {:?}",
+                result, exec_result
+            );
+            return false;
+        }
+    } else {
+        warn!("no result field in chain pb");
+    }
+    return true;
 }

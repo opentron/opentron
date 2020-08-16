@@ -76,7 +76,7 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessCreateContract {
             .put_key(keys::Account(owner_address), owner_acct)
             .map_err(|e| e.to_string())?;
 
-        Ok(TransactionResult::default())
+        Ok(TransactionResult::success())
     }
 
     fn fee(&self, manager: &Manager) -> i64 {
@@ -147,6 +147,6 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
             .put_key(keys::Votes(owner_addr), Votes { votes: self.votes.clone() })
             .map_err(|_| "db insert error")?;
 
-        Ok(TransactionResult::default())
+        Ok(TransactionResult::success())
     }
 }

@@ -82,7 +82,7 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
             .put_key(keys::DynamicProperty::LatestProposalId, proposal_id)
             .map_err(|_| "db insert error")?;
 
-        Ok(TransactionResult::default())
+        Ok(TransactionResult::success())
     }
 }
 
@@ -144,7 +144,7 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalApproveContract {
             .put_key(keys::Proposal(self.proposal_id), proposal)
             .map_err(|_| "db insert error")?;
 
-        Ok(TransactionResult::default())
+        Ok(TransactionResult::success())
     }
 }
 

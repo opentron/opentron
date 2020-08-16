@@ -101,8 +101,6 @@ impl BuiltinContractExecutorExt for contract_pb::TransferContract {
             .put_key(keys::Account(to_address), to_acct)
             .map_err(|e| e.to_string())?;
 
-        // NOTE: Default status is a `SUCCESS`. Although it's a bad design, OpenTron cannot change this.
-        // This is the the `ret` field of a transaction, and is saved in chain-db, participating in MerkleTree.
-        Ok(TransactionResult::default())
+        Ok(TransactionResult::success())
     }
 }

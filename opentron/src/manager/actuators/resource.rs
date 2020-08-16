@@ -110,7 +110,7 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
             unreachable!("already verified");
         }
 
-        Ok(TransactionResult::default())
+        Ok(TransactionResult::success())
     }
 }
 
