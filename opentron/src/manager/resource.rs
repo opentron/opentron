@@ -54,7 +54,7 @@ impl<'m> BandwidthProcessor<'m> {
         let owner_acct = self.manager.state_db.must_get(&keys::Account(owner_address));
 
         if ctx.new_account_created {
-            if self.consume_bandwidth_for_new_account_creation(&owner_acct, byte_size, now) ||
+            if self.consume_bandwidth_for_new_account_creation(owner_address, &owner_acct, byte_size, now) ||
                 self.consume_fee_for_new_account_creation(&owner_address, &owner_acct, ctx)
             {
                 // covers all bw expense
@@ -135,12 +135,8 @@ impl<'m> BandwidthProcessor<'m> {
 
         let mut acct = acct.clone();
         acct.latest_operation_timestamp = latest_op_ts;
-        {
-            let mut resource = acct.resource.as_mut().unwrap();
-
-            resource.frozen_bandwidth_used = new_bw_usage;
-            resource.frozen_bandwidth_latest_timestamp = now;
-        }
+        acct.resource_mut().frozen_bandwidth_used = new_bw_usage;
+        acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
 
         debug!("account bw: {}/{}", new_bw_usage, bw_limit);
         self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
@@ -251,7 +247,14 @@ impl<'m> BandwidthProcessor<'m> {
         }
     }
 
-    fn consume_bandwidth_for_new_account_creation(&self, acct: &Account, nbytes: i64, now: i64) -> bool {
+    // When an account has frozen enough bandwidth, it can create account freely.
+    fn consume_bandwidth_for_new_account_creation(
+        &mut self,
+        addr: Address,
+        acct: &Account,
+        nbytes: i64,
+        now: i64,
+    ) -> bool {
         let new_acct_bw_ratio = self
             .manager
             .state_db
@@ -264,13 +267,31 @@ impl<'m> BandwidthProcessor<'m> {
         let bw_latest_ts = res.frozen_bandwidth_latest_timestamp;
         let bw_limit = self.calculate_global_bandwidth_limit(acct);
 
-        let new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
+        let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
 
         // if freeze bw is enough
         if nbytes * new_acct_bw_ratio <= bw_limit - new_bw_usage {
-            unimplemented!("TODO: handle freeze bw in account creation")
+            debug!(
+                "create account with frozen bw: {}/{}",
+                nbytes * new_acct_bw_ratio,
+                bw_limit - new_bw_usage
+            );
+            let latest_op_ts = self
+                .manager
+                .state_db
+                .must_get(&keys::DynamicProperty::LatestBlockTimestamp);
+            new_bw_usage = adjust_usage(new_bw_usage, nbytes * new_acct_bw_ratio, now, now);
+
+            let mut acct = acct.clone();
+            acct.latest_operation_timestamp = latest_op_ts;
+            acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
+            acct.resource_mut().frozen_bandwidth_used = new_bw_usage;
+
+            self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+            true
+        } else {
+            false
         }
-        false
     }
 
     fn calculate_global_bandwidth_limit(&self, acct: &Account) -> i64 {
