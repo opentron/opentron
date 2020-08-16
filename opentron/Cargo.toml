@@ -54,3 +54,4 @@ chain = { path = '../chain' }
 chain-db = { path = '../chain-db' }
 state = { path = '../state' }
 config = { path = '../config' }
+constants = { path = '../constants' }

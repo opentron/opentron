@@ -31,7 +31,7 @@ jobs:
                   key: rocksdb-v6.7.3
 
             - name: Install RocksDB
-              if: steps.cache-rocksdb.outputs.cache-hit != 'true'
+              # if: steps.cache-rocksdb.outputs.cache-hit != 'true'
               run: |
                   git clone https://github.com/facebook/rocksdb.git
                   cd rocksdb

@@ -14,9 +14,8 @@ use proto2::state as state_pb;
 use rocks::prelude::*;
 
 use super::keys;
-use super::ChainParameter;
+use super::parameter::default_parameters_from_config;
 use super::DynamicProperty;
-// use crate::constants;
 
 pub type BoxError = Box<dyn ::std::error::Error>;
 
@@ -260,7 +259,7 @@ impl OverlayDB {
         }
 
         for (key, value) in self.inner.new_iterator_cf(&ReadOptions::default(), col) {
-            if !visited.contains(key) {
+            if visited.contains(key) {
                 continue;
             }
             func(key, value);
@@ -324,12 +323,12 @@ fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
             "account-resource",
             ColumnFamilyOptions::default().optimize_for_point_lookup(128),
         ),*/
-        // to_address => AccountResourceDelegation
+        // <<from_address, to_address>> => AccountResourceDelegation
         ColumnFamilyDescriptor::new(
             "resource-delegation",
             ColumnFamilyOptions::default().optimize_for_point_lookup(128),
         ),
-        // from_address => [to_address]
+        // to_address => [from_address]
         ColumnFamilyDescriptor::new(
             "resource-delegation-index",
             ColumnFamilyOptions::default().optimize_for_point_lookup(128),
@@ -436,6 +435,16 @@ impl StateDB {
         Ok(())
     }
 
+    pub fn delete_key<T, K: keys::Key<T>>(&mut self, key: &K) -> Result<(), BoxError> {
+        let wb = self
+            .db
+            .layers
+            .back_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no db layers found"))?;
+        wb.delete(&self.cols[K::COL], key.key().as_ref());
+        Ok(())
+    }
+
     pub fn get<T, K: keys::Key<T>>(&self, key: &K) -> Result<Option<T>, BoxError> {
         self.db
             .get(&self.cols[K::COL], key.key().as_ref())
@@ -473,7 +482,7 @@ impl StateDB {
 
         self.new_layer();
 
-        for (k, v) in ChainParameter::default_parameters_from_config(&chain.parameter) {
+        for (k, v) in default_parameters_from_config(&chain.parameter) {
             self.put_key(k, v)?;
         }
         for (k, v) in DynamicProperty::default_properties() {
@@ -511,6 +520,7 @@ impl StateDB {
             let acct = state_pb::Account {
                 creation_time: genesis.timestamp,
                 r#type: AccountType::Normal as i32,
+                resource: Some(Default::default()),
                 ..Default::default()
             };
             self.put_key(key, acct)?;
@@ -526,6 +536,7 @@ impl StateDB {
                 balance: alloc.balance,
                 creation_time: genesis.timestamp,
                 r#type: AccountType::Normal as i32,
+                resource: Some(Default::default()),
                 ..Default::default()
             };
 
@@ -540,14 +551,10 @@ impl StateDB {
         self.put_key(DynamicProperty::LatestSolidBlockNumber, 0)?;
 
         // default block filled slots
-        // TODO: use BLOCK_FILLED_SLOTS_NUMBER from constants
-        self.put_key(keys::BlockFilledSlots, vec![1; 128])?;
-
-        // from most votes to least votes
-        witnesses.sort_by(|w1, w2| w2.1.cmp(&w1.1));
-        // TODO: use 80 (default value from constants)
-        let scheduled_witnesses = witnesses.into_iter().map(|w| (w.0, 80)).collect();
-        self.put_key(keys::WitnessSchedule, scheduled_witnesses)?;
+        self.put_key(
+            keys::BlockFilledSlots,
+            vec![1; constants::NUM_OF_BLOCK_FILLED_SLOTS as usize],
+        )?;
 
         Ok(())
     }

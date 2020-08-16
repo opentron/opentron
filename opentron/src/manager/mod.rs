@@ -9,14 +9,15 @@ use state::db::StateDB;
 use state::keys;
 use std::convert::TryFrom;
 
+use self::controllers::ProposalController;
 use self::executor::TransactionExecutor;
-use self::maintenance::MaintenanceManager;
-use crate::constants;
+use self::governance::maintenance::MaintenanceManager;
 
 pub mod actuators;
+pub mod controllers;
 pub mod executor;
-pub mod maintenance;
-pub mod processors;
+pub mod governance;
+pub mod resource;
 
 type Error = Box<dyn ::std::error::Error>;
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -39,6 +40,9 @@ pub struct Manager {
     block_energy_usage: i64,
     // TaPoS check, size = 65536, 2MB.
     ref_block_hashes: Vec<H256>,
+    config: Config,
+    genesis_config: GenesisConfig,
+    maintenance_started_at: i64,
 }
 
 impl Manager {
@@ -64,6 +68,9 @@ impl Manager {
             my_witness: vec![],
             block_energy_usage: 0,
             ref_block_hashes: Vec::with_capacity(65536),
+            config: config.clone(),
+            genesis_config: genesis_config.clone(),
+            maintenance_started_at: 0,
         }
     }
 
@@ -103,7 +110,7 @@ impl Manager {
         if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
             let recovered = block.recover_witness()?;
             if self.state_db.get(&keys::ChainParameter::AllowMultisig)?.unwrap() == 1 {
-                panic!("TODO: handle multisig witness");
+                // warn!("TODO: handle multisig witness");
             }
             if recovered.as_bytes() != block.witness() {
                 return Err(new_error("verifying block witness signature failed"));
@@ -114,7 +121,7 @@ impl Manager {
             return Err(new_error("verify block merkle root hash failed"));
         }
 
-        // consensusInterface.receiveBlock = DposService.receiverBlock
+        // TODO consensusInterface.receiveBlock = DposService.receiverBlock
         // StateManager.receiverBlock
         // TODO: check dup block?
 
@@ -134,11 +141,20 @@ impl Manager {
             // println!("TODO: handle fork");
         }
 
+        if block.version() > constants::CURRENT_BLOCK_VERSION as i32 {
+            warn!(
+                "encounter newer block version, YOU MUST UPGRADE OpenTron. block_version={}",
+                block.version()
+            );
+        }
+
         // basic check finished, begin process block
         self.state_db.new_layer();
 
-        // . applyBlock
+        // applyBlock = processBlock + updateFork
         self.process_block(block)?;
+
+        // TODO: updateFork(here)
 
         self.state_db.solidify_layer();
 
@@ -158,19 +174,21 @@ impl Manager {
         // NOTE: won't pre-check transaction signature. useless.
 
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
-        // TODO: handle accountState - AccountStateCallBack.java
+        // TODO: handle accountState - AccountStateCallBack
         for txn in &block.transactions {
-            info!("transaction => {:?}", txn.hash);
+            info!("transaction => {:?} at block #{}", txn.hash, block.number());
             self.process_transaction(&txn, block)?;
         }
 
-        // 4. Adaptive energy processor: TODO
+        // 4. Adaptive energy processor: TODO, no energy implemented
 
         // 5. Block reward - payReward(block): TODO
 
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
-            // TODO
+            self.maintenance_started_at = Utc::now().timestamp_nanos();
+            info!("beigin maintenance at block #{}", block.number());
+            ProposalController::new(self).process_proposals()?;
         }
 
         // 7. consensus.applyBlock (DposService.applyBlock)
@@ -302,7 +320,7 @@ impl Manager {
         }
         let mut block_nums: Vec<_> = wit_addrs
             .into_iter()
-            .map(|(addr, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_num)
+            .map(|(addr, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
             .collect();
 
         block_nums.sort();
@@ -360,7 +378,7 @@ impl Manager {
         }
 
         if self.is_latest_block_maintenance() {
-            slot += constants::NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE;
+            slot += constants::NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE as i64;
         }
 
         let mut ts = self.latest_block_timestamp();
@@ -368,9 +386,18 @@ impl Manager {
         ts + constants::BLOCK_PRODUCING_INTERVAL * slot
     }
 
-    fn get_scheduled_witness(&self, slot: i64) -> Address {
-        const SINGLE_REPEAT: usize = 1;
+    fn get_active_witnesses(&self) -> Vec<Address> {
+        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+        if witnesses.is_empty() {
+            panic!("no witness found");
+        }
+        if witnesses.len() > constants::MAX_NUM_OF_ACTIVE_WITNESSES {
+            let _ = witnesses.split_off(constants::MAX_NUM_OF_ACTIVE_WITNESSES);
+        }
+        witnesses.into_iter().map(|wit| wit.0).collect()
+    }
 
+    fn get_scheduled_witness(&self, slot: i64) -> Address {
         let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
         if witnesses.is_empty() {
             panic!("no witness found");
@@ -381,8 +408,8 @@ impl Manager {
         let curr_slot = self.get_absolute_slot(self.latest_block_timestamp()) + slot;
         assert!(curr_slot >= 0, "slot must be positive");
 
-        let mut idx = (curr_slot as usize) % (witnesses.len() * SINGLE_REPEAT);
-        idx /= SINGLE_REPEAT;
+        let mut idx = (curr_slot as usize) % (witnesses.len() * constants::NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND);
+        idx /= constants::NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND;
         witnesses[idx].0
     }
 
@@ -443,8 +470,10 @@ impl WitnessStatisticManager<'_> {
         let mut wit = self.manager.state_db.must_get(&keys::Witness(wit_addr));
 
         wit.total_produced += 1;
-        wit.latest_block_num = block.number();
-        wit.latest_slot_num = self.manager.get_absolute_slot(block.timestamp());
+        wit.latest_block_number = block.number();
+        wit.latest_slot_number = self.manager.get_absolute_slot(block.timestamp());
+        // NOTE: This is used for fork controller.
+        wit.latest_block_version = block.version();
 
         self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
 
@@ -469,11 +498,11 @@ impl WitnessStatisticManager<'_> {
             self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
 
             self.filled_slots[self.filled_slots_index as usize] = 0;
-            self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS;
+            self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
         }
         // current block is filled
         self.filled_slots[self.filled_slots_index as usize] = 1;
-        self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS;
+        self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
 
         self.manager
             .state_db

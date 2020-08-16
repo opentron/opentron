@@ -1,5 +1,10 @@
-//* Chain parameters.
+//* Chain constants.
 
+use block_version::BlockVersion;
+
+pub mod block_version;
+
+/// Current block version for produced block.
 pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
 
 /// Will postpone txns if block size exceeds 2MiB.
@@ -21,7 +26,10 @@ pub const MAX_NUM_OF_STANDBY_WITNESSES: usize = 127;
 // 27 * 70% = 18.9, so a solid block is one verified by 19 witnesses.
 pub const SOLID_THRESHOLD_PERCENT: usize = 70;
 
-pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: i64 = 2;
+pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: usize = 2;
+
+// An SR should produce this much blocks then next.
+pub const NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND: usize = 1;
 
 /// Renamed: WitnessAllowanceFrozenTime
 pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
@@ -30,7 +38,7 @@ pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
 pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
 
 /// Renamed: BLOCK_FILLED_SLOTS_NUMBER
-pub const NUM_OF_BLOCK_FILLED_SLOTS: i64 = 128;
+pub const NUM_OF_BLOCK_FILLED_SLOTS: usize = 128;
 
 //* Transactions
 
@@ -50,8 +58,8 @@ pub const DEFAULT_ORIGIN_ENERGY_LIMIT: usize = 10_000_000;
 /// Renamed: TotalSignNum
 pub const MAX_NUM_OF_KEYS_IN_MULTISIG: usize = 5;
 
-pub const MAX_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: usize = 3;
-pub const MIN_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: usize = 3;
+pub const MAX_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
+pub const MIN_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
 
 /// Max number of `FronzenSupply` in AssetIssue.
 pub const MAX_NUM_OF_FROZEN_SUPPLIES_IN_ASSET_ISSUE: usize = 10;
@@ -82,58 +90,3 @@ pub const ADAPTIVE_ENERGY_DECREASE_RATE_DENOMINATOR: i64 = 100;
 
 pub const ADAPTIVE_ENERGY_INCREASE_RATE_NUMERATOR: i64 = 1000;
 pub const ADAPTIVE_ENERGY_INCREASE_RATE_DENOMINATOR: i64 = 999;
-
-/// Block versions. These versions match version names on github release page(or PR numbers).
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BlockVersion {
-    /// Also applies to all blocks before around #2300000.
-    Genesis = 0,
-    Unknown1290 = 1,
-    // PR #1442
-    Odyssey3_0_1 = 2,
-    // PR #1485
-    Odyssey3_1_0 = 3,
-    /// Special Check after block #4727890 (enery.limit.block.num).
-    /// When block.version == 5,
-    /// it makes block use new energy to handle transaction when block number >= 4727890L.
-    /// Otherwise version !=5, skip.
-    ///
-    /// - Support Of Resource Delegation.
-    /// - UpdateEnergyLimitContract
-    /// - TotalEnergyLimit
-    ///
-    /// Renamed: ENERGY_LIMIT
-    Odyssey3_2 = 5,
-    /// - Deprecates `TotalEnergyLimit`
-    /// - Add `TotalCurrentEnergyLimit`
-    Odyssey3_2_2 = 6,
-    /// - AllowMultisig
-    /// - AllowAdaptiveEnergy
-    /// - UpdateAccountPermissionFee
-    /// - MultisigFee
-    Odyssey3_5 = 7,
-    /// - AllowProtoFilterNum
-    /// - AllowAccountStateRoot
-    /// - AllowTvmConstantinopleUpgrade
-    Odyssey3_6_0 = 8,
-    /// - AllowTvmSolidity059Upgrade
-    /// - AdaptiveResourceLimitTargetRatio
-    /// - AdaptiveResourceLimitMultiplier
-    /// - AllowChangeDelegation
-    /// - StandbyWitnessPayPerBlock
-    Odyssey3_6_5 = 9,
-    /// - ForbidTransferToContract
-    Odyssey3_6_6 = 10,
-    // Note: This version has only non-core API changes.
-    Odyssey3_7 = 15,
-    /// Shielded TVM precompiles.
-    ///
-    /// - support AllowTvmShieldedUpgrade config
-    GreatVoyage4_0_0 = 16,
-    /// First hard fork based on timestamp. Fork at 1596780000_000, at least 22 SRs.
-    ///
-    /// See-also: https://github.com/tronprotocol/java-tron/pull/3314
-    ///
-    /// - support AllowTvmShieldedUpgrade proposal
-    GreatVoyage4_0_1 = 17,
-}

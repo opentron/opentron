@@ -107,6 +107,10 @@ impl IndexedBlock {
         &self.header.raw.raw_data.as_ref().unwrap().parent_hash
     }
 
+    pub fn version(&self) -> i32 {
+        self.header.raw.raw_data.as_ref().unwrap().version
+    }
+
     pub fn into_raw_block(self) -> Block {
         Block {
             block_header: Some(self.header.raw),

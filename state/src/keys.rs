@@ -29,7 +29,7 @@ pub trait Key<T>: Sized {
 
     /// Parse db key.
     fn parse_key(_raw: &[u8]) -> Self {
-        unimplemented!()
+        unreachable!()
     }
 }
 
@@ -39,7 +39,7 @@ impl Key<i64> for ChainParameter {
 
     fn key(&self) -> Self::Target {
         let mut raw = [b'p'; 9];
-        BE::write_u64(&mut raw[1..], self.to_i32() as u64);
+        BE::write_u64(&mut raw[1..], *self as u64);
         raw.to_vec()
     }
 
@@ -165,6 +165,10 @@ impl Key<pb::Witness> for Witness {
     fn parse_value(raw: &[u8]) -> pb::Witness {
         pb::Witness::decode(raw).unwrap()
     }
+
+    fn parse_key(raw: &[u8]) -> Self {
+        Witness(*Address::from_bytes(raw))
+    }
 }
 
 #[derive(Debug)]
@@ -189,9 +193,9 @@ impl Key<pb::Account> for Account {
     }
 }
 
-// to, from
+/// Resource delegation, from_address, to_address.
 #[derive(Debug)]
-pub struct ResourceDelegation(Address, Address);
+pub struct ResourceDelegation(pub Address, pub Address);
 
 impl Key<pb::ResourceDelegation> for ResourceDelegation {
     type Target = Vec<u8>;
@@ -212,8 +216,9 @@ impl Key<pb::ResourceDelegation> for ResourceDelegation {
     }
 }
 
+/// Reverse index for resource delegation info, to_address.
 #[derive(Debug)]
-pub struct ResourceDelegationIndex(Address);
+pub struct ResourceDelegationIndex(pub Address);
 
 impl Key<Vec<Address>> for ResourceDelegationIndex {
     type Target = Vec<u8>;
@@ -333,14 +338,14 @@ impl Key<H256> for ContractStorage {
 }
 
 #[derive(Debug)]
-pub struct Proposal(u64);
+pub struct Proposal(pub i64);
 
 impl Key<pb::Proposal> for Proposal {
     type Target = Vec<u8>;
     const COL: usize = super::db::COL_PROPOSAL;
 
     fn key(&self) -> Self::Target {
-        self.0.to_be_bytes().to_vec()
+        (self.0 as u64).to_be_bytes().to_vec()
     }
 
     fn value(val: &pb::Proposal) -> Cow<[u8]> {

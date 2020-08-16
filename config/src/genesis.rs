@@ -13,14 +13,14 @@ use proto2::chain::{
 use proto2::contract::TransferContract;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Witness {
     pub address: String,
     pub url: String,
     pub votes: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Alloc {
     pub address: String,
     pub name: String,
@@ -59,7 +59,7 @@ impl Alloc {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GenesisConfig {
     pub timestamp: i64,
     #[serde(rename = "parentHash")]
