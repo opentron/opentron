@@ -224,7 +224,7 @@ impl MaintenanceManager<'_> {
 ///
 /// Original logic from com.google.protobuf.ByteString, in Rust:
 ///
-/// ```rust
+/// ```ignore
 /// fn partial_hash(bs: &[u8], mut h: i32, offset: i32, length: i32) -> i32 {
 ///    for i in offset..(offset + length) {
 ///        h = h.wrapping_mul(31).wrapping_add(bs[i as usize] as i8 as i32);
