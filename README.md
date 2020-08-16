@@ -55,10 +55,10 @@ not ready for general use.
   - [x] primitives
     - [x] use primitive-types
     - [x] Address, PublicKey, PrivateKey, Signature
-  - [ ] config file
+  - [x] config file
     - [x] genesis block parsing
     - [x] toml config file parsing
-    - [ ] reorganize chain parameters
+    - [x] reorganize chain parameters
   - [x] discover protocol
   - [ ] channel protocol
     - [x] demo works
@@ -66,20 +66,25 @@ not ready for general use.
     - [ ] TODO: minor bug fix, timeout error
   - [x] chain
     - [x] Block / Transaction
-  - [ ] chainbase
-    - [ ] memory
-    - [ ] RocksDB
+  - [x] state-db
   - [ ] mempool
-  - [ ] consensus
+  - [x] governance
+    - [x] witness schedule
+    - [x] voting
+    - [x] proposal
+    - [ ] block reward
+  - [ ] executor/actuator
+    - [x] basic builtin contract support
+    - [ ] smart contract support
+    - TODO: handle all types of builtin contracts
   - [ ] EVM / TVM
     - [x] 3.7 TVM <https://github.com/andelf/evm>
     - [x] 4.0 TVM with zksnark: `ztron` crate
     - [ ] massive tests against resource usage
+    - [x] shielded trc20 transaction - ztron
   - [ ] RPC replacement
     - will not support gRPC
     - might have json-rpc support
-  - [ ] shielded trc20 transaction
-    - [x] ztron
 
 ## Quickstart
 
