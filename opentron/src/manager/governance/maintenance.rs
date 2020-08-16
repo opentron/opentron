@@ -2,13 +2,14 @@ use std::collections::HashMap;
 
 use ::keys::Address;
 use chain::IndexedBlock;
-use log::debug;
+use chrono::Utc;
+use log::{debug, info};
 use proto2::state::Witness;
 use state::keys;
 
 use super::super::Manager;
 
-/// Massive thing done during maintenance.
+/// Massive things done during maintenance.
 pub struct MaintenanceManager<'m> {
     manager: &'m mut Manager,
 }
@@ -29,9 +30,18 @@ impl MaintenanceManager<'_> {
         if is_maintenance {
             if block.number() != 1 {
                 self.do_maintenance()?;
+            } else {
+                // init schedule on first non-genesis block.
+                self.update_witness_schedule();
             }
             // updateNextMaintenanceTime
             self.increase_next_maintenance_time(next_maintenance_time, block.timestamp())?;
+            let elapsed = (Utc::now().timestamp_nanos() - self.manager.maintenance_started_at) as f64 / 1_000_000.0;
+            info!(
+                "maintenance finished for block #{} total_time={}ms",
+                block.number(),
+                elapsed
+            );
         }
         self.manager
             .state_db
@@ -48,7 +58,7 @@ impl MaintenanceManager<'_> {
             self.remove_power_of_gr()?;
         }
 
-        // TODO: only count votes of last epoch
+        // TODO: only count new votes of last epoch
         let votes = self.count_votes()?;
         if !votes.is_empty() {
             let old_active_witnesses = self.manager.get_active_witnesses();
@@ -103,19 +113,24 @@ impl MaintenanceManager<'_> {
     fn count_votes(&self) -> Result<HashMap<Address, i64>, String> {
         let mut votes: HashMap<Address, i64> = HashMap::new();
 
-        // value is a &state_pb::Votes
-        if self.manager.state_db.must_get(&keys::ChainParameter::RemovePowerOfGr) != -1 {
-            unimplemented!("TODO: the voting logic requires refactor");
-        }
-
+        let mut num_of_vote_entries = 0;
         {
             let votes = &mut votes;
-            self.manager.state_db.for_each(move |key: &keys::Votes, value| {
-                debug!("got votes key => {:?} votes={}", key, value.votes.len());
+            let num_of_vote_entries = &mut num_of_vote_entries;
+            // value is a &state_pb::Votes
+            self.manager.state_db.for_each(move |_key: &keys::Votes, value| {
+                *num_of_vote_entries += 1;
                 for vote in value.votes.iter() {
                     *votes.entry(*Address::from_bytes(&vote.vote_address)).or_default() += vote.vote_count;
                 }
             });
+        }
+        if num_of_vote_entries > 0 {
+            debug!("number of vote entries: {}", num_of_vote_entries);
+        }
+
+        if !votes.is_empty() && self.manager.state_db.must_get(&keys::ChainParameter::RemovePowerOfGr) != -1 {
+            unimplemented!("TODO: the voting logic requires refactor");
         }
 
         Ok(votes)
@@ -163,7 +178,6 @@ impl MaintenanceManager<'_> {
     // DposService.updateWitness
     fn update_witness_schedule(&mut self) {
         let mut wit_votes: Vec<(Address, i64)> = Vec::new();
-
         {
             let wit_votes = &mut wit_votes;
             self.manager.state_db.for_each(move |key: &keys::Witness, value| {
@@ -171,7 +185,7 @@ impl MaintenanceManager<'_> {
             });
         }
 
-        // NOTE: This is different from java-tron, with raw address as final fallback sorting key.
+        // NOTE: This is different from java-tron. In OpenTron, raw address is used as final fallback sorting key.
         wit_votes.sort_by_cached_key(|&(addr, vote_count)| {
             (
                 vote_count,
@@ -180,6 +194,9 @@ impl MaintenanceManager<'_> {
             )
         });
         wit_votes.reverse();
+        if wit_votes.len() > constants::MAX_NUM_OF_STANDBY_WITNESSES {
+            let _ = wit_votes.split_off(constants::MAX_NUM_OF_STANDBY_WITNESSES);
+        }
         let sched = wit_votes
             .iter()
             .map(|&(addr, _votes)| (addr, constants::DEFAULT_BROKERAGE_RATE))
@@ -199,26 +216,29 @@ impl MaintenanceManager<'_> {
 /// One must not depend on hash of object for stable sorting order.
 /// And the serialized object must be used for last sorting key.
 ///
-/// NOTE: Java has no unsigned integer/byte support. so `byte` is `i8`.
+/// NOTE: Java has no unsigned integer/byte support. So `byte` is `i8`.
 ///
 /// See-also: https://github.com/protocolbuffers/protobuf/blob/v3.4.0/java/core/src/main/java/com/google/protobuf/Internal.java
 ///
 /// See-also: https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html
+///
+/// Original logic from com.google.protobuf.ByteString, in Rust:
+///
+/// ```rust
+/// fn partial_hash(bs: &[u8], mut h: i32, offset: i32, length: i32) -> i32 {
+///    for i in offset..(offset + length) {
+///        h = h.wrapping_mul(31).wrapping_add(bs[i as usize] as i8 as i32);
+///    }
+///    h
+/// }
+/// let h = partial_hash(bs, bs.len() as i32, 0, bs.len() as i32);
+/// if h == 0 {
+///    1
+/// } else {
+///    h
+/// }
+/// ```
 fn java_bytestring_hash_code(bs: &[u8]) -> i32 {
-    /* // Original logic from com.google.protobuf.ByteString:
-    fn partial_hash(bs: &[u8], mut h: i32, offset: i32, length: i32) -> i32 {
-        for i in offset..(offset + length) {
-            h = h.wrapping_mul(31).wrapping_add(bs[i as usize] as i8 as i32);
-        }
-        h
-    }
-    let h = partial_hash(bs, bs.len() as i32, 0, bs.len() as i32);
-    if h == 0 {
-        1
-    } else {
-        h
-    } */
-
     match bs
         .iter()
         .fold(bs.len() as i32, |h, &b| h.wrapping_mul(31).wrapping_add(b as i8 as i32))

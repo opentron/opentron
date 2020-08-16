@@ -42,6 +42,7 @@ pub struct Manager {
     ref_block_hashes: Vec<H256>,
     config: Config,
     genesis_config: GenesisConfig,
+    maintenance_started_at: i64,
 }
 
 impl Manager {
@@ -69,6 +70,7 @@ impl Manager {
             ref_block_hashes: Vec::with_capacity(65536),
             config: config.clone(),
             genesis_config: genesis_config.clone(),
+            maintenance_started_at: 0,
         }
     }
 
@@ -174,7 +176,7 @@ impl Manager {
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
         for txn in &block.transactions {
-            info!("transaction => {:?}", txn.hash);
+            info!("transaction => {:?} at block #{}", txn.hash, block.number());
             self.process_transaction(&txn, block)?;
         }
 
@@ -184,6 +186,8 @@ impl Manager {
 
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
+            self.maintenance_started_at = Utc::now().timestamp_nanos();
+            info!("beigin maintenance at block #{}", block.number());
             ProposalController::new(self).process_proposals()?;
         }
 
