@@ -29,6 +29,13 @@ impl Account {
     pub fn amount_for_bandwidth(&self) -> i64 {
         self.frozen_amount_for_bandwidth + self.delegated_frozen_amount_for_bandwidth
     }
+
+    pub fn resource_mut(&mut self) -> &mut AccountResource {
+        if self.resource.is_none() {
+            self.resource = Some(Default::default());
+        }
+        self.resource.as_mut().unwrap()
+    }
 }
 
 impl Proposal {
