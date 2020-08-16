@@ -256,7 +256,11 @@ impl<'m> TransactionExecutor<'m> {
                     return Err("invalid signature".into());
                 }
 
-                debug!("=> Issue Asset by {}: {:?}", b58encode_check(&cntr.owner_address()), cntr);
+                debug!(
+                    "=> Issue Asset by {}: {:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr
+                );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate(self.manager, &mut ctx)?;
@@ -269,7 +273,26 @@ impl<'m> TransactionExecutor<'m> {
                 Ok(ctx.into())
             }
             // TVM
-            ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
+            ContractType::CreateSmartContract => {
+                let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Create Smart Contract by {}: name={:?} code_size={}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.new_contract.as_ref().unwrap().name,
+                    cntr.new_contract.as_ref().unwrap().bytecode.len(),
+                );
+                warn!("TODO: TVM & energy");
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::TriggerSmartContract => {
                 // smart contract status
                 let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))

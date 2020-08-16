@@ -25,6 +25,7 @@ pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> 
     let start_block = db_manager.latest_block_number() as u64 + 1;
 
     // 741457, first AssetIssueContract
+    // 768881, first CreateSmartContract
     for i in start_block.. {
         let blk = ctx.chain_db.get_block_by_number(i)?;
 
