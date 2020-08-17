@@ -295,6 +295,26 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::AccountUpdateContract => {
+                let cntr = contract_pb::AccountUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Account Set Name {}: name={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.account_name
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             // TVM
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
