@@ -32,7 +32,7 @@ pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: usize = 2;
 pub const NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND: usize = 1;
 
 /// Renamed: WitnessAllowanceFrozenTime
-pub const NUM_OF_FROZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
+pub const NUM_OF_FROZEN_DAYS_FOR_WITNESS_ALLOWANCE: i64 = 1;
 
 /// in percent
 pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
