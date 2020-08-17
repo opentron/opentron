@@ -97,7 +97,7 @@ impl<'m> BandwidthProcessor<'m> {
         addr: Address,
         acct: &Account,
         nbytes: i64,
-        _ctx: &mut TransactionContext,
+        ctx: &mut TransactionContext,
     ) -> bool {
         let bw_fee = self.manager.state_db.must_get(&keys::ChainParameter::BandwidthFee) * nbytes;
         let mut new_acct = acct.clone();
@@ -106,6 +106,7 @@ impl<'m> BandwidthProcessor<'m> {
         }
 
         self.manager.state_db.put_key(keys::Account(addr), new_acct).unwrap();
+        ctx.bandwidth_fee = bw_fee;
         true
     }
 
