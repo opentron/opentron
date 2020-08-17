@@ -191,6 +191,10 @@ impl Key<pb::Account> for Account {
     fn parse_value(raw: &[u8]) -> pb::Account {
         pb::Account::decode(raw).unwrap()
     }
+
+    fn parse_key(raw: &[u8]) -> Self {
+        Account(*Address::from_bytes(raw))
+    }
 }
 
 /// Resource delegation, from_address, to_address.
