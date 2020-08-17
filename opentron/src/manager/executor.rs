@@ -259,7 +259,7 @@ impl<'m> TransactionExecutor<'m> {
                 debug!(
                     "=> Issue Asset by {}: {:?}",
                     b58encode_check(&cntr.owner_address()),
-                    cntr
+                    cntr.name
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
@@ -271,6 +271,30 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 // TODO: Fill TransactionReceipt with newly created asset token_id.
                 Ok(ctx.into())
+            }
+            ContractType::TransferAssetContract => {
+                let cntr = contract_pb::TransferAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Transfer Asset from {} to {}: amount={} asset_name={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.to_address),
+                    cntr.amount,
+                    cntr.asset_name
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+
+                unimplemented!()
             }
             // TVM
             ContractType::CreateSmartContract => {

@@ -5,8 +5,9 @@ use std::convert::TryFrom;
 use ::keys::Address;
 use log::warn;
 use proto2::chain::transaction::Result as TransactionResult;
+use proto2::common::AccountType;
 use proto2::contract as contract_pb;
-use proto2::state::{asset::FrozenSupply, Asset};
+use proto2::state::{asset::FrozenSupply, Account, Asset};
 use state::keys;
 
 use super::super::executor::TransactionContext;
@@ -188,6 +189,9 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
             warn!("BUG: disallow same token name, while precision is not 0");
             asset.precision = 0;
         }
+        let remain_supply = self.total_supply - self.frozen_supply.iter().map(|sup| sup.frozen_amount).sum::<i64>();
+        owner_acct.token_balance.insert(token_id, remain_supply);
+
         manager
             .state_db
             .put_key(keys::Asset(token_id), asset)
@@ -212,6 +216,129 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
 
     fn fee(&self, manager: &Manager) -> i64 {
         manager.state_db.must_get(&keys::ChainParameter::AssetIssueFee)
+    }
+}
+
+impl BuiltinContractExecutorExt for contract_pb::TransferAssetContract {
+    fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let to_address = Address::try_from(&self.to_address).map_err(|_| "invalid to_address")?;
+
+        let mut fee = self.fee(manager);
+
+        if self.amount <= 0 {
+            return Err("transfer amount must be greater than 0".into());
+        }
+
+        if owner_address == to_address {
+            return Err("cannot transfer to oneself".into());
+        }
+
+        let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
+        let maybe_asset = if allow_same_token_name {
+            let token_id = self.asset_name.parse().map_err(|_| "invalid asset name")?;
+            state_db.get(&keys::Asset(token_id)).map_err(|_| "db query error")?
+        } else {
+            find_asset_by_name(manager, &self.asset_name)
+        };
+        if maybe_asset.is_none() {
+            return Err(format!("asset name {} not found", self.asset_name));
+        }
+        let asset = maybe_asset.unwrap();
+
+        let maybe_owner_acct = manager
+            .state_db
+            .get(&keys::Account(owner_address))
+            .map_err(|_| "db query error")?;
+        if maybe_owner_acct.is_none() {
+            return Err("account not exists".into());
+        }
+        let owner_acct = maybe_owner_acct.unwrap();
+
+        let token_balance = owner_acct.token_balance.get(&asset.id).copied().unwrap_or(0);
+        if token_balance < self.amount {
+            return Err("insufficient token balance".into());
+        }
+
+        let maybe_to_acct = state_db
+            .get(&keys::Account(to_address))
+            .map_err(|_| "error while querying db")?;
+        if let Some(to_acct) = maybe_to_acct {
+            if to_acct.r#type == AccountType::Contract as i32 &&
+                state_db.must_get(&keys::ChainParameter::ForbidTransferToContract) == 1
+            {
+                return Err("cannot transfer to a smart contract".into());
+            }
+
+            if to_acct
+                .token_balance
+                .get(&asset.id)
+                .copied()
+                .unwrap_or(0)
+                .checked_add(self.amount)
+                .is_none()
+            {
+                return Err("math overflow".into());
+            }
+        } else {
+            ctx.new_account_created = true;
+            // NOTE: CreateNewAccountFeeInSystemContract is 0, account creation fee is handled by BandwidthProcessor.
+            fee += state_db.must_get(&keys::ChainParameter::CreateNewAccountFeeInSystemContract);
+        }
+
+        if fee != 0 && owner_acct.balance < fee {
+            return Err("insufficient balance".into());
+        }
+
+        ctx.contract_fee = fee;
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let to_address = Address::try_from(&self.to_address).unwrap();
+
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
+
+        let fee = ctx.contract_fee;
+
+        let mut to_acct = manager
+            .state_db
+            .get(&keys::Account(to_address))
+            .map_err(|e| format!("state-db error: {:?}", e))?
+            .unwrap_or_else(|| Account::new(ctx.block_header.timestamp()));
+
+        let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
+        let token_id: i64 = if allow_same_token_name {
+            self.asset_name.parse().map_err(|_| "invalid asset name")?
+        } else {
+            find_asset_by_name(manager, &self.asset_name).unwrap().id
+        };
+
+        if fee != 0 {
+            owner_acct.adjust_balance(-fee).unwrap();
+            manager.add_to_blackhole(fee).unwrap();
+        }
+
+        owner_acct
+            .token_balance
+            .entry(token_id)
+            .and_modify(|bal| *bal -= self.amount);
+        *to_acct.token_balance.entry(token_id).or_default() += self.amount;
+
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), owner_acct)
+            .map_err(|e| e.to_string())?;
+        manager
+            .state_db
+            .put_key(keys::Account(to_address), to_acct)
+            .map_err(|e| e.to_string())?;
+
+        Ok(TransactionResult::success())
     }
 }
 
