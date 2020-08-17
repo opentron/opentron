@@ -293,8 +293,7 @@ impl<'m> TransactionExecutor<'m> {
 
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-
-                unimplemented!()
+                Ok(ctx.into())
             }
             // TVM
             ContractType::CreateSmartContract => {

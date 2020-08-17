@@ -2,7 +2,7 @@
 
 use ::keys::Address;
 use chain::IndexedTransaction;
-use log::debug;
+use log::{debug, warn};
 use prost::Message;
 use proto2::chain::ContractType;
 use proto2::state::Account;
@@ -66,8 +66,7 @@ impl<'m> BandwidthProcessor<'m> {
         }
 
         if cntr.type_code() == ContractType::TransferAssetContract && self.consume_asset_bandwidth() {
-            // TODO: handle asset bandwidth
-            unimplemented!()
+            return Ok(());
         }
 
         // NOTE: first use frozen bw, then free bw
@@ -221,8 +220,10 @@ impl<'m> BandwidthProcessor<'m> {
         true
     }
 
+    // useAssetAccountNet
     fn consume_asset_bandwidth(&self) -> bool {
-        unimplemented!()
+        warn!("TODO: useAssetAccountNet");
+        false
     }
 
     fn consume_fee_for_new_account_creation(
