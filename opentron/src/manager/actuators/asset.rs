@@ -219,6 +219,7 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
     }
 }
 
+// Transfer TRC10(Asset) tokens, creating to_account when it is not on chain.
 impl BuiltinContractExecutorExt for contract_pb::TransferAssetContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
         let state_db = &manager.state_db;
@@ -342,7 +343,128 @@ impl BuiltinContractExecutorExt for contract_pb::TransferAssetContract {
     }
 }
 
-// This is a legacy feature. So no need to implement any reverse index against token names.
+// Participate asset issuing while asset is in issuing period. Buy new TRC10 token using TRX.
+impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let to_address = Address::try_from(&self.to_address).map_err(|_| "invalid to_address")?;
+
+        if self.amount <= 0 {
+            return Err("amount must be greater than 0".into());
+        }
+
+        if owner_address == to_address {
+            return Err("cannot participate asset issue of oneself".into());
+        }
+
+        let maybe_owner_acct = state_db
+            .get(&keys::Account(owner_address))
+            .map_err(|_| "error while querying db")?;
+        if maybe_owner_acct.is_none() {
+            return Err("owner account is not on chain".into());
+        }
+        let owner_acct = maybe_owner_acct.unwrap();
+
+        if owner_acct.balance < self.amount {
+            return Err("insufficient balance".into());
+        }
+
+        let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
+        let maybe_asset = if allow_same_token_name {
+            let token_id = self.asset_name.parse().map_err(|_| "invalid asset name")?;
+            state_db.get(&keys::Asset(token_id)).map_err(|_| "db query error")?
+        } else {
+            find_asset_by_name(manager, &self.asset_name)
+        };
+        if maybe_asset.is_none() {
+            return Err(format!("asset name {} not found", self.asset_name));
+        }
+        let asset = maybe_asset.unwrap();
+
+        if to_address.as_bytes() != &*asset.owner_address {
+            return Err(format!("asset {} is not issued by {}", asset.id, to_address));
+        }
+
+        // exchange feasibility check
+        let now = manager.latest_block_timestamp();
+        if now >= asset.end_time || now < asset.start_time {
+            return Err("asset is not in issuing period".into());
+        }
+
+        let exchange_amount = self
+            .amount
+            .checked_mul(asset.num as i64)
+            .ok_or("math overflow")?
+            .checked_div(asset.trx_num as i64)
+            .ok_or("math overflow")?;
+        if exchange_amount < 0 {
+            return Err("math overflow, cannot process the exchange".into());
+        }
+
+        // NOTE: asset implies account, this might be useless.
+        let maybe_to_acct = state_db
+            .get(&keys::Account(to_address))
+            .map_err(|_| "error while querying db")?;
+        if maybe_to_acct.is_none() {
+            return Err("to account is not on chain".into());
+        }
+        let to_acct = maybe_to_acct.unwrap();
+
+        if to_acct.token_balance.get(&asset.id).copied().unwrap_or(0) < exchange_amount {
+            return Err("insufficient balance of target asset".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let to_address = Address::try_from(&self.to_address).unwrap();
+
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
+        let mut to_acct = manager.state_db.must_get(&keys::Account(to_address));
+
+        owner_acct.adjust_balance(-self.amount).unwrap();
+
+        // TODO: might be optimized via ctx, to avoid re-calculation
+        let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
+        let asset = if allow_same_token_name {
+            let token_id = self.asset_name.parse().map_err(|_| "invalid asset name")?;
+            manager
+                .state_db
+                .get(&keys::Asset(token_id))
+                .map_err(|_| "db query error")?
+                .unwrap()
+        } else {
+            find_asset_by_name(manager, &self.asset_name).unwrap()
+        };
+        let exchange_amount = self.amount * asset.num as i64 / asset.trx_num as i64;
+
+        owner_acct.adjust_token_balance(asset.id, exchange_amount).unwrap();
+        to_acct.adjust_token_balance(asset.id, -exchange_amount).unwrap();
+
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), owner_acct)
+            .map_err(|e| e.to_string())?;
+        manager
+            .state_db
+            .put_key(keys::Account(to_address), to_acct)
+            .map_err(|e| e.to_string())?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
+/// Find asset from state-db by its name. This is a legacy feature.
+/// So no need to implement any reverse index against token names.
+///
+/// Should only be used before AllowSameTokenName is ON.
+///
+/// NOTE: This is a design mistalk. Actually, one should use an asset's abbr instead of name.
+/// Never mind, use asset id(token id) solves.
 fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
     let mut found: Option<Asset> = None;
     {
