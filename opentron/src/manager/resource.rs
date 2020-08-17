@@ -5,6 +5,7 @@ use chain::IndexedTransaction;
 use log::{debug, warn};
 use prost::Message;
 use proto2::chain::ContractType;
+use proto2::contract::TransferAssetContract;
 use proto2::state::Account;
 use state::keys;
 
@@ -65,7 +66,10 @@ impl<'m> BandwidthProcessor<'m> {
             }
         }
 
-        if cntr.type_code() == ContractType::TransferAssetContract && self.consume_asset_bandwidth() {
+        // NOTE: Since Rust has no simple downcast support, use unsafe here.
+        if cntr.type_code() == ContractType::TransferAssetContract &&
+            self.consume_asset_bandwidth(unsafe { std::mem::transmute(cntr) })
+        {
             return Ok(());
         }
 
@@ -221,9 +225,10 @@ impl<'m> BandwidthProcessor<'m> {
     }
 
     // useAssetAccountNet
-    fn consume_asset_bandwidth(&self) -> bool {
+    fn consume_asset_bandwidth(&self, cntr: &TransferAssetContract) -> bool {
         warn!("TODO: useAssetAccountNet");
-        false
+        debug!("transfer asset => {:?}", cntr);
+        unimplemented!()
     }
 
     fn consume_fee_for_new_account_creation(
