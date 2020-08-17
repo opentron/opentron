@@ -37,6 +37,8 @@ message Account {
   int64 delegated_frozen_amount_for_energy = 11;
   int64 delegated_out_amount = 12;
   int64 issued_asset_id = 13;
+  int64 latest_withdraw_timestamp = 14;
+  int64 allowance = 15;
 }
 
 message ResourceDelegation {
