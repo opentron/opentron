@@ -15,11 +15,27 @@ impl Account {
 
     pub fn adjust_balance(&mut self, diff: i64) -> Result<(), ()> {
         if let Some(new_balance) = self.balance.checked_add(diff) {
-            self.balance = new_balance;
-            Ok(())
-        } else {
-            Err(())
+            if new_balance >= 0 {
+                self.balance = new_balance;
+                return Ok(());
+            }
         }
+        Err(())
+    }
+
+    pub fn adjust_token_balance(&mut self, token_id: i64, diff: i64) -> Result<(), ()> {
+        if let Some(balance) = self.token_balance.get_mut(&token_id) {
+            if let Some(new_balance) = balance.checked_add(diff) {
+                if new_balance >= 0 {
+                    *balance = new_balance;
+                    return Ok(());
+                }
+            }
+        } else if diff >= 0 {
+            self.token_balance.insert(token_id, diff);
+            return Ok(());
+        }
+        Err(())
     }
 
     pub fn tron_power(&self) -> i64 {
