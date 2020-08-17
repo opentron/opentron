@@ -46,6 +46,10 @@ impl Account {
         self.frozen_amount_for_bandwidth + self.delegated_frozen_amount_for_bandwidth
     }
 
+    pub fn resource(&self) -> &AccountResource {
+        self.resource.as_ref().unwrap()
+    }
+
     pub fn resource_mut(&mut self) -> &mut AccountResource {
         if self.resource.is_none() {
             self.resource = Some(Default::default());

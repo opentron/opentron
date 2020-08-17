@@ -17,7 +17,8 @@ message AccountResource {
   int64 energy_limit = 8;
   int64 energy_latest_timestamp = 9;
   map<int64, int64> asset_bandwidth_used = 10;
-  map<int64, int64> asset_bandwidth_limit = 11;
+  // limit is saved in Asset
+  // map<int64, int64> asset_bandwidth_limit = 11;
   map<int64, int64> asset_bandwidth_latest_timestamp = 12;
 }
 
