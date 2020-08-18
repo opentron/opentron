@@ -17,7 +17,7 @@ use crate::public::Public;
 const ADDRESS_TYPE_PREFIX: u8 = 0x41;
 
 /// Address of Tron, saved in 21-byte format.
-#[derive(PartialEq, Eq, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Clone, Copy, Hash, PartialOrd, Ord)]
 pub struct Address([u8; 21]);
 
 impl Address {

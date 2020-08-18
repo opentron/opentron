@@ -30,7 +30,7 @@ fn new_error(msg: &str) -> Error {
     Box::new(io::Error::new(io::ErrorKind::Other, msg))
 }
 
-// DB Manager.
+/// DB Manager.
 pub struct Manager {
     state_db: StateDB,
     genesis_block_timestamp: i64,
@@ -121,11 +121,9 @@ impl Manager {
             return Err(new_error("verify block merkle root hash failed"));
         }
 
-        // TODO consensusInterface.receiveBlock = DposService.receiverBlock
-        // StateManager.receiverBlock
-        // TODO: check dup block?
+        // TODO: check dup block? (StateManager.receiveBlock)
 
-        // NOTE: mainnet does not support shielded transaction.
+        // NOTE: mainnet does not support shielded TRC10 transaction.
 
         // . reject smaller block number
         if block.number() <= self.latest_block_number() {
@@ -138,7 +136,8 @@ impl Manager {
         }
 
         if block.parent_hash() != self.latest_block_hash().as_bytes() {
-            // println!("TODO: handle fork");
+            warn!("TODO: handle chain fork!");
+            return Err(new_error("chain fork!"));
         }
 
         if block.version() > constants::CURRENT_BLOCK_VERSION as i32 {
@@ -151,10 +150,11 @@ impl Manager {
         // basic check finished, begin process block
         self.state_db.new_layer();
 
-        // applyBlock = processBlock + updateFork
+        // . applyBlock = processBlock + updateFork
         self.process_block(block)?;
 
-        // TODO: updateFork(here)
+        // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is not removed.
+        // And no need to updateFork.
 
         self.state_db.solidify_layer();
 

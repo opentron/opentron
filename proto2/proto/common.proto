@@ -109,7 +109,7 @@ message Permission {
   PermissionType type = 1;
   // Owner id=0, Witness id=1, Active id starts by 2
   int32 id = 2;
-  string permission_name = 3;
+  string name = 3;
   int64 threshold = 4;
   int32 parent_id = 5;
   // 1 bit for 1 contract type

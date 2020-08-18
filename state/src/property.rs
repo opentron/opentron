@@ -11,9 +11,9 @@ pub enum DynamicProperty {
     /// For migration.
     DbVersion,
 
-    // * Next Global IDs
-    /// 1000001
-    NextTokenId,
+    // * Global IDs
+    /// 1000000 (start, never used)
+    LatestTokenId,
     /// 0, starts from 1
     LatestProposalId,
     /// 1
@@ -92,7 +92,7 @@ impl DynamicProperty {
 
         return vec![
             (DbVersion, CURRENT_DB_VERSION),
-            (NextTokenId, 1000001),
+            (LatestTokenId, 1000000),
             (LatestProposalId, 0),
             (NextExchangeId, 1),
             // LatestBlockTimestamp,

@@ -5,6 +5,7 @@ use chain::IndexedTransaction;
 use log::debug;
 use prost::Message;
 use proto2::chain::ContractType;
+use proto2::contract::TransferAssetContract;
 use proto2::state::Account;
 use state::keys;
 
@@ -54,7 +55,7 @@ impl<'m> BandwidthProcessor<'m> {
         let owner_acct = self.manager.state_db.must_get(&keys::Account(owner_address));
 
         if ctx.new_account_created {
-            if self.consume_bandwidth_for_new_account_creation(owner_address, &owner_acct, byte_size, now) ||
+            if self.consume_bandwidth_for_new_account_creation(&owner_address, &owner_acct, byte_size, now) ||
                 self.consume_fee_for_new_account_creation(&owner_address, &owner_acct, ctx)
             {
                 // covers all bw expense
@@ -65,23 +66,32 @@ impl<'m> BandwidthProcessor<'m> {
             }
         }
 
-        if cntr.type_code() == ContractType::TransferAssetContract && self.consume_asset_bandwidth() {
-            // TODO: handle asset bandwidth
-            unimplemented!()
+        // NOTE: Since Rust has no simple downcast support, use unsafe here.
+        if cntr.type_code() == ContractType::TransferAssetContract &&
+            self.consume_asset_bandwidth(
+                unsafe { std::mem::transmute(cntr) },
+                &owner_address,
+                &owner_acct,
+                byte_size,
+                now,
+                ctx,
+            )
+        {
+            return Ok(());
         }
 
         // NOTE: first use frozen bw, then free bw
 
-        if self.consume_frozen_bandwidth(owner_address, &owner_acct, byte_size, now, ctx) {
+        if self.consume_frozen_bandwidth(&owner_address, &owner_acct, byte_size, now, ctx) {
             return Ok(());
         }
 
-        if self.consume_free_bandwidth(owner_address, &owner_acct, byte_size, now, ctx) {
+        if self.consume_free_bandwidth(&owner_address, &owner_acct, byte_size, now, ctx) {
             return Ok(());
         }
 
         // burn for bandwidth
-        if self.consume_burnt_bandwidth(owner_address, &owner_acct, byte_size, ctx) {
+        if self.consume_burnt_bandwidth(&owner_address, &owner_acct, byte_size, ctx) {
             return Ok(());
         }
 
@@ -91,10 +101,10 @@ impl<'m> BandwidthProcessor<'m> {
     // Renamed: useTransactionFee
     fn consume_burnt_bandwidth(
         &mut self,
-        addr: Address,
+        addr: &Address,
         acct: &Account,
         nbytes: i64,
-        _ctx: &mut TransactionContext,
+        ctx: &mut TransactionContext,
     ) -> bool {
         let bw_fee = self.manager.state_db.must_get(&keys::ChainParameter::BandwidthFee) * nbytes;
         let mut new_acct = acct.clone();
@@ -102,14 +112,15 @@ impl<'m> BandwidthProcessor<'m> {
             return false;
         }
 
-        self.manager.state_db.put_key(keys::Account(addr), new_acct).unwrap();
+        self.manager.state_db.put_key(keys::Account(*addr), new_acct).unwrap();
+        ctx.bandwidth_fee = bw_fee;
         true
     }
 
     // Renamed: useAccountNet
     fn consume_frozen_bandwidth(
         &mut self,
-        addr: Address,
+        addr: &Address,
         acct: &Account,
         nbytes: i64,
         now: i64,
@@ -122,7 +133,7 @@ impl<'m> BandwidthProcessor<'m> {
         let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
 
         if nbytes > bw_limit - new_bw_usage {
-            debug!("frozen bandwidth is insufficient, will try use free bandwidth");
+            debug!("frozen bandwidth is insufficient, fall back to free");
             return false;
         }
 
@@ -139,14 +150,14 @@ impl<'m> BandwidthProcessor<'m> {
         acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
 
         debug!("account bw: {}/{}", new_bw_usage, bw_limit);
-        self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+        self.manager.state_db.put_key(keys::Account(*addr), acct).unwrap();
         true
     }
 
     // Renamed: useFreeNet.
     fn consume_free_bandwidth(
         &mut self,
-        addr: Address,
+        addr: &Address,
         acct: &Account,
         nbytes: i64,
         now: i64,
@@ -158,7 +169,7 @@ impl<'m> BandwidthProcessor<'m> {
 
         let mut new_free_bw_usage = adjust_usage(free_bw_usage, 0, free_bw_latest_ts, now);
         if nbytes > free_bw_limit - new_free_bw_usage {
-            debug!("free bandwidth is insufficient");
+            debug!("free bandwidth is insufficient, fall back to burn");
             return false;
         }
 
@@ -204,7 +215,7 @@ impl<'m> BandwidthProcessor<'m> {
         acct.latest_operation_timestamp = lastes_op_ts;
         debug!("account free bw: {}/{}", new_free_bw_usage, 5000);
 
-        self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+        self.manager.state_db.put_key(keys::Account(*addr), acct).unwrap();
 
         self.manager
             .state_db
@@ -221,8 +232,130 @@ impl<'m> BandwidthProcessor<'m> {
         true
     }
 
-    fn consume_asset_bandwidth(&self) -> bool {
-        unimplemented!()
+    // useAssetAccountNet
+    fn consume_asset_bandwidth(
+        &mut self,
+        cntr: &TransferAssetContract,
+        addr: &Address,
+        acct: &Account,
+        nbytes: i64,
+        now: i64,
+        _ctx: &mut TransactionContext,
+    ) -> bool {
+        let allow_same_token_name = self
+            .manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowSameTokenName) !=
+            0;
+        let mut asset = if allow_same_token_name {
+            let token_id = cntr.asset_name.parse().unwrap();
+            self.manager.state_db.must_get(&keys::Asset(token_id))
+        } else {
+            unimplemented!("lagacy asset name")
+        };
+        let token_id = asset.id;
+
+        if addr.as_bytes() == &*asset.owner_address {
+            // NOTE: Different logic from java-tron.
+            // Return a false, then automatically fallthrough to next `consume_frozen_bandwidth` in caller `consume`.
+            // Avoid calling `consume_frozen_bandwidth` twice.
+            //
+            // return self.consume_frozen_bandwidth(addr, acct, nbytes, now, ctx);
+            return false
+        }
+
+        // check public limit
+        let new_public_free_asset_bw_usage = adjust_usage(
+            asset.public_free_asset_bandwidth_used,
+            0,
+            asset.public_free_asset_bandwidth_last_timestamp,
+            now,
+        );
+        if nbytes > asset.public_free_asset_bandwidth_limit - new_public_free_asset_bw_usage {
+            debug!("asset {} public free bandwidth is insufficient", token_id);
+            return false;
+        }
+
+        // check pre-account-limit
+        let free_asset_bw_usage;
+        let latest_asset_op_ts;
+        if !allow_same_token_name {
+            unimplemented!("TODO: lagacy asset bandwidth handling");
+        } else {
+            free_asset_bw_usage = acct
+                .resource()
+                .asset_bandwidth_used
+                .get(&token_id)
+                .copied()
+                .unwrap_or(0);
+            latest_asset_op_ts = acct
+                .resource()
+                .asset_bandwidth_latest_timestamp
+                .get(&token_id)
+                .copied()
+                .unwrap_or(0);
+        }
+
+        let new_free_asset_bw_usage = adjust_usage(free_asset_bw_usage, 0, latest_asset_op_ts, now);
+
+        if nbytes > asset.free_asset_bandwidth_limit - new_free_asset_bw_usage {
+            debug!("asset {} free bandwidth is insufficient", token_id);
+            return false;
+        }
+
+        // check issuer's frozen bw
+        let issuer_addr = *Address::from_bytes(&asset.owner_address);
+        let mut issuer_acct = self.manager.state_db.must_get(&keys::Account(issuer_addr));
+        let issuer_bw_limit = self.calculate_global_bandwidth_limit(&issuer_acct);
+
+        let new_issuer_bw_usage = adjust_usage(
+            issuer_acct.resource().frozen_bandwidth_used,
+            0,
+            issuer_acct.resource().frozen_bandwidth_latest_timestamp,
+            now,
+        );
+
+        if nbytes > issuer_bw_limit - new_issuer_bw_usage {
+            debug!("asset {} issuer bandwidth is insufficient", token_id);
+            return false;
+        }
+
+        // now consume
+        let latest_op_ts = self.manager.latest_block_timestamp();
+
+        let new_issuer_bw_usage = adjust_usage(new_issuer_bw_usage, nbytes, now, now);
+        let new_free_asset_bw_usage = adjust_usage(new_free_asset_bw_usage, nbytes, now, now);
+        let new_public_free_asset_bw_usage = adjust_usage(new_public_free_asset_bw_usage, nbytes, now, now);
+
+        issuer_acct.resource_mut().frozen_bandwidth_used = new_issuer_bw_usage;
+        issuer_acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
+
+        asset.public_free_asset_bandwidth_used = new_public_free_asset_bw_usage;
+        asset.public_free_asset_bandwidth_last_timestamp = now;
+
+        let mut acct = acct.clone();
+        acct.latest_operation_timestamp = latest_op_ts;
+
+        if !allow_same_token_name {
+            unimplemented!("TODO: don't know how to save when allow same token name is off");
+        } else {
+            acct.resource_mut()
+                .asset_bandwidth_latest_timestamp
+                .insert(token_id, now);
+            acct.resource_mut()
+                .asset_bandwidth_used
+                .insert(token_id, new_free_asset_bw_usage);
+        }
+
+        // now save
+        self.manager.state_db.put_key(keys::Account(*addr), acct).unwrap();
+        self.manager
+            .state_db
+            .put_key(keys::Account(issuer_addr), issuer_acct)
+            .unwrap();
+        self.manager.state_db.put_key(keys::Asset(token_id), asset).unwrap();
+
+        true
     }
 
     fn consume_fee_for_new_account_creation(
@@ -250,7 +383,7 @@ impl<'m> BandwidthProcessor<'m> {
     // When an account has frozen enough bandwidth, it can create account freely.
     fn consume_bandwidth_for_new_account_creation(
         &mut self,
-        addr: Address,
+        addr: &Address,
         acct: &Account,
         nbytes: i64,
         now: i64,
@@ -287,7 +420,7 @@ impl<'m> BandwidthProcessor<'m> {
             acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
             acct.resource_mut().frozen_bandwidth_used = new_bw_usage;
 
-            self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+            self.manager.state_db.put_key(keys::Account(*addr), acct).unwrap();
             true
         } else {
             false

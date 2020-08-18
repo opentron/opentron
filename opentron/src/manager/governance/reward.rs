@@ -1,6 +1,7 @@
 //! Handle block reward, voting reward.
 
 use ::keys::Address;
+use log::warn;
 use state::keys;
 
 use super::super::Manager;
@@ -11,7 +12,7 @@ pub struct RewardController<'m> {
 }
 
 impl RewardController<'_> {
-    pub fn new<'a>(manager: &'a mut Manager) -> RewardController<'a> {
+    pub fn new<'a>(manager: &'a Manager) -> RewardController<'a> {
         RewardController { manager }
     }
 
@@ -38,5 +39,31 @@ impl RewardController<'_> {
         log::debug!("TODO: allowance update required");
         //unimplemented!()
         Ok(())
+    }
+}
+
+pub struct RewardUtil<'m> {
+    manager: &'m Manager,
+}
+
+impl RewardUtil<'_> {
+    pub fn new<'a>(manager: &'a Manager) -> RewardUtil<'a> {
+        RewardUtil { manager }
+    }
+
+    pub fn query_reward(&self, _addr: Address) -> i64 {
+        let allow_change_delegation = self
+            .manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowChangeDelegation) !=
+            0;
+
+        if !allow_change_delegation {
+            return 0;
+        }
+
+        // unimplemented!()
+        warn!("TODO: fake query_reward implementation");
+        16_000_000
     }
 }

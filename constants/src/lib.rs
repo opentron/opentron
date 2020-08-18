@@ -32,7 +32,7 @@ pub const NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE: usize = 2;
 pub const NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND: usize = 1;
 
 /// Renamed: WitnessAllowanceFrozenTime
-pub const NUM_OF_FRONZEN_DAYS_FOR_WITNESS_ALLOWANCE: usize = 1;
+pub const NUM_OF_FROZEN_DAYS_FOR_WITNESS_ALLOWANCE: i64 = 1;
 
 /// in percent
 pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
@@ -55,20 +55,17 @@ pub const MAX_TRANSACTION_EXPIRATION: i64 = 24 * 60 * 60 * 1_000;
 
 pub const DEFAULT_ORIGIN_ENERGY_LIMIT: usize = 10_000_000;
 
-/// Renamed: TotalSignNum
-pub const MAX_NUM_OF_KEYS_IN_MULTISIG: usize = 5;
-
 pub const MAX_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
 pub const MIN_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
 
 /// Max number of `FronzenSupply` in AssetIssue.
 pub const MAX_NUM_OF_FROZEN_SUPPLIES_IN_ASSET_ISSUE: usize = 10;
 
-pub const MAX_NUM_OF_FRONZEN_DAYS_IN_ASSET_ISSUE: usize = 3652;
-pub const MIN_NUM_OF_FRONZEN_DAYS_IN_ASSET_ISSUE: usize = 1;
+pub const MAX_NUM_OF_FROZEN_DAYS_IN_ASSET_ISSUE: i64 = 3652;
+pub const MIN_NUM_OF_FROZEN_DAYS_IN_ASSET_ISSUE: i64 = 1;
 
-/// Renamed: OneDayNetLimit, restrict both free_asset_net_limit and public_free_asset_net_limit.
-pub const MAX_FREE_BANDWIDTH_IN_ASSET_ISSUE: usize = 57_600_000_000;
+/// Renamed: OneDayNetLimit, restrict both free_asset_bandwidth_limit and public_free_asset_bandwidth_limit.
+pub const MAX_FREE_BANDWIDTH_IN_ASSET_ISSUE: i64 = 57_600_000_000;
 
 // Renamed: ExchangeBalanceLimit
 pub const MAX_EXCHANGE_BALANCE: usize = 1_000_000_000_000_000;
@@ -90,3 +87,10 @@ pub const ADAPTIVE_ENERGY_DECREASE_RATE_DENOMINATOR: i64 = 100;
 
 pub const ADAPTIVE_ENERGY_INCREASE_RATE_NUMERATOR: i64 = 1000;
 pub const ADAPTIVE_ENERGY_INCREASE_RATE_DENOMINATOR: i64 = 999;
+
+// * Account
+
+pub const MAX_NUM_OF_ACTIVE_PERMISSIONS: usize = 8;
+
+// Renamed: TotalSignNum
+pub const MAX_NUM_OF_KEYS_IN_PERMISSION: usize = 5;

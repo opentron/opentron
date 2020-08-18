@@ -30,9 +30,12 @@ message SetAccountIdContract {
 
 message AccountPermissionUpdateContract {
   bytes owner_address = 1;
-  proto.common.Permission owner = 2;  // empty means invalidate
+  // permission_id = 0
+  proto.common.Permission owner = 2;
+  // permission_id = 1
   proto.common.Permission witness = 3;
-  repeated proto.common.Permission actives = 4;  // empty means invalidate
+  // permission_id = 2, 3, 4, ...
+  repeated proto.common.Permission actives = 4;
 }
 
 // # TRX transfer
@@ -61,7 +64,6 @@ message AssetIssueContract {
     int64 frozen_amount = 1;
     int64 frozen_days = 2;
   }
-
   bytes owner_address = 1;
   // changed: bytes
   string name = 2;
@@ -74,17 +76,19 @@ message AssetIssueContract {
   int32 num = 8;
   int64 start_time = 9;
   int64 end_time = 10;
-  int64 order = 11;  // useless
-  int32 vote_score = 16;
   // NOTE: might be illegal utf8 bytes
   bytes description = 20;
   // changed: bytes
   string url = 21;
-  int64 free_asset_net_limit = 22;
-  int64 public_free_asset_net_limit = 23;
-  int64 public_free_asset_net_usage = 24;
-  int64 public_latest_free_net_time = 25;
-  string id = 41;
+  // NOTE: rename net to bandwidth
+  int64 free_asset_bandwidth_limit = 22;
+  int64 public_free_asset_bandwidth_limit = 23;
+  int64 public_free_asset_bandwidth_usage = 24;
+  // useless, and not checked
+  int64 OBSOLETE_public_latest_free_net_time = 25;
+  string OBSOLETE_id = 41;
+  int64 OBSOLETE_order = 11;
+  int32 OBSOLETE_vote_score = 16;
 }
 
 message ParticipateAssetIssueContract {
@@ -98,7 +102,7 @@ message ParticipateAssetIssueContract {
   int64 amount = 4;  // the amount of drops
 }
 
-/* note unused
+/* NOTE: unused
 message VoteAssetContract {
   bytes owner_address = 1;
   repeated bytes vote_address = 2;

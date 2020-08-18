@@ -1,5 +1,7 @@
 //! Transaction executor.
 
+use std::str;
+
 use ::keys::b58encode_check;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use log::{debug, error, warn};
@@ -9,7 +11,6 @@ use proto2::common::ResourceCode;
 use proto2::contract as contract_pb;
 use proto2::state::{ResourceReceipt, TransactionReceipt};
 use state::keys;
-use std::str;
 
 use super::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
 use super::resource::BandwidthProcessor;
@@ -92,16 +93,13 @@ impl<'m> TransactionExecutor<'m> {
         let recover_addrs = txn.recover_owner().expect("error while verifying signature");
         let maybe_result = txn.raw.result.get(0);
 
-        debug!("cntr type => {:?}", cntr_type);
-        // debug!(
-        //    "TODO: verify signagures and multisig, recover_addrs => {:?}",
-        //    recover_addrs
-        // );
+        let permission_id = cntr.permission_id;
 
+        debug!("cntr type => {:?}", cntr_type);
         // NOTE: Routine to handle transactions of builtin contracts:
         //
         // - decode google.Any
-        // - TODO: multisig
+        // - multisig
         // - validate (except bandwidth)
         // - execute logic
         // - handle bandwidth
@@ -115,11 +113,6 @@ impl<'m> TransactionExecutor<'m> {
         match cntr_type {
             ContractType::TransferContract => {
                 let cntr = contract_pb::TransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // TOOD: handle multisig, for now, use simple method
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> transfer from {} to {} with amount {}",
                     b58encode_check(&cntr.owner_address),
@@ -128,6 +121,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -138,11 +132,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::ProposalCreateContract => {
                 let cntr = contract_pb::ProposalCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // TOOD: handle multisig, for now, use simple method
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> Proposal by {} {:?}",
                     b58encode_check(&cntr.owner_address),
@@ -153,6 +142,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -163,11 +153,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::ProposalApproveContract => {
                 let cntr = contract_pb::ProposalApproveContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // TOOD: handle multisig, for now, use simple method
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> Approve Proposal #{} by {} {}",
                     cntr.proposal_id,
@@ -176,6 +161,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -186,15 +172,14 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::WitnessCreateContract => {
                 let cntr = contract_pb::WitnessCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
                 debug!(
                     "=> New Witness {} url={:?}",
                     b58encode_check(cntr.owner_address()),
                     str::from_utf8(&cntr.url)
                 );
+
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -203,11 +188,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::UpdateBrokerageContract => {
+                let cntr = contract_pb::UpdateBrokerageContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Update Witness Brokerage {}: new_brokerage_rate={}",
+                    b58encode_check(cntr.owner_address()),
+                    cntr.brokerage,
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::FreezeBalanceContract => {
                 let cntr = contract_pb::FreezeBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 debug!(
                     "=> Freeze Resource {} amount={} resource={:?}",
@@ -217,6 +215,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -227,9 +226,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::VoteWitnessContract => {
                 let cntr = contract_pb::VoteWitnessContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 debug!(
                     "=> Vote Witness by {} votes: {:?}",
@@ -241,6 +237,119 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::AssetIssueContract => {
+                let cntr = contract_pb::AssetIssueContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Issue Asset by {}: {:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.name
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                // TODO: Fill TransactionReceipt with newly created asset token_id.
+                Ok(ctx.into())
+            }
+            ContractType::TransferAssetContract => {
+                let cntr = contract_pb::TransferAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Transfer Asset from {} to {}: amount={} asset_name={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.to_address),
+                    cntr.amount,
+                    cntr.asset_name
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::ParticipateAssetIssueContract => {
+                let cntr =
+                    contract_pb::ParticipateAssetIssueContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Participate Asset Issue {}, to {}: token_id={} amount={}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.to_address),
+                    cntr.asset_name,
+                    cntr.amount
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::AccountUpdateContract => {
+                let cntr = contract_pb::AccountUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Account Set Name {}: name={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.account_name
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::AccountPermissionUpdateContract => {
+                let cntr =
+                    contract_pb::AccountPermissionUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Account Permission Update {}",
+                    b58encode_check(&cntr.owner_address()),
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::WithdrawBalanceContract => {
+                let cntr = contract_pb::WithdrawBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!("=> Withdraw Reward {}", b58encode_check(&cntr.owner_address()),);
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -250,13 +359,43 @@ impl<'m> TransactionExecutor<'m> {
                 Ok(ctx.into())
             }
             // TVM
-            ContractType::TriggerSmartContract | ContractType::CreateSmartContract => {
+            ContractType::CreateSmartContract => {
+                let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+
+                debug!(
+                    "=> Create Smart Contract by {}: name={:?} code_size={}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.new_contract.as_ref().unwrap().name,
+                    cntr.new_contract.as_ref().unwrap().bytecode.len(),
+                );
+                warn!("TODO: TVM & energy");
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::TriggerSmartContract => {
+                let cntr = contract_pb::TriggerSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+
                 // smart contract status
                 let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
                     .unwrap_or_default();
                 debug!("contract_status => {:?}", contract_status);
-                unimplemented!()
+                debug!(
+                    "=> Calling Smart Contract by {}: contract={}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.contract_address),
+                );
+                warn!("TODO: TVM & energy");
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
             }
             _ => unimplemented!(),
         }

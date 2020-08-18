@@ -14,29 +14,14 @@ jobs:
             - name: Install dependencies
               run: sudo apt-get install protobuf-compiler libprotobuf-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
 
-            - name: Chown of RockDB cache
-              run: |
-                  sudo chown -R $(whoami) /usr/local/lib /usr/local/include
-
-            - name: Cache RocksDB build
-              id: cache-rocksdb
+            - name: Cache Rust build
               uses: actions/cache@v2
               with:
                   path: |
-                      /usr/local/lib/librocksdb.so.6.7.3
-                      /usr/local/lib/librocksdb.so.6.7
-                      /usr/local/lib/librocksdb.so.6
-                      /usr/local/lib/librocksdb.so
-                      /usr/local/include/rocksdb
-                  key: rocksdb-v6.7.3
-
-            - name: Install RocksDB
-              if: steps.cache-rocksdb.outputs.cache-hit != 'true'
-              run: |
-                  git clone https://github.com/facebook/rocksdb.git
-                  cd rocksdb
-                  git checkout v6.7.3
-                  sudo make install-shared
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
             - name: Cache ztron-params
               id: cache-ztron-params
