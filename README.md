@@ -104,10 +104,10 @@ See [INSTALL.md](./INSTALL.md) for more detailed information.
 > brew install rocksdb  # macOS
 
 > # Get code
-> git clone --recurse-submodules https://github.com/oikos-cash/OpenTron.git
+> git clone --recurse-submodules https://github.com/opentron/opentron.git
 
 > # Compile tools
-> cd ./OpenTron/
+> cd ./opentron/
 > cargo build --all
 
 > cargo run -- --config config/conf.nile.toml
