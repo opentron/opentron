@@ -102,8 +102,6 @@ impl BuiltinContractExecutorExt for contract_pb::AccountPermissionUpdateContract
             return Err("too many active permissions".into());
         }
 
-        log::debug!("owner => {:?}", self.owner);
-
         check_permission(self.owner.as_ref().unwrap(), PermissionType::Owner)?;
 
         for active in &self.actives {

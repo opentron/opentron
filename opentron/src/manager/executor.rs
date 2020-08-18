@@ -93,16 +93,13 @@ impl<'m> TransactionExecutor<'m> {
         let recover_addrs = txn.recover_owner().expect("error while verifying signature");
         let maybe_result = txn.raw.result.get(0);
 
-        debug!("cntr type => {:?}", cntr_type);
-        // debug!(
-        //    "TODO: verify signagures and multisig, recover_addrs => {:?}",
-        //    recover_addrs
-        // );
+        let permission_id = cntr.permission_id;
 
+        debug!("cntr type => {:?}", cntr_type);
         // NOTE: Routine to handle transactions of builtin contracts:
         //
         // - decode google.Any
-        // - TODO: multisig
+        // - multisig
         // - validate (except bandwidth)
         // - execute logic
         // - handle bandwidth
@@ -116,11 +113,6 @@ impl<'m> TransactionExecutor<'m> {
         match cntr_type {
             ContractType::TransferContract => {
                 let cntr = contract_pb::TransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // TOOD: handle multisig, for now, use simple method
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> transfer from {} to {} with amount {}",
                     b58encode_check(&cntr.owner_address),
@@ -129,6 +121,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -139,11 +132,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::ProposalCreateContract => {
                 let cntr = contract_pb::ProposalCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // TOOD: handle multisig, for now, use simple method
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> Proposal by {} {:?}",
                     b58encode_check(&cntr.owner_address),
@@ -154,6 +142,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -164,11 +153,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::ProposalApproveContract => {
                 let cntr = contract_pb::ProposalApproveContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // TOOD: handle multisig, for now, use simple method
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> Approve Proposal #{} by {} {}",
                     cntr.proposal_id,
@@ -177,6 +161,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -187,15 +172,14 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::WitnessCreateContract => {
                 let cntr = contract_pb::WitnessCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
                 debug!(
                     "=> New Witness {} url={:?}",
                     b58encode_check(cntr.owner_address()),
                     str::from_utf8(&cntr.url)
                 );
+
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -206,15 +190,13 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::UpdateBrokerageContract => {
                 let cntr = contract_pb::UpdateBrokerageContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
                 debug!(
                     "=> Update Witness Brokerage {}: new_brokerage_rate={}",
                     b58encode_check(cntr.owner_address()),
                     cntr.brokerage,
                 );
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
@@ -224,9 +206,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::FreezeBalanceContract => {
                 let cntr = contract_pb::FreezeBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 debug!(
                     "=> Freeze Resource {} amount={} resource={:?}",
@@ -236,6 +215,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -246,9 +226,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::VoteWitnessContract => {
                 let cntr = contract_pb::VoteWitnessContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 debug!(
                     "=> Vote Witness by {} votes: {:?}",
@@ -260,6 +237,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -270,10 +248,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::AssetIssueContract => {
                 let cntr = contract_pb::AssetIssueContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> Issue Asset by {}: {:?}",
                     b58encode_check(&cntr.owner_address()),
@@ -281,6 +255,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -292,10 +267,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::TransferAssetContract => {
                 let cntr = contract_pb::TransferAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> Transfer Asset from {} to {}: amount={} asset_name={:?}",
                     b58encode_check(&cntr.owner_address()),
@@ -305,6 +276,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -316,10 +288,6 @@ impl<'m> TransactionExecutor<'m> {
             ContractType::ParticipateAssetIssueContract => {
                 let cntr =
                     contract_pb::ParticipateAssetIssueContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
-
                 debug!(
                     "=> Participate Asset Issue {}, to {}: token_id={} amount={}",
                     b58encode_check(&cntr.owner_address()),
@@ -329,6 +297,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -339,9 +308,6 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::AccountUpdateContract => {
                 let cntr = contract_pb::AccountUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 debug!(
                     "=> Account Set Name {}: name={:?}",
@@ -349,6 +315,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.account_name
                 );
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -360,21 +327,17 @@ impl<'m> TransactionExecutor<'m> {
             ContractType::AccountPermissionUpdateContract => {
                 let cntr =
                     contract_pb::AccountPermissionUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 debug!(
-                    "=> Account Set Permission {}: perm={:?}",
+                    "=> Account Permission Update {}",
                     b58encode_check(&cntr.owner_address()),
-                    cntr
                 );
-                warn!("TODO: impl AccountPermissionUpdateContract");
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                // cntr.validate(self.manager, &mut ctx)?;
-                // let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                // check_transaction_result(&exec_result, &maybe_result);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
@@ -382,12 +345,11 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::WithdrawBalanceContract => {
                 let cntr = contract_pb::WithdrawBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
 
                 debug!("=> Withdraw Reward {}", b58encode_check(&cntr.owner_address()),);
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -399,9 +361,7 @@ impl<'m> TransactionExecutor<'m> {
             // TVM
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
 
                 debug!(
                     "=> Create Smart Contract by {}: name={:?} code_size={}",
@@ -418,9 +378,8 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::TriggerSmartContract => {
                 let cntr = contract_pb::TriggerSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                if cntr.owner_address() != recover_addrs[0].as_bytes() {
-                    return Err("invalid signature".into());
-                }
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+
                 // smart contract status
                 let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
