@@ -384,6 +384,12 @@ impl Key<pb::Asset> for Asset {
     fn parse_value(raw: &[u8]) -> pb::Asset {
         pb::Asset::decode(raw).unwrap()
     }
+
+    fn parse_key(raw: &[u8]) -> Self {
+        let mut bytes = [0u8; 8];
+        bytes.copy_from_slice(raw);
+        Asset(u64::from_be_bytes(bytes) as i64)
+    }
 }
 
 #[derive(Debug)]
