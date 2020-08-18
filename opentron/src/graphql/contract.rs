@@ -247,7 +247,7 @@ impl From<PermissionPb> for Permission {
         Permission {
             r#type: PermissionType::from_i32(perm.r#type),
             id: perm.id,
-            name: perm.permission_name.clone(),
+            name: perm.name.clone(),
             threshold: perm.threshold as _,
             operations: if !perm.operations.is_empty() {
                 Some(hex::encode(&perm.operations))
