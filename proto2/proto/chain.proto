@@ -62,12 +62,11 @@ enum ContractType {
   // BuyStorageContract = 21;
   // BuyStorageBytesContract = 22;
   // SellStorageContract = 23;
-  // GetContract = 32;
-  // VoteAssetContract = 3;
-  // CustomContract = 20;
   AccountCreateContract = 0;
   TransferContract = 1;
   TransferAssetContract = 2;
+  // NOTE: only used in active permission bits.
+  VoteAssetContract = 3;
   VoteWitnessContract = 4;
   WitnessCreateContract = 5;
   AssetIssueContract = 6;
@@ -83,8 +82,12 @@ enum ContractType {
   ProposalApproveContract = 17;
   ProposalDeleteContract = 18;
   SetAccountIdContract = 19;
+  // NOTE: only used in active permission bits.
+  CustomContract = 20;
   CreateSmartContract = 30;
   TriggerSmartContract = 31;
+  // NOTE: only used in active permission bits.
+  GetContract = 32;
   UpdateSettingContract = 33;
   ExchangeCreateContract = 41;
   ExchangeInjectContract = 42;
