@@ -191,6 +191,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::WitnessUpdateContract => {
+                let cntr = contract_pb::WitnessUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Witness Update {} new_url={:?}",
+                    b58encode_check(cntr.owner_address()),
+                    String::from_utf8(cntr.update_url.clone()),
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::UpdateBrokerageContract => {
                 let cntr = contract_pb::UpdateBrokerageContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
                 debug!(
@@ -359,7 +377,7 @@ impl<'m> TransactionExecutor<'m> {
 
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-                Ok(ctx.into())
+                unimplemented!()
             }
             // TVM
             ContractType::CreateSmartContract => {
@@ -377,7 +395,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-                Ok(ctx.into())
+                unimplemented!()
             }
             ContractType::TriggerSmartContract => {
                 let cntr = contract_pb::TriggerSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -398,7 +416,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-                Ok(ctx.into())
+                unimplemented!()
             }
             _ => unimplemented!(),
         }
