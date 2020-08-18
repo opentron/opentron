@@ -137,7 +137,10 @@ impl<'m> TransactionExecutor<'m> {
                     b58encode_check(&cntr.owner_address),
                     cntr.parameters
                         .iter()
-                        .map(|(&k, v)| (keys::ChainParameter::from_i32(k as i32).unwrap(), v))
+                        .map(|(&k, v)| (
+                            keys::ChainParameter::from_i32(k as i32).expect(&format!("unknown proposal {}={}", k, v)),
+                            v
+                        ))
                         .collect::<std::collections::HashMap<_, _>>()
                 );
 
