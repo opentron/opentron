@@ -55,9 +55,6 @@ pub const MAX_TRANSACTION_EXPIRATION: i64 = 24 * 60 * 60 * 1_000;
 
 pub const DEFAULT_ORIGIN_ENERGY_LIMIT: usize = 10_000_000;
 
-/// Renamed: TotalSignNum
-pub const MAX_NUM_OF_KEYS_IN_MULTISIG: usize = 5;
-
 pub const MAX_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
 pub const MIN_NUM_OF_FROZEN_DAYS_FOR_RESOURCE: i64 = 3;
 
@@ -90,3 +87,10 @@ pub const ADAPTIVE_ENERGY_DECREASE_RATE_DENOMINATOR: i64 = 100;
 
 pub const ADAPTIVE_ENERGY_INCREASE_RATE_NUMERATOR: i64 = 1000;
 pub const ADAPTIVE_ENERGY_INCREASE_RATE_DENOMINATOR: i64 = 999;
+
+// * Account
+
+pub const MAX_NUM_OF_ACTIVE_PERMISSIONS: usize = 8;
+
+// Renamed: TotalSignNum
+pub const MAX_NUM_OF_KEYS_IN_PERMISSION: usize = 5;
