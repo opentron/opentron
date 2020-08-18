@@ -100,6 +100,10 @@ impl<'a> TryFrom<&'a [u8]> for Signature {
         if v.len() == 65 {
             let mut inner = [0u8; 65];
             (&mut inner[..]).copy_from_slice(v);
+            // NOTE: 0x2fe5b7a5610aa9dc081574b0451af82ac586ac0a67e2da2a100a5923c862e357
+            if inner[64] >= 27 {
+                inner[64] -= 27;
+            }
             Ok(Signature(inner))
         } else {
             Err(Error::InvalidSignature)
