@@ -30,9 +30,12 @@ message SetAccountIdContract {
 
 message AccountPermissionUpdateContract {
   bytes owner_address = 1;
-  proto.common.Permission owner = 2;  // empty means invalidate
+  // permission_id = 0
+  proto.common.Permission owner = 2;
+  // permission_id = 1
   proto.common.Permission witness = 3;
-  repeated proto.common.Permission actives = 4;  // empty means invalidate
+  // permission_id = 2, 3, 4, ...
+  repeated proto.common.Permission actives = 4;
 }
 
 // # TRX transfer
@@ -99,7 +102,7 @@ message ParticipateAssetIssueContract {
   int64 amount = 4;  // the amount of drops
 }
 
-/* note unused
+/* NOTE: unused
 message VoteAssetContract {
   bytes owner_address = 1;
   repeated bytes vote_address = 2;

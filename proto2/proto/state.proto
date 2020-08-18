@@ -22,6 +22,25 @@ message AccountResource {
   map<int64, int64> asset_bandwidth_latest_timestamp = 12;
 }
 
+message PermissionKey {
+  bytes address = 1;
+  int64 weight = 2;
+}
+
+// permission_id = 0
+message OwnerPermission {
+  int64 threshold = 1;
+  repeated PermissionKey keys = 2;
+}
+
+// permission_id = 2, 3, 4, ...
+message ActivePermission {
+  int64 threshold = 1;
+  repeated PermissionKey keys = 2;
+  bytes operations = 3;
+  string permission_name = 5;
+}
+
 message Account {
   proto.common.AccountType type = 1;
   string name = 2;
@@ -40,19 +59,8 @@ message Account {
   int64 issued_asset_id = 13;
   int64 latest_withdraw_timestamp = 14;
   int64 allowance = 15;
-}
-
-message ResourceDelegation {
-  bytes to_address = 1;
-  bytes from_address = 2;
-  int64 amount_for_bandwidth = 3;
-  int64 expiration_timestamp_for_bandwidth = 4;
-  int64 amount_for_energy = 5;
-  int64 expiration_timestamp_for_energy = 6;
-}
-
-message Votes {
-  repeated proto.common.Vote votes = 1;
+  OwnerPermission owner_permission = 16;
+  repeated ActivePermission active_permissions = 17;
 }
 
 message Witness {
@@ -68,6 +76,21 @@ message Witness {
   int32 latest_block_version = 9;
   // range: 0-100
   int32 brokerage = 10;
+  // Witness permission, permission_id = 1
+  bytes signature_key = 11;
+}
+
+message ResourceDelegation {
+  bytes to_address = 1;
+  bytes from_address = 2;
+  int64 amount_for_bandwidth = 3;
+  int64 expiration_timestamp_for_bandwidth = 4;
+  int64 amount_for_energy = 5;
+  int64 expiration_timestamp_for_energy = 6;
+}
+
+message Votes {
+  repeated proto.common.Vote votes = 1;
 }
 
 message Proposal {
