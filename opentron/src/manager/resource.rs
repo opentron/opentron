@@ -133,7 +133,7 @@ impl<'m> BandwidthProcessor<'m> {
         let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
 
         if nbytes > bw_limit - new_bw_usage {
-            debug!("frozen bandwidth is insufficient");
+            debug!("frozen bandwidth is insufficient, fall back to free");
             return false;
         }
 
@@ -169,7 +169,7 @@ impl<'m> BandwidthProcessor<'m> {
 
         let mut new_free_bw_usage = adjust_usage(free_bw_usage, 0, free_bw_latest_ts, now);
         if nbytes > free_bw_limit - new_free_bw_usage {
-            debug!("free bandwidth is insufficient");
+            debug!("free bandwidth is insufficient, fall back to burn");
             return false;
         }
 
@@ -240,7 +240,7 @@ impl<'m> BandwidthProcessor<'m> {
         acct: &Account,
         nbytes: i64,
         now: i64,
-        ctx: &mut TransactionContext,
+        _ctx: &mut TransactionContext,
     ) -> bool {
         let allow_same_token_name = self
             .manager
