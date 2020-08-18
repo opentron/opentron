@@ -204,6 +204,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::UpdateBrokerageContract => {
+                let cntr = contract_pb::UpdateBrokerageContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+                debug!(
+                    "=> Update Witness Brokerage {}: new_brokerage_rate={}",
+                    b58encode_check(cntr.owner_address()),
+                    cntr.brokerage,
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate(self.manager, &mut ctx)?;
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::FreezeBalanceContract => {
                 let cntr = contract_pb::FreezeBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
                 if cntr.owner_address() != recover_addrs[0].as_bytes() {
@@ -334,6 +352,29 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
+
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::AccountPermissionUpdateContract => {
+                let cntr =
+                    contract_pb::AccountPermissionUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                if cntr.owner_address() != recover_addrs[0].as_bytes() {
+                    return Err("invalid signature".into());
+                }
+
+                debug!(
+                    "=> Account Set Permission {}: perm={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr
+                );
+                warn!("TODO: impl AccountPermissionUpdateContract");
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                // cntr.validate(self.manager, &mut ctx)?;
+                // let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                // check_transaction_result(&exec_result, &maybe_result);
 
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);

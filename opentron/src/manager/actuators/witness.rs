@@ -221,3 +221,47 @@ impl BuiltinContractExecutorExt for contract_pb::WithdrawBalanceContract {
         Ok(TransactionResult::success())
     }
 }
+
+// Update brokerage rate in percent of a witness account.
+impl BuiltinContractExecutorExt for contract_pb::UpdateBrokerageContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let allow_change_delegation = state_db.must_get(&keys::ChainParameter::AllowChangeDelegation) != 0;
+        if !allow_change_delegation {
+            return Err("AllowChangeDelegation if OFF, brokerage rate is not supported".into());
+        }
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        if self.brokerage < 0 || self.brokerage > 100 {
+            return Err("invalid brokerage percent".into());
+        }
+
+        // Witness implies Account.
+        let maybe_witness = state_db
+            .get(&keys::Witness(owner_address))
+            .map_err(|_| "error while querying db")?;
+        if maybe_witness.is_none() {
+            return Err(format!("account {} is not a witness", owner_address));
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_addr = Address::try_from(&self.owner_address).unwrap();
+        let mut wit = manager.state_db.must_get(&keys::Witness(owner_addr));
+
+        // delegationStore.setBrokerage(ownerAddress, brokerage);
+        // TODO: delegation store
+        wit.brokerage = self.brokerage;
+
+        manager
+            .state_db
+            .put_key(keys::Witness(owner_addr), wit)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
