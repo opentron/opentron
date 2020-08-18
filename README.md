@@ -107,7 +107,7 @@ See [INSTALL.md](./INSTALL.md) for more detailed information.
 > git clone --recurse-submodules https://github.com/opentron/opentron.git
 
 > # Compile tools
-> cd ./OpenTron/
+> cd ./opentron/
 > cargo build --all
 
 > cargo run -- --config config/conf.nile.toml
