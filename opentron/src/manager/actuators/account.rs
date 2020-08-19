@@ -234,10 +234,10 @@ impl BuiltinContractExecutorExt for contract_pb::AccountCreateContract {
             if acct_type != AccountType::Normal {
                 warn!("create account with type={:?}", acct_type);
             }
-            // NOTE: One can create account of any type, even invalid type.
+            // NOTE: One can create account of any type
             new_acct.r#type = self.r#type;
         } else {
-            warn!("invalid account type code: {}", self.r#type);
+            panic!("invalid account type code: {}", self.r#type);
         }
 
         if fee != 0 {
