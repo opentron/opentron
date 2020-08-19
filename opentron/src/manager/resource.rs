@@ -57,7 +57,7 @@ impl<'m> BandwidthProcessor<'m> {
 
         if ctx.new_account_created {
             // consumeForCreateNewAccount
-            if self.consume_bandwidth_for_new_account_creation(&owner_address, &owner_acct, byte_size, now) ||
+            if self.consume_frozen_bandwidth_for_new_account_creation(&owner_address, &owner_acct, byte_size, now) ||
                 self.consume_fee_for_new_account_creation(&owner_address, &owner_acct, ctx)
             {
                 // covers all bw expense
@@ -173,9 +173,9 @@ impl<'m> BandwidthProcessor<'m> {
     ) -> bool {
         let free_bw_limit = constants::FREE_BANDWIDTH;
         let free_bw_usage = acct.resource.as_ref().unwrap().free_bandwidth_used;
-        let mut free_bw_latest_ts = acct.resource.as_ref().unwrap().free_bandwidth_latest_timestamp;
+        let mut free_bw_latest_slot = acct.resource.as_ref().unwrap().free_bandwidth_latest_slot;
 
-        let mut new_free_bw_usage = adjust_usage(free_bw_usage, 0, free_bw_latest_ts, now);
+        let mut new_free_bw_usage = adjust_usage(free_bw_usage, 0, free_bw_latest_slot, now);
         if nbytes > free_bw_limit - new_free_bw_usage {
             debug!(
                 "free bandwidth is insufficient {}/{}, requires={}",
@@ -193,23 +193,23 @@ impl<'m> BandwidthProcessor<'m> {
             .manager
             .state_db
             .must_get(&keys::DynamicProperty::GlobalFreeBandwidthUsed);
-        let mut g_bw_latest_ts = self
+        let mut g_bw_latest_slot = self
             .manager
             .state_db
-            .must_get(&keys::DynamicProperty::GlobalFreeBandwidthLatestTimestamp);
+            .must_get(&keys::DynamicProperty::GlobalFreeBandwidthLatestSlot);
 
-        let mut new_g_bw_usage = adjust_usage(g_bw_usage, 0, g_bw_latest_ts, now);
+        let mut new_g_bw_usage = adjust_usage(g_bw_usage, 0, g_bw_latest_slot, now);
         if nbytes > g_bw_limit - new_g_bw_usage {
             debug!("global free bandwidth is insufficient");
             return false;
         }
 
-        free_bw_latest_ts = now;
-        g_bw_latest_ts = now;
+        free_bw_latest_slot = now;
+        g_bw_latest_slot = now;
         // FIXME: Is getHeadBlockTimeStamp current block?
         let lastes_op_ts = self.manager.latest_block_timestamp();
-        new_free_bw_usage = adjust_usage(new_free_bw_usage, nbytes, free_bw_latest_ts, now);
-        new_g_bw_usage = adjust_usage(new_g_bw_usage, nbytes, g_bw_latest_ts, now);
+        new_free_bw_usage = adjust_usage(new_free_bw_usage, nbytes, free_bw_latest_slot, now);
+        new_g_bw_usage = adjust_usage(new_g_bw_usage, nbytes, g_bw_latest_slot, now);
 
         let mut acct = acct.clone();
         {
@@ -221,7 +221,7 @@ impl<'m> BandwidthProcessor<'m> {
             };
 
             resource.free_bandwidth_used = new_free_bw_usage;
-            resource.free_bandwidth_latest_timestamp = free_bw_latest_ts;
+            resource.free_bandwidth_latest_slot = free_bw_latest_slot;
         }
         acct.latest_operation_timestamp = lastes_op_ts;
         debug!("free BW usage: {}/{} (+{})", new_free_bw_usage, free_bw_limit, nbytes);
@@ -234,10 +234,7 @@ impl<'m> BandwidthProcessor<'m> {
             .unwrap();
         self.manager
             .state_db
-            .put_key(
-                keys::DynamicProperty::GlobalFreeBandwidthLatestTimestamp,
-                g_bw_latest_ts,
-            )
+            .put_key(keys::DynamicProperty::GlobalFreeBandwidthLatestSlot, g_bw_latest_slot)
             .unwrap();
 
         true
@@ -397,7 +394,7 @@ impl<'m> BandwidthProcessor<'m> {
     /// `consumeBandwidthForCreateNewAccount`
     ///
     /// When an account has frozen enough bandwidth, it can create account freely.
-    fn consume_bandwidth_for_new_account_creation(
+    fn consume_frozen_bandwidth_for_new_account_creation(
         &mut self,
         addr: &Address,
         acct: &Account,
@@ -417,6 +414,13 @@ impl<'m> BandwidthProcessor<'m> {
         let bw_limit = self.calculate_global_bandwidth_limit(acct);
 
         let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_slot, now);
+
+        debug!(
+            "BW {}/{} required={}",
+            new_bw_usage,
+            bw_limit,
+            nbytes * new_acct_bw_ratio
+        );
 
         // if freeze bw is enough to create account
         if nbytes * new_acct_bw_ratio <= bw_limit - new_bw_usage {
@@ -457,7 +461,7 @@ impl<'m> BandwidthProcessor<'m> {
         //
         // Take block #43004 of mainnet as an example. This is an edge case with 3 transactions.
         // First is a FreezeBalanceContract of 5_000_000_TRX, last one is a TransferContract all balance to create a
-        // new account(with 3 TRX frozen, enough BW to create account freely).
+        // new account(with 3 TRX frozen, enough BW to create account free of charge).
         // Freezing so much TRX causes weight to increase, so bandwidth acquired from previous freezing is decreased.
         // If using living weight BW weight value, the last transfer transaction will fail since 3 TRX frozen is
         // insufficient now.
@@ -474,7 +478,7 @@ impl<'m> BandwidthProcessor<'m> {
             .manager
             .state_db
             .must_get_skipped(1, &keys::DynamicProperty::TotalBandwidthWeight);
-        // debug!("total BW weight = {} live = {}", total_bw_weight, total_bw_weight_now);
+
         if total_bw_weight == 0 {
             return 0;
         }

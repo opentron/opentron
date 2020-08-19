@@ -58,7 +58,7 @@ pub enum DynamicProperty {
     /// Renamed: PublicNetUsage = 0
     GlobalFreeBandwidthUsed,
     /// Renamed: PublicNetTime = 0
-    GlobalFreeBandwidthLatestTimestamp,
+    GlobalFreeBandwidthLatestSlot,
     // * Unused and deprecated
     // ! Why a block scoped variable is saved to store?
     // BlockEnergyUsage
@@ -110,7 +110,7 @@ impl DynamicProperty {
             (TotalEnergyWeight, 0),
             (GlobalFreeBandwidthLimit, 14_400_000_000),
             (GlobalFreeBandwidthUsed, 0),
-            (GlobalFreeBandwidthLatestTimestamp, 0),
+            (GlobalFreeBandwidthLatestSlot, 0),
             // Default: ChainParameter::TotalEnergyLimit / 14400, when accessed
             // (TotalEnergyTargetLimit, 90_000_000_000 / 14400)
             (TotalEnergyAverageUsage, 0),
