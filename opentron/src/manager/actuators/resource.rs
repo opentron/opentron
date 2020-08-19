@@ -30,9 +30,11 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
         if self.frozen_balance < 1_000_000 {
             return Err("frozen balance must be greater than 1_TRX".into());
         }
-        // TODO: check account frozen count
         if self.frozen_balance > owner_acct.balance {
-            return Err("insufficient balance".into());
+            return Err(format!(
+                "insufficient balance, balance={}, required={}",
+                owner_acct.balance, self.frozen_balance
+            ));
         }
 
         // TODO: handle block.checkFrozenTime config
