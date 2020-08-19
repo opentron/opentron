@@ -347,6 +347,25 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::AccountCreateContract => {
+                let cntr = contract_pb::AccountCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Create Account By {}: {:?}, type={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.account_address),
+                    cntr.r#type,
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::AccountPermissionUpdateContract => {
                 let cntr =
                     contract_pb::AccountPermissionUpdateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -379,7 +398,7 @@ impl<'m> TransactionExecutor<'m> {
 
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-                unimplemented!()
+                Ok(ctx.into()) // unimplemented!()
             }
             // TVM
             ContractType::CreateSmartContract => {

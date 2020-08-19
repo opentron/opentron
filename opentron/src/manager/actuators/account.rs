@@ -3,9 +3,10 @@
 use std::convert::TryFrom;
 
 use ::keys::Address;
+use log::warn;
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::chain::ContractType;
-use proto2::common::{permission::PermissionType, Permission};
+use proto2::common::{permission::PermissionType, AccountType, Permission};
 use proto2::contract as contract_pb;
 use proto2::state::{Account, ActivePermission, OwnerPermission, PermissionKey};
 use state::keys;
@@ -180,6 +181,88 @@ impl BuiltinContractExecutorExt for contract_pb::AccountPermissionUpdateContract
         manager
             .state_db
             .must_get(&keys::ChainParameter::AccountPermissionUpdateFee)
+    }
+}
+
+// Create an account on chain.
+//
+// NOTE: This is a bad desgin, and is still vulnerable. One can create a contract of any type, which is meanningless.
+impl BuiltinContractExecutorExt for contract_pb::AccountCreateContract {
+    fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let fee = self.fee(manager);
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let new_address = Address::try_from(&self.account_address).map_err(|_| "invalid account_address")?;
+
+        let maybe_owner_acct = state_db
+            .get(&keys::Account(owner_address))
+            .map_err(|_| "db query error")?;
+        if maybe_owner_acct.is_none() {
+            return Err("account not exists".into());
+        }
+        let owner_acct = maybe_owner_acct.unwrap();
+
+        let maybe_new_acct = state_db
+            .get(&keys::Account(new_address))
+            .map_err(|_| "db query error")?;
+        if maybe_new_acct.is_some() {
+            return Err("account already exists".into());
+        }
+
+        if owner_acct.balance < fee {
+            return Err("insufficient balance to create an account".into());
+        }
+
+        // NOTE: type is not checked here!
+
+        ctx.new_account_created = true;
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
+
+        let new_address = Address::try_from(&self.account_address).unwrap();
+
+        let fee = ctx.contract_fee;
+
+        let mut new_acct = Account::new(ctx.block_header.timestamp());
+        if let Some(acct_type) = AccountType::from_i32(self.r#type as i32) {
+            if acct_type != AccountType::Normal {
+                warn!("create account with type={:?}", acct_type);
+            }
+            // NOTE: One can create account of any type, even invalid type.
+            new_acct.r#type = self.r#type;
+        } else {
+            warn!("invalid account type code: {}", self.r#type);
+        }
+
+        if fee != 0 {
+            owner_acct.adjust_balance(-fee).unwrap();
+            manager.add_to_blackhole(fee).unwrap();
+            manager
+                .state_db
+                .put_key(keys::Account(owner_address), owner_acct)
+                .map_err(|e| e.to_string())?;
+        }
+
+        manager
+            .state_db
+            .put_key(keys::Account(new_address), new_acct)
+            .map_err(|e| e.to_string())?;
+
+        Ok(TransactionResult::success())
+    }
+
+    fn fee(&self, manager: &Manager) -> i64 {
+        // NOTE: CreateNewAccountFeeInSystemContract is 0.
+        // Account creation fee(bandwidth) is handled by BandwidthProcessor.
+        manager
+            .state_db
+            .must_get(&keys::ChainParameter::CreateNewAccountFeeInSystemContract)
     }
 }
 
