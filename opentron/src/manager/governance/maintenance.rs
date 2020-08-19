@@ -191,8 +191,34 @@ impl MaintenanceManager<'_> {
     }
 
     /// `IncentiveManager.reward`, only when `AllowChangeDelegation = false`.
+    ///
+    /// Not used by testnet, but is used on mainnet.
+    ///
+    /// This is done after vote couting.
     fn legacy_reward_standby_witnesses(&mut self) {
-        unimplemented!()
+        let addrs = self.manager.get_standby_witnesses();
+        let vote_counts: Vec<_> = addrs
+            .iter()
+            .map(|&addr| self.manager.state_db.must_get(&keys::Witness(addr)).vote_count)
+            .collect();
+
+        let total_vote_count: i64 = vote_counts.iter().sum();
+        let total_pay = self
+            .manager
+            .state_db
+            .must_get(&keys::ChainParameter::StandbyWitnessAllowance);
+        let pay_per_vote = total_pay as f64 / total_vote_count as f64;
+
+        if total_pay != 0 {
+            for (addr, vote_weight) in addrs.into_iter().zip(vote_counts.into_iter()) {
+                let pay = (vote_weight as f64 * pay_per_vote) as i64;
+                if pay != 0 {
+                    let mut acct = self.manager.state_db.must_get(&keys::Account(addr));
+                    acct.allowance += pay;
+                    self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+                }
+            }
+        }
     }
 }
 

@@ -397,6 +397,17 @@ impl Manager {
         witnesses.into_iter().map(|wit| wit.0).collect()
     }
 
+    fn get_standby_witnesses(&self) -> Vec<Address> {
+        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+        if witnesses.is_empty() {
+            panic!("no witness found");
+        }
+        if witnesses.len() > constants::MAX_NUM_OF_STANDBY_WITNESSES {
+            let _ = witnesses.split_off(constants::MAX_NUM_OF_STANDBY_WITNESSES);
+        }
+        witnesses.into_iter().map(|wit| wit.0).collect()
+    }
+
     fn get_scheduled_witness(&self, slot: i64) -> Address {
         let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
         if witnesses.is_empty() {
