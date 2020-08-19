@@ -310,7 +310,7 @@ impl BuiltinContractExecutorExt for contract_pb::TransferAssetContract {
             .state_db
             .get(&keys::Account(to_address))
             .map_err(|e| format!("state-db error: {:?}", e))?
-            .unwrap_or_else(|| Account::new(ctx.block_header.timestamp()));
+            .unwrap_or_else(|| Account::new(manager.latest_block_timestamp()));
 
         let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
         let token_id: i64 = if allow_same_token_name {

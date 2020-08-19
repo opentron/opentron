@@ -229,7 +229,8 @@ impl BuiltinContractExecutorExt for contract_pb::AccountCreateContract {
 
         let fee = ctx.contract_fee;
 
-        let mut new_acct = Account::new(ctx.block_header.timestamp());
+        // NOTE: Account's creation_time is not current block timestamp, it's previous.
+        let mut new_acct = Account::new(manager.latest_block_timestamp());
         if let Some(acct_type) = AccountType::from_i32(self.r#type as i32) {
             if acct_type != AccountType::Normal {
                 warn!("create account with type={:?}", acct_type);
