@@ -43,6 +43,7 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
         permission_id: i32,
         mut recover_addrs: Vec<Address>,
         manager: &Manager,
+        ctx: &mut TransactionContext,
     ) -> Result<(), String> {
         let len_of_recover_addrs = recover_addrs.len();
         recover_addrs.sort();
@@ -55,6 +56,10 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
 
         let allow_multisig = manager.state_db.must_get(&keys::ChainParameter::AllowMultisig) != 0;
         if allow_multisig {
+            if recover_addrs.len() > 1 {
+                ctx.multisig_fee = manager.state_db.must_get(&keys::ChainParameter::MultisigFee);
+            }
+
             let maybe_acct = manager
                 .state_db
                 .get(&keys::Account(owner_address))

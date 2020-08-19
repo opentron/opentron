@@ -25,6 +25,7 @@ pub struct TransactionContext<'a> {
     pub bandwidth_fee: i64,
     // Handled by actuator.
     pub contract_fee: i64,
+    pub multisig_fee: i64,
     // NOTE: Account creation fee will overwrite bandwidth fee.
     // pub account_creation_fee: i64,
     // Set by actuator.valide().
@@ -39,6 +40,7 @@ impl<'a> TransactionContext<'a> {
             bandwidth_usage: 0,
             bandwidth_fee: 0,
             contract_fee: 0,
+            multisig_fee: 0,
             new_account_created: false,
         }
     }
@@ -121,7 +123,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -145,7 +147,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -164,7 +166,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -182,7 +184,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -200,7 +202,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -217,7 +219,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.brokerage,
                 );
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
@@ -236,7 +238,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -258,7 +260,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -276,7 +278,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -297,7 +299,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -318,7 +320,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -336,7 +338,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.account_name
                 );
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -356,7 +358,7 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
 
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
@@ -370,7 +372,7 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("=> Withdraw Reward {}", b58encode_check(&cntr.owner_address()),);
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
 
-                cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
@@ -382,7 +384,7 @@ impl<'m> TransactionExecutor<'m> {
             // TVM
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
 
                 debug!(
                     "=> Create Smart Contract by {}: name={:?} code_size={}",
@@ -399,7 +401,7 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::TriggerSmartContract => {
                 let cntr = contract_pb::TriggerSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // cntr.validate_signature(permission_id, recover_addrs, self.manager)?;
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
 
                 // smart contract status
                 let contract_status = maybe_result
