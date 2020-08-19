@@ -251,7 +251,8 @@ impl<'m> BandwidthProcessor<'m> {
             let token_id = cntr.asset_name.parse().unwrap();
             self.manager.state_db.must_get(&keys::Asset(token_id))
         } else {
-            unimplemented!("lagacy asset name")
+            super::actuators::asset::find_asset_by_name(self.manager, &cntr.asset_name)
+                .expect("must find by asset name")
         };
         let token_id = asset.id;
 
@@ -261,7 +262,7 @@ impl<'m> BandwidthProcessor<'m> {
             // Avoid calling `consume_frozen_bandwidth` twice.
             //
             // return self.consume_frozen_bandwidth(addr, acct, nbytes, now, ctx);
-            return false
+            return false;
         }
 
         // check public limit

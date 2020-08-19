@@ -12,7 +12,7 @@ use super::executor::TransactionContext;
 use super::Manager;
 
 mod account;
-mod asset;
+pub mod asset;
 mod proposal;
 mod resource;
 mod transfer;

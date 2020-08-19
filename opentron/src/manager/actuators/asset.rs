@@ -465,7 +465,7 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
 ///
 /// NOTE: This is a design mistalk. Actually, one should use an asset's abbr instead of name.
 /// Never mind, use asset id(token id) solves.
-fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
+pub fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
     let mut found: Option<Asset> = None;
     {
         let found = &mut found;
