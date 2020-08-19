@@ -13,6 +13,7 @@ use super::actuators::BuiltinContractExt;
 use super::executor::TransactionContext;
 use super::Manager;
 
+/// Bandwidth processor, `BandwidthProcessor.java`.
 pub struct BandwidthProcessor<'m> {
     manager: &'m mut Manager,
 }
@@ -48,20 +49,21 @@ impl<'m> BandwidthProcessor<'m> {
 
         ctx.bandwidth_usage = byte_size;
 
+        // NOTE: `now` is not a timestamp, it's a `slot`.
         let now = self.manager.get_head_slot();
 
         let owner_address = *Address::from_bytes(cntr.owner_address());
-
         let owner_acct = self.manager.state_db.must_get(&keys::Account(owner_address));
 
         if ctx.new_account_created {
+            // consumeForCreateNewAccount
             if self.consume_bandwidth_for_new_account_creation(&owner_address, &owner_acct, byte_size, now) ||
                 self.consume_fee_for_new_account_creation(&owner_address, &owner_acct, ctx)
             {
                 // covers all bw expense
-                debug!("created new account!");
                 return Ok(());
             } else {
+                debug!("acct => {:?}", owner_acct);
                 return Err("insufficient balance to create new account".into());
             }
         }
@@ -127,13 +129,19 @@ impl<'m> BandwidthProcessor<'m> {
         _ctx: &mut TransactionContext,
     ) -> bool {
         let bw_usage = acct.resource.as_ref().unwrap().frozen_bandwidth_used;
-        let bw_latest_ts = acct.resource.as_ref().unwrap().frozen_bandwidth_latest_timestamp;
+        let bw_latest_slot = acct.resource.as_ref().unwrap().frozen_bandwidth_latest_slot;
         let bw_limit = self.calculate_global_bandwidth_limit(acct);
 
-        let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
+        let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_slot, now);
 
         if nbytes > bw_limit - new_bw_usage {
-            debug!("frozen bandwidth is insufficient, fall back to free");
+            if bw_limit != 0 {
+                // only log when there's freeze
+                debug!(
+                    "frozen bandwidth is insufficient {}/{}, requires={}",
+                    new_bw_usage, bw_limit, nbytes
+                );
+            }
             return false;
         }
 
@@ -147,9 +155,9 @@ impl<'m> BandwidthProcessor<'m> {
         let mut acct = acct.clone();
         acct.latest_operation_timestamp = latest_op_ts;
         acct.resource_mut().frozen_bandwidth_used = new_bw_usage;
-        acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
+        acct.resource_mut().frozen_bandwidth_latest_slot = now;
 
-        debug!("account bw: {}/{}", new_bw_usage, bw_limit);
+        debug!("frozen BW usage: {}/{} (+{})", new_bw_usage, bw_limit, nbytes);
         self.manager.state_db.put_key(keys::Account(*addr), acct).unwrap();
         true
     }
@@ -169,7 +177,10 @@ impl<'m> BandwidthProcessor<'m> {
 
         let mut new_free_bw_usage = adjust_usage(free_bw_usage, 0, free_bw_latest_ts, now);
         if nbytes > free_bw_limit - new_free_bw_usage {
-            debug!("free bandwidth is insufficient, fall back to burn");
+            debug!(
+                "free bandwidth is insufficient {}/{}, requires={}",
+                new_free_bw_usage, free_bw_limit, nbytes
+            );
             return false;
         }
 
@@ -213,7 +224,7 @@ impl<'m> BandwidthProcessor<'m> {
             resource.free_bandwidth_latest_timestamp = free_bw_latest_ts;
         }
         acct.latest_operation_timestamp = lastes_op_ts;
-        debug!("account free bw: {}/{}", new_free_bw_usage, 5000);
+        debug!("free BW usage: {}/{} (+{})", new_free_bw_usage, free_bw_limit, nbytes);
 
         self.manager.state_db.put_key(keys::Account(*addr), acct).unwrap();
 
@@ -273,7 +284,7 @@ impl<'m> BandwidthProcessor<'m> {
             now,
         );
         if nbytes > asset.public_free_asset_bandwidth_limit - new_public_free_asset_bw_usage {
-            debug!("asset {} public free bandwidth is insufficient", token_id);
+            debug!("asset {} public free BW is insufficient", token_id);
             return false;
         }
 
@@ -281,7 +292,7 @@ impl<'m> BandwidthProcessor<'m> {
         let free_asset_bw_usage;
         let latest_asset_op_ts;
         if !allow_same_token_name {
-            unimplemented!("TODO: lagacy asset bandwidth handling");
+            unimplemented!("TODO: lagacy asset BW handling");
         } else {
             free_asset_bw_usage = acct
                 .resource()
@@ -300,7 +311,7 @@ impl<'m> BandwidthProcessor<'m> {
         let new_free_asset_bw_usage = adjust_usage(free_asset_bw_usage, 0, latest_asset_op_ts, now);
 
         if nbytes > asset.free_asset_bandwidth_limit - new_free_asset_bw_usage {
-            debug!("asset {} free bandwidth is insufficient", token_id);
+            debug!("asset {} free BW is insufficient", token_id);
             return false;
         }
 
@@ -312,7 +323,7 @@ impl<'m> BandwidthProcessor<'m> {
         let new_issuer_bw_usage = adjust_usage(
             issuer_acct.resource().frozen_bandwidth_used,
             0,
-            issuer_acct.resource().frozen_bandwidth_latest_timestamp,
+            issuer_acct.resource().frozen_bandwidth_latest_slot,
             now,
         );
 
@@ -329,7 +340,7 @@ impl<'m> BandwidthProcessor<'m> {
         let new_public_free_asset_bw_usage = adjust_usage(new_public_free_asset_bw_usage, nbytes, now, now);
 
         issuer_acct.resource_mut().frozen_bandwidth_used = new_issuer_bw_usage;
-        issuer_acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
+        issuer_acct.resource_mut().frozen_bandwidth_latest_slot = now;
 
         asset.public_free_asset_bandwidth_used = new_public_free_asset_bw_usage;
         asset.public_free_asset_bandwidth_last_timestamp = now;
@@ -359,6 +370,7 @@ impl<'m> BandwidthProcessor<'m> {
         true
     }
 
+    /// `consumeFeeForCreateNewAccount`
     fn consume_fee_for_new_account_creation(
         &mut self,
         addr: &Address,
@@ -369,6 +381,7 @@ impl<'m> BandwidthProcessor<'m> {
         let creation_fee = self.manager.state_db.must_get(&keys::ChainParameter::AccountCreateFee);
         // consumeFee
         if acct.balance >= creation_fee {
+            debug!("create account by BW fee");
             // Reset bandwidth usage, account creation fee covers normal bandwidth.
             let mut acct = acct.clone();
             assert!(acct.adjust_balance(-creation_fee).is_ok());
@@ -381,7 +394,9 @@ impl<'m> BandwidthProcessor<'m> {
         }
     }
 
-    // When an account has frozen enough bandwidth, it can create account freely.
+    /// `consumeBandwidthForCreateNewAccount`
+    ///
+    /// When an account has frozen enough bandwidth, it can create account freely.
     fn consume_bandwidth_for_new_account_creation(
         &mut self,
         addr: &Address,
@@ -398,27 +413,29 @@ impl<'m> BandwidthProcessor<'m> {
         let res = acct.resource.as_ref().cloned().unwrap_or_default();
 
         let bw_usage = res.frozen_bandwidth_used;
-        let bw_latest_ts = res.frozen_bandwidth_latest_timestamp;
+        let bw_latest_slot = res.frozen_bandwidth_latest_slot;
         let bw_limit = self.calculate_global_bandwidth_limit(acct);
 
-        let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_ts, now);
+        let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_slot, now);
 
-        // if freeze bw is enough
+        // if freeze bw is enough to create account
         if nbytes * new_acct_bw_ratio <= bw_limit - new_bw_usage {
-            debug!(
-                "create account with frozen bw: {}/{}",
-                nbytes * new_acct_bw_ratio,
-                bw_limit - new_bw_usage
-            );
             let latest_op_ts = self
                 .manager
                 .state_db
                 .must_get(&keys::DynamicProperty::LatestBlockTimestamp);
             new_bw_usage = adjust_usage(new_bw_usage, nbytes * new_acct_bw_ratio, now, now);
 
+            debug!(
+                "create account by frozen BW: {}/{} (+{})",
+                new_bw_usage,
+                bw_limit,
+                nbytes * new_acct_bw_ratio,
+            );
+
             let mut acct = acct.clone();
             acct.latest_operation_timestamp = latest_op_ts;
-            acct.resource_mut().frozen_bandwidth_latest_timestamp = now;
+            acct.resource_mut().frozen_bandwidth_latest_slot = now;
             acct.resource_mut().frozen_bandwidth_used = new_bw_usage;
 
             self.manager.state_db.put_key(keys::Account(*addr), acct).unwrap();
@@ -428,20 +445,36 @@ impl<'m> BandwidthProcessor<'m> {
         }
     }
 
+    /// `calculateGlobalNetLimit`
     fn calculate_global_bandwidth_limit(&self, acct: &Account) -> i64 {
         let amount_for_bw = acct.amount_for_bandwidth();
         if amount_for_bw < 1_000_000 {
             return 0;
         }
         let bw_weight = amount_for_bw / 1_000_000;
+        // NOTE: Although resource weight values update as new freeze and unfreeze transactions handled,
+        // new weight values should not be used when doing resource calculations of current block.
+        //
+        // Take block #43004 of mainnet as an example. This is an edge case with 3 transactions.
+        // First is a FreezeBalanceContract of 5_000_000_TRX, last one is a TransferContract all balance to create a
+        // new account(with 3 TRX frozen, enough BW to create account freely).
+        // Freezing so much TRX causes weight to increase, so bandwidth acquired from previous freezing is decreased.
+        // If using living weight BW weight value, the last transfer transaction will fail since 3 TRX frozen is
+        // insufficient now.
+        //
+        // The java-tron uses a revoking store implementation to handle this situation.
+        //
+        // In OpenTron, the state-db is layered. Top layer is current block, So `get_skipped` is used.
         let total_bw_limit = self
             .manager
             .state_db
             .must_get(&keys::DynamicProperty::TotalBandwidthLimit);
+
         let total_bw_weight = self
             .manager
             .state_db
-            .must_get(&keys::DynamicProperty::TotalBandwidthWeight);
+            .must_get_skipped(1, &keys::DynamicProperty::TotalBandwidthWeight);
+        // debug!("total BW weight = {} live = {}", total_bw_weight, total_bw_weight_now);
         if total_bw_weight == 0 {
             return 0;
         }
@@ -455,17 +488,17 @@ fn divide_ceil(numerator: i64, denominator: i64) -> i64 {
 }
 
 // Renamed: increase.
-fn adjust_usage(latest_usage: i64, new_usage: i64, latest_ts: i64, new_ts: i64) -> i64 {
+fn adjust_usage(latest_usage: i64, new_usage: i64, latest_slot: i64, new_slot: i64) -> i64 {
     const WINDOW_SIZE: i64 = constants::RESOURCE_WINDOW_SIZE / constants::BLOCK_PRODUCING_INTERVAL;
     const PRECISION: i64 = constants::RESOURCE_PRECISION;
 
     let mut average_latest_usage = divide_ceil(latest_usage * PRECISION, WINDOW_SIZE);
     let average_new_usage = divide_ceil(new_usage * PRECISION, WINDOW_SIZE);
 
-    if latest_ts != new_ts {
-        assert!(new_ts > latest_ts);
-        if latest_ts + WINDOW_SIZE > new_ts {
-            let delta = new_ts - latest_ts;
+    if latest_slot != new_slot {
+        assert!(new_slot > latest_slot);
+        if latest_slot + WINDOW_SIZE > new_slot {
+            let delta = new_slot - latest_slot;
             let decay: f64 = (WINDOW_SIZE - delta) as f64 / WINDOW_SIZE as f64;
             average_latest_usage = (average_latest_usage as f64 * decay).round() as _;
         } else {

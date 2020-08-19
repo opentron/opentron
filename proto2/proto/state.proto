@@ -12,7 +12,8 @@ message AccountResource {
   int64 free_bandwidth_latest_timestamp = 3;
   int64 frozen_bandwidth_used = 4;
   int64 frozen_bandwidth_limit = 5;
-  int64 frozen_bandwidth_latest_timestamp = 6;
+  // saved as slot
+  int64 frozen_bandwidth_latest_slot = 6;
   int64 energy_used = 7;
   int64 energy_limit = 8;
   int64 energy_latest_timestamp = 9;
@@ -184,6 +185,8 @@ message ResourceReceipt {
 
   // Oneof: asset issue, exchange create, witness create, account permission update.
   int64 contract_fee = 7;
+
+  int64 multisig_fee = 8;
 }
 
 // renamed: TransactionInfo
