@@ -320,7 +320,7 @@ impl Manager {
         }
         let mut block_nums: Vec<_> = wit_addrs
             .into_iter()
-            .map(|(addr, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
+            .map(|(addr, _, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
             .collect();
 
         block_nums.sort();

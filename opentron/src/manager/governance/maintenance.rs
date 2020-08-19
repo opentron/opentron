@@ -110,29 +110,18 @@ impl MaintenanceManager<'_> {
         Ok(())
     }
 
+    /// Executive vote counting.
+    ///
+    /// NOTE: The implementation is different from java-tron.
+    /// The votes are already counted and saved in Witness store.
     fn count_votes(&self) -> Result<HashMap<Address, i64>, String> {
         let mut votes: HashMap<Address, i64> = HashMap::new();
-
-        let mut num_of_vote_entries = 0;
         {
             let votes = &mut votes;
-            let num_of_vote_entries = &mut num_of_vote_entries;
-            // value is a &state_pb::Votes
-            self.manager.state_db.for_each(move |_key: &keys::Votes, value| {
-                *num_of_vote_entries += 1;
-                for vote in value.votes.iter() {
-                    *votes.entry(*Address::from_bytes(&vote.vote_address)).or_default() += vote.vote_count;
-                }
+            self.manager.state_db.for_each(move |_key: &keys::Witness, wit| {
+                votes.insert(*Address::from_bytes(&wit.address), wit.vote_count);
             });
         }
-        if num_of_vote_entries > 0 {
-            debug!("number of vote entries: {}", num_of_vote_entries);
-        }
-
-        if !votes.is_empty() && self.manager.state_db.must_get(&keys::ChainParameter::RemovePowerOfGr) != -1 {
-            unimplemented!("TODO: the voting logic requires refactor");
-        }
-
         Ok(votes)
     }
 
@@ -177,31 +166,28 @@ impl MaintenanceManager<'_> {
 
     // DposService.updateWitness
     fn update_witness_schedule(&mut self) {
-        let mut wit_votes: Vec<(Address, i64)> = Vec::new();
+        let mut wit_sched: Vec<(Address, i64, u8)> = Vec::new();
         {
-            let wit_votes = &mut wit_votes;
+            let wit_sched = &mut wit_sched;
             self.manager.state_db.for_each(move |key: &keys::Witness, value| {
-                wit_votes.push((key.0, value.vote_count));
+                wit_sched.push((key.0, value.vote_count, value.brokerage as u8));
             });
         }
 
         // NOTE: This is different from java-tron. In OpenTron, raw address is used as final fallback sorting key.
-        wit_votes.sort_by_cached_key(|&(addr, vote_count)| {
+        wit_sched.sort_by_cached_key(|&(addr, vote_count, _)| {
             (
                 vote_count,
                 java_bytestring_hash_code(addr.as_bytes()),
                 addr.as_bytes().to_vec(),
             )
         });
-        wit_votes.reverse();
-        if wit_votes.len() > constants::MAX_NUM_OF_STANDBY_WITNESSES {
-            let _ = wit_votes.split_off(constants::MAX_NUM_OF_STANDBY_WITNESSES);
+        wit_sched.reverse();
+        if wit_sched.len() > constants::MAX_NUM_OF_STANDBY_WITNESSES {
+            let _ = wit_sched.split_off(constants::MAX_NUM_OF_STANDBY_WITNESSES);
         }
-        let sched = wit_votes
-            .iter()
-            .map(|&(addr, _votes)| (addr, constants::DEFAULT_BROKERAGE_RATE))
-            .collect();
-        self.manager.state_db.put_key(keys::WitnessSchedule, sched).unwrap();
+
+        self.manager.state_db.put_key(keys::WitnessSchedule, wit_sched).unwrap();
     }
 
     /// `IncentiveManager.reward`, only when `AllowChangeDelegation = false`.

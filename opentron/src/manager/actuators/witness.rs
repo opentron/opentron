@@ -1,3 +1,6 @@
+//! Witness(SR, SRP, SRC) related builtin contracts.
+
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use ::keys::Address;
@@ -84,6 +87,11 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessCreateContract {
     }
 }
 
+// Vote for witnesses.
+//
+// NOTE: The implementation is different from java-tron.
+// The new votes will be directely counted and save to Witness store.
+// The current effective vote count is saved in WitnessSchedule.
 impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
         let state_db = &manager.state_db;
@@ -141,6 +149,33 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
 
         // delegationService.withdrawReward(ownerAddress);
         RewardController::new(manager).update_voting_reward(owner_addr)?;
+
+        let mut votes_diff: HashMap<Address, i64> = HashMap::new();
+
+        if let Some(old_votes) = manager
+            .state_db
+            .get(&keys::Votes(owner_addr))
+            .map_err(|_| "db query error")?
+        {
+            for vote in old_votes.votes {
+                votes_diff.insert(*Address::from_bytes(&vote.vote_address), -vote.vote_count);
+            }
+        }
+
+        for vote in &self.votes {
+            *votes_diff.entry(*Address::from_bytes(&vote.vote_address)).or_default() += vote.vote_count;
+        }
+
+        // Save votes.
+        for (addr, count_diff) in votes_diff {
+            let mut wit = manager.state_db.must_get(&keys::Witness(addr));
+            wit.vote_count += count_diff;
+
+            manager
+                .state_db
+                .put_key(keys::Witness(addr), wit)
+                .map_err(|_| "db insert error")?;
+        }
 
         manager
             .state_db

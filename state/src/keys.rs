@@ -29,7 +29,7 @@ pub trait Key<T>: Sized {
 
     /// Parse db key.
     fn parse_key(_raw: &[u8]) -> Self {
-        unreachable!()
+        unreachable!("key parsing is not implemented")
     }
 }
 
@@ -72,7 +72,8 @@ impl Key<i64> for DynamicProperty {
 #[derive(Debug)]
 pub struct WitnessSchedule;
 
-impl Key<Vec<(Address, u8)>> for WitnessSchedule {
+// `<<Address, number_of_votes, brokerage>>`
+impl Key<Vec<(Address, i64, u8)>> for WitnessSchedule {
     type Target = &'static str;
     const COL: usize = super::db::COL_DEFAULT;
 
@@ -81,20 +82,26 @@ impl Key<Vec<(Address, u8)>> for WitnessSchedule {
         "kWitnessSchedule"
     }
 
-    fn value(val: &Vec<(Address, u8)>) -> Cow<[u8]> {
+    fn value(val: &Vec<(Address, i64, u8)>) -> Cow<[u8]> {
         val.iter()
-            .map(|(ref addr, brokerage)| [addr.as_bytes(), &[*brokerage]].concat())
+            .map(|(ref addr, num_votes, brokerage)| {
+                [addr.as_bytes(), &num_votes.to_be_bytes()[..], &[*brokerage]].concat()
+            })
             .collect::<Vec<_>>()
             .concat()
             .into()
     }
 
-    fn parse_value(raw: &[u8]) -> Vec<(Address, u8)> {
-        if raw.len() % (21 + 1) != 0 {
+    fn parse_value(raw: &[u8]) -> Vec<(Address, i64, u8)> {
+        if raw.len() % (21 + 1 + 8) != 0 {
             panic!("malformed kWitnessSchedule");
         }
-        raw.chunks(22)
-            .map(|wit| (Address::try_from(&wit[..21]).unwrap(), wit[21]))
+        raw.chunks(30)
+            .map(|wit| {
+                let mut raw_num = [0u8; 8];
+                raw_num.copy_from_slice(&wit[21..29]);
+                (Address::try_from(&wit[..21]).unwrap(), i64::from_be_bytes(raw_num), wit[2])
+            })
             .collect()
     }
 }
