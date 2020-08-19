@@ -196,6 +196,22 @@ impl OverlayDB {
         }
     }
 
+    /// Get a value by key, skip top n layers.
+    pub fn get_skipped(&self, n: usize, col: &ColumnFamilyHandle, key: &[u8]) -> io::Result<Option<Vec<u8>>> {
+        for layer in self.layers.iter().rev().skip(n) {
+            if let Ok(val) = layer.get(col, key) {
+                return Ok(val);
+            }
+        }
+        match self.inner.get_cf(ReadOptions::default_instance(), col, key) {
+            Ok(val) => Ok(Some(val.to_vec())),
+            Err(e) if e.is_not_found() => Ok(None),
+            // Err(e) if e.is_not_found() => Err(io::Error::new(io::ErrorKind::NotFound, "")),
+            Err(e) => Err(io::Error::new(io::ErrorKind::Other, e.to_string())),
+        }
+    }
+
+
     /// Get the first value matching the given prefix.
     pub fn get_by_prefix(&self, col: &ColumnFamilyHandle, prefix: &[u8]) -> Option<Box<[u8]>> {
         let mut deleted = HashSet::<&[u8]>::new();
@@ -450,6 +466,21 @@ impl StateDB {
             .get(&self.cols[K::COL], key.key().as_ref())
             .map(|maybe_raw| maybe_raw.map(|raw| K::parse_value(&raw)))
             .map_err(|e| e.into())
+    }
+
+    pub fn get_skipped<T, K: keys::Key<T>>(&self, n: usize, key: &K) -> Result<Option<T>, BoxError> {
+        self.db
+            .get_skipped(n, &self.cols[K::COL], key.key().as_ref())
+            .map(|maybe_raw| maybe_raw.map(|raw| K::parse_value(&raw)))
+            .map_err(|e| e.into())
+    }
+
+    pub fn must_get_skipped<T, K: keys::Key<T>>(&self, n: usize, key: &K) -> T {
+        self.db
+            .get_skipped(n, &self.cols[K::COL], key.key().as_ref())
+            .map(|maybe_raw| maybe_raw.map(|raw| K::parse_value(&raw)))
+            .expect("corrupted db")
+            .expect("key must exist")
     }
 
     pub fn must_get<T, K: keys::Key<T>>(&self, key: &K) -> T {
