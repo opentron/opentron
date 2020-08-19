@@ -176,13 +176,19 @@ impl Manager {
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
         for txn in &block.transactions {
-            info!("transaction => {:?} at block #{}", txn.hash, block.number());
+            info!(
+                "transaction => {:?} at block #{} v{}",
+                txn.hash,
+                block.number(),
+                block.version()
+            );
             self.process_transaction(&txn, block)?;
         }
 
         // 4. Adaptive energy processor: TODO, no energy implemented
 
-        // 5. Block reward - payReward(block): TODO
+        // 5. Block reward
+        self.pay_reward(block);
 
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
@@ -346,6 +352,20 @@ impl Manager {
         }
 
         Ok(())
+    }
+
+    /// Pay block producing reward.
+    fn pay_reward(&mut self, block: &IndexedBlock) {
+        let allow_change_delegation = self.state_db.must_get(&keys::ChainParameter::AllowChangeDelegation) != 0;
+        if allow_change_delegation {
+            unimplemented!("TODO: pay block reward when AllowChangeDelegation");
+        } else {
+            let wit_addr = *Address::from_bytes(block.witness());
+            let mut wit_acct = self.state_db.must_get(&keys::Account(wit_addr));
+            let reward_per_block = self.state_db.must_get(&keys::ChainParameter::WitnessPayPerBlock);
+            wit_acct.allowance += reward_per_block;
+            self.state_db.put_key(keys::Account(wit_addr), wit_acct).unwrap();
+        }
     }
 
     // * DposSlot
