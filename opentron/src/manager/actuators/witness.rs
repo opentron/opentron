@@ -237,14 +237,17 @@ impl BuiltinContractExecutorExt for contract_pb::WithdrawBalanceContract {
         Ok(())
     }
 
-    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+    fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
 
         // delegationService.withdrawReward(ownerAddress);
         RewardController::new(manager).update_voting_reward(owner_addr)?;
 
+        ctx.withdrawal_amount = owner_acct.allowance;
+
         let now = manager.latest_block_timestamp();
+
         owner_acct.adjust_balance(owner_acct.allowance).unwrap();
         owner_acct.allowance = 0;
         owner_acct.latest_withdraw_timestamp = now;
