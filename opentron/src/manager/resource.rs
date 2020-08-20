@@ -415,13 +415,6 @@ impl<'m> BandwidthProcessor<'m> {
 
         let mut new_bw_usage = adjust_usage(bw_usage, 0, bw_latest_slot, now);
 
-        debug!(
-            "BW {}/{} required={}",
-            new_bw_usage,
-            bw_limit,
-            nbytes * new_acct_bw_ratio
-        );
-
         // if freeze bw is enough to create account
         if nbytes * new_acct_bw_ratio <= bw_limit - new_bw_usage {
             let latest_op_ts = self
@@ -457,18 +450,14 @@ impl<'m> BandwidthProcessor<'m> {
         }
         let bw_weight = amount_for_bw / 1_000_000;
         // NOTE: Although resource weight values update as new freeze and unfreeze transactions handled,
-        // new weight values should not be used when doing resource calculations of current block.
+        // new weight values is used when doing resource calculations of current block.
         //
         // Take block #43004 of mainnet as an example. This is an edge case with 3 transactions.
         // First is a FreezeBalanceContract of 5_000_000_TRX, last one is a TransferContract all balance to create a
         // new account(with 3 TRX frozen, enough BW to create account free of charge).
         // Freezing so much TRX causes weight to increase, so bandwidth acquired from previous freezing is decreased.
-        // If using living weight BW weight value, the last transfer transaction will fail since 3 TRX frozen is
-        // insufficient now.
         //
-        // The java-tron uses a revoking store implementation to handle this situation.
-        //
-        // In OpenTron, the state-db is layered. Top layer is current block, So `get_skipped` is used.
+        // For better handling of this situation, block producer should reorder transactions.
         let total_bw_limit = self
             .manager
             .state_db
@@ -477,7 +466,7 @@ impl<'m> BandwidthProcessor<'m> {
         let total_bw_weight = self
             .manager
             .state_db
-            .must_get_skipped(1, &keys::DynamicProperty::TotalBandwidthWeight);
+            .must_get(&keys::DynamicProperty::TotalBandwidthWeight);
 
         if total_bw_weight == 0 {
             return 0;

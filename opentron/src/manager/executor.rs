@@ -30,6 +30,7 @@ pub struct TransactionContext<'a> {
     // pub account_creation_fee: i64,
     // Set by actuator.valide().
     pub new_account_created: bool,
+    pub withdrawal_amount: i64,
 }
 
 impl<'a> TransactionContext<'a> {
@@ -42,6 +43,7 @@ impl<'a> TransactionContext<'a> {
             contract_fee: 0,
             multisig_fee: 0,
             new_account_created: false,
+            withdrawal_amount: 0,
         }
     }
 }
@@ -68,11 +70,13 @@ impl From<TransactionContext<'_>> for TransactionReceipt {
 
 impl ::std::fmt::Debug for TransactionContext<'_> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        f.debug_struct("TransactionContext<'_>")
-            .field("block", &self.block_header.hash)
+        f.debug_struct("TransactionContext")
+            .field("block", &self.block_header.number())
             .field("bandwidth_usage", &self.bandwidth_usage)
             .field("bandwidth_fee", &self.bandwidth_fee)
             .field("contract_fee", &self.contract_fee)
+            .field("multisig_fee", &self.multisig_fee)
+            .field("withdrawal_amount", &self.withdrawal_amount)
             .field("new_account_created", &self.new_account_created)
             .finish()
     }
@@ -101,10 +105,11 @@ impl<'m> TransactionExecutor<'m> {
         // NOTE: Routine to handle transactions of builtin contracts:
         //
         // - decode google.Any
-        // - multisig
+        // - multisig verifiy
         // - validate (except bandwidth)
-        // - execute logic
         // - handle bandwidth
+        // - TODO: handle mutisig fee
+        // - execute logic
         //
         // Which is diffent from java-tron:
         //
@@ -112,6 +117,8 @@ impl<'m> TransactionExecutor<'m> {
         // - multisig
         // - runtime.validate
         // - runtime.execute
+        //
+        // Bandwidth consumption must come before transaction execution, since some type of transaction cause bandwidth usage changes(freeze/unfreeze).
         match cntr_type {
             ContractType::TransferContract => {
                 let cntr = contract_pb::TransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -125,10 +132,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -149,10 +156,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -168,10 +175,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -186,10 +193,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -204,10 +211,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -221,9 +228,9 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -240,10 +247,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -262,10 +269,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -281,9 +288,9 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 // TODO: Fill TransactionReceipt with newly created asset token_id.
                 Ok(ctx.into())
@@ -301,10 +308,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -322,10 +329,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -340,10 +347,10 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -361,8 +368,9 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                check_transaction_result(&exec_result, &maybe_result);
                 BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -376,12 +384,11 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -394,11 +401,12 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
                 debug!("context => {:?}", ctx);
-                Ok(ctx.into()) // unimplemented!()
+                // unimplemented!();
+                Ok(ctx.into())
             }
             // TVM
             ContractType::CreateSmartContract => {
