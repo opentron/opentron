@@ -50,6 +50,7 @@ message Account {
   map<int64, int64> token_balance = 5;
   AccountResource resource = 6;
   int64 latest_operation_timestamp = 7;
+  // frozen resource
   int64 frozen_amount_for_bandwidth = 8;
   int64 frozen_amount_for_energy = 9;
   // delegated in bandwidth
