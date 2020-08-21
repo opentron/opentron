@@ -426,8 +426,6 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
         let mut to_acct = manager.state_db.must_get(&keys::Account(to_address));
 
-        owner_acct.adjust_balance(-self.amount).unwrap();
-
         // TODO: might be optimized via ctx, to avoid re-calculation
         let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
         let asset = if allow_same_token_name {
