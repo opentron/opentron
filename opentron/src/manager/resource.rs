@@ -70,6 +70,7 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
 
         // NOTE: multisig_fee is consumed in BandwidthProcessor
         if ctx.multisig_fee != 0 {
+            debug!("consume multisig fee");
             self.acct
                 .adjust_balance(-ctx.multisig_fee)
                 .map_err(|_| "insufficient balance to multisig")?;
@@ -228,7 +229,6 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
         now: i64,
         _ctx: &mut TransactionContext,
     ) -> bool {
-        debug!(".....................");
         let allow_same_token_name = self
             .manager
             .state_db
