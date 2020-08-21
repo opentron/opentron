@@ -442,6 +442,9 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
         };
         let exchange_amount = self.amount * asset.num as i64 / asset.trx_num as i64;
 
+        owner_acct.adjust_balance(-self.amount).unwrap();
+        to_acct.adjust_balance(self.amount).unwrap();
+
         owner_acct.adjust_token_balance(asset.id, exchange_amount).unwrap();
         to_acct.adjust_token_balance(asset.id, -exchange_amount).unwrap();
 
