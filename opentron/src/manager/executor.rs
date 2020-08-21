@@ -314,6 +314,20 @@ impl<'m> TransactionExecutor<'m> {
                 // TODO: Fill TransactionReceipt with newly created asset token_id.
                 Ok(ctx.into())
             }
+            ContractType::UpdateAssetContract => {
+                let cntr = contract_pb::UpdateAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!("=> Asset Update {}: {:?}", b58encode_check(&cntr.owner_address()), cntr);
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::TransferAssetContract => {
                 let cntr = contract_pb::TransferAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
                 debug!(

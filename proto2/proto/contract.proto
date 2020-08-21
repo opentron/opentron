@@ -115,7 +115,8 @@ message VoteAssetContract {
 message UpdateAssetContract {
   bytes owner_address = 1;
   bytes description = 2;
-  bytes url = 3;
+  // changed: bytes
+  string url = 3;
   int64 new_limit = 4;
   int64 new_public_limit = 5;
 }
