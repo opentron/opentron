@@ -101,7 +101,6 @@ impl<'m> TransactionExecutor<'m> {
 
         let permission_id = cntr.permission_id;
 
-        debug!("cntr type => {:?}", cntr_type);
         // NOTE: Routine to handle transactions of builtin contracts:
         //
         // - decode google.Any
@@ -132,7 +131,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -156,7 +155,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -175,7 +174,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -193,7 +192,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -211,7 +210,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -228,7 +227,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
                 debug!("context => {:?}", ctx);
@@ -247,7 +246,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -266,7 +265,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -288,7 +287,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -307,7 +306,7 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
                 debug!("context => {:?}", ctx);
@@ -322,7 +321,7 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
                 debug!("context => {:?}", ctx);
@@ -341,7 +340,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -362,7 +361,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -380,7 +379,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
@@ -401,7 +400,7 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
                 debug!("context => {:?}", ctx);
@@ -419,7 +418,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
                 debug!("context => {:?}", ctx);
@@ -434,7 +433,7 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
                 debug!("context => {:?}", ctx);
@@ -455,7 +454,7 @@ impl<'m> TransactionExecutor<'m> {
                 warn!("TODO: TVM & energy");
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 debug!("context => {:?}", ctx);
                 unimplemented!()
             }
@@ -476,7 +475,7 @@ impl<'m> TransactionExecutor<'m> {
                 warn!("TODO: TVM & energy");
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
-                BandwidthProcessor::new(self.manager).consume(txn, &cntr, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 debug!("context => {:?}", ctx);
                 unimplemented!()
             }
