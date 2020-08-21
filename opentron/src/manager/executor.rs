@@ -447,7 +447,7 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 unimplemented!()
             }
-            _ => unimplemented!(),
+            _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
         }
     }
 }
