@@ -68,6 +68,13 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
         let byte_size = byte_size as i64;
         ctx.bandwidth_usage = byte_size;
 
+        // NOTE: multisig_fee is consumed in BandwidthProcessor
+        if ctx.multisig_fee != 0 {
+            self.acct
+                .adjust_balance(-ctx.multisig_fee)
+                .map_err(|_| "insufficient balance to multisig")?;
+        }
+
         // NOTE: `now` is not a timestamp, it's a `slot`.
         let now = self.manager.get_head_slot();
 
