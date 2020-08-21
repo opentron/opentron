@@ -7,7 +7,7 @@ use primitive_types::H256;
 use prost::Message;
 use state::db::StateDB;
 use state::keys;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 use self::controllers::ProposalController;
 use self::executor::TransactionExecutor;
@@ -106,10 +106,11 @@ impl Manager {
         if block.number() <= 0 {
             panic!("only accepts block number > 1");
         }
+
         // 1. verify witness signature
         if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
             let recovered = block.recover_witness()?;
-            if self.state_db.get(&keys::ChainParameter::AllowMultisig)?.unwrap() == 1 {
+            if self.state_db.must_get(&keys::ChainParameter::AllowMultisig) == 1 {
                 // warn!("TODO: handle multisig witness");
             }
             if recovered.as_bytes() != block.witness() {
@@ -155,16 +156,15 @@ impl Manager {
 
         // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is not removed.
         // And no need to updateFork.
-
         self.state_db.solidify_layer();
 
         Ok(true)
     }
 
     fn process_block(&mut self, block: &IndexedBlock) -> Result<()> {
-        // 1. checkWitness
+        // 1. checkWitness - check block producing schedule
+        // Block producer is strictly scheduled except block #1(where needSyncCheck=false).
         if !self.validate_block_schedule(block)? {
-            // warn!("TODO: dev, ignore  validate_block_schedule error");
             return Err(new_error("validate witness schedule error"));
         }
 
@@ -185,7 +185,8 @@ impl Manager {
             self.process_transaction(&txn, block)?;
         }
 
-        // 4. Adaptive energy processor: TODO, no energy implemented
+        // 4. Adaptive energy processor:
+        // TODO, no energy implemented
 
         // 5. Block reward
         self.pay_reward(block);
@@ -207,7 +208,7 @@ impl Manager {
 
         self.update_ref_blocks(*block.hash());
 
-        // update latest block
+        // 8. update latest block - updateDynamicProperties
         self.state_db
             .put_key(keys::DynamicProperty::LatestBlockNumber, block.number())?;
         self.state_db
@@ -275,7 +276,7 @@ impl Manager {
     }
 
     fn validate_duplicated_transaction(&self, _txn: &IndexedTransaction) -> bool {
-        // TODO
+        // TODO: not used in barse sync. used in block producing
         true
     }
 
@@ -360,11 +361,11 @@ impl Manager {
         if allow_change_delegation {
             unimplemented!("TODO: pay block reward when AllowChangeDelegation");
         } else {
-            let wit_addr = *Address::from_bytes(block.witness());
-            let mut wit_acct = self.state_db.must_get(&keys::Account(wit_addr));
+            let wit_key = keys::Account(block.witness().try_into().unwrap());
+            let mut wit_acct = self.state_db.must_get(&wit_key);
             let reward_per_block = self.state_db.must_get(&keys::ChainParameter::WitnessPayPerBlock);
             wit_acct.allowance += reward_per_block;
-            self.state_db.put_key(keys::Account(wit_addr), wit_acct).unwrap();
+            self.state_db.put_key(wit_key, wit_acct).unwrap();
         }
     }
 
@@ -456,23 +457,17 @@ impl Manager {
 
     #[inline]
     fn latest_block_timestamp(&self) -> i64 {
-        self.state_db
-            .get(&keys::DynamicProperty::LatestBlockTimestamp)
-            .unwrap()
-            .unwrap()
+        self.state_db.must_get(&keys::DynamicProperty::LatestBlockTimestamp)
     }
 
     #[inline]
     pub fn latest_block_number(&self) -> i64 {
-        self.state_db
-            .get(&keys::DynamicProperty::LatestBlockNumber)
-            .unwrap()
-            .unwrap()
+        self.state_db.must_get(&keys::DynamicProperty::LatestBlockNumber)
     }
 
     #[inline]
     fn latest_block_hash(&self) -> H256 {
-        self.state_db.get(&keys::LatestBlockHash).unwrap().unwrap()
+        self.state_db.must_get(&keys::LatestBlockHash)
     }
 }
 
