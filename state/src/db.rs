@@ -211,7 +211,6 @@ impl OverlayDB {
         }
     }
 
-
     /// Get the first value matching the given prefix.
     pub fn get_by_prefix(&self, col: &ColumnFamilyHandle, prefix: &[u8]) -> Option<Box<[u8]>> {
         let mut deleted = HashSet::<&[u8]>::new();
@@ -309,6 +308,7 @@ pub const COL_ASSET: usize = 10;
 pub const COL_TRANSACTION_RECEIPT: usize = 11;
 pub const COL_INTERNAL_TRANSACTION: usize = 12;
 pub const COL_TRANSACTION_LOG: usize = 13;
+pub const COL_ACCOUNT_INDEX: usize = 14;
 
 /// The State DB derived from Chain DB.
 pub struct StateDB {
@@ -404,6 +404,13 @@ fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
         ColumnFamilyDescriptor::new(
             "transaction-log",
             ColumnFamilyOptions::default().prefix_extractor_fixed(32),
+        ),
+        // <<account_name: str>> => Address
+        ColumnFamilyDescriptor::new(
+            "account-index",
+            ColumnFamilyOptions::default()
+                .optimize_for_point_lookup(16)
+                .compression(CompressionType::NoCompression),
         ),
     ]
 }
@@ -571,8 +578,8 @@ impl StateDB {
                 ..Default::default()
             };
 
-            let key = keys::Account(addr);
-            self.put_key(key, acct)?;
+            self.put_key(keys::Account(addr), acct)?;
+            self.put_key(keys::AccountIndex(alloc.name.clone()), addr)?;
         }
 
         let genesis_block = genesis.to_indexed_block()?;

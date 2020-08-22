@@ -204,6 +204,26 @@ impl Key<pb::Account> for Account {
     }
 }
 
+#[derive(Debug)]
+pub struct AccountIndex(pub String);
+
+impl Key<Address> for AccountIndex {
+    type Target = Vec<u8>;
+    const COL: usize = super::db::COL_ACCOUNT_INDEX;
+
+    fn key(&self) -> Self::Target {
+        self.0.as_bytes().to_owned()
+    }
+
+    fn value(val: &Address) -> Cow<[u8]> {
+        Cow::from(val.as_bytes())
+    }
+
+    fn parse_value(raw: &[u8]) -> Address {
+        *Address::from_bytes(raw)
+    }
+}
+
 /// Resource delegation, from_address, to_address.
 #[derive(Debug)]
 pub struct ResourceDelegation(pub Address, pub Address);
