@@ -20,7 +20,7 @@ message AccountResource {
   map<int64, int64> asset_bandwidth_used = 10;
   // limit is saved in Asset
   // map<int64, int64> asset_bandwidth_limit = 11;
-  map<int64, int64> asset_bandwidth_latest_timestamp = 12;
+  map<int64, int64> asset_bandwidth_latest_slot = 12;
 }
 
 message PermissionKey {
@@ -160,7 +160,7 @@ message Asset {
   int64 free_asset_bandwidth_limit = 22;
   int64 public_free_asset_bandwidth_limit = 23;
   int64 public_free_asset_bandwidth_used = 24;
-  int64 public_free_asset_bandwidth_last_timestamp = 25;
+  int64 public_free_asset_bandwidth_last_slot = 25;
   // changed: string
   int64 id = 41;
 }
