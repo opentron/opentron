@@ -31,6 +31,7 @@ pub struct TransactionContext<'a> {
     // Set by actuator.valide().
     pub new_account_created: bool,
     pub withdrawal_amount: i64,
+    pub unfrozen_amount: i64,
 }
 
 impl<'a> TransactionContext<'a> {
@@ -44,6 +45,7 @@ impl<'a> TransactionContext<'a> {
             multisig_fee: 0,
             new_account_created: false,
             withdrawal_amount: 0,
+            unfrozen_amount: 0,
         }
     }
 }
@@ -77,6 +79,7 @@ impl ::std::fmt::Debug for TransactionContext<'_> {
             .field("contract_fee", &self.contract_fee)
             .field("multisig_fee", &self.multisig_fee)
             .field("withdrawal_amount", &self.withdrawal_amount)
+            .field("unfrozen_amount", &self.unfrozen_amount)
             .field("new_account_created", &self.new_account_created)
             .finish()
     }
@@ -316,6 +319,24 @@ impl<'m> TransactionExecutor<'m> {
             ContractType::UpdateAssetContract => {
                 let cntr = contract_pb::UpdateAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
                 debug!("=> Asset Update {}: {:?}", b58encode_check(&cntr.owner_address()), cntr);
+
+                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            ContractType::UnfreezeAssetContract => {
+                let cntr = contract_pb::UnfreezeAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Asset Unfreeze {}: {:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr
+                );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn.hash);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
