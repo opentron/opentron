@@ -183,7 +183,7 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
             free_asset_bandwidth_limit: self.free_asset_bandwidth_limit,
             public_free_asset_bandwidth_limit: self.public_free_asset_bandwidth_limit,
             public_free_asset_bandwidth_used: 0,
-            public_free_asset_bandwidth_last_timestamp: 0,
+            public_free_asset_bandwidth_last_slot: 0,
         };
         if !allow_same_token_name && asset.precision != 0 {
             warn!("BUG: disallow same token name, while precision is not 0");
