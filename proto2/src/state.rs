@@ -15,7 +15,8 @@ impl Account {
 
     pub fn adjust_balance(&mut self, diff: i64) -> Result<(), ()> {
         if let Some(new_balance) = self.balance.checked_add(diff) {
-            if new_balance >= 0 {
+            // When self.balance is negative, this is a blackhole.
+            if self.balance < 0 || new_balance >= 0 {
                 self.balance = new_balance;
                 return Ok(());
             }
