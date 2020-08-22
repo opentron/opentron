@@ -1,8 +1,11 @@
 //! Asset related builtin contracts.
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::sync::Mutex;
 
 use ::keys::Address;
+use lazy_static::lazy_static;
 use log::warn;
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::common::AccountType;
@@ -528,6 +531,13 @@ impl BuiltinContractExecutorExt for contract_pb::UpdateAssetContract {
     }
 }
 
+lazy_static! {
+    static ref ASSET_ID_CACHE: Mutex<HashMap<String, i64>> = {
+        let m = HashMap::new();
+        Mutex::new(m)
+    };
+}
+
 /// Find asset from state-db by its name. This is a legacy feature.
 /// So no need to implement any reverse index against token names.
 ///
@@ -536,14 +546,20 @@ impl BuiltinContractExecutorExt for contract_pb::UpdateAssetContract {
 /// NOTE: This is a design mistalk. Actually, one should use an asset's abbr instead of name.
 /// Never mind, use asset id(token id) solves.
 pub fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
-    let mut found: Option<Asset> = None;
-    {
-        let found = &mut found;
-        manager.state_db.for_each(move |_key: &keys::Asset, value: &Asset| {
-            if value.name == asset_name {
-                *found = Some(value.clone());
-            }
-        });
+    let mut map = ASSET_ID_CACHE.lock().unwrap();
+    if let Some(&token_id) = map.get(asset_name) {
+        manager.state_db.get(&keys::Asset(token_id)).expect("db query error")
+    } else {
+        let mut found: Option<Asset> = None;
+        {
+            let found = &mut found;
+            manager.state_db.for_each(move |_key: &keys::Asset, asset: &Asset| {
+                if asset.name == asset_name {
+                    map.insert(asset_name.to_owned(), asset.id);
+                    *found = Some(asset.clone());
+                }
+            });
+        }
+        found
     }
-    found
 }
