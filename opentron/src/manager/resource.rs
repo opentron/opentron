@@ -170,7 +170,7 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
         let mut new_free_bw_usage = adjust_usage(free_bw_usage, 0, free_bw_latest_slot, now);
         if nbytes > free_bw_limit - new_free_bw_usage {
             debug!(
-                "free bandwidth is insufficient {}/{}, requires={}",
+                "free BW is insufficient {}/{}, require {}, will burn",
                 new_free_bw_usage, free_bw_limit, nbytes
             );
             return false;
@@ -192,7 +192,7 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
 
         let mut new_g_bw_usage = adjust_usage(g_bw_usage, 0, g_bw_latest_slot, now);
         if nbytes > g_bw_limit - new_g_bw_usage {
-            debug!("global free bandwidth is insufficient");
+            debug!("global free BW is insufficient");
             return false;
         }
 

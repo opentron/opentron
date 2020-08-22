@@ -235,7 +235,7 @@ impl Manager {
 
         // 4.validateSignature (NOTE: move to executor)
         // 5.cusumeBandwidth (NOTE: move to executor)
-        // 6.cusumeMultiSigFee (NOTE: move to executor)
+        // 6.cusumeMultiSigFee (NOTE: move to BandwidthProcessor)
 
         // 7. transaction is executed by TransactionTrace.
         let txn_receipt = TransactionExecutor::new(self).execute(txn, block)?;
