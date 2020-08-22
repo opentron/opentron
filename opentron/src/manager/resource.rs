@@ -256,7 +256,7 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
         let new_public_free_asset_bw_usage = adjust_usage(
             asset.public_free_asset_bandwidth_used,
             0,
-            asset.public_free_asset_bandwidth_last_timestamp,
+            asset.public_free_asset_bandwidth_last_slot,
             now,
         );
         if nbytes > asset.public_free_asset_bandwidth_limit - new_public_free_asset_bw_usage {
@@ -265,28 +265,22 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
         }
 
         // check pre-account-limit
-        let free_asset_bw_usage;
-        let latest_asset_op_ts;
-        if !allow_same_token_name {
-            unimplemented!("TODO: lagacy asset BW handling");
-        } else {
-            free_asset_bw_usage = self
-                .acct
-                .resource()
-                .asset_bandwidth_used
-                .get(&token_id)
-                .copied()
-                .unwrap_or(0);
-            latest_asset_op_ts = self
-                .acct
-                .resource()
-                .asset_bandwidth_latest_timestamp
-                .get(&token_id)
-                .copied()
-                .unwrap_or(0);
-        }
+        let free_asset_bw_usage = self
+            .acct
+            .resource()
+            .asset_bandwidth_used
+            .get(&token_id)
+            .copied()
+            .unwrap_or(0);
+        let latest_asset_op_slot = self
+            .acct
+            .resource()
+            .asset_bandwidth_latest_slot
+            .get(&token_id)
+            .copied()
+            .unwrap_or(0);
 
-        let new_free_asset_bw_usage = adjust_usage(free_asset_bw_usage, 0, latest_asset_op_ts, now);
+        let new_free_asset_bw_usage = adjust_usage(free_asset_bw_usage, 0, latest_asset_op_slot, now);
 
         if nbytes > asset.free_asset_bandwidth_limit - new_free_asset_bw_usage {
             debug!("asset {} free BW is insufficient", token_id);
@@ -317,26 +311,28 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
         let new_free_asset_bw_usage = adjust_usage(new_free_asset_bw_usage, nbytes, now, now);
         let new_public_free_asset_bw_usage = adjust_usage(new_public_free_asset_bw_usage, nbytes, now, now);
 
+        debug!(
+            "asset #{} issuer BW {}/{} (+{}), user limit {}/{}, public limit {}/{}",
+            token_id, new_issuer_bw_usage, issuer_bw_limit, nbytes,
+            new_free_asset_bw_usage, asset.free_asset_bandwidth_limit,
+            new_public_free_asset_bw_usage, asset.public_free_asset_bandwidth_limit
+        );
+
         issuer_acct.resource_mut().frozen_bandwidth_used = new_issuer_bw_usage;
         issuer_acct.resource_mut().frozen_bandwidth_latest_slot = now;
 
         asset.public_free_asset_bandwidth_used = new_public_free_asset_bw_usage;
-        asset.public_free_asset_bandwidth_last_timestamp = now;
+        asset.public_free_asset_bandwidth_last_slot = now;
 
         self.acct.latest_operation_timestamp = latest_op_ts;
-
-        if !allow_same_token_name {
-            unimplemented!("TODO: don't know how to save when allow same token name is off");
-        } else {
-            self.acct
-                .resource_mut()
-                .asset_bandwidth_latest_timestamp
-                .insert(token_id, now);
-            self.acct
-                .resource_mut()
-                .asset_bandwidth_used
-                .insert(token_id, new_free_asset_bw_usage);
-        }
+        self.acct
+            .resource_mut()
+            .asset_bandwidth_latest_slot
+            .insert(token_id, now);
+        self.acct
+            .resource_mut()
+            .asset_bandwidth_used
+            .insert(token_id, new_free_asset_bw_usage);
 
         // now save
         self.manager
