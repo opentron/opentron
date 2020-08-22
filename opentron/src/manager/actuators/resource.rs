@@ -177,7 +177,7 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
         Ok(())
     }
 
-    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+    fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
 
         // withdrawReward
@@ -215,6 +215,7 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
                     owner_acct.frozen_amount_for_energy = 0;
                 }
             }
+            ctx.unfrozen_amount = unfrozen_amount;
 
             manager
                 .state_db
