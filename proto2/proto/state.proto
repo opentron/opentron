@@ -9,10 +9,11 @@ message AccountResource {
   int64 free_bandwidth_used = 1;
   // Normally free bandwidth limit is a const defined in code, 5000.
   // int64 free_bandwidth_limit = 2;
-  int64 free_bandwidth_latest_timestamp = 3;
+  int64 free_bandwidth_latest_slot = 3;
   int64 frozen_bandwidth_used = 4;
   int64 frozen_bandwidth_limit = 5;
-  int64 frozen_bandwidth_latest_timestamp = 6;
+  // saved as slot
+  int64 frozen_bandwidth_latest_slot = 6;
   int64 energy_used = 7;
   int64 energy_limit = 8;
   int64 energy_latest_timestamp = 9;
@@ -49,6 +50,7 @@ message Account {
   map<int64, int64> token_balance = 5;
   AccountResource resource = 6;
   int64 latest_operation_timestamp = 7;
+  // frozen resource
   int64 frozen_amount_for_bandwidth = 8;
   int64 frozen_amount_for_energy = 9;
   // delegated in bandwidth
@@ -184,6 +186,8 @@ message ResourceReceipt {
 
   // Oneof: asset issue, exchange create, witness create, account permission update.
   int64 contract_fee = 7;
+
+  int64 multisig_fee = 8;
 }
 
 // renamed: TransactionInfo

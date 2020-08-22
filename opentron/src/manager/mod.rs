@@ -7,7 +7,7 @@ use primitive_types::H256;
 use prost::Message;
 use state::db::StateDB;
 use state::keys;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 use self::controllers::ProposalController;
 use self::executor::TransactionExecutor;
@@ -106,10 +106,11 @@ impl Manager {
         if block.number() <= 0 {
             panic!("only accepts block number > 1");
         }
+
         // 1. verify witness signature
         if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
             let recovered = block.recover_witness()?;
-            if self.state_db.get(&keys::ChainParameter::AllowMultisig)?.unwrap() == 1 {
+            if self.state_db.must_get(&keys::ChainParameter::AllowMultisig) == 1 {
                 // warn!("TODO: handle multisig witness");
             }
             if recovered.as_bytes() != block.witness() {
@@ -155,16 +156,15 @@ impl Manager {
 
         // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is not removed.
         // And no need to updateFork.
-
         self.state_db.solidify_layer();
 
         Ok(true)
     }
 
     fn process_block(&mut self, block: &IndexedBlock) -> Result<()> {
-        // 1. checkWitness
+        // 1. checkWitness - check block producing schedule
+        // Block producer is strictly scheduled except block #1(where needSyncCheck=false).
         if !self.validate_block_schedule(block)? {
-            // warn!("TODO: dev, ignore  validate_block_schedule error");
             return Err(new_error("validate witness schedule error"));
         }
 
@@ -176,13 +176,20 @@ impl Manager {
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
         for txn in &block.transactions {
-            info!("transaction => {:?} at block #{}", txn.hash, block.number());
+            info!(
+                "transaction => {:?} at block #{} v{}",
+                txn.hash,
+                block.number(),
+                block.version()
+            );
             self.process_transaction(&txn, block)?;
         }
 
-        // 4. Adaptive energy processor: TODO, no energy implemented
+        // 4. Adaptive energy processor:
+        // TODO, no energy implemented
 
-        // 5. Block reward - payReward(block): TODO
+        // 5. Block reward
+        self.pay_reward(block);
 
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
@@ -201,7 +208,7 @@ impl Manager {
 
         self.update_ref_blocks(*block.hash());
 
-        // update latest block
+        // 8. update latest block - updateDynamicProperties
         self.state_db
             .put_key(keys::DynamicProperty::LatestBlockNumber, block.number())?;
         self.state_db
@@ -228,7 +235,7 @@ impl Manager {
 
         // 4.validateSignature (NOTE: move to executor)
         // 5.cusumeBandwidth (NOTE: move to executor)
-        // 6.cusumeMultiSigFee (NOTE: move to executor)
+        // 6.cusumeMultiSigFee (NOTE: move to BandwidthProcessor)
 
         // 7. transaction is executed by TransactionTrace.
         let txn_receipt = TransactionExecutor::new(self).execute(txn, block)?;
@@ -269,7 +276,7 @@ impl Manager {
     }
 
     fn validate_duplicated_transaction(&self, _txn: &IndexedTransaction) -> bool {
-        // TODO
+        // TODO: not used in barse sync. used in block producing
         true
     }
 
@@ -320,7 +327,7 @@ impl Manager {
         }
         let mut block_nums: Vec<_> = wit_addrs
             .into_iter()
-            .map(|(addr, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
+            .map(|(addr, _, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
             .collect();
 
         block_nums.sort();
@@ -346,6 +353,20 @@ impl Manager {
         }
 
         Ok(())
+    }
+
+    /// Pay block producing reward.
+    fn pay_reward(&mut self, block: &IndexedBlock) {
+        let allow_change_delegation = self.state_db.must_get(&keys::ChainParameter::AllowChangeDelegation) != 0;
+        if allow_change_delegation {
+            unimplemented!("TODO: pay block reward when AllowChangeDelegation");
+        } else {
+            let wit_key = keys::Account(block.witness().try_into().unwrap());
+            let mut wit_acct = self.state_db.must_get(&wit_key);
+            let reward_per_block = self.state_db.must_get(&keys::ChainParameter::WitnessPayPerBlock);
+            wit_acct.allowance += reward_per_block;
+            self.state_db.put_key(wit_key, wit_acct).unwrap();
+        }
     }
 
     // * DposSlot
@@ -397,6 +418,17 @@ impl Manager {
         witnesses.into_iter().map(|wit| wit.0).collect()
     }
 
+    fn get_standby_witnesses(&self) -> Vec<Address> {
+        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+        if witnesses.is_empty() {
+            panic!("no witness found");
+        }
+        if witnesses.len() > constants::MAX_NUM_OF_STANDBY_WITNESSES {
+            let _ = witnesses.split_off(constants::MAX_NUM_OF_STANDBY_WITNESSES);
+        }
+        witnesses.into_iter().map(|wit| wit.0).collect()
+    }
+
     fn get_scheduled_witness(&self, slot: i64) -> Address {
         let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
         if witnesses.is_empty() {
@@ -425,23 +457,17 @@ impl Manager {
 
     #[inline]
     fn latest_block_timestamp(&self) -> i64 {
-        self.state_db
-            .get(&keys::DynamicProperty::LatestBlockTimestamp)
-            .unwrap()
-            .unwrap()
+        self.state_db.must_get(&keys::DynamicProperty::LatestBlockTimestamp)
     }
 
     #[inline]
     pub fn latest_block_number(&self) -> i64 {
-        self.state_db
-            .get(&keys::DynamicProperty::LatestBlockNumber)
-            .unwrap()
-            .unwrap()
+        self.state_db.must_get(&keys::DynamicProperty::LatestBlockNumber)
     }
 
     #[inline]
     fn latest_block_hash(&self) -> H256 {
-        self.state_db.get(&keys::LatestBlockHash).unwrap().unwrap()
+        self.state_db.must_get(&keys::LatestBlockHash)
     }
 }
 

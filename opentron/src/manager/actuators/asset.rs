@@ -310,7 +310,7 @@ impl BuiltinContractExecutorExt for contract_pb::TransferAssetContract {
             .state_db
             .get(&keys::Account(to_address))
             .map_err(|e| format!("state-db error: {:?}", e))?
-            .unwrap_or_else(|| Account::new(ctx.block_header.timestamp()));
+            .unwrap_or_else(|| Account::new(manager.latest_block_timestamp()));
 
         let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
         let token_id: i64 = if allow_same_token_name {
@@ -426,8 +426,6 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
         let mut to_acct = manager.state_db.must_get(&keys::Account(to_address));
 
-        owner_acct.adjust_balance(-self.amount).unwrap();
-
         // TODO: might be optimized via ctx, to avoid re-calculation
         let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
         let asset = if allow_same_token_name {
@@ -441,6 +439,9 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
             find_asset_by_name(manager, &self.asset_name).unwrap()
         };
         let exchange_amount = self.amount * asset.num as i64 / asset.trx_num as i64;
+
+        owner_acct.adjust_balance(-self.amount).unwrap();
+        to_acct.adjust_balance(self.amount).unwrap();
 
         owner_acct.adjust_token_balance(asset.id, exchange_amount).unwrap();
         to_acct.adjust_token_balance(asset.id, -exchange_amount).unwrap();
@@ -458,6 +459,75 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
     }
 }
 
+// Update an asset' url, description, per-account free bw limit, global free bw limit.
+impl BuiltinContractExecutorExt for contract_pb::UpdateAssetContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        let maybe_owner_acct = state_db
+            .get(&keys::Account(owner_address))
+            .map_err(|_| "error while querying db")?;
+        if maybe_owner_acct.is_none() {
+            return Err("owner account is not on chain".into());
+        }
+        let owner_acct = maybe_owner_acct.unwrap();
+        if owner_acct.issued_asset_id == 0 {
+            return Err("account has not issued any asset".into());
+        }
+
+        // TODO: is this needless?
+        let maybe_asset = state_db
+            .get(&keys::Asset(owner_acct.issued_asset_id))
+            .map_err(|_| "db query error")?;
+        if maybe_asset.is_none() {
+            return Err(format!(
+                "asset for id {} is not found in state-db",
+                owner_acct.issued_asset_id
+            ));
+        }
+
+        // validUrl
+        if self.url.is_empty() || self.url.len() > 256 {
+            return Err("invalid asset url".into());
+        }
+
+        // validAssetDescription
+        if self.description.len() > 200 {
+            return Err("invalid asset description, too long".into());
+        }
+
+        if self.new_limit < 0 || self.new_limit >= constants::MAX_FREE_BANDWIDTH_IN_ASSET_ISSUE {
+            return Err("invalid free_asset_bandwidth_limit".into());
+        }
+
+        if self.new_public_limit < 0 || self.new_public_limit >= constants::MAX_FREE_BANDWIDTH_IN_ASSET_ISSUE {
+            return Err("invalid public_free_asset_bandwidth_limit".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
+        let mut asset = manager.state_db.must_get(&keys::Asset(owner_acct.issued_asset_id));
+
+        asset.url = self.url.clone();
+        asset.description = self.description.clone();
+        asset.free_asset_bandwidth_limit = self.new_limit;
+        asset.public_free_asset_bandwidth_limit = self.new_public_limit;
+
+        manager
+            .state_db
+            .put_key(keys::Asset(owner_acct.issued_asset_id), asset)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
 /// Find asset from state-db by its name. This is a legacy feature.
 /// So no need to implement any reverse index against token names.
 ///
@@ -465,7 +535,7 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
 ///
 /// NOTE: This is a design mistalk. Actually, one should use an asset's abbr instead of name.
 /// Never mind, use asset id(token id) solves.
-fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
+pub fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
     let mut found: Option<Asset> = None;
     {
         let found = &mut found;

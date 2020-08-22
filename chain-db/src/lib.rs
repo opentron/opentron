@@ -261,7 +261,7 @@ impl ChainDB {
             .map(|(key, val)| (key.to_vec(), val.to_vec()))
             .collect::<Vec<_>>();
         if found.is_empty() {
-            return Err(Box::new(io::Error::new(io::ErrorKind::NotFound, "bock not found")));
+            return Err(Box::new(io::Error::new(io::ErrorKind::NotFound, "block not found")));
         }
         if found.len() > 1 {
             eprintln!("multiple blocks found for same number: {}", num);

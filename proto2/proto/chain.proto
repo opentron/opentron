@@ -66,7 +66,7 @@ enum ContractType {
   TransferContract = 1;
   TransferAssetContract = 2;
   // NOTE: only used in active permission bits.
-  VoteAssetContract = 3;
+  OBSOLETE_VoteAssetContract = 3;
   VoteWitnessContract = 4;
   WitnessCreateContract = 5;
   AssetIssueContract = 6;
@@ -83,11 +83,11 @@ enum ContractType {
   ProposalDeleteContract = 18;
   SetAccountIdContract = 19;
   // NOTE: only used in active permission bits.
-  CustomContract = 20;
+  OBSOLETE_CustomContract = 20;
   CreateSmartContract = 30;
   TriggerSmartContract = 31;
   // NOTE: only used in active permission bits.
-  GetContract = 32;
+  OBSOLETE_GetContract = 32;
   UpdateSettingContract = 33;
   ExchangeCreateContract = 41;
   ExchangeInjectContract = 42;
@@ -97,7 +97,8 @@ enum ContractType {
   AccountPermissionUpdateContract = 46;
   ClearABIContract = 48;
   UpdateBrokerageContract = 49;
-  ShieldedTransferContract = 51;
+  // NOTE: only used in active permission bits.
+  OBSOLETE_ShieldedTransferContract = 51;
 }
 
 message Transaction {

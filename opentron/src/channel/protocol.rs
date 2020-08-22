@@ -75,7 +75,7 @@ impl ChannelMessage {
                 Ok(())
             }
             Block(ref block) => block.encode(dst),
-            Transactions(ref trxs) => trxs.encode(dst),
+            Transactions(ref txns) => txns.encode(dst),
             TransactionInventory(ref inv) |
             BlockInventory(ref inv) |
             FetchTransactionInventory(ref inv) |
@@ -94,7 +94,7 @@ impl ChannelMessage {
         let pb_len = match *self {
             Ping | Pong => 1,
             Block(ref block) => block.encoded_len(),
-            Transactions(ref trxs) => trxs.encoded_len(),
+            Transactions(ref txns) => txns.encoded_len(),
             TransactionInventory(ref inv) |
             BlockInventory(ref inv) |
             FetchTransactionInventory(ref inv) |
@@ -129,11 +129,11 @@ impl ::std::fmt::Debug for ChannelMessage {
             Pong => write!(f, "Pong"),
             Block(ref block) => write!(
                 f,
-                "Block(number={}, |trxs|={})",
+                "Block(number={}, |txns|={})",
                 block.block_header.as_ref().unwrap().raw_data.as_ref().unwrap().number,
                 block.transactions.len()
             ),
-            Transactions(ref trxs) => write!(f, "Transactions(|trxs|={})", trxs.transactions.len()),
+            Transactions(ref txns) => write!(f, "Transactions(|txns|={})", txns.transactions.len()),
             TransactionInventory(ref inv) => write!(f, "TransactionInventory(|ids|={})", inv.ids.len()),
             BlockInventory(ref inv) => write!(f, "BlockInventory(|ids|={})", inv.ids.len()),
             FetchTransactionInventory(ref inv) => write!(f, "FetchTransactionInventory(|ids|={})", inv.ids.len()),

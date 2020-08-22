@@ -8,11 +8,11 @@ use super::super::Manager;
 
 /// Controller to handle rewards. Renamed from DelegationService, which is ambiguous.
 pub struct RewardController<'m> {
-    manager: &'m Manager,
+    manager: &'m mut Manager,
 }
 
 impl RewardController<'_> {
-    pub fn new<'a>(manager: &'a Manager) -> RewardController<'a> {
+    pub fn new<'a>(manager: &'a mut Manager) -> RewardController<'a> {
         RewardController { manager }
     }
 
@@ -36,9 +36,7 @@ impl RewardController<'_> {
             return Ok(());
         }
 
-        log::debug!("TODO: allowance update required");
-        //unimplemented!()
-        Ok(())
+        unimplemented!("TODO: allowance update required")
     }
 }
 

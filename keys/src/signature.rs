@@ -96,10 +96,23 @@ impl TryFrom<&'static str> for Signature {
 impl<'a> TryFrom<&'a [u8]> for Signature {
     type Error = Error;
 
-    fn try_from(v: &'a [u8]) -> Result<Self, Error> {
+    fn try_from(mut v: &'a [u8]) -> Result<Self, Error> {
+        if v.len() == 67 {
+            // NOTE: a8f55980f7312adf9bd67b9436d362599cb2f5b83d255435cf5dbdc6bd1eaacd
+            // with signature:
+            // 2d206c63fad7b7130845c3bfbaf75c057054596619ab5725078e248717c9605a (r)
+            // 3c52f496e230a0cdbdf63e443ee7839ceb21ac348e6e69be1470fa37fac89550 (s)
+            // 01 (v)
+            // 9000 (rubbish surfix)
+            v = &v[..65];
+        }
         if v.len() == 65 {
             let mut inner = [0u8; 65];
             (&mut inner[..]).copy_from_slice(v);
+            // NOTE: 0x2fe5b7a5610aa9dc081574b0451af82ac586ac0a67e2da2a100a5923c862e357
+            if inner[64] >= 27 {
+                inner[64] -= 27;
+            }
             Ok(Signature(inner))
         } else {
             Err(Error::InvalidSignature)

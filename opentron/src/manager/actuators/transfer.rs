@@ -82,7 +82,7 @@ impl BuiltinContractExecutorExt for contract_pb::TransferContract {
             .state_db
             .get(&keys::Account(to_address))
             .map_err(|e| format!("state-db error: {:?}", e))?
-            .unwrap_or_else(|| Account::new(ctx.block_header.timestamp()));
+            .unwrap_or_else(|| Account::new(manager.latest_block_timestamp()));
 
         if fee != 0 {
             owner_acct.adjust_balance(-fee).unwrap();
