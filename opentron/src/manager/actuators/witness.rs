@@ -186,6 +186,10 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
                 },
             )
             .map_err(|_| "db insert error")?;
+        manager
+            .state_db
+            .put_key(keys::DynamicProperty::HasNewVotesInCurrentCycle, 1)
+            .map_err(|_| "db insert error")?;
 
         Ok(TransactionResult::success())
     }

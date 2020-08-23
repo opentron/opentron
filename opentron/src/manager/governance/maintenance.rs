@@ -54,18 +54,29 @@ impl MaintenanceManager<'_> {
         // 0: default (unremoved)
         // 1: remove now
         // -1: removed
-        let mut gr_votes_removed = false;
         if self.manager.state_db.must_get(&keys::ChainParameter::RemovePowerOfGr) == 1 {
             self.remove_power_of_gr()?;
-            gr_votes_removed = true;
+            info!("power of GR gets removed");
         }
 
+        let has_new_votes = self
+            .manager
+            .state_db
+            .get(&keys::DynamicProperty::HasNewVotesInCurrentCycle)
+            .map_err(|_| "db query error")?
+            .unwrap_or(0) !=
+            0;
+
         let votes = self.count_votes()?;
-        // re-schedule iff: just removed gr votes, or incoming new votes
-        //
-        // NOTE: In OpenTron, votes are counted as new VoteWitness transaction processed.
-        // When there's no new votes and GR votes are just removed, SR should be re-scheduled.
-        if !votes.is_empty() || gr_votes_removed {
+        // NOTE: RemovePowerOfGr won't trigger an SR re-scheduling. This is a bad design mistake in java-tron.
+        // Re-scheduling is only triggered iff new votes in current cycle.
+        if has_new_votes {
+            // reset vote status
+            self.manager
+                .state_db
+                .put_key(keys::DynamicProperty::HasNewVotesInCurrentCycle, 0)
+                .map_err(|_| "db insert error")?;
+
             let old_active_witnesses = self.manager.get_active_witnesses();
 
             // FIXME: handle votes, unvotes
@@ -109,7 +120,6 @@ impl MaintenanceManager<'_> {
             {
                 self.legacy_reward_standby_witnesses()
             }
-            // TODO: update Witness.is_active
         }
 
         Ok(())
