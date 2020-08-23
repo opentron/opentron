@@ -458,11 +458,7 @@ impl Manager {
     // consensus
     #[inline]
     fn is_latest_block_maintenance(&self) -> bool {
-        self.state_db
-            .get(&keys::DynamicProperty::IsMaintenance)
-            .unwrap()
-            .unwrap_or(0) ==
-            1
+        self.state_db.must_get(&keys::DynamicProperty::IsMaintenance) != 0
     }
 
     #[inline]

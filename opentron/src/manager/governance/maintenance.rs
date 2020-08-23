@@ -54,13 +54,18 @@ impl MaintenanceManager<'_> {
         // 0: default (unremoved)
         // 1: remove now
         // -1: removed
+        let mut gr_votes_removed = false;
         if self.manager.state_db.must_get(&keys::ChainParameter::RemovePowerOfGr) == 1 {
             self.remove_power_of_gr()?;
+            gr_votes_removed = true;
         }
 
-        // TODO: only count new votes of last epoch
         let votes = self.count_votes()?;
-        if !votes.is_empty() {
+        // re-schedule iff: just removed gr votes, or incoming new votes
+        //
+        // NOTE: In OpenTron, votes are counted as new VoteWitness transaction processed.
+        // When there's no new votes and GR votes are just removed, SR should be re-scheduled.
+        if !votes.is_empty() || gr_votes_removed {
             let old_active_witnesses = self.manager.get_active_witnesses();
 
             // FIXME: handle votes, unvotes
