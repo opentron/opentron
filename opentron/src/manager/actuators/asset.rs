@@ -45,7 +45,8 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
             }
         }
 
-        if self.abbr.is_empty() || self.abbr.len() > 32 || self.abbr.as_bytes().iter().any(|&b| b < 0x21 || b > 0x7e) {
+        // NOTE: `abbr` can be empty, like asset #1000477.
+        if self.abbr.len() > 32 || self.abbr.as_bytes().iter().any(|&b| b < 0x21 || b > 0x7e) {
             return Err("invalid asset abbr".into());
         }
 
