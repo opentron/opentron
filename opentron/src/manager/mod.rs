@@ -176,7 +176,7 @@ impl Manager {
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
         for txn in &block.transactions {
-            info!(
+            debug!(
                 "transaction => {:?} at block #{} v{}",
                 txn.hash,
                 block.number(),
@@ -184,6 +184,12 @@ impl Manager {
             );
             self.process_transaction(&txn, block)?;
         }
+        info!(
+            "block #{} v{} txns={}",
+            block.number(),
+            block.version(),
+            block.transactions.len()
+        );
 
         // 4. Adaptive energy processor:
         // TODO, no energy implemented

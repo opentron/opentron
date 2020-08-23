@@ -516,7 +516,7 @@ fn check_transaction_result(exec_result: &TransactionResult, maybe_result: &Opti
             return false;
         }
     } else {
-        warn!("no result field in chain pb");
+        debug!("no result field in chain pb");
     }
     return true;
 }
