@@ -67,10 +67,10 @@ impl MaintenanceManager<'_> {
             .unwrap_or(0) !=
             0;
 
-        let votes = self.count_votes()?;
         // NOTE: RemovePowerOfGr won't trigger an SR re-scheduling. This is a bad design mistake in java-tron.
         // Re-scheduling is only triggered iff new votes in current cycle.
         if has_new_votes {
+            let votes = self.count_votes()?;
             // reset vote status
             self.manager
                 .state_db
