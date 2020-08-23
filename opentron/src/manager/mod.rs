@@ -149,6 +149,7 @@ impl Manager {
         }
 
         // basic check finished, begin process block
+        let started_at = Utc::now().timestamp_nanos();
         self.state_db.new_layer();
 
         // . applyBlock = processBlock + updateFork
@@ -157,6 +158,15 @@ impl Manager {
         // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is not removed.
         // And no need to updateFork.
         self.state_db.solidify_layer();
+
+        let elapsed = (Utc::now().timestamp_nanos() - started_at) as f64 / 1_000_000.0;
+        info!(
+            "block #{} v{} txns={:<3} total_time={}ms",
+            block.number(),
+            block.version(),
+            block.transactions.len(),
+            elapsed
+        );
 
         Ok(true)
     }
@@ -184,12 +194,6 @@ impl Manager {
             );
             self.process_transaction(&txn, block)?;
         }
-        info!(
-            "block #{} v{} txns={}",
-            block.number(),
-            block.version(),
-            block.transactions.len()
-        );
 
         // 4. Adaptive energy processor:
         // TODO, no energy implemented
