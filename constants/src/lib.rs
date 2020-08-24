@@ -34,8 +34,8 @@ pub const NUM_OF_CONSECUTIVE_BLOCKS_PER_ROUND: usize = 1;
 /// Renamed: WitnessAllowanceFrozenTime
 pub const NUM_OF_FROZEN_DAYS_FOR_WITNESS_ALLOWANCE: i64 = 1;
 
-/// in percent
-pub const DEFAULT_BROKERAGE_RATE: u8 = 20;
+/// Percent of block reward paid to witness.
+pub const DEFAULT_BROKERAGE_RATE: i32 = 20;
 
 /// Renamed: BLOCK_FILLED_SLOTS_NUMBER
 pub const NUM_OF_BLOCK_FILLED_SLOTS: usize = 128;

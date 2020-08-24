@@ -1,5 +1,8 @@
+//! Chain parameters, can be modified by proposals.
+
 use config::ChainParameterConfig;
 
+#[doc(inline)]
 pub use proto2::state::ChainParameter;
 
 pub fn default_parameters() -> impl IntoIterator<Item = (ChainParameter, i64)> {
@@ -33,8 +36,9 @@ pub fn default_parameters() -> impl IntoIterator<Item = (ChainParameter, i64)> {
         (AllowAdaptiveEnergy, 0),
         (AdaptiveResourceLimitTargetRatio, 14400),
         (AdaptiveResourceLimitMultiplier, 1_000),
-        (WitnessPayPerBlock, 32_000_000),
+        // Only used before AllowChangeDelegation
         (StandbyWitnessAllowance, 115_200_000_000),
+        (WitnessPayPerBlock, 32_000_000),
         (StandbyWitnessPayPerBlock, 16_000_000),
         (AllowTvmTransferTrc10Upgrade, 0),
         (AllowTvmConstantinopleUpgrade, 0),

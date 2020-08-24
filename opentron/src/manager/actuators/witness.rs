@@ -61,6 +61,7 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessCreateContract {
             address: owner_address.as_bytes().to_vec(),
             url: unsafe { String::from_utf8_unchecked(self.url.clone()) },
             vote_count: 0,
+            brokerage: constants::DEFAULT_BROKERAGE_RATE,
             // FIXME: is_active should be updated in vote counting
             is_active: false,
             ..Default::default()
@@ -188,7 +189,7 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
             .map_err(|_| "db insert error")?;
         manager
             .state_db
-            .put_key(keys::DynamicProperty::HasNewVotesInCurrentCycle, 1)
+            .put_key(keys::DynamicProperty::HasNewVotesInCurrentEpoch, 1)
             .map_err(|_| "db insert error")?;
 
         Ok(TransactionResult::success())

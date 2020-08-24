@@ -318,7 +318,7 @@ pub struct StateDB {
 
 impl Drop for StateDB {
     fn drop(&mut self) {
-        info!("state db closed successfully, all cached layers will be droped");
+        info!("state-db closed successfully, all cached layers will be droped");
     }
 }
 
@@ -546,6 +546,7 @@ impl StateDB {
                 address: addr.as_bytes().to_vec(),
                 url: witness.url.clone(),
                 vote_count: witness.votes,
+                brokerage: constants::DEFAULT_BROKERAGE_RATE,
                 // assume all witness in genesis are active witnesses.
                 is_active: true,
                 ..Default::default()

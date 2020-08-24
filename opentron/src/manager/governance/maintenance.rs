@@ -62,19 +62,19 @@ impl MaintenanceManager<'_> {
         let has_new_votes = self
             .manager
             .state_db
-            .get(&keys::DynamicProperty::HasNewVotesInCurrentCycle)
+            .get(&keys::DynamicProperty::HasNewVotesInCurrentEpoch)
             .map_err(|_| "db query error")?
             .unwrap_or(0) !=
             0;
 
-        // NOTE: RemovePowerOfGr won't trigger an SR re-scheduling. This is a bad design mistake in java-tron.
+        // NOTE: RemovePowerOfGr won't trigger an SR re-scheduling. This is a bad design flaw in java-tron.
         // Re-scheduling is only triggered iff new votes in current cycle.
         if has_new_votes {
             let votes = self.count_votes()?;
             // reset vote status
             self.manager
                 .state_db
-                .put_key(keys::DynamicProperty::HasNewVotesInCurrentCycle, 0)
+                .put_key(keys::DynamicProperty::HasNewVotesInCurrentEpoch, 0)
                 .map_err(|_| "db insert error")?;
 
             let old_active_witnesses = self.manager.get_active_witnesses();
@@ -110,7 +110,7 @@ impl MaintenanceManager<'_> {
                 }
             }
 
-            // lagacy incentiveManager.reward(newWitnessAddressList)
+            // legacy incentiveManager.reward(newWitnessAddressList)
             // Only when AllowChangeDelegation = false
             if self
                 .manager
@@ -239,7 +239,7 @@ impl MaintenanceManager<'_> {
 
 /// `hashCode()` for `com.google.protobuf.ByteString`.
 ///
-/// NOTE: This is a really bad design mistake in java-tron, and is still vulnerable.
+/// NOTE: This is a really bad design flaw in java-tron, and is still vulnerable.
 /// One must not depend on hash of object for stable sorting order.
 /// And the serialized object must be used for last sorting key.
 ///

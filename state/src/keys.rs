@@ -69,10 +69,10 @@ impl Key<i64> for DynamicProperty {
     }
 }
 
+/// `<<Address, vote_count, brokerage>>`
 #[derive(Debug)]
 pub struct WitnessSchedule;
 
-// `<<Address, number_of_votes, brokerage>>`
 impl Key<Vec<(Address, i64, u8)>> for WitnessSchedule {
     type Target = &'static str;
     const COL: usize = super::db::COL_DEFAULT;
