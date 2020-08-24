@@ -34,7 +34,7 @@ pub struct ChainDB {
 
 impl Drop for ChainDB {
     fn drop(&mut self) {
-        info!("db closed successfully");
+        info!("chain-db closed successfully");
     }
 }
 

@@ -55,7 +55,7 @@ impl AppContext {
         info!("node id => {}", hex::encode(&node_id));
         info!("p2p version => {}", config.chain.p2p_version);
         info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
-        info!("chain db loaded");
+        info!("chain-db loaded");
 
         Ok(AppContext {
             chain_db,

@@ -88,7 +88,7 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
             return Err("num should be greater than 0".into());
         }
 
-        // NOTE: This is a design mistake. This field is used for state-db, not for sending a builtin contract.
+        // NOTE: This is a design flaw. This field is used for state-db, not for sending a builtin contract.
         if self.public_free_asset_bandwidth_usage != 0 {
             return Err("do not fill public_free_asset_net_usage".into());
         }
@@ -626,7 +626,7 @@ lazy_static! {
 ///
 /// Should only be used before AllowSameTokenName is ON.
 ///
-/// NOTE: This is a design mistalk. Actually, one should use an asset's abbr instead of name.
+/// NOTE: This is a design flaw. Actually, one should use an asset's abbr instead of name.
 /// Never mind, use asset id(token id) solves.
 pub fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
     let mut map = ASSET_ID_CACHE.lock().unwrap();

@@ -100,7 +100,7 @@ impl ProposalController<'_> {
                 .state_db
                 .must_get(&keys::DynamicProperty::NextMaintenanceTime);
             if proposal.expiration_time <= current_maintenance_time {
-                info!("proposal #{} expired, counting votes...", proposal_id);
+                info!("proposal #{} expired, counting votes of active witnesses...", proposal_id);
                 self.process_proposal(proposal)?;
                 continue;
             }
