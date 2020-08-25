@@ -1087,6 +1087,7 @@ dependencies = [
  "juniper",
  "juniper_hyper",
  "keys",
+ "lazy_static",
  "log",
  "num_cpus",
  "primitive-types",
