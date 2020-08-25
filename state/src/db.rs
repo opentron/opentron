@@ -309,6 +309,8 @@ pub const COL_TRANSACTION_RECEIPT: usize = 11;
 pub const COL_INTERNAL_TRANSACTION: usize = 12;
 pub const COL_TRANSACTION_LOG: usize = 13;
 pub const COL_ACCOUNT_INDEX: usize = 14;
+pub const COL_VOTER_REWARD: usize = 15;
+
 
 /// The State DB derived from Chain DB.
 pub struct StateDB {
@@ -412,6 +414,12 @@ fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
                 .optimize_for_point_lookup(16)
                 .compression(CompressionType::NoCompression),
         ),
+        ColumnFamilyDescriptor::new(
+            "voter-reward",
+            ColumnFamilyOptions::default()
+                .optimize_for_small_db()
+                .optimize_for_point_lookup(16),
+        ),
     ]
 }
 
@@ -498,6 +506,13 @@ impl StateDB {
             .expect("key must exist")
     }
 
+    /// Increase a i64 key and the return updated value.
+    pub fn incr_key<K: keys::Key<i64>>(&mut self, key: K) -> Result<i64, BoxError> {
+        let old_val = self.get(&key)?.expect("key must be found");
+        self.put_key(key, old_val + 1)?;
+        Ok(old_val + 1)
+    }
+
     pub fn for_each<T, K: keys::Key<T>, F>(&self, mut func: F)
     where
         F: FnMut(&K, &T) -> (),
@@ -530,7 +545,6 @@ impl StateDB {
         self.apply_genesis_config(genesis)?;
 
         // WitnessSchedule is inited in first maintenance cycle.
-        // self.put_key(&mut wb, keys::WitnessSchedule, value: T)
 
         self.db.solidify_layers()?;
         info!("inited state-db from genesis");

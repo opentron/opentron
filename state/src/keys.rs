@@ -69,7 +69,7 @@ impl Key<i64> for DynamicProperty {
     }
 }
 
-/// `<<Address, vote_count, brokerage>>`
+/// kWitnessSchedule => `<<Address, vote_count: i64, brokerage: u8>>`
 #[derive(Debug)]
 pub struct WitnessSchedule;
 
@@ -100,7 +100,11 @@ impl Key<Vec<(Address, i64, u8)>> for WitnessSchedule {
             .map(|wit| {
                 let mut raw_num = [0u8; 8];
                 raw_num.copy_from_slice(&wit[21..29]);
-                (Address::try_from(&wit[..21]).unwrap(), i64::from_be_bytes(raw_num), wit[2])
+                (
+                    Address::try_from(&wit[..21]).unwrap(),
+                    i64::from_be_bytes(raw_num),
+                    wit[29],
+                )
             })
             .collect()
     }
@@ -140,7 +144,7 @@ impl Key<Vec<u8>> for BlockFilledSlots {
 
     // Same as DynamicProperty
     fn key(&self) -> Self::Target {
-        "ksaveBlockFilledSlots"
+        "kSaveBlockFilledSlots"
     }
 
     fn value(val: &Vec<u8>) -> Cow<[u8]> {
@@ -175,6 +179,33 @@ impl Key<pb::Witness> for Witness {
 
     fn parse_key(raw: &[u8]) -> Self {
         Witness(*Address::from_bytes(raw))
+    }
+}
+
+/// Reward for one epoch of a standby witness.
+/// `<<epoch: i64, Address>> => WitnessVoterReward { vote_count, reward }`
+#[derive(Debug)]
+pub struct VoterReward(pub i64, pub Address);
+
+impl Key<pb::WitnessVoterReward> for VoterReward {
+    type Target = Vec<u8>;
+    const COL: usize = super::db::COL_VOTER_REWARD;
+
+    fn key(&self) -> Self::Target {
+        let mut raw = vec![0u8; 8 + 20];
+        raw[0..8].copy_from_slice(&self.0.to_be_bytes()[..]);
+        raw[8..].copy_from_slice(self.1.as_tvm_bytes());
+        raw
+    }
+
+    fn value(val: &pb::WitnessVoterReward) -> Cow<[u8]> {
+        let mut buf = BytesMut::with_capacity(val.encoded_len());
+        val.encode(&mut buf).unwrap();
+        Cow::from(buf.to_vec())
+    }
+
+    fn parse_value(raw: &[u8]) -> pb::WitnessVoterReward {
+        pb::WitnessVoterReward::decode(raw).unwrap()
     }
 }
 
@@ -278,8 +309,7 @@ impl Key<Vec<Address>> for ResourceDelegationIndex {
     }
 }
 
-// TODO: Votes should be stored with epoch round as prefix, which simplifies maintenance round.
-/// `Votes: <<Address>> => [Vote]`
+/// `<<Address>> => Votes { epoch: i64, votes: [Votes] }`
 #[derive(Debug)]
 pub struct Votes(pub Address);
 
@@ -299,10 +329,6 @@ impl Key<pb::Votes> for Votes {
 
     fn parse_value(raw: &[u8]) -> pb::Votes {
         pb::Votes::decode(raw).unwrap()
-    }
-
-    fn parse_key(raw: &[u8]) -> Self {
-        Votes(*Address::from_bytes(raw))
     }
 }
 
