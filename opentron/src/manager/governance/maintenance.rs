@@ -4,7 +4,7 @@ use ::keys::Address;
 use chain::IndexedBlock;
 use chrono::Utc;
 use log::{debug, info};
-use proto2::state::Witness;
+use proto2::state::{Witness, WitnessVoterReward};
 use state::keys;
 
 use super::super::Manager;
@@ -36,6 +36,27 @@ impl MaintenanceManager<'_> {
             }
             // updateNextMaintenanceTime
             self.increase_next_maintenance_time(next_maintenance_time, block.timestamp())?;
+
+            // update epoch and witness reward info
+            // TODO: only when AllowChangeDelegation is enabled
+            let epoch = self
+                .manager
+                .state_db
+                .incr_key(keys::DynamicProperty::CurrentEpoch)
+                .unwrap();
+            for (wit_addr, vote_count, _) in self.manager.state_db.must_get(&keys::WitnessSchedule) {
+                self.manager
+                    .state_db
+                    .put_key(
+                        keys::VoterReward(epoch, wit_addr),
+                        WitnessVoterReward {
+                            vote_count,
+                            reward_amount: 0,
+                        },
+                    )
+                    .unwrap();
+            }
+
             let elapsed = (Utc::now().timestamp_nanos() - self.manager.maintenance_started_at) as f64 / 1_000_000.0;
             info!(
                 "maintenance finished for block #{} total_time={}ms",
@@ -68,7 +89,7 @@ impl MaintenanceManager<'_> {
             0;
 
         // NOTE: RemovePowerOfGr won't trigger an SR re-scheduling. This is a bad design flaw in java-tron.
-        // Re-scheduling is only triggered iff new votes in current cycle.
+        // Re-scheduling is only triggered iff new votes in current epoch.
         if has_new_votes {
             let votes = self.count_votes()?;
             // reset vote status
@@ -160,8 +181,13 @@ impl MaintenanceManager<'_> {
         Ok(())
     }
 
-    // Remove vote counts in genesis config.
+    /// Remove vote count set in genesis config.
+    ///
+    /// NOTE: Witness re-scheduling only occurs when new votes found.
+    /// So when removing power of GR, witness schedule's vote_count should be updated as well.
     fn remove_power_of_gr(&mut self) -> Result<(), String> {
+        let mut wit_sched = self.manager.state_db.must_get(&keys::WitnessSchedule);
+        debug!("before => {:?}", wit_sched);
         for gr_wit in &self.manager.genesis_config.witnesses {
             let addr = gr_wit.address.parse::<Address>().expect("address format error");
 
@@ -171,7 +197,16 @@ impl MaintenanceManager<'_> {
                 .state_db
                 .put_key(keys::Witness(addr), witness)
                 .map_err(|_| "insert db error")?;
+
+            wit_sched
+                .iter_mut()
+                .find(|(sched_addr, _, _)| sched_addr == &addr)
+                .map(|(_, vote_count, _)| *vote_count -= gr_wit.votes);
         }
+        self.manager
+            .state_db
+            .put_key(keys::WitnessSchedule, wit_sched)
+            .map_err(|_| "insert db error")?;
         self.manager
             .state_db
             .put_key(keys::ChainParameter::RemovePowerOfGr, -1)
