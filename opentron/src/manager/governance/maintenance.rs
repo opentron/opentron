@@ -38,23 +38,30 @@ impl MaintenanceManager<'_> {
             self.increase_next_maintenance_time(next_maintenance_time, block.timestamp())?;
 
             // update epoch and witness reward info
-            // TODO: only when AllowChangeDelegation is enabled
             let epoch = self
                 .manager
                 .state_db
                 .incr_key(keys::DynamicProperty::CurrentEpoch)
                 .unwrap();
-            for (wit_addr, vote_count, _) in self.manager.state_db.must_get(&keys::WitnessSchedule) {
-                self.manager
-                    .state_db
-                    .put_key(
-                        keys::VoterReward(epoch, wit_addr),
-                        WitnessVoterReward {
-                            vote_count,
-                            reward_amount: 0,
-                        },
-                    )
-                    .unwrap();
+            // Only update VoterReward when AllowChangeDelegation is enabled.
+            if self
+                .manager
+                .state_db
+                .must_get(&keys::ChainParameter::AllowChangeDelegation) !=
+                0
+            {
+                for (wit_addr, vote_count, _) in self.manager.state_db.must_get(&keys::WitnessSchedule) {
+                    self.manager
+                        .state_db
+                        .put_key(
+                            keys::VoterReward(epoch, wit_addr),
+                            WitnessVoterReward {
+                                vote_count,
+                                reward_amount: 0,
+                            },
+                        )
+                        .unwrap();
+                }
             }
 
             let elapsed = (Utc::now().timestamp_nanos() - self.manager.maintenance_started_at) as f64 / 1_000_000.0;
