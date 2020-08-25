@@ -28,6 +28,8 @@ pub enum DynamicProperty {
     IsMaintenance,
     NextMaintenanceTime,
     HasNewVotesInCurrentEpoch,
+    /// Number of maintenance passed.
+    CurrentEpoch,
 
     // StateFlag, is in maintenance?
     // TODO fill slots
@@ -105,6 +107,7 @@ impl DynamicProperty {
             // FIXME: should be after genesis timestamp
             (NextMaintenanceTime, 0),
             (HasNewVotesInCurrentEpoch, 0),
+            (CurrentEpoch, 0),
             (BlockFilledSlotsIndex, 0),
             // * bandwidth
             (TotalBandwidthWeight, 0),
