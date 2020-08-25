@@ -1,17 +1,16 @@
 // NOTE: Embedding slog macros and select! requires increasing recursion_limit.
 #![recursion_limit = "1024"]
-
-use futures::channel::oneshot;
-// use futures::future::FutureExt;
-use futures::join;
-use log::info;
-use slog::{o, Drain};
-use slog_scope_futures::FutureExt as SlogFutureExt;
 use std::error::Error;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+use futures::channel::oneshot;
+use futures::join;
+use log::info;
+use slog::{o, Drain};
+use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio::sync::broadcast;
 
 use opentron::channel::server::channel_server;
@@ -30,7 +29,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
-    let drain = slog::LevelFilter(drain, slog::Level::Info).fuse();
+    let drain = if matches.is_present("debug") {
+        slog::LevelFilter(drain, slog::Level::Debug).fuse()
+    } else {
+        slog::LevelFilter(drain, slog::Level::Info).fuse()
+    };
 
     let logger = slog::Logger::root(drain, o!());
 
@@ -71,7 +74,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
     let mut ctx = AppContext::from_config(config_file)?;
     info!("load config => \n{:#?}", ctx.config);
-    ctx.outbound_ip = get_my_ip().await?;
+    ctx.outbound_ip = get_my_ip().await.unwrap_or("127.0.0.1".into());
     info!("outbound ip address: {}", ctx.outbound_ip);
     let ctx = Arc::new(ctx);
 
