@@ -82,6 +82,12 @@ message Witness {
   bytes signature_key = 11;
 }
 
+// Witness reward info of one epoch.
+message WitnessVoterReward {
+  int64 vote_count = 1;
+  int64 reward_amount = 3;
+}
+
 message ResourceDelegation {
   bytes to_address = 1;
   bytes from_address = 2;
@@ -93,6 +99,8 @@ message ResourceDelegation {
 
 message Votes {
   repeated proto.common.Vote votes = 1;
+  // used for calculating vote reward
+  int64 epoch = 2;
 }
 
 message Proposal {

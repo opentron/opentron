@@ -24,6 +24,16 @@ impl Account {
         Err(())
     }
 
+    pub fn adjust_allowance(&mut self, diff: i64) -> Result<(), ()> {
+        if let Some(new_allowance) = self.allowance.checked_add(diff) {
+            if new_allowance >= 0 {
+                self.allowance = new_allowance;
+                return Ok(());
+            }
+        }
+        Err(())
+    }
+
     pub fn adjust_token_balance(&mut self, token_id: i64, diff: i64) -> Result<(), ()> {
         if let Some(balance) = self.token_balance.get_mut(&token_id) {
             if let Some(new_balance) = balance.checked_add(diff) {
