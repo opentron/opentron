@@ -181,7 +181,7 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
 
         // withdrawReward
-        RewardController::new(manager).update_voting_reward(owner_addr)?;
+        RewardController::new(manager).withdraw_reward(owner_addr)?;
 
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
         let resource_type = ResourceCode::from_i32(self.resource).unwrap();
@@ -217,10 +217,6 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
             }
             ctx.unfrozen_amount = unfrozen_amount;
 
-            manager
-                .state_db
-                .put_key(keys::Account(owner_addr), owner_acct)
-                .map_err(|_| "db insert error")?;
             manager
                 .state_db
                 .put_key(keys::ResourceDelegation(owner_addr, owner_addr), del)
@@ -260,6 +256,12 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
                 .delete_key(&keys::Votes(owner_addr))
                 .map_err(|_| "db delete error")?;
         }
+
+        // save owner_acct at last
+        manager
+            .state_db
+            .put_key(keys::Account(owner_addr), owner_acct)
+            .map_err(|_| "db insert error")?;
 
         // TODO: save unfreeze_amount in result.
         Ok(TransactionResult::success())

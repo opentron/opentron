@@ -149,15 +149,13 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
 
         // delegationService.withdrawReward(ownerAddress);
-        RewardController::new(manager).update_voting_reward(owner_addr)?;
+        RewardController::new(manager).withdraw_reward(owner_addr)?;
 
         let mut votes_diff: HashMap<Address, i64> = HashMap::new();
 
-        if let Some(old_votes) = manager
-            .state_db
-            .get(&keys::Votes(owner_addr))
-            .map_err(|_| "db query error")?
-        {
+        // if there's prev vote
+        let votes_key = keys::Votes(owner_addr);
+        if let Some(old_votes) = manager.state_db.get(&votes_key).map_err(|_| "db query error")? {
             for vote in old_votes.votes {
                 votes_diff.insert(*Address::from_bytes(&vote.vote_address), -vote.vote_count);
             }
@@ -178,15 +176,18 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
                 .map_err(|_| "db insert error")?;
         }
 
+        let epoch = manager.state_db.must_get(&keys::DynamicProperty::CurrentEpoch);
         manager
             .state_db
             .put_key(
                 keys::Votes(owner_addr),
                 Votes {
+                    epoch,
                     votes: self.votes.clone(),
                 },
             )
             .map_err(|_| "db insert error")?;
+
         manager
             .state_db
             .put_key(keys::DynamicProperty::HasNewVotesInCurrentEpoch, 1)
@@ -247,7 +248,7 @@ impl BuiltinContractExecutorExt for contract_pb::WithdrawBalanceContract {
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
 
         // delegationService.withdrawReward(ownerAddress);
-        RewardController::new(manager).update_voting_reward(owner_addr)?;
+        RewardController::new(manager).withdraw_reward(owner_addr)?;
 
         ctx.withdrawal_amount = owner_acct.allowance;
 
@@ -296,14 +297,13 @@ impl BuiltinContractExecutorExt for contract_pb::UpdateBrokerageContract {
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
         let mut wit = manager.state_db.must_get(&keys::Witness(owner_addr));
 
-        // delegationStore.setBrokerage(ownerAddress, brokerage);
-        // TODO: delegation store
-        wit.brokerage = self.brokerage;
-
-        manager
-            .state_db
-            .put_key(keys::Witness(owner_addr), wit)
-            .map_err(|_| "db insert error")?;
+        if self.brokerage != wit.brokerage {
+            wit.brokerage = self.brokerage;
+            manager
+                .state_db
+                .put_key(keys::Witness(owner_addr), wit)
+                .map_err(|_| "db insert error")?;
+        }
 
         Ok(TransactionResult::success())
     }

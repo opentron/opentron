@@ -2,7 +2,7 @@ use ::keys::{b58encode_check, Address};
 use chain::{IndexedBlock, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
-use log::{debug, info, warn};
+use log::{debug, info, warn, trace};
 use primitive_types::H256;
 use prost::Message;
 use state::db::StateDB;
@@ -12,6 +12,7 @@ use std::convert::{TryFrom, TryInto};
 use self::controllers::ProposalController;
 use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;
+use self::governance::reward::RewardController;
 
 pub mod actuators;
 pub mod controllers;
@@ -160,13 +161,22 @@ impl Manager {
         self.state_db.solidify_layer();
 
         let elapsed = (Utc::now().timestamp_nanos() - started_at) as f64 / 1_000_000.0;
-        info!(
-            "block #{} v{} txns={:<3} total_time={}ms",
-            block.number(),
-            block.version(),
-            block.transactions.len(),
-            elapsed
-        );
+        if !block.transactions.is_empty() {
+            info!(
+                "block #{} v{} txns={:<3} total_time={}ms",
+                block.number(),
+                block.version(),
+                block.transactions.len(),
+                elapsed
+            );
+        } else {
+            trace!(
+                "block #{} v{} empty total_time={}ms",
+                block.number(),
+                block.version(),
+                elapsed
+            );
+        }
 
         Ok(true)
     }
@@ -328,7 +338,7 @@ impl Manager {
     }
 
     fn update_solid_block(&mut self, block: &IndexedBlock) -> Result<()> {
-        let mut wit_addrs = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+        let mut wit_addrs = self.state_db.must_get(&keys::WitnessSchedule);
         if wit_addrs.is_empty() {
             panic!("no witness found");
         }
@@ -348,7 +358,8 @@ impl Manager {
         let new_solid_block_num = block_nums[pos];
         let old_solid_block_num = self.state_db.must_get(&keys::DynamicProperty::LatestSolidBlockNumber);
         if new_solid_block_num < old_solid_block_num {
-            // NOTE: This warning is ignored.
+            // NOTE: This warning must be ignored. When new active witness is ranked after maintenance,
+            // new solid block number might become 0.
             warn!(
                 "cannot update solid block number backwards, current={}, update={}",
                 old_solid_block_num, new_solid_block_num
@@ -369,8 +380,12 @@ impl Manager {
     fn pay_reward(&mut self, block: &IndexedBlock) {
         let allow_change_delegation = self.state_db.must_get(&keys::ChainParameter::AllowChangeDelegation) != 0;
         if allow_change_delegation {
-            unimplemented!("TODO: pay block reward when AllowChangeDelegation");
+            // So-called new-style reward scheme.
+            // 1. delegationService.payBlockReward
+            // 2. delegationService.payStandbyWitness
+            RewardController::new(self).pay_reward(block).unwrap();
         } else {
+            // NOTE: In this legacy reward scheme, standby witnesses will be paid during maintenance cycle.
             let wit_key = keys::Account(block.witness().try_into().unwrap());
             let mut wit_acct = self.state_db.must_get(&wit_key);
             let reward_per_block = self.state_db.must_get(&keys::ChainParameter::WitnessPayPerBlock);
