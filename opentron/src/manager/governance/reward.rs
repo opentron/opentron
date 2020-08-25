@@ -2,7 +2,7 @@
 
 use ::keys::Address;
 use chain::IndexedBlock;
-use log::warn;
+use log::debug;
 use proto2::state::Votes;
 use state::keys;
 
@@ -111,25 +111,73 @@ impl RewardController<'_> {
             .get(&keys::Votes(addr))
             .map_err(|_| "db query error")?
         {
-            let mut acct = self.manager.state_db.must_get(&keys::Account(addr));
             let curr_epoch = self.manager.state_db.must_get(&keys::DynamicProperty::CurrentEpoch);
+            if votes.epoch == curr_epoch {
+                return Ok(());
+            }
+
+            let mut acct = self.manager.state_db.must_get(&keys::Account(addr));
+
+            let begin_epoch = votes.epoch;
+            let mut reward_amount = 0;
+            for epoch in begin_epoch..curr_epoch {
+                reward_amount += RewardUtil::new(self.manager).compute_reward(epoch, &votes)?;
+            }
+            debug!("withdraw reward={} epochs={}", reward_amount, curr_epoch - begin_epoch);
+
+            if reward_amount != 0 {
+                acct.adjust_allowance(reward_amount).unwrap();
+                self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+            }
+
+            votes.epoch = curr_epoch;
+            self.manager.state_db.put_key(keys::Votes(addr), votes).unwrap();
+        }
+
+        Ok(())
+    }
+}
+
+pub struct RewardUtil<'m> {
+    manager: &'m Manager,
+}
+
+impl RewardUtil<'_> {
+    pub fn new<'a>(manager: &'a Manager) -> RewardUtil<'a> {
+        RewardUtil { manager }
+    }
+
+    // DelegationService.queryReward.
+    pub fn query_reward(&self, addr: Address) -> Result<i64, String> {
+        let allow_change_delegation = self
+            .manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowChangeDelegation) !=
+            0;
+        if !allow_change_delegation {
+            return Ok(0);
+        }
+
+        if let Some(votes) = self
+            .manager
+            .state_db
+            .get(&keys::Votes(addr))
+            .map_err(|_| "db query error")?
+        {
+            let curr_epoch = self.manager.state_db.must_get(&keys::DynamicProperty::CurrentEpoch);
+            if votes.epoch == curr_epoch {
+                return Ok(0);
+            }
 
             let begin_epoch = votes.epoch;
             let mut reward_amount = 0;
             for epoch in begin_epoch..curr_epoch {
                 reward_amount += self.compute_reward(epoch, &votes)?;
             }
-            log::debug!("total reward amount = {}", reward_amount);
-            if reward_amount != 0 {
-                acct.adjust_allowance(reward_amount).unwrap();
-            }
-
-            votes.epoch = curr_epoch;
-            self.manager.state_db.put_key(keys::Votes(addr), votes).unwrap();
-            self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+            Ok(reward_amount)
+        } else {
+            Ok(0)
         }
-
-        Ok(())
     }
 
     fn compute_reward(&self, epoch: i64, votes: &Votes) -> Result<i64, String> {
@@ -150,31 +198,5 @@ impl RewardController<'_> {
             }
         }
         Ok(reward_amount)
-    }
-}
-
-pub struct RewardUtil<'m> {
-    manager: &'m Manager,
-}
-
-impl RewardUtil<'_> {
-    pub fn new<'a>(manager: &'a Manager) -> RewardUtil<'a> {
-        RewardUtil { manager }
-    }
-
-    pub fn query_reward(&self, _addr: Address) -> i64 {
-        let allow_change_delegation = self
-            .manager
-            .state_db
-            .must_get(&keys::ChainParameter::AllowChangeDelegation) !=
-            0;
-
-        if !allow_change_delegation {
-            return 0;
-        }
-
-        // unimplemented!()
-        warn!("TODO: fake query_reward implementation");
-        16_000_000
     }
 }

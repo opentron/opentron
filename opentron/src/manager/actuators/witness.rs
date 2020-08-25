@@ -232,7 +232,7 @@ impl BuiltinContractExecutorExt for contract_pb::WithdrawBalanceContract {
             return Err("latest withdrawal is less than 24 hours ago".into());
         }
 
-        if acct.allowance <= 0 && RewardUtil::new(manager).query_reward(owner_address) <= 0 {
+        if acct.allowance <= 0 && RewardUtil::new(manager).query_reward(owner_address)? <= 0 {
             return Err("account does not have any reward".into());
         }
 
