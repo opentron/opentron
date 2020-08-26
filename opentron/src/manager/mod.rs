@@ -9,7 +9,7 @@ use state::db::StateDB;
 use state::keys;
 use std::convert::{TryFrom, TryInto};
 
-use self::controllers::ProposalController;
+use self::governance::proposal::ProposalController;
 use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;
 use self::governance::reward::RewardController;
