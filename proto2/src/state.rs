@@ -57,6 +57,10 @@ impl Account {
         self.frozen_amount_for_bandwidth + self.delegated_frozen_amount_for_bandwidth
     }
 
+    pub fn amount_for_energy(&self) -> i64 {
+        self.frozen_amount_for_energy + self.delegated_frozen_amount_for_energy
+    }
+
     pub fn resource(&self) -> &AccountResource {
         self.resource.as_ref().unwrap()
     }
