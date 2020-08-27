@@ -375,7 +375,7 @@ impl Key<Vec<u8>> for ContractCode {
 }
 
 #[derive(Debug)]
-pub struct ContractStorage(Address, H256);
+pub struct ContractStorage(pub Address, pub H256);
 
 impl Key<H256> for ContractStorage {
     type Target = Vec<u8>;
