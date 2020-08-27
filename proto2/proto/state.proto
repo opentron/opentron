@@ -15,8 +15,8 @@ message AccountResource {
   // saved as slot
   int64 frozen_bandwidth_latest_slot = 6;
   int64 energy_used = 7;
-  int64 energy_limit = 8;
-  int64 energy_latest_timestamp = 9;
+  // int64 energy_limit = 8;
+  int64 energy_latest_slot = 9;
   map<int64, int64> asset_bandwidth_used = 10;
   // limit is saved in Asset
   // map<int64, int64> asset_bandwidth_limit = 11;
