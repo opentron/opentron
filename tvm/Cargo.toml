@@ -1,0 +1,9 @@
+[package]
+name = "tvm"
+version = "0.1.0"
+authors = ["OpenTron Developers <info@opentron.org>"]
+edition = "2018"
+
+[dependencies]
+# evm = { path = '../../evm' }
+evm = { git = "https://github.com/opentron/evm", branch = "tron" }
