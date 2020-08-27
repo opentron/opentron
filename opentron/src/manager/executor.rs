@@ -32,13 +32,18 @@ pub struct TransactionContext<'a> {
     pub new_account_created: bool,
     pub withdrawal_amount: i64,
     pub unfrozen_amount: i64,
+    pub fee_limit: i64,
+    pub energy_limit: i64,
 }
 
 impl<'a> TransactionContext<'a> {
-    pub fn new<'b>(block_header: &'b IndexedBlockHeader, transaction_hash: &'b H256) -> TransactionContext<'b> {
+    pub fn new<'b>(
+        block_header: &'b IndexedBlockHeader,
+        transaction: &'b IndexedTransaction,
+    ) -> TransactionContext<'b> {
         TransactionContext {
             block_header,
-            transaction_hash,
+            transaction_hash: &transaction.hash,
             bandwidth_usage: 0,
             bandwidth_fee: 0,
             contract_fee: 0,
@@ -46,6 +51,9 @@ impl<'a> TransactionContext<'a> {
             new_account_created: false,
             withdrawal_amount: 0,
             unfrozen_amount: 0,
+            fee_limit: transaction.raw.raw_data.as_ref().unwrap().fee_limit,
+            // will be filled while validating
+            energy_limit: 0,
         }
     }
 }
@@ -131,7 +139,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.amount
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -155,7 +163,7 @@ impl<'m> TransactionExecutor<'m> {
                         .collect::<std::collections::HashMap<_, _>>()
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -174,7 +182,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.is_approval
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -192,7 +200,7 @@ impl<'m> TransactionExecutor<'m> {
                     str::from_utf8(&cntr.url)
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -210,7 +218,7 @@ impl<'m> TransactionExecutor<'m> {
                     String::from_utf8(cntr.update_url.clone()),
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -227,7 +235,7 @@ impl<'m> TransactionExecutor<'m> {
                     b58encode_check(cntr.owner_address()),
                     cntr.brokerage,
                 );
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -246,7 +254,7 @@ impl<'m> TransactionExecutor<'m> {
                     ResourceCode::from_i32(cntr.resource).unwrap()
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -265,7 +273,7 @@ impl<'m> TransactionExecutor<'m> {
                     ResourceCode::from_i32(cntr.resource).unwrap(),
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -287,7 +295,7 @@ impl<'m> TransactionExecutor<'m> {
                         .collect::<std::collections::HashMap<_, _>>()
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -305,7 +313,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.name
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
@@ -320,7 +328,7 @@ impl<'m> TransactionExecutor<'m> {
                 let cntr = contract_pb::UpdateAssetContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
                 debug!("=> Asset Update {}: {:?}", b58encode_check(&cntr.owner_address()), cntr);
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
@@ -338,7 +346,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
@@ -358,7 +366,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.asset_name
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -379,7 +387,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.amount
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -397,7 +405,7 @@ impl<'m> TransactionExecutor<'m> {
                     b58encode_check(&cntr.owner_address()),
                     cntr.account_name
                 );
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -417,7 +425,7 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.r#type,
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
@@ -436,7 +444,7 @@ impl<'m> TransactionExecutor<'m> {
                     b58encode_check(&cntr.owner_address()),
                 );
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
@@ -449,7 +457,7 @@ impl<'m> TransactionExecutor<'m> {
                 let cntr = contract_pb::WithdrawBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
                 debug!("=> Withdraw Reward {}", b58encode_check(&cntr.owner_address()),);
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
 
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
@@ -458,13 +466,11 @@ impl<'m> TransactionExecutor<'m> {
                 check_transaction_result(&exec_result, &maybe_result);
 
                 debug!("context => {:?}", ctx);
-                // unimplemented!();
                 Ok(ctx.into())
             }
             // TVM
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
 
                 debug!(
                     "=> Create Smart Contract by {}: name={:?} code_size={}",
@@ -474,9 +480,16 @@ impl<'m> TransactionExecutor<'m> {
                 );
                 warn!("TODO: TVM & energy");
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
                 debug!("context => {:?}", ctx);
+                // Ok(ctx.into())
                 unimplemented!()
             }
             ContractType::TriggerSmartContract => {
@@ -495,10 +508,11 @@ impl<'m> TransactionExecutor<'m> {
                 );
                 warn!("TODO: TVM & energy");
 
-                let mut ctx = TransactionContext::new(&block.header, &txn.hash);
+                let mut ctx = TransactionContext::new(&block.header, &txn);
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 debug!("context => {:?}", ctx);
-                unimplemented!()
+                unimplemented!();
+                Ok(ctx.into())
             }
             _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
         }

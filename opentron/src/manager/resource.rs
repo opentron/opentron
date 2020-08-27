@@ -313,9 +313,14 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
 
         debug!(
             "asset #{} issuer BW {}/{} (+{}), user limit {}/{}, public limit {}/{}",
-            token_id, new_issuer_bw_usage, issuer_bw_limit, nbytes,
-            new_free_asset_bw_usage, asset.free_asset_bandwidth_limit,
-            new_public_free_asset_bw_usage, asset.public_free_asset_bandwidth_limit
+            token_id,
+            new_issuer_bw_usage,
+            issuer_bw_limit,
+            nbytes,
+            new_free_asset_bw_usage,
+            asset.free_asset_bandwidth_limit,
+            new_public_free_asset_bw_usage,
+            asset.public_free_asset_bandwidth_limit
         );
 
         issuer_acct.resource_mut().frozen_bandwidth_used = new_issuer_bw_usage;
@@ -463,4 +468,48 @@ fn adjust_usage(latest_usage: i64, new_usage: i64, latest_slot: i64, new_slot: i
     average_latest_usage += average_new_usage;
     // getUsage
     average_latest_usage * WINDOW_SIZE / PRECISION
+}
+
+/// Util for calculating energy.
+pub struct EnergyUtil<'a> {
+    manager: &'a Manager,
+}
+
+impl EnergyUtil<'_> {
+    pub fn new<'a>(manager: &'a Manager) -> EnergyUtil<'a> {
+        EnergyUtil { manager }
+    }
+
+    // getAccountLeftEnergyFromFreeze
+    pub fn get_left_energy(&self, acct: &Account) -> i64 {
+        let now = self.manager.get_head_slot();
+
+        let e_usage = acct.resource().energy_used;
+        let e_latest_slot = acct.resource().energy_latest_slot;
+        let e_limit = self.calculate_global_energy_limit(acct);
+
+        let new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
+
+        return (e_limit - new_e_usage).max(0);
+    }
+
+    pub fn calculate_global_energy_limit(&self, acct: &Account) -> i64 {
+        let amount_for_e = acct.amount_for_energy();
+        if amount_for_e < 1_000_000 {
+            return 0;
+        }
+        let e_weight = amount_for_e / 1_000_000;
+        let total_e_limit = self
+            .manager
+            .state_db
+            .must_get(&keys::ChainParameter::TotalEnergyCurrentLimit);
+
+        let total_e_weight = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::TotalEnergyWeight);
+
+        assert!(total_e_limit > 0, "total energy limit must be greater than 0");
+        return (e_weight as f64 * (total_e_limit as f64 / total_e_weight as f64)) as i64;
+    }
 }
