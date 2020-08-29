@@ -11,9 +11,11 @@ use proto2::chain::transaction::Result as TransactionResult;
 use proto2::contract as contract_pb;
 use proto2::state::Account;
 use state::keys;
+use tvm::{backend::ApplyBackend, ExitReason};
 
 use super::super::controllers::ForkController;
 use super::super::executor::TransactionContext;
+use super::super::resource::EnergyProcessor;
 use super::super::resource::EnergyUtil;
 use super::super::vm::StateBackend;
 use super::super::Manager;
@@ -22,7 +24,9 @@ use super::BuiltinContractExecutorExt;
 const MAX_CONTRACT_NAME_LENGTH: usize = 32;
 const MAX_FEE_LIMIT: i64 = 1_000_000_000;
 const MIN_TOKEN_ID: i64 = 1_000_000;
+const SAVE_CODE_ENERGY_PER_BYTE: usize = 200;
 
+// Create a smart contract and deploy it on chain.
 impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
         let state_db = &manager.state_db;
@@ -41,7 +45,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         if new_cntr.name.as_bytes().len() > MAX_CONTRACT_NAME_LENGTH {
             return Err("smart contract's name must not be greater than 32".into());
         }
-        if new_cntr.consume_user_resource_percent < 0 || new_cntr.consume_user_resource_percent > 100 {
+        if new_cntr.consume_user_energy_percent < 0 || new_cntr.consume_user_energy_percent > 100 {
             return Err("user energy consume percent must be in [0, 100]".into());
         }
 
@@ -94,7 +98,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 return Err("invalid call_token_value".into());
             }
 
-            // NOTE: This is a strange check, one can set it to 1 to bypass.
+            // NOTE: This is a wrong check, when creating smart contracts, origin_energy_limit is always set to 0.
             if new_cntr.origin_energy_limit <= 0 {
                 return Err("origin_energy_limit must be greater than 0".into());
             }
@@ -126,19 +130,80 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
     fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
         let new_cntr = self.new_contract.as_ref().unwrap();
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let cntr_address = generate_created_contract_address(&ctx.transaction_hash, &owner_address);
 
-        let backend = StateBackend::new(manager, ctx);
-        let config = tvm::Config::odyssey_3_7();
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
 
+        // Routine to handle smart contract creation:
+        // . create contract account
+        // . create smart contract
+        // . save code if before AllowTvmConstantinopleUpgrade
+        // . transfer TRX and TRC10
+        // . execute opcode in VM (vm.play)
+        // . save code if after AllowTvmConstantinopleUpgrade
+
+        // If contract creation is failed, all creation will be discarded.
+        manager.new_layer();
+
+        let mut cntr_acct = Account::new_contract_account(manager.latest_block_timestamp());
+        let mut cntr = self.new_contract.as_ref().unwrap().clone();
+        cntr.contract_address = cntr_address.as_bytes().to_vec();
+
+        let allow_tvm_constantinople = manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
+            0;
+
+        let call_value = new_cntr.call_value;
+        if call_value > 0 {
+            if owner_acct.adjust_balance(-call_value).is_err() {
+                return Err("insufficient balance".into()); // validate error
+            }
+            cntr_acct.adjust_balance(call_value).unwrap();
+        }
+        if self.call_token_value > 0 {
+            if owner_acct
+                .adjust_token_balance(self.call_token_id, -self.call_token_value)
+                .is_err()
+            {
+                return Err("insufficient token balance".into()); // validate error
+            }
+            cntr_acct
+                .adjust_token_balance(self.call_token_id, self.call_token_value)
+                .unwrap();
+        }
+
+        manager
+            .state_db
+            .put_key(keys::Account(cntr_address), cntr_acct)
+            .unwrap();
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), owner_acct)
+            .unwrap();
+        manager.state_db.put_key(keys::Contract(cntr_address), cntr).unwrap();
+        if !allow_tvm_constantinople {
+            let code = legacy_get_code(&new_cntr.bytecode);
+            log::debug!("legacy code size => {}", code.len());
+            manager
+                .state_db
+                .put_key(keys::ContractCode(cntr_address), code.to_vec())
+                .unwrap();
+        }
+
+        // execution
         let energy_limit = ctx.energy_limit as usize;
 
+        let mut backend = StateBackend::new(manager, ctx);
+        let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
         let mut executor = tvm::StackExecutor::new(&backend, energy_limit, &config);
 
         let vm_ctx = tvm::Context {
             // contract address
-            address: H160::random(),
-            caller: H160::from_slice(&self.owner_address[1..]),
+            address: H160::from_slice(cntr_address.as_tvm_bytes()),
+            caller: H160::from_slice(owner_address.as_tvm_bytes()),
             call_value: new_cntr.call_value.into(),
             call_token_id: self.call_token_id.into(),
             call_token_value: self.call_token_value.into(),
@@ -149,21 +214,85 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
         let exit_reason = executor.execute(&mut rt);
-
-        log::debug!("exit => {:?}", exit_reason);
-
+        log::debug!("TVM exit code => {:?}", exit_reason);
+        let used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
-        log::debug!("return => {:?}", hex::encode(&ret_val));
-        let save_code_energy = ret_val.len() * 200;
+        // let remain_energy = executor.gas();
+        let (applies, logs) = executor.deconstruct();
 
-        log::debug!("consumed gas/energy => {}", energy_limit - executor.gas());
-        log::debug!("save code energy => {}", save_code_energy);
+        let save_code_energy = ret_val.len() * SAVE_CODE_ENERGY_PER_BYTE;
+        let remain_energy = energy_limit - used_energy;
 
-        let energy_usage = energy_limit - executor.gas() + save_code_energy;
-        log::debug!("energy usage = {}", energy_usage);
+        if save_code_energy > remain_energy {
+            log::warn!("insufficient energy to save code!");
+            unimplemented!("insufficient energy");
+        }
+
+        backend.apply(applies, logs, false);
+
+        // payEnergyBill => useEnergy
+
+        match exit_reason {
+            ExitReason::Succeed(_) => {
+                log::debug!("TVM result size(deployed code) => {:?}", ret_val.len());
+                let energy_usage = (used_energy + save_code_energy) as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} save_code_energy={}",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                    save_code_energy
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    owner_address,
+                    energy_usage,
+                    0,
+                    new_cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                if !allow_tvm_constantinople {
+                    manager
+                        .state_db
+                        .put_key(keys::ContractCode(cntr_address), ret_val)
+                        .unwrap();
+                }
+            }
+            _ => {
+                manager.rollback_layers(1);
+                // TODO: spend energy or spend all energy
+                unimplemented!()
+            }
+        }
 
         Ok(TransactionResult::success())
     }
+}
+
+// NOTE: This is a really bad implementation.
+// It preserves constructor parameters and is inconsistent with save code energy.
+// Anyway, we are not the inventors of bugs, instead, we are copiers.
+fn legacy_get_code(deploy_code: &[u8]) -> &[u8] {
+    const RETURN: u8 = 0xf3;
+    const STOP: u8 = 0x00;
+    const PUSH1: u8 = 0x60;
+    const PUSH32: u8 = 0x7f;
+
+    let mut pos = 0;
+    while pos + 1 < deploy_code.len() {
+        let op = deploy_code[pos];
+
+        if op == RETURN && deploy_code[pos + 1] == STOP {
+            return &deploy_code[pos + 2..];
+        }
+        if op >= PUSH1 && op <= PUSH32 {
+            pos += (op - PUSH1) as usize + 1;
+        }
+        pos += 1;
+    }
+    return &[0u8; 32];
 }
 
 fn generate_created_contract_address(txn_hash: &H256, owner_address: &Address) -> Address {

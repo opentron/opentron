@@ -45,6 +45,8 @@ pub struct Manager {
     config: Config,
     genesis_config: GenesisConfig,
     maintenance_started_at: i64,
+
+    layers: usize,
 }
 
 impl Manager {
@@ -73,6 +75,7 @@ impl Manager {
             config: config.clone(),
             genesis_config: genesis_config.clone(),
             maintenance_started_at: 0,
+            layers: 0,
         }
     }
 
@@ -101,6 +104,25 @@ impl Manager {
         blackhole_acct.balance += fee;
         self.state_db.put_key(key, blackhole_acct).unwrap();
         Ok(())
+    }
+
+    fn new_layer(&mut self) {
+        self.layers += 1;
+        self.state_db.new_layer();
+    }
+
+    fn commit_current_layers(&mut self) {
+        for _ in 0 .. self.layers {
+            self.state_db.solidify_layer();
+        }
+        self.layers = 0;
+    }
+
+    fn rollback_layers(&mut self, n: usize) {
+        for _ in 0 .. n {
+            self.state_db.discard_last_layer().unwrap();
+        }
+        self.layers -= n;
     }
 
     // Entry of db manager.
@@ -152,14 +174,14 @@ impl Manager {
 
         // basic check finished, begin process block
         let started_at = Utc::now().timestamp_nanos();
-        self.state_db.new_layer();
+        self.new_layer();
 
         // . applyBlock = processBlock + updateFork
         self.process_block(block)?;
 
         // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is not removed.
         // And no need to updateFork.
-        self.state_db.solidify_layer();
+        self.commit_current_layers();
 
         let elapsed = (Utc::now().timestamp_nanos() - started_at) as f64 / 1_000_000.0;
         if !block.transactions.is_empty() {
@@ -350,13 +372,12 @@ impl Manager {
             .into_iter()
             .map(|(addr, _, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
             .collect();
-
         block_nums.sort();
 
         // NOTE: When there are 27 active witnesses, pos will be 8, that's 19 SR confirmations.
         let pos = (block_nums.len() as f64 * (1.0 - constants::SOLID_THRESHOLD_PERCENT as f64 / 100.0)) as usize;
-
         let new_solid_block_num = block_nums[pos];
+
         let old_solid_block_num = self.state_db.must_get(&keys::DynamicProperty::LatestSolidBlockNumber);
         if new_solid_block_num < old_solid_block_num {
             // NOTE: This warning must be ignored. When new active witness is ranked after maintenance,

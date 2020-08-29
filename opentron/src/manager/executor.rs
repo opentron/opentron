@@ -9,7 +9,7 @@ use primitive_types::H256;
 use proto2::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto2::common::ResourceCode;
 use proto2::contract as contract_pb;
-use proto2::state::{ResourceReceipt, TransactionReceipt};
+use proto2::state::{ResourceReceipt, TransactionLog, TransactionReceipt};
 use state::keys;
 
 use super::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
@@ -33,7 +33,12 @@ pub struct TransactionContext<'a> {
     pub withdrawal_amount: i64,
     pub unfrozen_amount: i64,
     pub fee_limit: i64,
+    pub energy: i64,
     pub energy_limit: i64,
+    pub energy_usage: i64,
+    pub origin_energy_usage: i64,
+    pub energy_fee: i64,
+    pub logs: Vec<TransactionLog>,
 }
 
 impl<'a> TransactionContext<'a> {
@@ -53,14 +58,19 @@ impl<'a> TransactionContext<'a> {
             unfrozen_amount: 0,
             fee_limit: transaction.raw.raw_data.as_ref().unwrap().fee_limit,
             // will be filled while validating
+            energy: 0,
             energy_limit: 0,
+            energy_usage: 0,
+            origin_energy_usage: 0,
+            energy_fee: 0,
+            logs: vec![],
         }
     }
 }
 
 impl From<TransactionContext<'_>> for TransactionReceipt {
     fn from(ctx: TransactionContext) -> TransactionReceipt {
-        TransactionReceipt {
+        let mut receipt = TransactionReceipt {
             success: true,
 
             hash: ctx.transaction_hash.as_ref().to_vec(),
@@ -74,22 +84,44 @@ impl From<TransactionContext<'_>> for TransactionReceipt {
                 ..Default::default()
             }),
             ..Default::default()
+        };
+
+        // TODO: distinguish by builtin contract type
+        if ctx.energy_limit > 0 {
+            receipt.resource_receipt.as_mut().map(|r| {
+                r.energy = ctx.energy;
+                r.energy_usage = ctx.energy_usage;
+                r.energy_fee = ctx.energy_fee;
+                r.origin_energy_usage = ctx.origin_energy_usage;
+            });
+            receipt.vm_logs = ctx.logs;
         }
+        receipt
     }
 }
 
 impl ::std::fmt::Debug for TransactionContext<'_> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        f.debug_struct("TransactionContext")
-            .field("block", &self.block_header.number())
+        let mut dbg = f.debug_struct("TransactionContext");
+        dbg.field("block", &self.block_header.number())
             .field("bandwidth_usage", &self.bandwidth_usage)
             .field("bandwidth_fee", &self.bandwidth_fee)
             .field("contract_fee", &self.contract_fee)
             .field("multisig_fee", &self.multisig_fee)
             .field("withdrawal_amount", &self.withdrawal_amount)
             .field("unfrozen_amount", &self.unfrozen_amount)
-            .field("new_account_created", &self.new_account_created)
-            .finish()
+            .field("new_account_created", &self.new_account_created);
+
+        // smart contract
+        if self.energy_limit > 0 {
+            dbg.field("energy_limit", &self.energy_limit)
+                .field("energy", &self.energy)
+                .field("energy_usage", &self.energy_usage)
+                .field("origin_energy_usage", &self.origin_energy_usage)
+                .field("energy_fee", &self.energy_fee)
+                .field("|logs|", &self.logs.len());
+        }
+        dbg.finish()
     }
 }
 
@@ -489,8 +521,7 @@ impl<'m> TransactionExecutor<'m> {
                 check_transaction_result(&exec_result, &maybe_result);
 
                 debug!("context => {:?}", ctx);
-                // Ok(ctx.into())
-                unimplemented!()
+                Ok(ctx.into())
             }
             ContractType::TriggerSmartContract => {
                 let cntr = contract_pb::TriggerSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -511,8 +542,7 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn);
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 debug!("context => {:?}", ctx);
-                unimplemented!();
-                Ok(ctx.into())
+                Err("unimpl".into())
             }
             _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
         }
