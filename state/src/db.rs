@@ -311,7 +311,6 @@ pub const COL_TRANSACTION_LOG: usize = 13;
 pub const COL_ACCOUNT_INDEX: usize = 14;
 pub const COL_VOTER_REWARD: usize = 15;
 
-
 /// The State DB derived from Chain DB.
 pub struct StateDB {
     db: OverlayDB,
@@ -454,6 +453,14 @@ impl StateDB {
             .layers
             .pop_front()
             .map(|wb| self.db.inner.write(WriteOptions::default_instance(), &wb));
+    }
+
+    pub fn discard_last_layer(&mut self) -> io::Result<()> {
+        self.db
+            .layers
+            .pop_back()
+            .ok_or(io::Error::new(io::ErrorKind::NotFound, "no layers"))?;
+        Ok(())
     }
 
     pub fn put_key<T, K: keys::Key<T>>(&mut self, key: K, value: T) -> Result<(), BoxError> {
