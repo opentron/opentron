@@ -332,8 +332,9 @@ impl Key<pb::Votes> for Votes {
     }
 }
 
+/// `Address => pb::SmartContract`
 #[derive(Debug)]
-pub struct Contract(Address);
+pub struct Contract(pub Address);
 
 impl Key<pb::SmartContract> for Contract {
     type Target = Vec<u8>;
@@ -354,8 +355,9 @@ impl Key<pb::SmartContract> for Contract {
     }
 }
 
+/// `Address => Vec<u8>`
 #[derive(Debug)]
-pub struct ContractCode(Address);
+pub struct ContractCode(pub Address);
 
 impl Key<Vec<u8>> for ContractCode {
     type Target = Vec<u8>;
@@ -374,6 +376,7 @@ impl Key<Vec<u8>> for ContractCode {
     }
 }
 
+/// `<<Address, index: H256>> => H256`
 #[derive(Debug)]
 pub struct ContractStorage(pub Address, pub H256);
 
@@ -490,14 +493,19 @@ impl Key<pb::InternalTransaction> for InternalTransaction {
 }
 
 #[derive(Debug)]
-pub struct TransactionLog(Address, H256);
+pub struct TransactionLog(pub Address, Vec<H256>);
 
 impl Key<pb::TransactionLog> for TransactionLog {
     type Target = Vec<u8>;
     const COL: usize = super::db::COL_TRANSACTION_LOG;
 
     fn key(&self) -> Self::Target {
-        self.0.as_bytes().to_vec()
+        let mut raw = Vec::with_capacity(21 + 32 * self.1.len());
+        raw.extend_from_slice(self.0.as_bytes());
+        for topic in &self.1 {
+            raw.extend_from_slice(topic.as_bytes())
+        }
+        raw
     }
 
     fn value(val: &pb::TransactionLog) -> Cow<[u8]> {
