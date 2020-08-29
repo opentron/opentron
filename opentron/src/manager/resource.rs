@@ -2,6 +2,7 @@
 
 use ::keys::Address;
 use chain::IndexedTransaction;
+use constants::block_version::BlockVersion;
 use log::debug;
 use prost::Message;
 use proto2::chain::ContractType;
@@ -10,6 +11,7 @@ use proto2::state::Account;
 use state::keys;
 
 use super::actuators::BuiltinContractExt;
+use super::controllers::ForkController;
 use super::executor::TransactionContext;
 use super::Manager;
 
@@ -470,6 +472,155 @@ fn adjust_usage(latest_usage: i64, new_usage: i64, latest_slot: i64, new_slot: i
     average_latest_usage * WINDOW_SIZE / PRECISION
 }
 
+/// Energy processor, `BandwidthProcessor.java`.
+pub struct EnergyProcessor<'a> {
+    manager: &'a mut Manager,
+}
+
+impl EnergyProcessor<'_> {
+    pub fn new<'a>(manager: &'a mut Manager) -> EnergyProcessor<'a> {
+        EnergyProcessor { manager }
+    }
+
+    pub fn consume(
+        &mut self,
+        caller: Address,
+        origin: Address,
+        energy_used: i64,
+        caller_percent: i64,
+        origin_energy_limit: i64,
+        ctx: &mut TransactionContext,
+    ) -> Result<(), String> {
+        if energy_used <= 0 {
+            return Ok(());
+        }
+
+        let now = self.manager.get_head_slot();
+        let caller_acct = self.manager.state_db.must_get(&keys::Account(caller));
+        if caller == origin {
+            return self.consume_energy(caller, caller_acct, energy_used, now, ctx);
+        }
+
+        let origin_acct = self.manager.state_db.must_get(&keys::Account(origin));
+
+        let mut origin_usage = energy_used * (100 - caller_percent) / 100;
+        origin_usage = EnergyUtil::new(self.manager).get_origin_usage(&origin_acct, origin_energy_limit, origin_usage);
+        let caller_usage = energy_used - origin_usage;
+
+        if origin_usage > 0 {
+            assert!(self.consume_frozen_energy(origin, origin_acct, origin_usage, now));
+            ctx.origin_energy_usage = origin_usage;
+        }
+        if caller_usage > 0 {
+            self.consume_energy(caller, caller_acct, caller_usage, now, ctx)?;
+        }
+
+        Ok(())
+    }
+
+    fn consume_energy(
+        &mut self,
+        addr: Address,
+        mut acct: Account,
+        energy_used: i64,
+        now: i64,
+        ctx: &mut TransactionContext,
+    ) -> Result<(), String> {
+        if self.consume_frozen_energy(addr, acct.clone(), energy_used, now) {
+            ctx.energy_usage = energy_used;
+            return Ok(());
+        }
+
+        let consumed = self.consume_remain_frozen_energy(&mut acct, now);
+        if consumed > 0 {
+            self.manager
+                .state_db
+                .put_key(keys::Account(addr), acct.clone())
+                .unwrap();
+        }
+        assert!(consumed < energy_used);
+
+        // Will consume burnt energy
+        let energy_price = self.manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
+        let energy_fee = (energy_used - consumed) * energy_price;
+
+        ctx.energy_fee = energy_fee;
+        ctx.energy_usage = consumed;
+
+        if acct.adjust_balance(-energy_fee).is_err() {
+            return Err("insufficient balance to burn for energy".into());
+        }
+
+        self.manager.add_to_blackhole(energy_fee).unwrap();
+        self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+
+        self.manager.block_energy_usage += energy_used - consumed;
+
+        Ok(())
+    }
+
+    // Consume all remain E, return how much it consumed.
+    fn consume_remain_frozen_energy(&mut self, acct: &mut Account, now: i64) -> i64 {
+        let e_usage = acct.resource().energy_used;
+        let e_latest_slot = acct.resource().energy_latest_slot;
+        let e_limit = EnergyUtil::new(self.manager).calculate_global_energy_limit(&acct);
+
+        if e_limit == 0 {
+            return 0;
+        }
+
+        let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
+
+        let energy_remain = e_limit - new_e_usage;
+        if energy_remain == 0 {
+            return 0;
+        }
+
+        let latest_op_ts = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::LatestBlockTimestamp);
+        new_e_usage = adjust_usage(new_e_usage, energy_remain, now, now);
+
+        acct.latest_operation_timestamp = latest_op_ts;
+        acct.resource_mut().energy_used = new_e_usage;
+        acct.resource_mut().energy_latest_slot = now;
+
+        self.manager.block_energy_usage += energy_remain;
+
+        energy_remain
+    }
+
+    // useEnergy
+    fn consume_frozen_energy(&mut self, addr: Address, mut acct: Account, energy_used: i64, now: i64) -> bool {
+        let e_usage = acct.resource().energy_used;
+        let e_latest_slot = acct.resource().energy_latest_slot;
+        let e_limit = EnergyUtil::new(self.manager).calculate_global_energy_limit(&acct);
+
+        let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
+
+        if energy_used > (e_limit - new_e_usage) {
+            return false;
+        }
+
+        let latest_op_ts = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::LatestBlockTimestamp);
+        new_e_usage = adjust_usage(new_e_usage, energy_used, now, now);
+
+        acct.latest_operation_timestamp = latest_op_ts;
+        acct.resource_mut().energy_used = new_e_usage;
+        acct.resource_mut().energy_latest_slot = now;
+        debug!("E usage: {}/{} (+{})", new_e_usage, e_limit, energy_used);
+
+        self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
+        self.manager.block_energy_usage += energy_used;
+
+        true
+    }
+}
+
 /// Util for calculating energy.
 pub struct EnergyUtil<'a> {
     manager: &'a Manager,
@@ -491,6 +642,19 @@ impl EnergyUtil<'_> {
         let new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
 
         return (e_limit - new_e_usage).max(0);
+    }
+
+    // getOriginUsage
+    pub fn get_origin_usage(&self, origin_acct: &Account, origin_energy_limit: i64, origin_usage: i64) -> i64 {
+        let energy_left = self.get_left_energy(origin_acct);
+        if ForkController::new(self.manager)
+            .pass_version(BlockVersion::Odyssey3_2_2)
+            .unwrap()
+        {
+            origin_usage.min(energy_left).min(origin_energy_limit)
+        } else {
+            origin_usage.min(energy_left)
+        }
     }
 
     pub fn calculate_global_energy_limit(&self, acct: &Account) -> i64 {
