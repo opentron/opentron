@@ -1,8 +1,8 @@
 //! The TVM backend.
 
 use ::keys::Address;
-use log::debug;
 use primitive_types::{H160, H256, U256};
+use proto2::state::{Account, AccountType, TransactionLog};
 use state::db::StateDB;
 use state::keys;
 use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
@@ -11,29 +11,35 @@ use super::executor::TransactionContext;
 use super::Manager;
 
 /// StateDB backend, storing all state values in a RocksDB instance.
-pub struct StateBackend<'m, 'c> {
-    manager: &'m Manager,
-    ctx: &'c TransactionContext<'c>,
+pub struct StateBackend<'m, 'c, 'ctx> {
+    manager: &'m mut Manager,
+    ctx: &'c mut TransactionContext<'ctx>,
 }
 
-impl<'m, 'c> StateBackend<'m, 'c> {
+impl<'m, 'c, 'ctx> StateBackend<'m, 'c, 'ctx> {
     /// Create a new StateDB backend.
-    pub fn new(manager: &'m Manager, ctx: &'c TransactionContext<'c>) -> Self {
+    pub fn new(manager: &'m mut Manager, ctx: &'c mut TransactionContext<'ctx>) -> Self {
         Self { manager, ctx }
     }
 
     /// Get the underlying `StateDB` storing the state.
-    pub fn state(&self) -> &StateDB {
+    fn state(&self) -> &StateDB {
         &self.manager.state_db
+    }
+
+    /// Get the underlying `StateDB` storing the state, mutable.
+    fn state_mut(&mut self) -> &mut StateDB {
+        &mut self.manager.state_db
     }
 }
 
-impl<'m, 'c> Backend for StateBackend<'m, 'c> {
+#[allow(unused_variables)]
+impl Backend for StateBackend<'_, '_, '_> {
     fn gas_price(&self) -> U256 {
         U256::zero()
     }
     fn origin(&self) -> H160 {
-        H160::from_slice(Address::default().as_tvm_bytes())
+        unimplemented!()
     }
 
     fn block_hash(&self, number: U256) -> H256 {
@@ -91,14 +97,94 @@ impl<'m, 'c> Backend for StateBackend<'m, 'c> {
         unimplemented!()
     }
 
-    fn storage(&self, address: H160, index: H256) -> H256 {
-        debug!("!storage {:?} {:?}", address, index);
+    fn storage(&self, address: H160, index: H256) -> Option<H256> {
+        // debug!("!storage {:?} {:?}", address, index);
+        // NOTE: ContractStorage must not save value of 0.
         self.state()
             .get(&keys::ContractStorage(
                 Address::from_tvm_bytes(address.as_bytes()),
                 index,
             ))
-            .unwrap()
-            .unwrap_or_default()
+            .expect("db query")
+    }
+}
+
+impl ApplyBackend for StateBackend<'_, '_, '_> {
+    fn apply<A, I, L>(&mut self, values: A, logs: L, delete_empty: bool)
+    where
+        A: IntoIterator<Item = Apply<I>>,
+        I: IntoIterator<Item = (H256, H256)>,
+        L: IntoIterator<Item = Log>,
+    {
+        for apply in values {
+            match apply {
+                Apply::Modify {
+                    address,
+                    basic,
+                    code,
+                    storage,
+                    reset_storage,
+                } => {
+                    let addr = Address::from_tvm_bytes(address.as_bytes());
+                    if delete_empty &&
+                        basic.balance == U256::zero() &&
+                        basic.nonce == U256::zero() &&
+                        code.is_none() &&
+                        basic.token_balance.is_empty()
+                    {
+                        unimplemented!("TODO: delete empty");
+                    }
+
+                    let mut account = self
+                        .state()
+                        .get(&keys::Account(addr))
+                        .expect("db query")
+                        .unwrap_or_else(|| Account::new(self.manager.latest_block_timestamp()));
+
+                    account.balance = basic.balance.as_u64() as i64;
+                    for (token_id, token_value) in basic.token_balance {
+                        account
+                            .adjust_token_balance(token_id.as_u64() as i64, token_value.as_u64() as i64)
+                            .unwrap();
+                    }
+                    // account.nonce = basic.nonce;
+                    if let Some(code) = code {
+                        self.state_mut().put_key(keys::ContractCode(addr), code).unwrap();
+                        account.r#type = AccountType::Contract as i32;
+                    }
+
+                    if reset_storage {
+                        unimplemented!("TODO: reset_storage")
+                    }
+
+                    for (index, value) in storage {
+                        log::debug!("set storage: ({}, {}) => {}", addr, index, value);
+                        if value == H256::default() {
+                            self.state_mut()
+                                .delete_key(&keys::ContractStorage(addr, index))
+                                .unwrap();
+                        } else {
+                            self.state_mut()
+                                .put_key(keys::ContractStorage(addr, index), value)
+                                .unwrap();
+                        }
+                    }
+                }
+                Apply::Delete { address } => {
+                    let addr = Address::from_tvm_bytes(address.as_bytes());
+                    self.state_mut().delete_key(&keys::Account(addr)).unwrap();
+                    unimplemented!("TODO: delete account")
+                }
+            }
+        }
+
+        for Log { address, topics, data } in logs {
+            // let addr = Address::from_tvm_bytes(address.as_bytes());
+            self.ctx.logs.push(TransactionLog {
+                address: Address::from_tvm_bytes(address.as_bytes()).as_bytes().to_vec(),
+                topics: topics.iter().map(|t| t.as_bytes().to_vec()).collect(),
+                data: data,
+            });
+        }
     }
 }
