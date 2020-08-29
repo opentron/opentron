@@ -460,7 +460,7 @@ impl From<ContractPb> for Contract {
                         .map(|abi| &abi.entries)
                         .and_then(|entries| serde_json::to_string(entries).ok()),
                     code: hex::encode(&smart_cntr.bytecode),
-                    user_resource_percent: smart_cntr.consume_user_resource_percent as _,
+                    user_resource_percent: smart_cntr.consume_user_energy_percent as _,
                     origin_energy_limit: smart_cntr.origin_energy_limit as _,
                     contract_address: if !smart_cntr.contract_address.is_empty() {
                         Some(b58encode_check(&smart_cntr.contract_address))

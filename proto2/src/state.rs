@@ -1,6 +1,7 @@
 include!(concat!(env!("OUT_DIR"), "/proto.state.rs"));
 
 pub use crate::common::SmartContract;
+pub use crate::common::AccountType;
 
 use self::proposal::State as ProposalState;
 
@@ -9,6 +10,14 @@ impl Account {
         Account {
             creation_time: block_timestamp,
             resource: Some(Default::default()),
+            ..Default::default()
+        }
+    }
+
+    pub fn new_contract_account(block_timestamp: i64) -> Self {
+        Account {
+            creation_time: block_timestamp,
+            r#type: AccountType::Contract as i32,
             ..Default::default()
         }
     }
