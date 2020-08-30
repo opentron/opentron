@@ -4,7 +4,7 @@ use std::str;
 
 use ::keys::b58encode_check;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
-use log::{debug, error, warn};
+use log::{debug, error};
 use primitive_types::H256;
 use proto2::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto2::common::ResourceCode;
@@ -519,6 +519,7 @@ impl<'m> TransactionExecutor<'m> {
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 check_transaction_result(&exec_result, &maybe_result);
 
+                debug!("result => {:?}", exec_result);
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
@@ -536,11 +537,18 @@ impl<'m> TransactionExecutor<'m> {
                     b58encode_check(&cntr.owner_address()),
                     b58encode_check(&cntr.contract_address),
                 );
-                warn!("TODO: TVM & energy");
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
+                /*
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                */
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                // check_transaction_result(&exec_result, &maybe_result);
+
                 debug!("context => {:?}", ctx);
+                // Ok(ctx.into())
                 Err("unimpl".into())
             }
             _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),

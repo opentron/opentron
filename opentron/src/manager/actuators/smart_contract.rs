@@ -7,11 +7,11 @@ use ::keys::Address;
 use constants::block_version::BlockVersion;
 use log::warn;
 use primitive_types::{H160, H256};
-use proto2::chain::transaction::Result as TransactionResult;
+use proto2::chain::transaction::{result::ContractStatus, Result as TransactionResult};
 use proto2::contract as contract_pb;
 use proto2::state::Account;
 use state::keys;
-use tvm::{backend::ApplyBackend, ExitReason};
+use tvm::{backend::ApplyBackend, ExitError, ExitReason};
 
 use super::super::controllers::ForkController;
 use super::super::executor::TransactionContext;
@@ -259,6 +259,30 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                         .put_key(keys::ContractCode(cntr_address), ret_val)
                         .unwrap();
                 }
+                Ok(TransactionResult::success())
+            }
+            ExitReason::Error(ExitError::OutOfGas) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} insufficient",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    owner_address,
+                    energy_usage,
+                    0,
+                    new_cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::OutOfEnergy as i32;
+                Ok(ret)
             }
             _ => {
                 manager.rollback_layers(1);
@@ -266,8 +290,6 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 unimplemented!()
             }
         }
-
-        Ok(TransactionResult::success())
     }
 }
 
