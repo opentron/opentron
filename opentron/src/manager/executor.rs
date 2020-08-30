@@ -510,7 +510,6 @@ impl<'m> TransactionExecutor<'m> {
                     cntr.new_contract.as_ref().unwrap().name,
                     cntr.new_contract.as_ref().unwrap().bytecode.len(),
                 );
-                warn!("TODO: TVM & energy");
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
 

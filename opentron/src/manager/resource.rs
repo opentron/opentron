@@ -619,6 +619,83 @@ impl EnergyProcessor<'_> {
 
         true
     }
+
+    // updateTotalEnergyAverageUsage + updateAdaptiveTotalEnergyLimit
+    pub fn update_adaptive_energy(&mut self) -> Result<(), String> {
+        // updateTotalEnergyAverageUsage
+        let now = self.manager.get_head_slot();
+
+        let block_energy_usage = self.manager.block_energy_usage;
+        let total_energy_average_usage = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::TotalEnergyAverageUsage);
+        let total_energy_average_slot = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::TotalEnergyAverageSlot);
+
+        let new_total_energy_average_usage = adjust_usage(
+            total_energy_average_usage,
+            block_energy_usage,
+            total_energy_average_slot,
+            now,
+        );
+
+        debug!(
+            "adaptive energy: {} (+{})",
+            new_total_energy_average_usage, block_energy_usage
+        );
+
+        self.manager
+            .state_db
+            .put_key(
+                keys::DynamicProperty::TotalEnergyAverageUsage,
+                new_total_energy_average_usage,
+            )
+            .unwrap();
+        self.manager
+            .state_db
+            .put_key(keys::DynamicProperty::TotalEnergyAverageSlot, now)
+            .unwrap();
+
+        // updateAdaptiveTotalEnergyLimit
+        let total_energy_target_limit = self
+            .manager
+            .state_db
+            .must_get(&keys::DynamicProperty::TotalEnergyTargetLimit);
+        let total_energy_curr_limit = self
+            .manager
+            .state_db
+            .must_get(&keys::ChainParameter::TotalEnergyCurrentLimit);
+        let total_energy_limit = self.manager.state_db.must_get(&keys::ChainParameter::TotalEnergyLimit);
+
+        let mut new_curr_limit = if total_energy_average_usage > total_energy_target_limit {
+            total_energy_curr_limit * constants::ADAPTIVE_ENERGY_DECREASE_RATE_NUMERATOR /
+                constants::ADAPTIVE_ENERGY_DECREASE_RATE_DENOMINATOR
+        } else {
+            total_energy_curr_limit * constants::ADAPTIVE_ENERGY_INCREASE_RATE_NUMERATOR /
+                constants::ADAPTIVE_ENERGY_INCREASE_RATE_DENOMINATOR
+        };
+
+        new_curr_limit = new_curr_limit.max(total_energy_limit).min(
+            total_energy_limit *
+                self.manager
+                    .state_db
+                    .must_get(&keys::ChainParameter::AdaptiveResourceLimitMultiplier),
+        );
+        self.manager
+            .state_db
+            .put_key(keys::ChainParameter::TotalEnergyCurrentLimit, new_curr_limit)
+            .unwrap();
+
+        debug!(
+            "total energy current limit update: {} => {}",
+            total_energy_curr_limit, new_curr_limit
+        );
+
+        Ok(())
+    }
 }
 
 /// Util for calculating energy.

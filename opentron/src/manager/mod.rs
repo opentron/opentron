@@ -2,17 +2,18 @@ use ::keys::{b58encode_check, Address};
 use chain::{IndexedBlock, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
-use log::{debug, info, warn, trace};
+use log::{debug, info, trace, warn};
 use primitive_types::H256;
 use prost::Message;
 use state::db::StateDB;
 use state::keys;
 use std::convert::{TryFrom, TryInto};
 
-use self::governance::proposal::ProposalController;
 use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;
+use self::governance::proposal::ProposalController;
 use self::governance::reward::RewardController;
+use self::resource::EnergyProcessor;
 
 pub mod actuators;
 pub mod controllers;
@@ -112,14 +113,14 @@ impl Manager {
     }
 
     fn commit_current_layers(&mut self) {
-        for _ in 0 .. self.layers {
+        for _ in 0..self.layers {
             self.state_db.solidify_layer();
         }
         self.layers = 0;
     }
 
     fn rollback_layers(&mut self, n: usize) {
-        for _ in 0 .. n {
+        for _ in 0..n {
             self.state_db.discard_last_layer().unwrap();
         }
         self.layers -= n;
@@ -230,6 +231,13 @@ impl Manager {
 
         // 4. Adaptive energy processor:
         // TODO, no energy implemented
+        if self.block_energy_usage > 0 {
+            if self.state_db.must_get(&keys::ChainParameter::AllowAdaptiveEnergy) != 0 {
+                debug!("block energy = {}", self.block_energy_usage);
+                // updateTotalEnergyAverageUsage + updateAdaptiveTotalEnergyLimit
+                EnergyProcessor::new(self).update_adaptive_energy().unwrap();
+            }
+        }
 
         // 5. Block reward
         self.pay_reward(block);
