@@ -93,11 +93,15 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     fn code_size(&self, address: H160) -> usize {
-        unimplemented!()
+        log::debug!("CODE_SIZE of {:?}", address);
+        let addr = Address::from_tvm_bytes(address.as_bytes());
+        self.state().get(&keys::ContractCode(addr)).unwrap().map(|code| code.len()).unwrap_or_default()
     }
 
     fn code(&self, address: H160) -> Vec<u8> {
-        unimplemented!()
+        log::debug!("CODE of {:?}", address);
+        let addr = Address::from_tvm_bytes(address.as_bytes());
+        self.state().get(&keys::ContractCode(addr)).unwrap().unwrap_or_default()
     }
 
     fn storage(&self, address: H160, index: H256) -> Option<H256> {
