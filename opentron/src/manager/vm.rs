@@ -14,12 +14,13 @@ use super::Manager;
 pub struct StateBackend<'m, 'c, 'ctx> {
     manager: &'m mut Manager,
     ctx: &'c mut TransactionContext<'ctx>,
+    sender: Address,
 }
 
 impl<'m, 'c, 'ctx> StateBackend<'m, 'c, 'ctx> {
     /// Create a new StateDB backend.
-    pub fn new(manager: &'m mut Manager, ctx: &'c mut TransactionContext<'ctx>) -> Self {
-        Self { manager, ctx }
+    pub fn new(sender: Address, manager: &'m mut Manager, ctx: &'c mut TransactionContext<'ctx>) -> Self {
+        Self { manager, ctx, sender }
     }
 
     /// Get the underlying `StateDB` storing the state.
@@ -38,8 +39,10 @@ impl Backend for StateBackend<'_, '_, '_> {
     fn gas_price(&self) -> U256 {
         U256::zero()
     }
+
+    // ORIGIN opcode, the transaction sender.
     fn origin(&self) -> H160 {
-        unimplemented!()
+        H160::from_slice(self.sender.as_tvm_bytes())
     }
 
     fn block_hash(&self, number: U256) -> H256 {
