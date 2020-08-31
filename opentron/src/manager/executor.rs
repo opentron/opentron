@@ -497,14 +497,13 @@ impl<'m> TransactionExecutor<'m> {
 
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
-                let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
-                check_transaction_result(&exec_result, &maybe_result);
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
 
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
-            // TVM
+            // TVM: Should handle BW first, then remaining can be used for E.
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
@@ -518,9 +517,9 @@ impl<'m> TransactionExecutor<'m> {
                 let mut ctx = TransactionContext::new(&block.header, &txn);
 
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 // NOTE: vm must be strictly checked.
                 if !check_transaction_result(&exec_result, &maybe_result) {
                     debug!("result => {:?}", exec_result);
@@ -545,9 +544,9 @@ impl<'m> TransactionExecutor<'m> {
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 if !check_transaction_result(&exec_result, &maybe_result) {
                     debug!("result => {:?}", exec_result);
                     return Err("result check not passed!".into());
