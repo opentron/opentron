@@ -480,7 +480,28 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
                 Ok(TransactionResult::success())
             }
+            ExitReason::Revert(_) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                if !ret_val.is_empty() {
+                    ctx.result = ret_val;
+                }
+                log::debug!("energy usage: {}/{}", energy_usage, energy_limit);
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    origin_address,
+                    energy_usage,
+                    cntr.consume_user_energy_percent,
+                    cntr.origin_energy_limit,
+                    ctx,
+                )?;
 
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::Revert as i32;
+                debug!("create contract failed, revert");
+                Ok(ret)
+            }
             _ => {
                 manager.rollback_layers(1);
                 // TODO: spend energy or spend all energy
