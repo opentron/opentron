@@ -481,6 +481,30 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
                 Ok(TransactionResult::success())
             }
+            ExitReason::Error(ExitError::OutOfGas) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} insufficient",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    origin_address,
+                    energy_usage,
+                    cntr.consume_user_energy_percent,
+                    cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::OutOfEnergy as i32;
+                debug!("create contract failed, out out energy");
+                Ok(ret)
+            }
             ExitReason::Revert(_) => {
                 manager.rollback_layers(1);
                 let energy_usage = used_energy as i64;
