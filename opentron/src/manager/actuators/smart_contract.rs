@@ -214,9 +214,9 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         let data = Rc::default();
 
         let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
-        let exit_reason = executor.execute(&mut rt);
+        let mut exit_reason = executor.execute(&mut rt);
         log::debug!("TVM exit code => {:?}", exit_reason);
-        let used_energy = executor.used_gas();
+        let mut used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
 
         let (applies, logs) = executor.deconstruct();
@@ -225,8 +225,14 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         let remain_energy = energy_limit - used_energy;
 
         if save_code_energy > remain_energy {
-            log::warn!("insufficient energy to save code!");
-            unimplemented!("insufficient energy");
+            // use up
+            used_energy = energy_limit;
+            exit_reason = ExitReason::Error(ExitError::OutOfGas);
+            log::warn!(
+                "insufficient energy to save code! energy={} exit={:?}",
+                used_energy,
+                exit_reason
+            );
         }
 
         backend.apply(applies, logs, false);
