@@ -1,15 +1,16 @@
 //! Creating smart contracts, calling smart contract methods.
 
 use std::convert::TryFrom;
+use std::i64;
 use std::rc::Rc;
 
 use ::keys::Address;
 use constants::block_version::BlockVersion;
-use log::warn;
+use log::{debug, warn};
 use primitive_types::{H160, H256};
 use proto2::chain::transaction::{result::ContractStatus, Result as TransactionResult};
 use proto2::contract as contract_pb;
-use proto2::state::Account;
+use proto2::state::{Account, SmartContract};
 use state::keys;
 use tvm::{backend::ApplyBackend, ExitError, ExitReason};
 
@@ -217,7 +218,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         log::debug!("TVM exit code => {:?}", exit_reason);
         let used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
-        // let remain_energy = executor.gas();
+
         let (applies, logs) = executor.deconstruct();
 
         let save_code_energy = ret_val.len() * SAVE_CODE_ENERGY_PER_BYTE;
@@ -230,12 +231,19 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         backend.apply(applies, logs, false);
 
-        // payEnergyBill => useEnergy
-
         match exit_reason {
             ExitReason::Succeed(_) => {
-                log::debug!("TVM result size(deployed code) => {:?}", ret_val.len());
                 let energy_usage = (used_energy + save_code_energy) as i64;
+                log::debug!("TVM result size(deployed code) => {:?}", ret_val.len());
+                if allow_tvm_constantinople {
+                    manager
+                        .state_db
+                        .put_key(keys::ContractCode(cntr_address), ret_val.clone())
+                        .unwrap();
+                    ctx.result = ret_val;
+                } else {
+                    ctx.result = ret_val;
+                }
                 ctx.energy = energy_usage;
                 log::debug!(
                     "energy usage: {}/{} vm_energy={} save_code_energy={}",
@@ -253,12 +261,6 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                     ctx,
                 )?;
 
-                if !allow_tvm_constantinople {
-                    manager
-                        .state_db
-                        .put_key(keys::ContractCode(cntr_address), ret_val)
-                        .unwrap();
-                }
                 Ok(TransactionResult::success())
             }
             ExitReason::Error(ExitError::OutOfGas) => {
@@ -282,8 +284,203 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
                 let mut ret = TransactionResult::success();
                 ret.contract_status = ContractStatus::OutOfEnergy as i32;
+                debug!("create contract failed, out out energy");
                 Ok(ret)
             }
+            _ => {
+                manager.rollback_layers(1);
+                // TODO: spend energy or spend all energy
+                unimplemented!()
+            }
+        }
+    }
+}
+
+// Calling smart contract. `call` logic.
+impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
+    fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        if state_db.must_get(&keys::ChainParameter::AllowTvm) == 0 {
+            return Err("TVM is disabled".into());
+        }
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract_address")?;
+
+        let maybe_cntr = manager
+            .state_db
+            .get(&keys::Contract(cntr_address))
+            .map_err(|_| "db query error")?;
+        if maybe_cntr.is_none() {
+            return Err("contract not found".into());
+        }
+        let cntr = maybe_cntr.unwrap();
+        let origin_address = *Address::from_bytes(&cntr.origin_address);
+
+        let fee_limit = ctx.fee_limit;
+        let call_value = self.call_value;
+        let mut call_token_value = 0_i64;
+        let mut call_token_id = 0_i64;
+
+        let allow_trc10_transfer = manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmTransferTrc10Upgrade) !=
+            0;
+        if allow_trc10_transfer {
+            call_token_value = self.call_token_value;
+            call_token_id = self.call_token_id;
+        }
+
+        if ForkController::new(manager).pass_version(BlockVersion::Odyssey3_2_2)? {
+            if call_value < 0 {
+                return Err("invalid call_value".into());
+            }
+            if call_token_value < 0 {
+                return Err("invalid call_token_value".into());
+            }
+        }
+
+        // checkTokenValueAndId
+        if allow_trc10_transfer {
+            // NOTE: also checks allowMultiSig
+            if manager.state_db.must_get(&keys::ChainParameter::AllowMultisig) != 0 {
+                if call_token_id != 0 && call_token_id <= MIN_TOKEN_ID {
+                    return Err("invalid token id range".into());
+                }
+                if call_token_value > 0 && call_token_id == 0 {
+                    return Err("invalid token id & token value".into());
+                }
+            }
+        }
+
+        let code = manager
+            .state_db
+            .get(&keys::ContractCode(cntr_address))
+            .map_err(|_| "db query error")?;
+        if code.is_some() && !code.as_ref().unwrap().is_empty() {
+            log::debug!("fee_limit => {}", ctx.fee_limit);
+            if ctx.fee_limit < 0 || ctx.fee_limit > MAX_FEE_LIMIT {
+                return Err("invalid fee_limit".into());
+            }
+
+            // TODO: check constant call
+
+            let caller_acct = manager
+                .state_db
+                .get(&keys::Account(owner_address))
+                .map_err(|_| "db query error")?
+                .ok_or_else(|| "owner account is not on chain")?;
+            let origin_acct = manager.state_db.must_get(&keys::Account(origin_address));
+
+            let energy_limit = if owner_address == origin_address {
+                get_account_energy_limit(manager, &caller_acct, fee_limit, call_value)
+            } else {
+                get_total_energy_limit(manager, &caller_acct, &origin_acct, &cntr, fee_limit, call_value)
+            };
+            debug!("energy_limit = {}", energy_limit);
+            ctx.energy_limit = energy_limit;
+        } else {
+            warn!("code is empty!");
+        }
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let cntr_address = Address::try_from(&self.contract_address).unwrap();
+
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
+        let mut cntr_acct = manager.state_db.must_get(&keys::Account(cntr_address));
+
+        let cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
+        let origin_address = Address::try_from(&cntr.origin_address).unwrap();
+
+        manager.new_layer();
+
+        // transfer
+        if self.call_value > 0 {
+            if owner_acct.adjust_balance(-self.call_value).is_err() {
+                return Err("insufficient balance".into()); // validate error
+            }
+            cntr_acct.adjust_balance(self.call_value).unwrap();
+        }
+        if self.call_token_value > 0 {
+            if owner_acct
+                .adjust_token_balance(self.call_token_id, -self.call_token_value)
+                .is_err()
+            {
+                return Err("insufficient token balance".into()); // validate error
+            }
+            cntr_acct
+                .adjust_token_balance(self.call_token_id, self.call_token_value)
+                .unwrap();
+        }
+        manager
+            .state_db
+            .put_key(keys::Account(cntr_address), cntr_acct)
+            .unwrap();
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), owner_acct)
+            .unwrap();
+
+        // build execution context
+        let code = manager
+            .state_db
+            .get(&keys::ContractCode(cntr_address))
+            .map_err(|_| "db query error")?
+            .unwrap_or_default();
+        let code = Rc::new(code);
+        let data = Rc::new(self.data.to_vec());
+        debug!("calling data = {:?}", hex::encode(&self.data));
+
+        let energy_limit = ctx.energy_limit as usize;
+
+        let mut backend = StateBackend::new(manager, ctx);
+        let config = tvm::Config::odyssey_3_7();
+        // new_with_precompile
+        let mut executor = tvm::StackExecutor::new(&backend, energy_limit, &config);
+
+        let vm_ctx = tvm::Context {
+            // contract address
+            address: H160::from_slice(cntr_address.as_tvm_bytes()),
+            caller: H160::from_slice(owner_address.as_tvm_bytes()),
+            call_value: self.call_value.into(),
+            call_token_id: self.call_token_id.into(),
+            call_token_value: self.call_token_value.into(),
+        };
+
+        let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
+        let exit_reason = executor.execute(&mut rt);
+        log::debug!("TVM exit code => {:?}", exit_reason);
+        let used_energy = executor.used_gas();
+        let ret_val = rt.machine().return_value();
+
+        let (applies, logs) = executor.deconstruct();
+
+        debug!("ret val => {}", hex::encode(&ret_val));
+
+        backend.apply(applies, logs, false);
+
+        match exit_reason {
+            ExitReason::Succeed(_) => {
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                ctx.result = ret_val;
+                log::debug!("energy usage: {}/{}", energy_usage, energy_limit);
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    origin_address,
+                    energy_usage,
+                    cntr.consume_user_energy_percent,
+                    cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                Ok(TransactionResult::success())
+            }
+
             _ => {
                 manager.rollback_layers(1);
                 // TODO: spend energy or spend all energy
@@ -326,7 +523,19 @@ fn generate_created_contract_address(txn_hash: &H256, owner_address: &Address) -
     Address::from_tvm_bytes(&hasher.finalize()[12..])
 }
 
-// getAccountEnergyLimitWithFixRatio
+#[inline]
+fn get_account_energy_limit(manager: &Manager, acct: &Account, fee_limit: i64, call_value: i64) -> i64 {
+    if ForkController::new(manager)
+        .pass_version(BlockVersion::Odyssey3_2_2)
+        .unwrap()
+    {
+        get_account_energy_limit_with_fixed_ratio(manager, &acct, fee_limit, call_value)
+    } else {
+        get_account_energy_limit_with_float_ratio(manager, &acct, fee_limit, call_value)
+    }
+}
+
+/// getAccountEnergyLimitWithFixRatio
 fn get_account_energy_limit_with_fixed_ratio(
     manager: &Manager,
     acct: &Account,
@@ -345,6 +554,7 @@ fn get_account_energy_limit_with_fixed_ratio(
     available_energy.min(energy_from_fee_limit)
 }
 
+/// getAccountEnergyLimitWithFloatRatio
 fn get_account_energy_limit_with_float_ratio(
     manager: &Manager,
     acct: &Account,
@@ -371,6 +581,75 @@ fn get_account_energy_limit_with_float_ratio(
         }
     };
     (left_energy + energy_from_balance).min(energy_from_fee_limit)
+}
+
+#[inline]
+fn get_total_energy_limit(
+    manager: &Manager,
+    caller: &Account,
+    origin: &Account,
+    cntr: &SmartContract,
+    fee_limit: i64,
+    call_value: i64,
+) -> i64 {
+    // TODO: Can origin be null? (use getAccountEnergyLimitWithFixRatio)
+    if ForkController::new(manager)
+        .pass_version(BlockVersion::Odyssey3_2_2)
+        .unwrap()
+    {
+        get_total_energy_limit_with_fixed_ratio(manager, caller, origin, cntr, fee_limit, call_value)
+    } else {
+        get_total_energy_limit_with_float_ratio(manager, caller, origin, cntr, fee_limit, call_value)
+    }
+}
+
+/// getTotalEnergyLimitWithFixRatio
+fn get_total_energy_limit_with_fixed_ratio(
+    manager: &Manager,
+    caller: &Account,
+    origin: &Account,
+    cntr: &SmartContract,
+    fee_limit: i64,
+    call_value: i64,
+) -> i64 {
+    let caller_energy_limit = get_account_energy_limit_with_fixed_ratio(manager, caller, fee_limit, call_value);
+    let consume_user_energy_percent = cntr.consume_user_energy_percent;
+    assert!(cntr.origin_energy_limit >= 0);
+
+    let origin_energy_left = EnergyUtil::new(manager).get_left_energy(origin);
+    let origin_energy_limit = if consume_user_energy_percent > 0 {
+        assert!(consume_user_energy_percent <= 100);
+        i64::min(
+            caller_energy_limit * (100 - consume_user_energy_percent) / consume_user_energy_percent,
+            i64::min(origin_energy_left, cntr.origin_energy_limit),
+        )
+    } else {
+        i64::min(origin_energy_left, cntr.origin_energy_limit)
+    };
+
+    caller_energy_limit + origin_energy_limit
+}
+
+/// getTotalEnergyLimitWithFloatRatio
+fn get_total_energy_limit_with_float_ratio(
+    manager: &Manager,
+    caller: &Account,
+    origin: &Account,
+    cntr: &SmartContract,
+    fee_limit: i64,
+    call_value: i64,
+) -> i64 {
+    let caller_energy_limit = get_account_energy_limit_with_float_ratio(manager, caller, fee_limit, call_value);
+    let consume_user_energy_percent = cntr.consume_user_energy_percent;
+
+    // creatorEnergyFromFreeze
+    let origin_energy_limit = EnergyUtil::new(manager).get_left_energy(origin);
+
+    if origin_energy_limit * consume_user_energy_percent > (100 - consume_user_energy_percent) * caller_energy_limit {
+        caller_energy_limit * 100 / consume_user_energy_percent
+    } else {
+        caller_energy_limit + origin_energy_limit
+    }
 }
 
 // getEnergyFee(long callerEnergyUsage, long callerEnergyFrozen, long callerEnergyTotal)

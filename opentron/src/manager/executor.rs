@@ -38,6 +38,7 @@ pub struct TransactionContext<'a> {
     pub energy_usage: i64,
     pub origin_energy_usage: i64,
     pub energy_fee: i64,
+    pub result: Vec<u8>,
     pub logs: Vec<TransactionLog>,
 }
 
@@ -63,6 +64,7 @@ impl<'a> TransactionContext<'a> {
             energy_usage: 0,
             origin_energy_usage: 0,
             energy_fee: 0,
+            result: vec![],
             logs: vec![],
         }
     }
@@ -94,6 +96,7 @@ impl From<TransactionContext<'_>> for TransactionReceipt {
                 r.energy_fee = ctx.energy_fee;
                 r.origin_energy_usage = ctx.origin_energy_usage;
             });
+            receipt.vm_result = ctx.result;
             receipt.vm_logs = ctx.logs;
         }
         receipt
@@ -119,6 +122,7 @@ impl ::std::fmt::Debug for TransactionContext<'_> {
                 .field("energy_usage", &self.energy_usage)
                 .field("origin_energy_usage", &self.origin_energy_usage)
                 .field("energy_fee", &self.energy_fee)
+                .field("result", &hex::encode(&self.result))
                 .field("|logs|", &self.logs.len());
         }
         dbg.finish()
@@ -517,16 +521,17 @@ impl<'m> TransactionExecutor<'m> {
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
-                check_transaction_result(&exec_result, &maybe_result);
+                // NOTE: vm must be strictly checked.
+                if !check_transaction_result(&exec_result, &maybe_result) {
+                    debug!("result => {:?}", exec_result);
+                    return Err("result check not passed!".into());
+                }
 
-                debug!("result => {:?}", exec_result);
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
             ContractType::TriggerSmartContract => {
                 let cntr = contract_pb::TriggerSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
-
                 // smart contract status
                 let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
@@ -539,17 +544,16 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
-                /*
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
                 let exec_result = cntr.execute(self.manager, &mut ctx)?;
-                */
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
-                // check_transaction_result(&exec_result, &maybe_result);
-
+                if !check_transaction_result(&exec_result, &maybe_result) {
+                    debug!("result => {:?}", exec_result);
+                    return Err("result check not passed!".into());
+                }
                 debug!("context => {:?}", ctx);
-                // Ok(ctx.into())
-                Err("unimpl".into())
+                Ok(ctx.into())
             }
             _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
         }
