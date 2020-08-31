@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#38694a1ff47b5db50ad04d9f83708fdb70a22705"
+source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
 dependencies = [
  "evm-core",
  "evm-gasometer",
@@ -511,7 +511,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#38694a1ff47b5db50ad04d9f83708fdb70a22705"
+source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
 dependencies = [
  "primitive-types",
 ]
@@ -519,7 +519,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#38694a1ff47b5db50ad04d9f83708fdb70a22705"
+source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
 dependencies = [
  "evm-core",
  "evm-runtime",
@@ -529,7 +529,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#38694a1ff47b5db50ad04d9f83708fdb70a22705"
+source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
 dependencies = [
  "evm-core",
  "primitive-types",
@@ -1363,7 +1363,7 @@ checksum = "c36fa947111f5c62a733b652544dd0016a43ce89619538a8ef92724a6f501a20"
 [[package]]
 name = "precompiled"
 version = "3.7.0"
-source = "git+https://github.com/opentron/evm?branch=tron#38694a1ff47b5db50ad04d9f83708fdb70a22705"
+source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
 dependencies = [
  "bn-plus",
  "digest 0.8.1",
@@ -2157,6 +2157,9 @@ name = "tvm"
 version = "0.1.0"
 dependencies = [
  "evm",
+ "log",
+ "precompiled",
+ "primitive-types",
 ]
 
 [[package]]
