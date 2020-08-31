@@ -440,7 +440,8 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
-        let mut executor = tvm::StackExecutor::new(&backend, energy_limit, &config);
+        let mut executor =
+            tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, tvm::precompile::tron_precompile);
 
         let vm_ctx = tvm::Context {
             // contract address
