@@ -498,6 +498,7 @@ impl EnergyProcessor<'_> {
         let now = self.manager.get_head_slot();
         let caller_acct = self.manager.state_db.must_get(&keys::Account(caller));
         if caller == origin {
+            debug!("E usage: caller=origin={}", energy_used);
             return self.consume_energy(caller, caller_acct, energy_used, now, ctx);
         }
 
@@ -514,6 +515,7 @@ impl EnergyProcessor<'_> {
         if caller_usage > 0 {
             self.consume_energy(caller, caller_acct, caller_usage, now, ctx)?;
         }
+        debug!("E usage: caller={} origin={}", caller_usage, origin_usage);
 
         Ok(())
     }
@@ -550,6 +552,8 @@ impl EnergyProcessor<'_> {
         if acct.adjust_balance(-energy_fee).is_err() {
             return Err("insufficient balance to burn for energy".into());
         }
+
+        debug!("E usage: frozen={} burnt={}", consumed, energy_used - consumed);
 
         self.manager.add_to_blackhole(energy_fee).unwrap();
         self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
