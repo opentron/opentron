@@ -55,8 +55,9 @@ impl Backend for StateBackend<'_, '_, '_> {
     fn block_coinbase(&self) -> H160 {
         H160::from_slice(&self.ctx.block_header.witness()[1..])
     }
+    // TIMESTAMP: timestamp of current block.
     fn block_timestamp(&self) -> U256 {
-        self.ctx.block_header.timestamp().into()
+        (self.ctx.block_header.timestamp() / 1_000).into()
     }
     fn block_difficulty(&self) -> U256 {
         0.into()
@@ -95,7 +96,11 @@ impl Backend for StateBackend<'_, '_, '_> {
     fn code_size(&self, address: H160) -> usize {
         log::debug!("CODE_SIZE of {:?}", address);
         let addr = Address::from_tvm_bytes(address.as_bytes());
-        self.state().get(&keys::ContractCode(addr)).unwrap().map(|code| code.len()).unwrap_or_default()
+        self.state()
+            .get(&keys::ContractCode(addr))
+            .unwrap()
+            .map(|code| code.len())
+            .unwrap_or_default()
     }
 
     fn code(&self, address: H160) -> Vec<u8> {

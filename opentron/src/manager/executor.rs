@@ -564,7 +564,7 @@ fn check_transaction_result(exec_result: &TransactionResult, maybe_result: &Opti
     if let Some(result) = maybe_result {
         if result != &exec_result {
             error!(
-                "execution result mismatch, expected: {:?}, got: {:?}",
+                "execution result mismatch, expected: \n{:?}\ngot: \n{:?}",
                 result, exec_result
             );
             return false;
