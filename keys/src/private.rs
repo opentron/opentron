@@ -5,8 +5,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use hex::{FromHex, ToHex};
-use secp256k1::key::SecretKey;
-use secp256k1::{Message, Secp256k1};
+use secp256k1::{Message, SecretKey};
 use sha2::{Digest, Sha256};
 
 use crate::error::Error;
@@ -19,17 +18,13 @@ pub struct Private([u8; 32]);
 impl Private {
     /// Sign digest data with the private key.
     pub fn sign_digest(&self, digest: &[u8]) -> Result<Signature, Error> {
-        let secp = Secp256k1::new();
-        let secret_key = SecretKey::from_slice(&secp, &self.0).expect("32 bytes, within curve order");
-        let message = Message::from_slice(digest).map_err(|_| Error::InvalidMessage)?;
-        let sig = secp
-            .sign_recoverable(&message, &secret_key)
-            .map_err(|_| Error::InvalidSignature)?;
-        let (rec_id, data) = sig.serialize_compact(&secp);
+        let secret_key = SecretKey::parse_slice(&self.0).expect("32 bytes, within curve order");
+        let message = Message::parse_slice(digest).map_err(|_| Error::InvalidMessage)?;
+        let (sig, rec_id) = secp256k1::sign(&message, &secret_key);
 
         let mut raw = [0u8; 65];
-        raw[0..64].copy_from_slice(&data[0..64]);
-        raw[64] = rec_id.to_i32() as u8;
+        raw[0..64].copy_from_slice(&sig.serialize()[..]);
+        raw[64] = rec_id.serialize();
         Ok(Signature::from(raw))
     }
 

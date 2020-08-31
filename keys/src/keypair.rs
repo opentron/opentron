@@ -2,9 +2,7 @@
 use std::fmt;
 
 use rand::rngs::OsRng;
-use secp256k1::key;
-use secp256k1::Secp256k1;
-use std::convert::TryFrom;
+use secp256k1::{SecretKey, PublicKey};
 
 use crate::address::Address;
 use crate::error::Error;
@@ -40,14 +38,12 @@ impl KeyPair {
         Ok(KeyPair { private, public })
     }
 
-    fn from_keypair(sec: key::SecretKey, publ: key::PublicKey) -> Self {
-        let secp = Secp256k1::new();
-
+    fn from_keypair(sec: SecretKey, publ: PublicKey) -> Self {
         let mut pub_key = [0u8; 64];
-        pub_key[..].copy_from_slice(&publ.serialize_vec(&secp, /* compressed */ false)[1..]);
+        pub_key[..].copy_from_slice(&publ.serialize()[1..]);
 
         KeyPair {
-            private: Private::try_from(&sec[..]).expect("won't fail; qed"),
+            private: Private::from(sec.serialize()),
             public: Public::from(pub_key),
         }
     }
@@ -55,8 +51,9 @@ impl KeyPair {
     /// Generates a new random KeyPair.
     pub fn generate() -> Self {
         let mut rng = OsRng;
-        let secp = Secp256k1::new();
-        let (secret_key, public_key) = secp.generate_keypair(&mut rng).expect("generate keypair");
+        let secret_key = SecretKey::random(&mut rng);
+        let public_key= PublicKey::from_secret_key(&secret_key);
+
         KeyPair::from_keypair(secret_key, public_key)
     }
 }
