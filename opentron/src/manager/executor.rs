@@ -503,6 +503,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::UpdateSettingContract => {
+                let cntr = contract_pb::UpdateSettingContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Update Contract setting {}, contract={}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.contract_address)
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             // TVM: Should handle BW first, then remaining can be used for E.
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -554,7 +572,7 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
-            #[cfg(feature="nile")]
+            #[cfg(feature = "nile")]
             ContractType::ShieldedTransferContract => {
                 let cntr = contract_pb::ShieldedTransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
