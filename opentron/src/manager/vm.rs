@@ -72,7 +72,6 @@ impl Backend for StateBackend<'_, '_, '_> {
 
     fn exists(&self, address: H160) -> bool {
         let addr = Address::from_tvm_bytes(address.as_bytes());
-        println!("!!! ex address {:?} {}", address, addr);
         self.state().get(&keys::Account(addr)).unwrap().is_some()
     }
 

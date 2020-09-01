@@ -463,10 +463,11 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         log::debug!("TVM exit code => {:?}", exit_reason);
         let used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
+        if !ret_val.is_empty() {
+            debug!("return value: {:?}", hex::encode(&ret_val));
+        }
 
         let (applies, logs) = executor.deconstruct();
-
-        debug!("ret val => {}", hex::encode(&ret_val));
 
         backend.apply(applies, logs, false);
 
