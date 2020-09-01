@@ -4,7 +4,7 @@ use std::str;
 
 use ::keys::b58encode_check;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
-use log::{debug, error};
+use log::{debug, error, warn};
 use primitive_types::H256;
 use proto2::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto2::common::ResourceCode;
@@ -551,6 +551,22 @@ impl<'m> TransactionExecutor<'m> {
                     debug!("result => {:?}", exec_result);
                     return Err("result check not passed!".into());
                 }
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
+            #[cfg(feature="nile")]
+            ContractType::ShieldedTransferContract => {
+                let cntr = contract_pb::ShieldedTransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                warn!("=> Shielded Transaction");
+                // NOTE: dummy implementation
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                // NOTE: Shielded transaction won't consume bandwidth.
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
+
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }

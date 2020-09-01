@@ -202,6 +202,17 @@ impl ProposalUtil<'_> {
                 self.require_version(BlockVersion::GreatVoyage4_0_1)?;
                 self.accept_bool(value)
             }
+            // NOTE: In nile's branch, this is wrongly marked as 4.0.
+            //
+            // See-also: https://github.com/tronprotocol/java-tron/pull/3372
+            #[cfg(feature = "nile")]
+            AllowShieldedTransaction => {
+                self.require_version(BlockVersion::Odyssey3_7)?;
+                self.accept_true(value)?;
+                self.require_proposal(ChainParameter::AllowSameTokenName)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err("unknown proposal parameter".into()),
         }
     }
 

@@ -272,3 +272,16 @@ message SellStorageContract {
   int64 storage_bytes = 2;
 }
 */
+
+// NOTE: This is only used in nile testnet.
+message ShieldedTransferContract {
+  bytes transparent_from_address = 1; // transparent address
+  int64 from_amount = 2;
+  // changed: SpendDescription, ignore inner pb.
+  repeated bytes spend_description = 3;
+  // changed: ReceiveDescription, ignore inner pb.
+  repeated bytes receive_description = 4;
+  bytes binding_signature = 5;
+  bytes transparent_to_address = 6; // transparent address
+  int64 to_amount = 7; // the amount to transparent to_address
+}

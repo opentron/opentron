@@ -97,8 +97,8 @@ enum ContractType {
   AccountPermissionUpdateContract = 46;
   ClearABIContract = 48;
   UpdateBrokerageContract = 49;
-  // NOTE: only used in active permission bits.
-  OBSOLETE_ShieldedTransferContract = 51;
+  // NOTE: Only used in active permission bits, and nile testnet.
+  ShieldedTransferContract = 51;
 }
 
 message Transaction {
