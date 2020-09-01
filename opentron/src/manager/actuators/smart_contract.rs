@@ -566,7 +566,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
     }
 }
 
-// Calling smart contract. `call` logic.
+// Update a contract's `consume_user_energy_percent` setting.
 impl BuiltinContractExecutorExt for contract_pb::UpdateSettingContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
         let state_db = &manager.state_db;
@@ -604,6 +604,51 @@ impl BuiltinContractExecutorExt for contract_pb::UpdateSettingContract {
         let mut cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
 
         cntr.consume_user_energy_percent = self.consume_user_energy_percent;
+        manager
+            .state_db
+            .put_key(keys::Contract(cntr_address), cntr)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
+// Update a contract's ABI.
+//
+// NOTE: This is a design flaw, to deceive oneself.
+impl BuiltinContractExecutorExt for contract_pb::ClearAbiContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        if state_db.must_get(&keys::ChainParameter::AllowTvm) == 0 {
+            return Err("TVM is disabled".into());
+        }
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract_address")?;
+
+        let maybe_cntr = manager
+            .state_db
+            .get(&keys::Contract(cntr_address))
+            .map_err(|_| "db query error")?;
+        if maybe_cntr.is_none() {
+            return Err("contract not found".into());
+        }
+        let cntr = maybe_cntr.unwrap();
+        let origin_address = *Address::from_bytes(&cntr.origin_address);
+
+        if origin_address != owner_address {
+            return Err("owner address is not the origin creator of contract".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let cntr_address = Address::try_from(&self.contract_address).unwrap();
+        let mut cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
+
+        cntr.abi.as_mut().map(|abi| abi.entries = vec![]);
         manager
             .state_db
             .put_key(keys::Contract(cntr_address), cntr)
