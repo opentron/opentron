@@ -1094,7 +1094,6 @@ name = "merkle-tree"
 version = "0.1.0"
 dependencies = [
  "primitive-types",
- "sha2 0.9.1",
 ]
 
 [[package]]
