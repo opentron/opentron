@@ -99,8 +99,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 return Err("invalid call_token_value".into());
             }
 
-            // NOTE: This is a wrong check, when creating smart contracts, origin_energy_limit is always set to 0.
-            if new_cntr.origin_energy_limit <= 0 {
+            if new_cntr.origin_energy_limit < 0 {
                 return Err("origin_energy_limit must be greater than 0".into());
             }
 
