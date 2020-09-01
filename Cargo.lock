@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
+source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
 dependencies = [
  "evm-core",
  "evm-gasometer",
@@ -511,7 +511,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
+source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
 dependencies = [
  "primitive-types",
 ]
@@ -519,7 +519,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
+source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
 dependencies = [
  "evm-core",
  "evm-runtime",
@@ -529,7 +529,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
+source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
 dependencies = [
  "evm-core",
  "primitive-types",
@@ -899,9 +899,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.5.1"
+version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86b45e59b16c76b11bf9738fd5d38879d3bd28ad292d7b313608becb17ae2df9"
+checksum = "4e47a3566dd4fd4eec714ae6ceabdee0caec795be835c223d92c2d40f1e8cf1c"
 dependencies = [
  "autocfg",
  "hashbrown",
@@ -1350,7 +1350,7 @@ checksum = "c36fa947111f5c62a733b652544dd0016a43ce89619538a8ef92724a6f501a20"
 [[package]]
 name = "precompiled"
 version = "3.7.0"
-source = "git+https://github.com/opentron/evm?branch=tron#73fa209791026a165667b74adffce96f881bbf8a"
+source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
 dependencies = [
  "bn-plus",
  "digest 0.8.1",
