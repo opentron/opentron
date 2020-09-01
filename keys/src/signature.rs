@@ -97,7 +97,7 @@ impl<'a> TryFrom<&'a [u8]> for Signature {
     type Error = Error;
 
     fn try_from(mut v: &'a [u8]) -> Result<Self, Error> {
-        if v.len() == 67 {
+        if v.len() > 65 {
             // NOTE: a8f55980f7312adf9bd67b9436d362599cb2f5b83d255435cf5dbdc6bd1eaacd
             // with signature:
             // 2d206c63fad7b7130845c3bfbaf75c057054596619ab5725078e248717c9605a (r)
