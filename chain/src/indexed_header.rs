@@ -35,6 +35,10 @@ impl IndexedBlockHeader {
         self.raw.raw_data.as_ref().unwrap().timestamp
     }
 
+    pub fn witness(&self) -> &[u8] {
+        &self.raw.raw_data.as_ref().unwrap().witness_address
+    }
+
     pub fn block_id(&self) -> BlockId {
         BlockId {
             number: self.number(),

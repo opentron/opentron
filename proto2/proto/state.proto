@@ -15,8 +15,8 @@ message AccountResource {
   // saved as slot
   int64 frozen_bandwidth_latest_slot = 6;
   int64 energy_used = 7;
-  int64 energy_limit = 8;
-  int64 energy_latest_timestamp = 9;
+  // int64 energy_limit = 8;
+  int64 energy_latest_slot = 9;
   map<int64, int64> asset_bandwidth_used = 10;
   // limit is saved in Asset
   // map<int64, int64> asset_bandwidth_limit = 11;
@@ -82,6 +82,12 @@ message Witness {
   bytes signature_key = 11;
 }
 
+// Witness reward info of one epoch.
+message WitnessVoterReward {
+  int64 vote_count = 1;
+  int64 reward_amount = 3;
+}
+
 message ResourceDelegation {
   bytes to_address = 1;
   bytes from_address = 2;
@@ -93,6 +99,8 @@ message ResourceDelegation {
 
 message Votes {
   repeated proto.common.Vote votes = 1;
+  // used for calculating vote reward
+  int64 epoch = 2;
 }
 
 message Proposal {
@@ -139,6 +147,7 @@ message Asset {
   message FrozenSupply {
     int64 frozen_amount = 1;
     int64 frozen_expiry_timestamp = 2;
+    bool is_unfrozen = 3;
   }
 
   bytes owner_address = 1;
@@ -178,7 +187,7 @@ message ResourceReceipt {
   int64 energy_usage = 1;
   int64 energy_fee = 2;
   int64 origin_energy_usage = 3;
-  int64 energy_usage_total = 4;
+  int64 energy = 4;
 
   int64 bandwidth_usage = 5;
   // when create a new account, usage = 0, fee = 0.1 TRX
@@ -200,30 +209,22 @@ message TransactionReceipt {
   int64 fee = 5;
   ResourceReceipt resource_receipt = 6;
 
-  message ContractReceipt {
-    chain.Transaction.Result.ContractStatus status = 1;
-    // VM error message
-    bytes message = 10;
-    // created contract address
-    bytes created_address = 2;
-    bytes result = 3;
-    repeated InternalTransaction internal_transactions = 4;
-    repeated TransactionLog logs = 5;
-  }
-  message ExchangeReceipt {
-    int64 created_exchange_id = 1;
-    int64 received_amount = 2;
-    int64 injected_amount = 3;
-    int64 withdrawal_amount = 4;
-  }
+  int64 asset_created_token_id = 7;
+  int64 withdrawal_amount = 8;
+  int64 unfrozen_amount = 9;
 
-  oneof result {
-    ContractReceipt contract = 7;
-    int64 created_asset_id = 8;
-    int64 withdrawal_amount = 9;
-    int64 unfrozen_amount = 10;
-    ExchangeReceipt exchange = 11;
-  }
+  chain.Transaction.Result.ContractStatus vm_status = 10;
+  // VM error message
+  bytes vm_message = 11;
+  bytes vm_created_contract_address = 12;
+  bytes vm_result = 13;
+  repeated InternalTransaction vm_internal_transactions = 14;
+  repeated TransactionLog vm_logs = 15;
+
+  int64 exchange_created_exchange_id = 16;
+  int64 exchange_received_amount = 17;
+  int64 exchange_injected_amount = 18;
+  int64 exchange_withdrawal_amount = 19;
 }
 
 // Chain parameters, known as proposals, can be changed via proposal.

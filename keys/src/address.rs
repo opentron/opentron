@@ -65,6 +65,12 @@ impl Address {
     }
 }
 
+impl Default for Address {
+    fn default() -> Self {
+        Address([0x41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    }
+}
+
 impl fmt::Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         b58encode_check(&self.0).fmt(f)
@@ -73,9 +79,7 @@ impl fmt::Display for Address {
 
 impl ::std::fmt::Debug for Address {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        f.debug_tuple("Address")
-         .field(&self.to_string())
-         .finish()
+        f.debug_tuple("Address").field(&self.to_string()).finish()
     }
 }
 

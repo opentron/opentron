@@ -211,7 +211,6 @@ impl OverlayDB {
         }
     }
 
-
     /// Get the first value matching the given prefix.
     pub fn get_by_prefix(&self, col: &ColumnFamilyHandle, prefix: &[u8]) -> Option<Box<[u8]>> {
         let mut deleted = HashSet::<&[u8]>::new();
@@ -309,6 +308,8 @@ pub const COL_ASSET: usize = 10;
 pub const COL_TRANSACTION_RECEIPT: usize = 11;
 pub const COL_INTERNAL_TRANSACTION: usize = 12;
 pub const COL_TRANSACTION_LOG: usize = 13;
+pub const COL_ACCOUNT_INDEX: usize = 14;
+pub const COL_VOTER_REWARD: usize = 15;
 
 /// The State DB derived from Chain DB.
 pub struct StateDB {
@@ -318,7 +319,7 @@ pub struct StateDB {
 
 impl Drop for StateDB {
     fn drop(&mut self) {
-        info!("state db closed successfully, all cached layers will be droped");
+        info!("state-db closed successfully, all cached layers will be droped");
     }
 }
 
@@ -405,6 +406,19 @@ fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
             "transaction-log",
             ColumnFamilyOptions::default().prefix_extractor_fixed(32),
         ),
+        // <<account_name: str>> => Address
+        ColumnFamilyDescriptor::new(
+            "account-index",
+            ColumnFamilyOptions::default()
+                .optimize_for_point_lookup(16)
+                .compression(CompressionType::NoCompression),
+        ),
+        ColumnFamilyDescriptor::new(
+            "voter-reward",
+            ColumnFamilyOptions::default()
+                .optimize_for_small_db()
+                .optimize_for_point_lookup(16),
+        ),
     ]
 }
 
@@ -439,6 +453,14 @@ impl StateDB {
             .layers
             .pop_front()
             .map(|wb| self.db.inner.write(WriteOptions::default_instance(), &wb));
+    }
+
+    pub fn discard_last_layer(&mut self) -> io::Result<()> {
+        self.db
+            .layers
+            .pop_back()
+            .ok_or(io::Error::new(io::ErrorKind::NotFound, "no layers"))?;
+        Ok(())
     }
 
     pub fn put_key<T, K: keys::Key<T>>(&mut self, key: K, value: T) -> Result<(), BoxError> {
@@ -491,6 +513,13 @@ impl StateDB {
             .expect("key must exist")
     }
 
+    /// Increase a i64 key and the return updated value.
+    pub fn incr_key<K: keys::Key<i64>>(&mut self, key: K) -> Result<i64, BoxError> {
+        let old_val = self.get(&key)?.expect("key must be found");
+        self.put_key(key, old_val + 1)?;
+        Ok(old_val + 1)
+    }
+
     pub fn for_each<T, K: keys::Key<T>, F>(&self, mut func: F)
     where
         F: FnMut(&K, &T) -> (),
@@ -523,7 +552,6 @@ impl StateDB {
         self.apply_genesis_config(genesis)?;
 
         // WitnessSchedule is inited in first maintenance cycle.
-        // self.put_key(&mut wb, keys::WitnessSchedule, value: T)
 
         self.db.solidify_layers()?;
         info!("inited state-db from genesis");
@@ -539,6 +567,7 @@ impl StateDB {
                 address: addr.as_bytes().to_vec(),
                 url: witness.url.clone(),
                 vote_count: witness.votes,
+                brokerage: constants::DEFAULT_BROKERAGE_RATE,
                 // assume all witness in genesis are active witnesses.
                 is_active: true,
                 ..Default::default()
@@ -571,8 +600,8 @@ impl StateDB {
                 ..Default::default()
             };
 
-            let key = keys::Account(addr);
-            self.put_key(key, acct)?;
+            self.put_key(keys::Account(addr), acct)?;
+            self.put_key(keys::AccountIndex(alloc.name.clone()), addr)?;
         }
 
         let genesis_block = genesis.to_indexed_block()?;

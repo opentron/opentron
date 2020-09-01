@@ -44,9 +44,11 @@ rand = '0.7'
 chrono = '0.4'
 hex = '0.4'
 sha2 = '0.9'
+sha3 = '0.9'
 byteorder = '1.3'
 bytes = '0.5'
 reqwest = { version = '0.10', default-features = false, features = ['json'] }
+lazy_static = "1.4"
 # workspace
 proto2 = { path = '../proto2' }
 keys = { path = '../keys' }
@@ -55,3 +57,4 @@ chain-db = { path = '../chain-db' }
 state = { path = '../state' }
 config = { path = '../config' }
 constants = { path = '../constants' }
+tvm = { path = '../tvm' }

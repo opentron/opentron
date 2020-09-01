@@ -1,0 +1,14 @@
+[package]
+name = "tvm"
+version = "0.1.0"
+authors = ["OpenTron Developers <info@opentron.org>"]
+edition = "2018"
+
+[dependencies]
+primitive-types = "0.7"
+log = "0.4"
+# evm = { path = '../../evm' }
+# precompiled = { path = '../../evm/precompiled' }
+precompiled = { git = "https://github.com/opentron/evm", branch = "tron" }
+evm = { git = "https://github.com/opentron/evm", branch = "tron" }
+# ztron = { path = '../ztron' }

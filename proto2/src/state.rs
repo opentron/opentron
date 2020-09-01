@@ -1,6 +1,7 @@
 include!(concat!(env!("OUT_DIR"), "/proto.state.rs"));
 
 pub use crate::common::SmartContract;
+pub use crate::common::AccountType;
 
 use self::proposal::State as ProposalState;
 
@@ -13,10 +14,29 @@ impl Account {
         }
     }
 
+    pub fn new_contract_account(block_timestamp: i64) -> Self {
+        Account {
+            creation_time: block_timestamp,
+            r#type: AccountType::Contract as i32,
+            ..Default::default()
+        }
+    }
+
     pub fn adjust_balance(&mut self, diff: i64) -> Result<(), ()> {
         if let Some(new_balance) = self.balance.checked_add(diff) {
-            if new_balance >= 0 {
+            // When self.balance is negative, this is a blackhole.
+            if self.balance < 0 || new_balance >= 0 {
                 self.balance = new_balance;
+                return Ok(());
+            }
+        }
+        Err(())
+    }
+
+    pub fn adjust_allowance(&mut self, diff: i64) -> Result<(), ()> {
+        if let Some(new_allowance) = self.allowance.checked_add(diff) {
+            if new_allowance >= 0 {
+                self.allowance = new_allowance;
                 return Ok(());
             }
         }
@@ -44,6 +64,10 @@ impl Account {
 
     pub fn amount_for_bandwidth(&self) -> i64 {
         self.frozen_amount_for_bandwidth + self.delegated_frozen_amount_for_bandwidth
+    }
+
+    pub fn amount_for_energy(&self) -> i64 {
+        self.frozen_amount_for_energy + self.delegated_frozen_amount_for_energy
     }
 
     pub fn resource(&self) -> &AccountResource {

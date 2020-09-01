@@ -50,7 +50,12 @@ pub enum BlockVersion {
     Odyssey3_6_5 = 9,
     /// - ForbidTransferToContract
     Odyssey3_6_6 = 10,
-    // Note: This version has only non-core API changes.
+    // NOTE: This version has only non-core API changes. Should not be a version fork.
+    /// On Nile testnet, this is the `AllowShieldedTransaction` fork.
+    ///
+    /// See-also: https://github.com/tronprotocol/java-tron/pull/3372
+    ///
+    /// See-also: block 1628391 of Nile testnet
     Odyssey3_7 = 15,
     /// Shielded TVM precompiles.
     ///

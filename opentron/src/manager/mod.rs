@@ -2,22 +2,25 @@ use ::keys::{b58encode_check, Address};
 use chain::{IndexedBlock, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
-use log::{debug, info, warn};
+use log::{debug, info, trace, warn};
 use primitive_types::H256;
 use prost::Message;
 use state::db::StateDB;
 use state::keys;
 use std::convert::{TryFrom, TryInto};
 
-use self::controllers::ProposalController;
 use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;
+use self::governance::proposal::ProposalController;
+use self::governance::reward::RewardController;
+use self::resource::EnergyProcessor;
 
 pub mod actuators;
 pub mod controllers;
 pub mod executor;
 pub mod governance;
 pub mod resource;
+pub mod vm;
 
 type Error = Box<dyn ::std::error::Error>;
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -43,6 +46,8 @@ pub struct Manager {
     config: Config,
     genesis_config: GenesisConfig,
     maintenance_started_at: i64,
+
+    layers: usize,
 }
 
 impl Manager {
@@ -71,6 +76,7 @@ impl Manager {
             config: config.clone(),
             genesis_config: genesis_config.clone(),
             maintenance_started_at: 0,
+            layers: 0,
         }
     }
 
@@ -99,6 +105,25 @@ impl Manager {
         blackhole_acct.balance += fee;
         self.state_db.put_key(key, blackhole_acct).unwrap();
         Ok(())
+    }
+
+    fn new_layer(&mut self) {
+        self.layers += 1;
+        self.state_db.new_layer();
+    }
+
+    fn commit_current_layers(&mut self) {
+        for _ in 0..self.layers {
+            self.state_db.solidify_layer();
+        }
+        self.layers = 0;
+    }
+
+    fn rollback_layers(&mut self, n: usize) {
+        for _ in 0..n {
+            self.state_db.discard_last_layer().unwrap();
+        }
+        self.layers -= n;
     }
 
     // Entry of db manager.
@@ -149,14 +174,33 @@ impl Manager {
         }
 
         // basic check finished, begin process block
-        self.state_db.new_layer();
+        let started_at = Utc::now().timestamp_nanos();
+        self.new_layer();
 
         // . applyBlock = processBlock + updateFork
         self.process_block(block)?;
 
         // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is not removed.
         // And no need to updateFork.
-        self.state_db.solidify_layer();
+        self.commit_current_layers();
+
+        let elapsed = (Utc::now().timestamp_nanos() - started_at) as f64 / 1_000_000.0;
+        if !block.transactions.is_empty() {
+            info!(
+                "block #{} v{} txns={:<3} total_time={}ms",
+                block.number(),
+                block.version(),
+                block.transactions.len(),
+                elapsed
+            );
+        } else {
+            trace!(
+                "block #{} v{} empty total_time={}ms",
+                block.number(),
+                block.version(),
+                elapsed
+            );
+        }
 
         Ok(true)
     }
@@ -176,7 +220,7 @@ impl Manager {
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
         for txn in &block.transactions {
-            info!(
+            debug!(
                 "transaction => {:?} at block #{} v{}",
                 txn.hash,
                 block.number(),
@@ -187,6 +231,13 @@ impl Manager {
 
         // 4. Adaptive energy processor:
         // TODO, no energy implemented
+        if self.block_energy_usage > 0 {
+            if self.state_db.must_get(&keys::ChainParameter::AllowAdaptiveEnergy) != 0 {
+                debug!("block energy = {}", self.block_energy_usage);
+                // updateTotalEnergyAverageUsage + updateAdaptiveTotalEnergyLimit
+                EnergyProcessor::new(self).update_adaptive_energy().unwrap();
+            }
+        }
 
         // 5. Block reward
         self.pay_reward(block);
@@ -318,7 +369,7 @@ impl Manager {
     }
 
     fn update_solid_block(&mut self, block: &IndexedBlock) -> Result<()> {
-        let mut wit_addrs = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+        let mut wit_addrs = self.state_db.must_get(&keys::WitnessSchedule);
         if wit_addrs.is_empty() {
             panic!("no witness found");
         }
@@ -329,16 +380,16 @@ impl Manager {
             .into_iter()
             .map(|(addr, _, _)| self.state_db.must_get(&keys::Witness(addr)).latest_block_number)
             .collect();
-
         block_nums.sort();
 
         // NOTE: When there are 27 active witnesses, pos will be 8, that's 19 SR confirmations.
         let pos = (block_nums.len() as f64 * (1.0 - constants::SOLID_THRESHOLD_PERCENT as f64 / 100.0)) as usize;
-
         let new_solid_block_num = block_nums[pos];
+
         let old_solid_block_num = self.state_db.must_get(&keys::DynamicProperty::LatestSolidBlockNumber);
         if new_solid_block_num < old_solid_block_num {
-            // NOTE: This warning is ignored.
+            // NOTE: This warning must be ignored. When new active witness is ranked after maintenance,
+            // new solid block number might become 0.
             warn!(
                 "cannot update solid block number backwards, current={}, update={}",
                 old_solid_block_num, new_solid_block_num
@@ -359,8 +410,12 @@ impl Manager {
     fn pay_reward(&mut self, block: &IndexedBlock) {
         let allow_change_delegation = self.state_db.must_get(&keys::ChainParameter::AllowChangeDelegation) != 0;
         if allow_change_delegation {
-            unimplemented!("TODO: pay block reward when AllowChangeDelegation");
+            // So-called new-style reward scheme.
+            // 1. delegationService.payBlockReward
+            // 2. delegationService.payStandbyWitness
+            RewardController::new(self).pay_reward(block).unwrap();
         } else {
+            // NOTE: In this legacy reward scheme, standby witnesses will be paid during maintenance cycle.
             let wit_key = keys::Account(block.witness().try_into().unwrap());
             let mut wit_acct = self.state_db.must_get(&wit_key);
             let reward_per_block = self.state_db.must_get(&keys::ChainParameter::WitnessPayPerBlock);
@@ -448,11 +503,7 @@ impl Manager {
     // consensus
     #[inline]
     fn is_latest_block_maintenance(&self) -> bool {
-        self.state_db
-            .get(&keys::DynamicProperty::IsMaintenance)
-            .unwrap()
-            .unwrap_or(0) ==
-            1
+        self.state_db.must_get(&keys::DynamicProperty::IsMaintenance) != 0
     }
 
     #[inline]

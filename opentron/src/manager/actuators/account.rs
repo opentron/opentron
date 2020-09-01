@@ -56,6 +56,11 @@ impl BuiltinContractExecutorExt for contract_pb::AccountUpdateContract {
             .state_db
             .put_key(keys::Account(owner_address), owner_acct)
             .map_err(|e| e.to_string())?;
+        manager
+            .state_db
+            .put_key(keys::AccountIndex(self.account_name.clone()), owner_address)
+            .map_err(|e| e.to_string())?;
+
         Ok(TransactionResult::success())
     }
 }
@@ -267,19 +272,14 @@ impl BuiltinContractExecutorExt for contract_pb::AccountCreateContract {
     }
 }
 
-// TODO: impl index
 /// Find an account in state-db by its name.
 fn find_account_by_name(manager: &Manager, acct_name: &str) -> Option<Account> {
-    let mut found: Option<Account> = None;
-    {
-        let found = &mut found;
-        manager.state_db.for_each(move |_key: &keys::Account, value: &Account| {
-            if value.name == acct_name {
-                *found = Some(value.clone());
-            }
-        });
-    }
-    found
+    let maybe_addr = manager
+        .state_db
+        .get(&keys::AccountIndex(acct_name.to_owned()))
+        .ok()
+        .flatten();
+    maybe_addr.map(|addr| manager.state_db.must_get(&keys::Account(addr)))
 }
 
 /// Check permission pb definition.

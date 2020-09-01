@@ -1,8 +1,11 @@
 //! Asset related builtin contracts.
 
+use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::sync::Mutex;
 
 use ::keys::Address;
+use lazy_static::lazy_static;
 use log::warn;
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::common::AccountType;
@@ -42,7 +45,8 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
             }
         }
 
-        if self.abbr.is_empty() || self.abbr.len() > 32 || self.abbr.as_bytes().iter().any(|&b| b < 0x21 || b > 0x7e) {
+        // NOTE: `abbr` can be empty, like asset #1000477.
+        if self.abbr.len() > 32 || self.abbr.as_bytes().iter().any(|&b| b < 0x21 || b > 0x7e) {
             return Err("invalid asset abbr".into());
         }
 
@@ -84,7 +88,7 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
             return Err("num should be greater than 0".into());
         }
 
-        // NOTE: This is a design mistake. This field is used for state-db, not for sending a builtin contract.
+        // NOTE: This is a design flaw. This field is used for state-db, not for sending a builtin contract.
         if self.public_free_asset_bandwidth_usage != 0 {
             return Err("do not fill public_free_asset_net_usage".into());
         }
@@ -171,6 +175,7 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
                 .map(|sup| FrozenSupply {
                     frozen_amount: sup.frozen_amount,
                     frozen_expiry_timestamp: self.start_time + sup.frozen_days * DAY_IN_MS,
+                    is_unfrozen: false,
                 })
                 .collect(),
             trx_num: self.trx_num,
@@ -528,22 +533,116 @@ impl BuiltinContractExecutorExt for contract_pb::UpdateAssetContract {
     }
 }
 
+// Unfreeze an asset's frozen_supply.
+impl BuiltinContractExecutorExt for contract_pb::UnfreezeAssetContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        let maybe_owner_acct = state_db
+            .get(&keys::Account(owner_address))
+            .map_err(|_| "error while querying db")?;
+        if maybe_owner_acct.is_none() {
+            return Err("owner account is not on chain".into());
+        }
+        let owner_acct = maybe_owner_acct.unwrap();
+        if owner_acct.issued_asset_id == 0 {
+            return Err("account has not issued any asset".into());
+        }
+
+        let maybe_asset = state_db
+            .get(&keys::Asset(owner_acct.issued_asset_id))
+            .map_err(|_| "db query error")?;
+        if maybe_asset.is_none() {
+            return Err(format!(
+                "asset for id {} is not found in state-db",
+                owner_acct.issued_asset_id
+            ));
+        }
+        let asset = maybe_asset.unwrap();
+        if asset.frozen_supply.is_empty() {
+            return Err("no frozen supply".into());
+        }
+
+        log::debug!("frozen_sup => {:?}", asset.frozen_supply);
+        let now = manager.latest_block_timestamp();
+        if asset
+            .frozen_supply
+            .iter()
+            .find(|sup| !sup.is_unfrozen && sup.frozen_expiry_timestamp <= now)
+            .is_none()
+        {
+            return Err("no frozen supply to unfreeze".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_address));
+        let mut asset = manager.state_db.must_get(&keys::Asset(owner_acct.issued_asset_id));
+
+        let now = manager.latest_block_timestamp();
+
+        let mut unfrozen_amount = 0_i64;
+        for sup in asset.frozen_supply.iter_mut() {
+            if !sup.is_unfrozen && sup.frozen_expiry_timestamp <= now {
+                unfrozen_amount += sup.frozen_amount;
+                sup.is_unfrozen = true;
+            }
+        }
+
+        ctx.unfrozen_amount = unfrozen_amount;
+        owner_acct
+            .adjust_token_balance(owner_acct.issued_asset_id, unfrozen_amount)
+            .unwrap();
+
+        manager
+            .state_db
+            .put_key(keys::Asset(owner_acct.issued_asset_id), asset)
+            .map_err(|_| "db insert error")?;
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), owner_acct)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
+// Asset name to asset id cache.
+lazy_static! {
+    static ref ASSET_ID_CACHE: Mutex<HashMap<String, i64>> = {
+        let m = HashMap::new();
+        Mutex::new(m)
+    };
+}
+
 /// Find asset from state-db by its name. This is a legacy feature.
 /// So no need to implement any reverse index against token names.
+/// A cache hashmap is enough to speed up legacy assets.
 ///
 /// Should only be used before AllowSameTokenName is ON.
 ///
-/// NOTE: This is a design mistalk. Actually, one should use an asset's abbr instead of name.
+/// NOTE: This is a design flaw. Actually, one should use an asset's abbr instead of name.
 /// Never mind, use asset id(token id) solves.
 pub fn find_asset_by_name(manager: &Manager, asset_name: &str) -> Option<Asset> {
-    let mut found: Option<Asset> = None;
-    {
-        let found = &mut found;
-        manager.state_db.for_each(move |_key: &keys::Asset, value: &Asset| {
-            if value.name == asset_name {
-                *found = Some(value.clone());
-            }
-        });
+    let mut map = ASSET_ID_CACHE.lock().unwrap();
+    if let Some(&token_id) = map.get(asset_name) {
+        manager.state_db.get(&keys::Asset(token_id)).expect("db query error")
+    } else {
+        let mut found: Option<Asset> = None;
+        {
+            let found = &mut found;
+            manager.state_db.for_each(move |_key: &keys::Asset, asset: &Asset| {
+                if asset.name == asset_name {
+                    map.insert(asset_name.to_owned(), asset.id);
+                    *found = Some(asset.clone());
+                }
+            });
+        }
+        found
     }
-    found
 }

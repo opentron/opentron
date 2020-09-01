@@ -27,6 +27,9 @@ pub enum DynamicProperty {
 
     IsMaintenance,
     NextMaintenanceTime,
+    HasNewVotesInCurrentEpoch,
+    /// Number of maintenance passed.
+    CurrentEpoch,
 
     // StateFlag, is in maintenance?
     // TODO fill slots
@@ -48,7 +51,7 @@ pub enum DynamicProperty {
     TotalEnergyTargetLimit,
     /// Default: 0
     TotalEnergyAverageUsage,
-    TotalEnergyAverageTime,
+    TotalEnergyAverageSlot,
     // ChainParameter::TotalEnergyCurrentLimit = getTotalEnergyLimit()
     // ChainParameter::TotalEnergyLimit = 90000000000
 
@@ -103,6 +106,8 @@ impl DynamicProperty {
             (IsMaintenance, 0),
             // FIXME: should be after genesis timestamp
             (NextMaintenanceTime, 0),
+            (HasNewVotesInCurrentEpoch, 0),
+            (CurrentEpoch, 0),
             (BlockFilledSlotsIndex, 0),
             // * bandwidth
             (TotalBandwidthWeight, 0),
@@ -114,7 +119,7 @@ impl DynamicProperty {
             // Default: ChainParameter::TotalEnergyLimit / 14400, when accessed
             // (TotalEnergyTargetLimit, 90_000_000_000 / 14400)
             (TotalEnergyAverageUsage, 0),
-            (TotalEnergyAverageTime, 0),
+            (TotalEnergyAverageSlot, 0),
         ];
     }
 

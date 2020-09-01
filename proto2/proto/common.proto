@@ -86,7 +86,7 @@ message SmartContract {
   ABI abi = 3;
   bytes bytecode = 4;
   int64 call_value = 5;
-  int64 consume_user_resource_percent = 6;
+  int64 consume_user_energy_percent = 6;
   string name = 7;
   int64 origin_energy_limit = 8;
   bytes code_hash = 9;

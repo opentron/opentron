@@ -34,7 +34,7 @@ pub struct ChainDB {
 
 impl Drop for ChainDB {
     fn drop(&mut self) {
-        info!("db closed successfully");
+        info!("chain-db closed successfully");
     }
 }
 
@@ -247,12 +247,11 @@ impl ChainDB {
         let mut upper_bound = [0xff_u8; 32];
         BE::write_u64(&mut upper_bound[..8], num);
 
-        let it = self.block_header.new_iterator(
-            &ReadOptions::default()
-                .iterate_lower_bound(&lower_bound[..])
-                .iterate_upper_bound(&upper_bound[..])
-                .pin_data(true),
-        );
+        let ropts = ReadOptions::default()
+            .iterate_lower_bound(&lower_bound[..])
+            .iterate_upper_bound(&upper_bound[..])
+            .pin_data(true);
+        let it = self.block_header.new_iterator(&ropts);
 
         // FIXME: iterator key lifetime leaks, key might becomes same key
         // ref: https://github.com/bh1xuw/rust-rocks/issues/15
@@ -260,6 +259,8 @@ impl ChainDB {
             // .take_while(|(key, _)| &key[..8] == lower_bound)
             .map(|(key, val)| (key.to_vec(), val.to_vec()))
             .collect::<Vec<_>>();
+        drop(ropts); // holds lifetime of bound slice.
+
         if found.is_empty() {
             return Err(Box::new(io::Error::new(io::ErrorKind::NotFound, "block not found")));
         }

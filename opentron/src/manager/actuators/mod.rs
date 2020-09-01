@@ -15,6 +15,7 @@ mod account;
 pub mod asset;
 mod proposal;
 mod resource;
+mod smart_contract;
 mod transfer;
 mod witness;
 
