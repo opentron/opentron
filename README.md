@@ -72,10 +72,10 @@ not ready for general use.
     - [x] witness schedule
     - [x] voting
     - [x] proposal
-    - [ ] block reward
+    - [x] block reward
   - [ ] executor/actuator
     - [x] basic builtin contract support
-    - [ ] smart contract support
+    - [x] smart contract support
     - TODO: handle all types of builtin contracts
   - [ ] EVM / TVM
     - [x] 3.7 TVM <https://github.com/andelf/evm>
