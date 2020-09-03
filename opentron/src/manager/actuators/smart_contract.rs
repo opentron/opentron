@@ -194,7 +194,6 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         // execution
         let energy_limit = ctx.energy_limit as usize;
-
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
@@ -441,7 +440,6 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         debug!("calling data = {:?}", hex::encode(&self.data));
 
         let energy_limit = ctx.energy_limit as usize;
-
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
