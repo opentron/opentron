@@ -99,6 +99,14 @@ impl Manager {
         }
     }
 
+    pub fn add_token_to_blackhole(&mut self, token_id: i64, fee: i64) -> Result<()> {
+        let key = keys::Account(self.blackhole);
+        let mut blackhole_acct = self.state_db.must_get(&key);
+        blackhole_acct.adjust_token_balance(token_id, fee).unwrap();
+        self.state_db.put_key(key, blackhole_acct).unwrap();
+        Ok(())
+    }
+
     pub fn add_to_blackhole(&mut self, fee: i64) -> Result<()> {
         let key = keys::Account(self.blackhole);
         let mut blackhole_acct = self.state_db.must_get(&key);

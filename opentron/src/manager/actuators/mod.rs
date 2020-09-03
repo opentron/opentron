@@ -18,6 +18,8 @@ mod resource;
 mod smart_contract;
 mod transfer;
 mod witness;
+#[cfg(feature = "nile")]
+mod shielded;
 
 pub trait BuiltinContractExt: Message + Default + Sized {
     fn owner_address(&self) -> &[u8];
@@ -211,3 +213,13 @@ impl_contract_ext_for!(ExchangeCreateContract);
 impl_contract_ext_for!(ExchangeInjectContract);
 impl_contract_ext_for!(ExchangeWithdrawContract);
 impl_contract_ext_for!(ExchangeTransactionContract);
+
+#[cfg(feature="nile")]
+impl BuiltinContractExt for ::proto2::contract::ShieldedTransferContract {
+    fn owner_address(&self) -> &[u8] {
+        &[]
+    }
+    fn type_code(&self) -> ContractType {
+        ContractType::ShieldedTransferContract
+    }
+}

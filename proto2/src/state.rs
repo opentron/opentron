@@ -99,3 +99,15 @@ impl Proposal {
         }
     }
 }
+
+
+impl SmartContract {
+    pub fn new_inner() -> Self {
+        SmartContract {
+            name: "CreatedByContract".into(),
+            consume_user_energy_percent: 100,
+            origin_energy_limit: 0,
+            ..Default::default()
+        }
+    }
+}

@@ -1,6 +1,6 @@
 [package]
 name = "tvm"
-version = "0.1.0"
+version = "3.7.0"
 authors = ["OpenTron Developers <info@opentron.org>"]
 edition = "2018"
 
@@ -8,7 +8,14 @@ edition = "2018"
 primitive-types = "0.7"
 log = "0.4"
 # evm = { path = '../../evm' }
-# precompiled = { path = '../../evm/precompiled' }
-precompiled = { git = "https://github.com/opentron/evm", branch = "tron" }
 evm = { git = "https://github.com/opentron/evm", branch = "tron" }
 # ztron = { path = '../ztron' }
+libsecp256k1 = "0.3"
+sha3 = "0.9"
+sha2 = "0.9"
+digest = "0.9"
+bn-plus = "0.4"
+hex = "0.4"
+num-bigint = "0.3"
+num-traits = "0.2"
+lazy_static = "1"

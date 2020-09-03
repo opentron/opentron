@@ -99,8 +99,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 return Err("invalid call_token_value".into());
             }
 
-            // NOTE: This is a wrong check, when creating smart contracts, origin_energy_limit is always set to 0.
-            if new_cntr.origin_energy_limit <= 0 {
+            if new_cntr.origin_energy_limit < 0 {
                 return Err("origin_energy_limit must be greater than 0".into());
             }
 
@@ -195,7 +194,6 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         // execution
         let energy_limit = ctx.energy_limit as usize;
-
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
@@ -442,7 +440,6 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         debug!("calling data = {:?}", hex::encode(&self.data));
 
         let energy_limit = ctx.energy_limit as usize;
-
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
@@ -509,7 +506,31 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
                 let mut ret = TransactionResult::success();
                 ret.contract_status = ContractStatus::OutOfEnergy as i32;
-                debug!("create contract failed, out out energy");
+                debug!("trigger contract failed, OutOfEnergy");
+                Ok(ret)
+            }
+            ExitReason::Error(ExitError::IllegalOperation) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} insufficient",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    origin_address,
+                    energy_usage,
+                    cntr.consume_user_energy_percent,
+                    cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::IllegalOperation as i32;
+                debug!("trigger contract failed, IllegalOperation");
                 Ok(ret)
             }
             ExitReason::Revert(_) => {
@@ -540,6 +561,98 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
                 unimplemented!()
             }
         }
+    }
+}
+
+// Update a contract's `consume_user_energy_percent` setting.
+impl BuiltinContractExecutorExt for contract_pb::UpdateSettingContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        if state_db.must_get(&keys::ChainParameter::AllowTvm) == 0 {
+            return Err("TVM is disabled".into());
+        }
+
+        if self.consume_user_energy_percent < 0 || self.consume_user_energy_percent > 100 {
+            return Err("percent must be in the range [0, 100]".into());
+        }
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract_address")?;
+
+        let maybe_cntr = manager
+            .state_db
+            .get(&keys::Contract(cntr_address))
+            .map_err(|_| "db query error")?;
+        if maybe_cntr.is_none() {
+            return Err("contract not found".into());
+        }
+        let cntr = maybe_cntr.unwrap();
+        let origin_address = *Address::from_bytes(&cntr.origin_address);
+
+        if origin_address != owner_address {
+            return Err("owner address is not the origin creator of contract".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let cntr_address = Address::try_from(&self.contract_address).unwrap();
+        let mut cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
+
+        cntr.consume_user_energy_percent = self.consume_user_energy_percent;
+        manager
+            .state_db
+            .put_key(keys::Contract(cntr_address), cntr)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
+// Update a contract's ABI.
+//
+// NOTE: This is a design flaw, to deceive oneself.
+impl BuiltinContractExecutorExt for contract_pb::ClearAbiContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        if state_db.must_get(&keys::ChainParameter::AllowTvm) == 0 {
+            return Err("TVM is disabled".into());
+        }
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract_address")?;
+
+        let maybe_cntr = manager
+            .state_db
+            .get(&keys::Contract(cntr_address))
+            .map_err(|_| "db query error")?;
+        if maybe_cntr.is_none() {
+            return Err("contract not found".into());
+        }
+        let cntr = maybe_cntr.unwrap();
+        let origin_address = *Address::from_bytes(&cntr.origin_address);
+
+        if origin_address != owner_address {
+            return Err("owner address is not the origin creator of contract".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let cntr_address = Address::try_from(&self.contract_address).unwrap();
+        let mut cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
+
+        cntr.abi.as_mut().map(|abi| abi.entries = vec![]);
+        manager
+            .state_db
+            .put_key(keys::Contract(cntr_address), cntr)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
     }
 }
 

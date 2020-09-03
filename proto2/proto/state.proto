@@ -456,4 +456,11 @@ enum ChainParameter {
   //
   // Default: 0
   AllowProtoFilterNum = 24;
+
+  // Legacy. Only available on nile testnet.
+  //
+  // Enabled: 3.7
+  //
+  // Default: 0
+  AllowShieldedTransaction = 27;
 }

@@ -1,8 +1,9 @@
 //! The TVM backend.
 
 use ::keys::Address;
+use crypto::keccak256;
 use primitive_types::{H160, H256, U256};
-use proto2::state::{Account, AccountType, TransactionLog};
+use proto2::state::{Account, AccountType, SmartContract, TransactionLog};
 use state::db::StateDB;
 use state::keys;
 use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
@@ -93,7 +94,6 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     fn code_size(&self, address: H160) -> usize {
-        log::debug!("CODE_SIZE of {:?}", address);
         let addr = Address::from_tvm_bytes(address.as_bytes());
         self.state()
             .get(&keys::ContractCode(addr))
@@ -102,8 +102,8 @@ impl Backend for StateBackend<'_, '_, '_> {
             .unwrap_or_default()
     }
 
+    // TODO: use Rc<Vec<u8>> to cache
     fn code(&self, address: H160) -> Vec<u8> {
-        log::debug!("CODE of {:?}", address);
         let addr = Address::from_tvm_bytes(address.as_bytes());
         self.state().get(&keys::ContractCode(addr)).unwrap().unwrap_or_default()
     }
@@ -117,6 +117,10 @@ impl Backend for StateBackend<'_, '_, '_> {
                 index,
             ))
             .expect("db query")
+    }
+
+    fn transaction_root_hash(&self) -> H256 {
+        *self.ctx.transaction_hash
     }
 }
 
@@ -146,27 +150,44 @@ impl ApplyBackend for StateBackend<'_, '_, '_> {
                         unimplemented!("TODO: delete empty");
                     }
 
-                    let mut account = self
+                    let (mut account, created) = self
                         .state()
                         .get(&keys::Account(addr))
                         .expect("db query")
-                        .unwrap_or_else(|| Account::new(self.manager.latest_block_timestamp()));
+                        .map(|acct| (acct, false))
+                        .unwrap_or_else(|| {
+                            log::debug!("create new account in TVM: {} {:?}", addr, address);
+                            (Account::new(self.manager.latest_block_timestamp()), true)
+                        });
 
                     account.balance = basic.balance.as_u64() as i64;
                     for (token_id, token_value) in basic.token_balance {
-                        account
-                            .adjust_token_balance(token_id.as_u64() as i64, token_value.as_u64() as i64)
-                            .unwrap();
+                        if token_value == U256::zero() {
+                            account.token_balance.remove(&(token_id.as_u64() as i64));
+                        } else {
+                            account
+                                .token_balance
+                                .insert(token_id.as_u64() as i64, token_value.as_u64() as i64);
+                        }
                     }
                     // account.nonce = basic.nonce;
                     if let Some(code) = code {
+                        let mut cntr = SmartContract::new_inner();
+                        cntr.origin_address = Address::from_tvm_bytes(self.origin().as_bytes()).as_bytes().to_owned();
+                        cntr.contract_address = addr.as_bytes().to_owned();
+                        cntr.code_hash = keccak256(&code).as_bytes().to_owned();
+                        cntr.txn_hash = self.transaction_root_hash().as_bytes().to_owned();
+
+                        self.state_mut().put_key(keys::Contract(addr), cntr).unwrap();
+
                         self.state_mut().put_key(keys::ContractCode(addr), code).unwrap();
                         account.r#type = AccountType::Contract as i32;
                     }
 
-                    if reset_storage {
-                        unimplemented!("TODO: reset_storage")
+                    if !created && reset_storage {
+                        log::warn!("TODO: reset_storage {}", addr);
                     }
+                    self.state_mut().put_key(keys::Account(addr), account).unwrap();
 
                     for (index, value) in storage {
                         log::debug!("set storage: ({}, {}) => {}", addr, index, value);

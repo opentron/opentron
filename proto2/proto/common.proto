@@ -92,7 +92,7 @@ message SmartContract {
   bytes code_hash = 9;
   // When smart contract is created by a trigger smart contract call.
   // renamed: trx_hash
-  bytes txn_id = 10;
+  bytes txn_hash = 10;
 }
 
 message Permission {
