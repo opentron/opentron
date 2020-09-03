@@ -495,13 +495,12 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
+source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
 dependencies = [
  "evm-core",
  "evm-gasometer",
  "evm-runtime",
  "hex",
- "precompiled",
  "primitive-types",
  "rlp",
  "serde",
@@ -511,7 +510,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
+source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
 dependencies = [
  "primitive-types",
 ]
@@ -519,7 +518,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
+source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
 dependencies = [
  "evm-core",
  "evm-runtime",
@@ -529,7 +528,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
+source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
 dependencies = [
  "evm-core",
  "primitive-types",
@@ -950,7 +949,7 @@ dependencies = [
 [[package]]
 name = "juniper"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper.git#2ab00f55d620c51b8732c97c90f8f3349c2e6a0b"
+source = "git+https://github.com/graphql-rust/juniper.git#0f400c37999476c93a147a071ef3fdefcfd03afe"
 dependencies = [
  "bson",
  "chrono",
@@ -969,7 +968,7 @@ dependencies = [
 [[package]]
 name = "juniper_codegen"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper.git#2ab00f55d620c51b8732c97c90f8f3349c2e6a0b"
+source = "git+https://github.com/graphql-rust/juniper.git#0f400c37999476c93a147a071ef3fdefcfd03afe"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -980,7 +979,7 @@ dependencies = [
 [[package]]
 name = "juniper_hyper"
 version = "0.5.2"
-source = "git+https://github.com/graphql-rust/juniper.git#2ab00f55d620c51b8732c97c90f8f3349c2e6a0b"
+source = "git+https://github.com/graphql-rust/juniper.git#0f400c37999476c93a147a071ef3fdefcfd03afe"
 dependencies = [
  "futures",
  "hyper",
@@ -1243,6 +1242,7 @@ dependencies = [
  "clap",
  "config",
  "constants",
+ "crypto",
  "ctrlc",
  "futures",
  "hex",
@@ -1346,25 +1346,6 @@ name = "ppv-lite86"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c36fa947111f5c62a733b652544dd0016a43ce89619538a8ef92724a6f501a20"
-
-[[package]]
-name = "precompiled"
-version = "3.7.0"
-source = "git+https://github.com/opentron/evm?branch=tron#94fb3171852ad70e0f390ef5f3272a54e9610029"
-dependencies = [
- "bn-plus",
- "digest 0.8.1",
- "evm-core",
- "evm-gasometer",
- "hex",
- "lazy_static",
- "libsecp256k1",
- "num-bigint",
- "num-traits",
- "primitive-types",
- "sha2 0.8.2",
- "sha3 0.8.2",
-]
 
 [[package]]
 name = "primitive-types"
@@ -2141,12 +2122,20 @@ checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
 name = "tvm"
-version = "0.1.0"
+version = "3.7.0"
 dependencies = [
+ "bn-plus",
+ "digest 0.9.0",
  "evm",
+ "hex",
+ "lazy_static",
+ "libsecp256k1",
  "log",
- "precompiled",
+ "num-bigint",
+ "num-traits",
  "primitive-types",
+ "sha2 0.9.1",
+ "sha3 0.9.1",
 ]
 
 [[package]]
