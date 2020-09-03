@@ -606,6 +606,17 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::ProposalDeleteContract => unimplemented!(),
+            ContractType::SetAccountIdContract => unimplemented!(),
+            ContractType::ExchangeCreateContract => unimplemented!(),
+            ContractType::ExchangeInjectContract => unimplemented!(),
+            ContractType::ExchangeWithdrawContract => unimplemented!(),
+            ContractType::ExchangeTransactionContract => unimplemented!(),
+            ContractType::UpdateEnergyLimitContract => unimplemented!(),
+            ContractType::ObsoleteVoteAssetContract |
+            ContractType::ObsoleteCustomContract |
+            ContractType::ObsoleteGetContract => unreachable!("obsolete: {:?}", cntr_type),
+            #[allow(unreachable_patterns)]
             _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
         }
     }
