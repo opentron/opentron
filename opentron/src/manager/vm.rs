@@ -173,7 +173,7 @@ impl ApplyBackend for StateBackend<'_, '_, '_> {
                     // account.nonce = basic.nonce;
                     if let Some(code) = code {
                         let mut cntr = SmartContract::new_inner();
-                        cntr.origin_address = self.origin_address;
+                        cntr.origin_address = Address::from_tvm_bytes(self.origin().as_bytes()).as_bytes().to_owned();
                         cntr.contract_address = addr.as_bytes().to_owned();
                         cntr.code_hash = keccak256(&code).as_bytes().to_owned();
                         cntr.txn_hash = self.transaction_root_hash().as_bytes().to_owned();

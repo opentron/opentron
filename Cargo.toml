@@ -70,3 +70,4 @@ state = { path = './state' }
 config = { path = './config' }
 constants = { path = './constants' }
 tvm = { path = './tvm' }
+crypto = { path = './crypto' }

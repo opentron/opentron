@@ -7,8 +7,8 @@ edition = "2018"
 [dependencies]
 primitive-types = "0.7"
 log = "0.4"
-evm = { path = '../../evm' }
-# evm = { git = "https://github.com/opentron/evm", branch = "tron" }
+# evm = { path = '../../evm' }
+evm = { git = "https://github.com/opentron/evm", branch = "tron" }
 # ztron = { path = '../ztron' }
 libsecp256k1 = "0.3"
 sha3 = "0.9"

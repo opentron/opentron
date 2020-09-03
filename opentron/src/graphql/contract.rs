@@ -153,7 +153,7 @@ pub struct SmartContract {
     origin_energy_limit: f64,
     code_hash: Option<String>,
     // When smart contract is created by a trigger smart contract call.
-    txn_id: Option<String>,
+    txn_hash: Option<String>,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -472,8 +472,8 @@ impl From<ContractPb> for Contract {
                     } else {
                         None
                     },
-                    txn_id: if !smart_cntr.txn_id.is_empty() {
-                        Some(hex::encode(&smart_cntr.txn_id))
+                    txn_hash: if !smart_cntr.txn_hash.is_empty() {
+                        Some(hex::encode(&smart_cntr.txn_hash))
                     } else {
                         None
                     },
