@@ -291,6 +291,30 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 debug!("create contract failed, out out energy");
                 Ok(ret)
             }
+            ExitReason::Error(ExitError::IllegalOperation) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} illegal_operation",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    owner_address,
+                    energy_usage,
+                    0,
+                    new_cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::IllegalOperation as i32;
+                debug!("create contract failed, IllegalOperation");
+                Ok(ret)
+            }
             _ => {
                 manager.rollback_layers(1);
                 // TODO: spend energy or spend all energy
@@ -514,7 +538,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
                 let energy_usage = used_energy as i64;
                 ctx.energy = energy_usage;
                 log::debug!(
-                    "energy usage: {}/{} vm_energy={} insufficient",
+                    "energy usage: {}/{} vm_energy={} illegal_operation",
                     energy_usage,
                     energy_limit,
                     used_energy,
