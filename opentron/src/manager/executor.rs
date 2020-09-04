@@ -451,6 +451,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::SetAccountIdContract => {
+                let cntr = contract_pb::SetAccountIdContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Account Set ID {}: name={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.account_id
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::AccountCreateContract => {
                 let cntr = contract_pb::AccountCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
@@ -607,7 +625,6 @@ impl<'m> TransactionExecutor<'m> {
                 Ok(ctx.into())
             }
             ContractType::ProposalDeleteContract => unimplemented!(),
-            ContractType::SetAccountIdContract => unimplemented!(),
             ContractType::ExchangeCreateContract => unimplemented!(),
             ContractType::ExchangeInjectContract => unimplemented!(),
             ContractType::ExchangeWithdrawContract => unimplemented!(),

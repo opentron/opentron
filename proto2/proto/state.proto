@@ -63,6 +63,8 @@ message Account {
   int64 allowance = 15;
   OwnerPermission owner_permission = 16;
   repeated ActivePermission active_permissions = 17;
+  // deprecated, but still exists
+  bytes account_id = 20;
 }
 
 message Witness {
