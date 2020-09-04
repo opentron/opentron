@@ -495,7 +495,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
+source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
 dependencies = [
  "evm-core",
  "evm-gasometer",
@@ -510,7 +510,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
+source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
 dependencies = [
  "primitive-types",
 ]
@@ -518,7 +518,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
+source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
 dependencies = [
  "evm-core",
  "evm-runtime",
@@ -528,7 +528,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#477baf8881805f8e404c3f58ffcb20893540a5dc"
+source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
 dependencies = [
  "evm-core",
  "primitive-types",
@@ -1093,6 +1093,7 @@ name = "merkle-tree"
 version = "0.1.0"
 dependencies = [
  "primitive-types",
+ "sha2 0.9.1",
 ]
 
 [[package]]
@@ -1397,9 +1398,9 @@ checksum = "eba180dafb9038b050a4c280019bbedf9f2467b61e5d892dcad585bb57aadc5a"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.19"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04f5f085b5d71e2188cb8271e5da0161ad52c3f227a661a3c135fdf28e258b12"
+checksum = "175c513d55719db99da20232b06cda8bab6b83ec2d04e3283edf0213c37c1a29"
 dependencies = [
  "unicode-xid",
 ]
