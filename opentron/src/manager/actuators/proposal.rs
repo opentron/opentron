@@ -16,15 +16,7 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
 
-        /* NOTE: witness implies account
-        let maybe_acct = manager
-            .state_db
-            .get(&keys::Account(owner_address))
-            .map_err(|_| "db query error")?;
-        if maybe_acct.is_none() {
-            return Err("account not exists".into());
-        }
-        */
+        // NOTE: witness implies account
 
         let maybe_wit = manager
             .state_db
@@ -136,6 +128,46 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalApproveContract {
                 .filter(|addr| &addr[..] != owner_address.as_bytes())
                 .collect();
         }
+        manager
+            .state_db
+            .put_key(keys::Proposal(self.proposal_id), proposal)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
+impl BuiltinContractExecutorExt for contract_pb::ProposalDeleteContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        // NOTE: Proposal creator implies a witness. No need to check others.
+        let proposal = manager
+            .state_db
+            .get(&keys::Proposal(self.proposal_id))
+            .map_err(|_| "db query error")?
+            .ok_or("proposal id not found")?;
+
+        if proposal.proposer_address != self.owner_address {
+            return Err(format!(
+                "proposal #{} is not proposed by {}",
+                proposal.proposal_id, owner_address
+            ));
+        }
+        if proposal.state != ProposalState::Pending as i32 {
+            return Err(format!(
+                "proposal #{} is not in pending state(expired or cancelled)",
+                proposal.proposal_id
+            ));
+        }
+        // NOTE: Pending implies not-expired, not-cancelled
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let mut proposal = manager.state_db.must_get(&keys::Proposal(self.proposal_id));
+        proposal.state = ProposalState::Cancelled as _;
         manager
             .state_db
             .put_key(keys::Proposal(self.proposal_id), proposal)

@@ -228,6 +228,23 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::ProposalDeleteContract => {
+                let cntr = contract_pb::ProposalDeleteContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Delete Proposal #{} by {}",
+                    cntr.proposal_id,
+                    b58encode_check(cntr.owner_address()),
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::WitnessCreateContract => {
                 let cntr = contract_pb::WitnessCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
                 debug!(
@@ -624,7 +641,6 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
-            ContractType::ProposalDeleteContract => unimplemented!(),
             ContractType::ExchangeCreateContract => unimplemented!(),
             ContractType::ExchangeInjectContract => unimplemented!(),
             ContractType::ExchangeWithdrawContract => unimplemented!(),
