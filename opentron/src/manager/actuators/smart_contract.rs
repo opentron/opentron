@@ -90,8 +90,12 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         }
         let acct = maybe_owner_acct.unwrap();
 
-        // i.e. the ENERGY_LIMIT fork
-        let energy_limit = if ForkController::new(manager).pass_version(BlockVersion::Odyssey3_2_2)? {
+        // NOTE: VMConfig.getEnergyLimitHardFork is a const false?
+        let energy_limit = if !ForkController::new(manager)
+            .pass_version(BlockVersion::Odyssey3_2_2)
+            .unwrap()
+        {
+            // old style
             if call_value < 0 {
                 return Err("invalid call_value".into());
             }
@@ -105,7 +109,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
             get_account_energy_limit_with_fixed_ratio(manager, &acct, ctx.fee_limit, call_value)
         } else {
-            warn!("use legacy energy limit calculation");
+            // new style
             get_account_energy_limit_with_float_ratio(manager, &acct, ctx.fee_limit, call_value)
         };
 
@@ -233,7 +237,13 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
             );
         }
 
-        backend.apply(applies, logs, false);
+        if let ExitReason::Succeed(_) = exit_reason {
+            backend.apply(applies, logs, false);
+        } else {
+            drop(backend);
+            drop(applies);
+            drop(logs);
+        }
 
         match exit_reason {
             ExitReason::Succeed(_) => {
@@ -360,7 +370,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             call_token_id = self.call_token_id;
         }
 
-        if ForkController::new(manager).pass_version(BlockVersion::Odyssey3_2_2)? {
+        if !ForkController::new(manager).pass_version(BlockVersion::Odyssey3_2_2)? {
             if call_value < 0 {
                 return Err("invalid call_value".into());
             }
@@ -490,7 +500,13 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
         let (applies, logs) = executor.deconstruct();
 
-        backend.apply(applies, logs, false);
+        if let ExitReason::Succeed(_) = exit_reason {
+            backend.apply(applies, logs, false);
+        } else {
+            drop(backend);
+            drop(applies);
+            drop(logs);
+        }
 
         match exit_reason {
             ExitReason::Succeed(_) => {
@@ -715,7 +731,7 @@ fn generate_created_contract_address(txn_hash: &H256, owner_address: &Address) -
 
 #[inline]
 fn get_account_energy_limit(manager: &Manager, acct: &Account, fee_limit: i64, call_value: i64) -> i64 {
-    if ForkController::new(manager)
+    if !ForkController::new(manager)
         .pass_version(BlockVersion::Odyssey3_2_2)
         .unwrap()
     {
@@ -773,6 +789,7 @@ fn get_account_energy_limit_with_float_ratio(
     (left_energy + energy_from_balance).min(energy_from_fee_limit)
 }
 
+// getTotalEnergyLimit
 #[inline]
 fn get_total_energy_limit(
     manager: &Manager,
@@ -783,7 +800,7 @@ fn get_total_energy_limit(
     call_value: i64,
 ) -> i64 {
     // TODO: Can origin be null? (use getAccountEnergyLimitWithFixRatio)
-    if ForkController::new(manager)
+    if !ForkController::new(manager)
         .pass_version(BlockVersion::Odyssey3_2_2)
         .unwrap()
     {
