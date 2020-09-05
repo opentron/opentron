@@ -806,7 +806,7 @@ fn get_account_energy_limit_with_float_ratio(
         let left_balance = legacy_get_energy_fee(acct.amount_for_energy(), left_energy, energy_limit);
 
         if left_balance > fee_limit {
-            energy_limit * fee_limit / acct.amount_for_energy()
+            ((energy_limit as i128) * (fee_limit as i128) / (acct.amount_for_energy() as i128)) as i64
         } else {
             left_energy + (fee_limit - left_balance) / energy_price
         }
@@ -890,8 +890,7 @@ fn legacy_get_energy_fee(energy_usage: i64, frozen_energy: i64, total_energy: i6
     if total_energy <= 0 {
         0
     } else {
-        // TODO: big integer?
-        frozen_energy * energy_usage / total_energy
+        ((frozen_energy as i128) * (energy_usage as i128) / (total_energy as i128)) as i64
     }
 }
 
