@@ -190,6 +190,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e4cec68f03f32e44924783795810fa50a7035d8c8ebe78580ad7e6c703fba38"
 
 [[package]]
+name = "cargo_gn"
+version = "0.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ba7d7f7b201dfcbc314b14f2176c92f8ba521dab538b40e426ffed25ed7cd80"
+
+[[package]]
 name = "cc"
 version = "1.0.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -495,7 +501,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
+source = "git+https://github.com/opentron/evm?branch=tron#abf8487f14e086dba68e100bdd1a4fbd9bc9e7f0"
 dependencies = [
  "evm-core",
  "evm-gasometer",
@@ -510,7 +516,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
+source = "git+https://github.com/opentron/evm?branch=tron#abf8487f14e086dba68e100bdd1a4fbd9bc9e7f0"
 dependencies = [
  "primitive-types",
 ]
@@ -518,7 +524,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
+source = "git+https://github.com/opentron/evm?branch=tron#abf8487f14e086dba68e100bdd1a4fbd9bc9e7f0"
 dependencies = [
  "evm-core",
  "evm-runtime",
@@ -528,7 +534,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.17.0"
-source = "git+https://github.com/opentron/evm?branch=tron#5accc242f28b143c48905622aff7de8904dcc42d"
+source = "git+https://github.com/opentron/evm?branch=tron#abf8487f14e086dba68e100bdd1a4fbd9bc9e7f0"
 dependencies = [
  "evm-core",
  "primitive-types",
@@ -764,12 +770,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.8.2"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e91b62f79061a0bc2e046024cb7ba44b08419ed238ecbd9adbd787434b9e8c25"
-dependencies = [
- "autocfg",
-]
+checksum = "00d63df3d41950fb462ed38308eea019113ad1508da725bbedcd0fa5a85ef5f7"
 
 [[package]]
 name = "heck"
@@ -898,9 +901,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.5.2"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e47a3566dd4fd4eec714ae6ceabdee0caec795be835c223d92c2d40f1e8cf1c"
+checksum = "55e2e4c765aa53a0424761bf9f41aa7a6ac1efa87238f59560640e27fca028f2"
 dependencies = [
  "autocfg",
  "hashbrown",
@@ -1430,7 +1433,7 @@ dependencies = [
  "prost",
  "prost-types",
  "tempfile",
- "which",
+ "which 3.1.1",
 ]
 
 [[package]]
@@ -1712,6 +1715,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
 
 [[package]]
+name = "rusty_v8"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74794f26ec99d8baa7dc8499d520f122aad18fc022e79fc774e3c178040960f9"
+dependencies = [
+ "bitflags",
+ "cargo_gn",
+ "lazy_static",
+ "libc",
+ "which 4.0.2",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1722,6 +1738,21 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "semver"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "394cec28fa623e00903caf7ba4fa6fb9a0e260280bb8cdbbba029611108a0190"
+dependencies = [
+ "semver-parser",
+]
+
+[[package]]
+name = "semver-parser"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
@@ -1897,6 +1928,17 @@ dependencies = [
  "libc",
  "redox_syscall",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "solc"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "rusty_v8",
+ "semver",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -2359,6 +2401,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d011071ae14a2f6671d0b74080ae0cd8ebf3a6f8c9589a2cd45f23126fe29724"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "which"
+version = "4.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87c14ef7e1b8b8ecfc75d5eca37949410046e66f15d185c01d70824f1f8111ef"
+dependencies = [
+ "libc",
+ "thiserror",
 ]
 
 [[package]]
