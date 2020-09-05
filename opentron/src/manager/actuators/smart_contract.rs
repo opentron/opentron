@@ -12,7 +12,7 @@ use proto2::chain::transaction::{result::ContractStatus, Result as TransactionRe
 use proto2::contract as contract_pb;
 use proto2::state::{Account, SmartContract};
 use state::keys;
-use tvm::{backend::ApplyBackend, ExitError, ExitReason};
+use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason};
 
 use super::super::controllers::ForkController;
 use super::super::executor::TransactionContext;
@@ -571,6 +571,31 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
                 let mut ret = TransactionResult::success();
                 ret.contract_status = ContractStatus::IllegalOperation as i32;
                 debug!("trigger contract failed, IllegalOperation");
+                Ok(ret)
+            }
+            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::TransferException)) |
+            ExitReason::Error(ExitError::TransferException) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} TransferException",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    origin_address,
+                    energy_usage,
+                    cntr.consume_user_energy_percent,
+                    cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::TransferFailed as i32;
+                debug!("trigger contract failed, TransferException");
                 Ok(ret)
             }
             ExitReason::Revert(_) => {

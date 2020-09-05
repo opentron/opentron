@@ -128,6 +128,7 @@ message Transaction {
       ILLEGAL_OPERATION = 8;
       OUT_OF_TIME = 11;
       OUT_OF_ENERGY = 10;
+      // TransferException
       TRANSFER_FAILED = 14;
       // Maybe not used
       BAD_JUMP_DESTINATION = 3;
