@@ -91,8 +91,8 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         let acct = maybe_owner_acct.unwrap();
 
         // NOTE: VMConfig.getEnergyLimitHardFork is a const false?
-        let energy_limit = if !ForkController::new(manager)
-            .pass_version(BlockVersion::Odyssey3_2_2)
+        let energy_limit = if ForkController::new(manager)
+            .pass_version(BlockVersion::ENERGY_LIMIT())
             .unwrap()
         {
             // old style
@@ -370,7 +370,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             call_token_id = self.call_token_id;
         }
 
-        if !ForkController::new(manager).pass_version(BlockVersion::Odyssey3_2_2)? {
+        if ForkController::new(manager).pass_version(BlockVersion::ENERGY_LIMIT())? {
             if call_value < 0 {
                 return Err("invalid call_value".into());
             }
@@ -731,8 +731,8 @@ fn generate_created_contract_address(txn_hash: &H256, owner_address: &Address) -
 
 #[inline]
 fn get_account_energy_limit(manager: &Manager, acct: &Account, fee_limit: i64, call_value: i64) -> i64 {
-    if !ForkController::new(manager)
-        .pass_version(BlockVersion::Odyssey3_2_2)
+    if ForkController::new(manager)
+        .pass_version(BlockVersion::ENERGY_LIMIT())
         .unwrap()
     {
         get_account_energy_limit_with_fixed_ratio(manager, &acct, fee_limit, call_value)
@@ -800,8 +800,8 @@ fn get_total_energy_limit(
     call_value: i64,
 ) -> i64 {
     // TODO: Can origin be null? (use getAccountEnergyLimitWithFixRatio)
-    if !ForkController::new(manager)
-        .pass_version(BlockVersion::Odyssey3_2_2)
+    if ForkController::new(manager)
+        .pass_version(BlockVersion::ENERGY_LIMIT())
         .unwrap()
     {
         get_total_energy_limit_with_fixed_ratio(manager, caller, origin, cntr, fee_limit, call_value)

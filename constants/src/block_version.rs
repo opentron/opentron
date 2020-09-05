@@ -81,4 +81,10 @@ impl BlockVersion {
             _ => ForkPolicy::Old,
         }
     }
+
+    /// The ENERGY_LIMIT fork at block #4727890.
+    #[allow(non_snake_case)]
+    pub const fn ENERGY_LIMIT() -> BlockVersion {
+        BlockVersion::Odyssey3_2
+    }
 }
