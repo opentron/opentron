@@ -265,9 +265,7 @@ impl OverlayDB {
                         Some(val) => {
                             func(key, val);
                         }
-                        None => {
-                            visited.insert(key);
-                        }
+                        None => (),
                     }
                 }
             }
@@ -283,12 +281,95 @@ impl OverlayDB {
 
     /// Iterate over the data for a given column, returning all key/value pairs
     /// where the key starts with the given prefix.
-    pub fn iter_with_prefix<'a>(
-        &'a self,
-        _col: &ColumnFamilyHandle,
-        _prefix: &'a [u8],
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
-        unimplemented!()
+    pub fn for_each_by_prefix<F>(&self, col: &ColumnFamilyHandle, prefix: &[u8], mut func: F)
+    where
+        F: FnMut(&[u8], &[u8]) -> (),
+    {
+        let mut visited = HashSet::<&[u8]>::new();
+
+        for layer in self.layers.iter().rev() {
+            if let Some(cache) = layer.cache.get(&col.id()) {
+                for (key, value) in cache.iter().filter(|(key, _)| key.starts_with(prefix)) {
+                    if !key.starts_with(prefix) {
+                        continue;
+                    }
+                    if visited.contains(&**key) {
+                        continue;
+                    }
+                    visited.insert(key);
+                    match value {
+                        Some(val) => {
+                            func(key, val);
+                        }
+                        None => (),
+                    }
+                }
+            }
+        }
+
+        for (key, value) in self
+            .inner
+            .new_iterator_cf(&ReadOptions::default().iterate_lower_bound(prefix), col)
+        {
+            if !key.starts_with(prefix) {
+                return;
+            }
+            if visited.contains(key) {
+                continue;
+            }
+            func(key, value);
+        }
+    }
+
+    pub fn delete(&mut self, col: &ColumnFamilyHandle, key: &[u8]) -> io::Result<()> {
+        let wb = self
+            .layers
+            .back_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no db layers found"))?;
+        wb.delete(col, key);
+        Ok(())
+    }
+
+    pub fn delete_by_prefix(&mut self, col: &ColumnFamilyHandle, prefix: &[u8]) -> io::Result<()> {
+        let mut visited = HashSet::<&[u8]>::new();
+        let mut deleted = HashSet::<Vec<u8>>::new();
+
+        for layer in self.layers.iter().rev() {
+            if let Some(cache) = layer.cache.get(&col.id()) {
+                for (key, value) in cache.iter().filter(|(key, _)| key.starts_with(prefix)) {
+                    if !key.starts_with(prefix) {
+                        continue;
+                    }
+                    if visited.contains(&**key) {
+                        continue;
+                    }
+                    visited.insert(key);
+                    match value {
+                        Some(_) => {
+                            deleted.insert(key.to_vec());
+                        },
+                        None => (),
+                    }
+                }
+            }
+        }
+
+        for key in self
+            .inner
+            .new_iterator_cf(&ReadOptions::default().iterate_lower_bound(prefix), col).keys()
+        {
+            if !key.starts_with(prefix) {
+                return Ok(());
+            }
+            if visited.contains(key) {
+                continue;
+            }
+            deleted.insert(key.to_vec());
+        }
+        for key in &deleted {
+            self.delete(col, key)?;
+        }
+        Ok(())
     }
 }
 
@@ -474,12 +555,12 @@ impl StateDB {
     }
 
     pub fn delete_key<T, K: keys::Key<T>>(&mut self, key: &K) -> Result<(), BoxError> {
-        let wb = self
-            .db
-            .layers
-            .back_mut()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "no db layers found"))?;
-        wb.delete(&self.cols[K::COL], key.key().as_ref());
+        self.db.delete(&self.cols[K::COL], key.key().as_ref())?;
+        Ok(())
+    }
+
+    pub fn delete_by_prefix(&mut self, col: &ColumnFamilyHandle, prefix: &[u8]) -> Result<(), BoxError> {
+        self.db.delete_by_prefix(col, prefix)?;
         Ok(())
     }
 
@@ -525,6 +606,15 @@ impl StateDB {
         F: FnMut(&K, &T) -> (),
     {
         self.db.for_each(&self.cols[K::COL], move |key, value| {
+            func(&K::parse_key(key), &K::parse_value(value))
+        });
+    }
+
+    pub fn for_each_by_prefix<T, K: keys::Key<T>, F>(&self, prefix: &[u8], mut func: F)
+    where
+        F: FnMut(&K, &T) -> (),
+    {
+        self.db.for_each_by_prefix(&self.cols[K::COL], prefix, move |key, value| {
             func(&K::parse_key(key), &K::parse_value(value))
         });
     }
