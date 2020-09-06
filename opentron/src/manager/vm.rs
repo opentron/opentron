@@ -10,6 +10,7 @@ use primitive_types::{H160, H256, U256};
 use proto2::state::{Account, AccountType, SmartContract, TransactionLog};
 use state::db::StateDB;
 use state::keys;
+use log::debug;
 use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
 
 use super::executor::TransactionContext;
@@ -251,10 +252,21 @@ impl ApplyBackend for StateBackend<'_, '_, '_> {
                         }
                     }
                 }
+                // Suicided
                 Apply::Delete { address } => {
                     let addr = Address::from_tvm_bytes(address.as_bytes());
                     self.state_mut().delete_key(&keys::Account(addr)).unwrap();
-                    unimplemented!("TODO: delete account")
+                    self.state_mut().delete_key(&keys::Contract(addr)).unwrap();
+                    self.state_mut().delete_key(&keys::ContractCode(addr)).unwrap();
+                    debug!("suicide and delete account: {}", addr);
+                    let mut has_storage = false;
+                    self.state().for_each_by_prefix(addr.as_bytes(), |key: &keys::ContractStorage, value| {
+                        debug!("{} ({:?} => {:?})", key.0, key.1, value);
+                        has_storage = true;
+                    });
+                    if has_storage {
+                        unimplemented!("TODO: delete account storage")
+                    }
                 }
             }
         }
