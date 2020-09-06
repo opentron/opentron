@@ -47,13 +47,14 @@ fn recover_addr(message: &[u8], signature: &[u8]) -> Option<H160> {
 
 /// batchvalidatesign(bytes32 hash, bytes[] signatures, address[] addresses) returns (bytes32)
 pub fn batchvalidatesign(input: &[u8]) -> Option<Vec<u8>> {
+    const MAX_NUM_OF_SIGNATURES: usize = 16;
     let mut it = AbiArgIterator::new(input);
 
     let hash = it.next_byte32()?;
     let sigs = it.next_array_of_bytes()?;
     let addrs = it.next_array_of_byte32()?;
 
-    if sigs.len() != addrs.len() {
+    if sigs.len() != addrs.len() || sigs.is_empty() || sigs.len() > MAX_NUM_OF_SIGNATURES{
         return None;
     }
 
