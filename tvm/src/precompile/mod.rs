@@ -1,7 +1,7 @@
 //! The precompiles.
 
-use crate::{ExitError, ExitSucceed};
 use crate::backend::Backend;
+use crate::{ExitError, ExitSucceed};
 
 use digest::Digest;
 use num_bigint::BigUint;
@@ -150,15 +150,14 @@ pub fn tron_precompile(
         }
         0x9 => {
             const COST_PER_SIGN: usize = 1500;
-
-            let cost = COST_PER_SIGN * (input.len() / WORD_SIZE - 5) / 6;
+            let cost = COST_PER_SIGN * ((input.len() / WORD_SIZE - 5) / 6);
 
             let ret = tron::batchvalidatesign(input).unwrap_or_default();
             Some(Ok((ExitSucceed::Returned, ret, cost)))
         }
         0xa => {
             const COST_PER_SIGN: usize = 1500;
-            let cost = COST_PER_SIGN * (input.len() / WORD_SIZE - 5) / 6;
+            let cost = COST_PER_SIGN * ((input.len() / WORD_SIZE - 5) / 6);
 
             let validated = tron::validatemultisign(input, backend).unwrap_or(false);
             let encoded = U256::from(validated as u8);
