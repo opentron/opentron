@@ -77,7 +77,9 @@ pub fn validatemultisign(input: &[u8]) -> Option<bool> {
     let _hash = it.next_byte32();
     let _sigs = it.next_array_of_bytes();
 
-    return Some(true);
+    unimplemented!("TODO: impl validatemultisign")
+
+    // return Some(true);
 }
 
 #[cfg(test)]

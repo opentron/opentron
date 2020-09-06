@@ -1,7 +1,10 @@
 //! The TVM backend.
 
+use std::collections::HashSet;
+
 use ::keys::Address;
 use crypto::keccak256;
+use lazy_static::lazy_static;
 use primitive_types::{H160, H256, U256};
 use proto2::state::{Account, AccountType, SmartContract, TransactionLog};
 use state::db::StateDB;
@@ -10,6 +13,18 @@ use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
 
 use super::executor::TransactionContext;
 use super::Manager;
+
+lazy_static! {
+    static ref PRECOMPILE_ADDRS: HashSet<H160> = {
+        let mut set = HashSet::new();
+        for &precompile in &[
+            0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0x1000001, 0x1000002, 0x1000003, 0x1000004,
+        ] {
+            set.insert(H160::from_low_u64_be(precompile));
+        }
+        set
+    };
+}
 
 /// StateDB backend, storing all state values in a RocksDB instance.
 pub struct StateBackend<'m, 'c, 'ctx> {
@@ -72,6 +87,10 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     fn exists(&self, address: H160) -> bool {
+        if PRECOMPILE_ADDRS.contains(&address) {
+            return true;
+        }
+
         let addr = Address::from_tvm_bytes(address.as_bytes());
         self.state().get(&keys::Account(addr)).unwrap().is_some()
     }
