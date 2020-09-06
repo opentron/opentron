@@ -1,6 +1,7 @@
 //! The TVM backend.
 
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
 use ::keys::Address;
 use crypto::keccak256;
@@ -140,6 +141,35 @@ impl Backend for StateBackend<'_, '_, '_> {
 
     fn transaction_root_hash(&self) -> H256 {
         *self.ctx.transaction_hash
+    }
+
+    fn validate_multisig(&self, address: H160, perm_id: U256, message: H256, signatures: &[&[u8]]) -> bool {
+        use ::keys::{Public, Signature};
+
+        let addr = Address::from_tvm_bytes(address.as_bytes());
+        let maybe_acct = self.state().get(&keys::Account(addr)).unwrap();
+        if maybe_acct.is_none() {
+            return false;
+        }
+        let acct = maybe_acct.unwrap();
+        if perm_id > U256::from(i32::max_value()) {
+            return false;
+        }
+        let perm_id = perm_id.low_u32() as i32;
+        let recover_addrs = signatures
+            .iter()
+            .map(|&raw_sig| {
+                Signature::try_from(raw_sig)
+                    .and_then(|sig| Public::recover_digest(message.as_bytes(), &sig))
+                    .map(|pubkey| Address::from_public(&pubkey))
+            })
+            .collect::<Result<Vec<_>, _>>();
+        if recover_addrs.is_err() {
+            log::error!("rec_addr failed: {:?}", recover_addrs);
+        }
+        super::actuators::validate_multisig(addr, acct, perm_id, recover_addrs.unwrap(), None, true)
+            .map_err(|e| log::error!("validata multisig error: {:?}", e))
+            .is_ok()
     }
 }
 

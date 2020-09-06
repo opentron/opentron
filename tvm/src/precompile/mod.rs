@@ -1,6 +1,7 @@
 //! The precompiles.
 
 use crate::{ExitError, ExitSucceed};
+use crate::backend::Backend;
 
 use digest::Digest;
 use num_bigint::BigUint;
@@ -38,7 +39,7 @@ const WORD_SIZE: usize = 32;
 // 000000000000000000000000000000000000000000000000000000000000000a
 // validatemultisign(address addr, uint256 permissionId, bytes32 hash, bytes[] signatures) returns (bool)
 // TRON 4.0 update: shielded contracts, implemented in ztron.
-// 000000000000000000000000000000000000000000000000000000000 - verifyMintProof
+// 0000000000000000000000000000000000000000000000000000000001000001 - verifyMintProof
 // 0000000000000000000000000000000000000000000000000000000001000002 - verifyTransferProof
 // 0000000000000000000000000000000000000000000000000000000001000003 - verifyBurnProof
 // 0000000000000000000000000000000000000000000000000000000001000004 - pedersenHash
@@ -46,6 +47,7 @@ pub fn tron_precompile(
     address: H160,
     input: &[u8],
     _target_gas: Option<usize>,
+    backend: &dyn Backend,
 ) -> Option<Result<(ExitSucceed, Vec<u8>, usize), ExitError>> {
     match address.to_low_u64_be() {
         0x1 => {
@@ -158,7 +160,7 @@ pub fn tron_precompile(
             const COST_PER_SIGN: usize = 1500;
             let cost = COST_PER_SIGN * (input.len() / WORD_SIZE - 5) / 6;
 
-            let validated = tron::validatemultisign(input).unwrap_or(false);
+            let validated = tron::validatemultisign(input, backend).unwrap_or(false);
             let encoded = U256::from(validated as u8);
 
             let mut ret = vec![0u8; 32];

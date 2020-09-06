@@ -4,6 +4,7 @@ use sha3::{Digest, Keccak256};
 use std::convert::TryInto;
 
 use super::helper::AbiArgIterator;
+use crate::backend::Backend;
 
 pub fn ecrecover(input: &[u8]) -> Option<H256> {
     let v: u8 = U256::from_big_endian(&input[32..64]).try_into().ok()?;
@@ -69,17 +70,15 @@ pub fn batchvalidatesign(input: &[u8]) -> Option<Vec<u8>> {
 }
 
 /// validatemultisign(address addr, uint256 permissionId, bytes32 hash, bytes[] signatures) returns (bool)
-pub fn validatemultisign(input: &[u8]) -> Option<bool> {
+pub fn validatemultisign(input: &[u8], backend: &dyn Backend) -> Option<bool> {
     let mut it = AbiArgIterator::new(input);
 
-    let _addr = it.next_h160();
-    let _perm_id = it.next_u256();
-    let _hash = it.next_byte32();
-    let _sigs = it.next_array_of_bytes();
+    let addr = it.next_h160()?;
+    let perm_id = it.next_u256()?;
+    let hash = it.next_h256()?;
+    let sigs = it.next_array_of_bytes()?;
 
-    unimplemented!("TODO: impl validatemultisign")
-
-    // return Some(true);
+    Some(backend.validate_multisig(addr, perm_id, hash, &sigs))
 }
 
 #[cfg(test)]
