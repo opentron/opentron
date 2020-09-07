@@ -188,7 +188,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
             .unwrap();
         manager.state_db.put_key(keys::Contract(cntr_address), cntr).unwrap();
         if !allow_tvm_constantinople {
-            let code = legacy_get_code(&new_cntr.bytecode);
+            let code = legacy_get_runtime_code(&new_cntr.bytecode);
             log::debug!("legacy code size => {}", code.len());
             manager
                 .state_db
@@ -434,6 +434,29 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
         let origin_address = Address::try_from(&cntr.origin_address).unwrap();
 
+        let energy_limit = ctx.energy_limit as usize;
+
+        // NOTE: OutOfTime is a design flaw, skip VM and accept the result.
+        if ctx.contract_status == ContractStatus::OutOfTime {
+            warn!("contract status is OutOfTime, skip!");
+            let energy_usage = energy_limit as i64;
+            ctx.energy = energy_usage;
+            log::debug!("energy usage: {} (all)", energy_usage);
+            EnergyProcessor::new(manager).consume(
+                owner_address,
+                origin_address,
+                energy_usage,
+                cntr.consume_user_energy_percent,
+                cntr.origin_energy_limit,
+                ctx,
+            )?;
+
+            let mut ret = TransactionResult::success();
+            ret.contract_status = ContractStatus::OutOfTime as i32;
+            debug!("execute contract failed, OutOfTime");
+            return Ok(ret);
+        }
+
         manager.new_layer();
 
         // transfer
@@ -473,7 +496,6 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let data = Rc::new(self.data.to_vec());
         debug!("calling data = {:?}", hex::encode(&self.data));
 
-        let energy_limit = ctx.energy_limit as usize;
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
@@ -724,7 +746,7 @@ impl BuiltinContractExecutorExt for contract_pb::ClearAbiContract {
 // NOTE: This is a really bad implementation.
 // It preserves constructor parameters and is inconsistent with save code energy.
 // Anyway, we are not the inventors of bugs, instead, we are copiers.
-fn legacy_get_code(deploy_code: &[u8]) -> &[u8] {
+fn legacy_get_runtime_code(deploy_code: &[u8]) -> &[u8] {
     const RETURN: u8 = 0xf3;
     const STOP: u8 = 0x00;
     const PUSH1: u8 = 0x60;

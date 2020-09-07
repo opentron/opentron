@@ -40,6 +40,7 @@ pub struct TransactionContext<'a> {
     pub energy_fee: i64,
     pub result: Vec<u8>,
     pub logs: Vec<TransactionLog>,
+    pub contract_status: ContractStatus,
 }
 
 impl<'a> TransactionContext<'a> {
@@ -66,6 +67,7 @@ impl<'a> TransactionContext<'a> {
             energy_fee: 0,
             result: vec![],
             logs: vec![],
+            contract_status: ContractStatus::default(),
         }
     }
 }
@@ -577,6 +579,9 @@ impl<'m> TransactionExecutor<'m> {
             // TVM: Should handle BW first, then remaining can be used for E.
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                let contract_status = maybe_result
+                    .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
+                    .unwrap_or_default();
 
                 debug!(
                     "=> Create Smart Contract by {}: name={:?} code_size={}",
@@ -586,7 +591,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
-
+                ctx.contract_status = contract_status;
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
@@ -614,6 +619,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
+                ctx.contract_status = contract_status;
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
