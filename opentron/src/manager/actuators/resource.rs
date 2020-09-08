@@ -96,18 +96,18 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
         let maybe_recv_addr = Address::try_from(&self.receiver_address).ok();
 
         // NOTE: In OpenTron, delegate to others and freeze for oneself is handled in the same logic.
-        if let Some(resource_type) = ResourceCode::from_i32(self.resource) {
+        if let Some(res_type) = ResourceCode::from_i32(self.resource) {
             if let Some(recv_addr) = maybe_recv_addr {
                 delegate_resource(
                     manager,
                     owner_addr,
                     recv_addr,
-                    resource_type,
+                    res_type,
                     self.frozen_balance,
                     expire_time,
                 )?;
             } else {
-                freeze_resource(manager, owner_addr, resource_type, self.frozen_balance, expire_time)?;
+                freeze_resource(manager, owner_addr, res_type, self.frozen_balance, expire_time)?;
             }
         } else {
             unreachable!("already verified");
@@ -123,37 +123,86 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
         let state_db = &manager.state_db;
 
         let owner_addr = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
-        let maybe_owner_acct = state_db
+        let owner_acct = state_db
             .get(&keys::Account(owner_addr))
-            .map_err(|_| "error while querying db")?;
-        if maybe_owner_acct.is_none() {
-            return Err("owner account is not on chain".into());
-        }
-        let owner_acct = maybe_owner_acct.unwrap();
+            .map_err(|_| "error while querying db")?
+            .ok_or_else(|| "owner account is not on chain")?;
 
-        let resource_type = ResourceCode::from_i32(self.resource).ok_or("invalid resource type")?;
+        let res_type = ResourceCode::from_i32(self.resource).ok_or("invalid resource type")?;
 
         let now = manager.latest_block_timestamp();
 
         if !self.receiver_address.is_empty() &&
-            manager.state_db.must_get(&keys::ChainParameter::AllowDelegateResource) == 1
+            manager.state_db.must_get(&keys::ChainParameter::AllowDelegateResource) != 0
         {
             if self.owner_address == self.receiver_address {
                 return Err("the owner and receiver address cannot be the same".into());
             }
             let recv_addr = Address::try_from(&self.receiver_address).map_err(|_| "invalid receiver_address")?;
-            let maybe_recv_acct = state_db
+            let recv_acct = state_db
                 .get(&keys::Account(recv_addr))
-                .map_err(|_| "error while querying db")?;
-            if maybe_recv_acct.is_none() {
-                return Err("receiver account is not on chain".into());
-            }
+                .map_err(|_| "error while querying db")?
+                .ok_or_else(|| "receiver account is not on chain")?;
 
-            unimplemented!("TODO: handle un-delegate");
+            let del = manager
+                .state_db
+                .get(&keys::ResourceDelegation(owner_addr, owner_addr))
+                .map_err(|_| "error while querying db")?
+                .ok_or_else(|| "delegation does not exist")?;
+
+            let allow_tvm_constantinople = manager
+                .state_db
+                .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
+                0;
+            let allow_tvm_solidity059 = manager
+                .state_db
+                .must_get(&keys::ChainParameter::AllowTvmSolidity059Upgrade) !=
+                0;
+
+            // TODO: refactor logic
+
+            match res_type {
+                ResourceCode::Bandwidth => {
+                    if del.amount_for_bandwidth <= 0 {
+                        return Err("delegated bandwidth does not exist".into());
+                    }
+                    if !allow_tvm_constantinople {
+                        if recv_acct.delegated_frozen_amount_for_bandwidth < del.amount_for_bandwidth {
+                            return Err("inconsistent state-db!!".into());
+                        }
+                    } else if !allow_tvm_solidity059 &&
+                        recv_acct.r#type != AccountType::Contract as i32 &&
+                        recv_acct.delegated_frozen_amount_for_bandwidth < del.amount_for_bandwidth
+                    {
+                        return Err("inconsistent state-db!!".into());
+                    }
+                    if del.expiration_timestamp_for_bandwidth > now {
+                        return Err("delegation is not expired".into());
+                    }
+                }
+                ResourceCode::Energy => {
+                    if del.amount_for_energy <= 0 {
+                        return Err("delegated energy does not exist".into());
+                    }
+                    if !allow_tvm_constantinople {
+                        if recv_acct.delegated_frozen_amount_for_energy < del.amount_for_energy {
+                            return Err("inconsistent state-db!!".into());
+                        }
+                    } else if !allow_tvm_solidity059 &&
+                        recv_acct.r#type != AccountType::Contract as i32 &&
+                        recv_acct.delegated_frozen_amount_for_energy < del.amount_for_energy
+                    {
+                        return Err("inconsistent state-db!!".into());
+                    }
+                    if del.expiration_timestamp_for_energy > now {
+                        return Err("delegation is not expired".into());
+                    }
+                }
+            }
         } else {
             // NOTE: there will be only 1 freeze!
             let del = state_db.must_get(&keys::ResourceDelegation(owner_addr, owner_addr));
-            match resource_type {
+            match res_type {
                 ResourceCode::Bandwidth => {
                     // NOTE: FrozenCount is not checked
                     if owner_acct.frozen_amount_for_bandwidth > 0 {
@@ -184,18 +233,77 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
         RewardController::new(manager).withdraw_reward(owner_addr)?;
 
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
-        let resource_type = ResourceCode::from_i32(self.resource).unwrap();
+        let res_type = ResourceCode::from_i32(self.resource).unwrap();
 
         let mut unfrozen_amount = 0;
         if !self.receiver_address.is_empty() &&
             manager.state_db.must_get(&keys::ChainParameter::AllowDelegateResource) == 1
         {
-            unimplemented!("TODO: handle unfreeze after AllowDelegateResource");
+            // handle delegated resource
+            let recv_addr = Address::try_from(&self.receiver_address).unwrap();
+            let mut del = manager
+                .state_db
+                .must_get(&keys::ResourceDelegation(owner_addr, recv_addr));
+
+            unfrozen_amount = del.amount_for_resource(res_type);
+            del.reset_resource(res_type);
+            owner_acct.delegated_out_amount -= unfrozen_amount;
+
+            let mut recv_acct = manager.state_db.must_get(&keys::Account(recv_addr));
+
+            let allow_tvm_constantinople = manager
+                .state_db
+                .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
+                0;
+            let allow_tvm_solidity059 = manager
+                .state_db
+                .must_get(&keys::ChainParameter::AllowTvmSolidity059Upgrade) !=
+                0;
+
+            if !allow_tvm_constantinople || recv_acct.r#type != AccountType::Contract as i32 {
+                // TODO: is `saturating_add` can be used here to optimize?
+                match res_type {
+                    ResourceCode::Bandwidth => {
+                        if allow_tvm_solidity059 && recv_acct.delegated_frozen_amount_for_bandwidth < unfrozen_amount {
+                            recv_acct.delegated_frozen_amount_for_bandwidth = 0;
+                        } else {
+                            recv_acct.delegated_frozen_amount_for_bandwidth -= unfrozen_amount;
+                        }
+                    }
+                    ResourceCode::Energy => {
+                        if allow_tvm_solidity059 && recv_acct.delegated_frozen_amount_for_energy < unfrozen_amount {
+                            recv_acct.delegated_frozen_amount_for_energy = 0;
+                        } else {
+                            recv_acct.delegated_frozen_amount_for_energy -= unfrozen_amount;
+                        }
+                    }
+                }
+                manager
+                    .state_db
+                    .put_key(keys::Account(recv_addr), recv_acct)
+                    .map_err(|_| "db insert error")?;
+            }
+
+            owner_acct.adjust_balance(unfrozen_amount).unwrap();
+
+            if del.is_empty() {
+                remove_from_delegation_index(manager, owner_addr, recv_addr)?;
+                manager
+                    .state_db
+                    .delete_key(&keys::ResourceDelegation(owner_addr, recv_addr))
+                    .map_err(|_| "db delete error")?;
+            } else {
+                manager
+                    .state_db
+                    .put_key(keys::ResourceDelegation(owner_addr, recv_addr), del)
+                    .map_err(|_| "db insert error")?;
+            }
         } else {
+            // handle frozen resource of oneself
             let mut del = manager
                 .state_db
                 .must_get(&keys::ResourceDelegation(owner_addr, owner_addr));
-            match resource_type {
+            match res_type {
                 ResourceCode::Bandwidth => {
                     // ctx.withdrawal_amount = del.amount_for_bandwidth;
                     unfrozen_amount += del.amount_for_bandwidth;
@@ -217,16 +325,17 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
             }
             ctx.unfrozen_amount = unfrozen_amount;
 
+            if del.is_empty() {
+                remove_from_delegation_index(manager, owner_addr, owner_addr)?;
+            }
             manager
                 .state_db
                 .put_key(keys::ResourceDelegation(owner_addr, owner_addr), del)
                 .map_err(|_| "db insert error")?;
-
-            remove_from_delegation_index(manager, owner_addr, owner_addr)?;
         }
 
         // handle global weight
-        let weight_key = match resource_type {
+        let weight_key = match res_type {
             ResourceCode::Bandwidth => keys::DynamicProperty::TotalBandwidthWeight,
             ResourceCode::Energy => keys::DynamicProperty::TotalEnergyWeight,
         };
@@ -263,7 +372,7 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
             .put_key(keys::Account(owner_addr), owner_acct)
             .map_err(|_| "db insert error")?;
 
-        // TODO: save unfreeze_amount in result.
+        ctx.unfrozen_amount = unfrozen_amount;
         Ok(TransactionResult::success())
     }
 }

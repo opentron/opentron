@@ -322,11 +322,20 @@ impl<'m> TransactionExecutor<'m> {
             ContractType::UnfreezeBalanceContract => {
                 let cntr = contract_pb::UnfreezeBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
-                debug!(
-                    "=> Unfreeze {} resource={:?}",
-                    b58encode_check(cntr.owner_address()),
-                    ResourceCode::from_i32(cntr.resource).unwrap(),
-                );
+                if cntr.receiver_address.is_empty() {
+                    debug!(
+                        "=> Unfreeze {:?} {}",
+                        ResourceCode::from_i32(cntr.resource).unwrap(),
+                        b58encode_check(cntr.owner_address()),
+                    );
+                } else {
+                    debug!(
+                        "=> Unfreeze {:?} {} receiver={}",
+                        ResourceCode::from_i32(cntr.resource).unwrap(),
+                        b58encode_check(cntr.owner_address()),
+                        b58encode_check(&cntr.receiver_address)
+                    );
+                }
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
