@@ -53,7 +53,10 @@ impl BuiltinContractExecutorExt for contract_pb::TransferContract {
 
         if let Some(spend) = self.amount.checked_add(fee) {
             if owner_acct.balance < spend {
-                return Err("insufficient balance".into());
+                return Err(format!(
+                    "insufficient balance, balance={}, required={}",
+                    owner_acct.balance, spend
+                ));
             }
         } else {
             return Err("math overflow".into());

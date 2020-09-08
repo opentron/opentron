@@ -729,7 +729,7 @@ impl EnergyUtil<'_> {
     pub fn get_origin_usage(&self, origin_acct: &Account, origin_energy_limit: i64, origin_usage: i64) -> i64 {
         let energy_left = self.get_left_energy(origin_acct);
         if ForkController::new(self.manager)
-            .pass_version(BlockVersion::Odyssey3_2_2)
+            .pass_version(BlockVersion::ENERGY_LIMIT())
             .unwrap()
         {
             origin_usage.min(energy_left).min(origin_energy_limit)

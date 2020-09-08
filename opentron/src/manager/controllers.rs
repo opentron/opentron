@@ -38,7 +38,7 @@ impl ForkController<'_> {
             }
             ForkPolicy::New {
                 timestamp,
-                minimum_upgraded,
+                min_upgrade_percent,
             } => {
                 let maintenance_interval = self
                     .manager
@@ -51,12 +51,13 @@ impl ForkController<'_> {
                 }
 
                 let active_wit_addrs = self.manager.get_active_witnesses();
+                let min_num_required = (active_wit_addrs.len() * min_upgrade_percent as usize) as f64 / 100.0;
                 let num_passed = active_wit_addrs
                     .into_iter()
                     .map(|addr| self.manager.state_db.must_get(&keys::Witness(addr)))
                     .map(|wit| wit.latest_block_version >= version as _)
                     .count();
-                Ok(num_passed >= minimum_upgraded)
+                Ok(num_passed as f64 >= min_num_required)
             }
         }
     }

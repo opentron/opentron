@@ -1,7 +1,6 @@
 include!(concat!(env!("OUT_DIR"), "/proto.state.rs"));
 
-pub use crate::common::SmartContract;
-pub use crate::common::AccountType;
+pub use crate::common::{AccountType, ResourceCode, SmartContract};
 
 use self::proposal::State as ProposalState;
 
@@ -80,6 +79,13 @@ impl Account {
         }
         self.resource.as_mut().unwrap()
     }
+
+    pub fn delegated_amount_for_resource(&self, res: ResourceCode) -> i64 {
+        match res {
+            ResourceCode::Bandwidth => self.delegated_frozen_amount_for_bandwidth,
+            ResourceCode::Energy => self.delegated_frozen_amount_for_energy,
+        }
+    }
 }
 
 impl Proposal {
@@ -100,7 +106,6 @@ impl Proposal {
     }
 }
 
-
 impl SmartContract {
     pub fn new_inner() -> Self {
         SmartContract {
@@ -108,6 +113,42 @@ impl SmartContract {
             consume_user_energy_percent: 100,
             origin_energy_limit: 0,
             ..Default::default()
+        }
+    }
+}
+
+impl ResourceDelegation {
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.amount_for_energy == 0 && self.amount_for_bandwidth == 0
+    }
+
+    #[inline]
+    pub fn amount_for_resource(&self, res: ResourceCode) -> i64 {
+        match res {
+            ResourceCode::Bandwidth => self.amount_for_bandwidth,
+            ResourceCode::Energy => self.amount_for_energy,
+        }
+    }
+    #[inline]
+    pub fn expiration_timestamp_for_resource(&self, res: ResourceCode) -> i64 {
+        match res {
+            ResourceCode::Bandwidth => self.expiration_timestamp_for_bandwidth,
+            ResourceCode::Energy => self.expiration_timestamp_for_energy,
+        }
+    }
+
+    #[inline]
+    pub fn reset_resource(&mut self, res: ResourceCode) {
+        match res {
+            ResourceCode::Bandwidth => {
+                self.amount_for_bandwidth = 0;
+                self.expiration_timestamp_for_bandwidth = 0;
+            }
+            ResourceCode::Energy => {
+                self.amount_for_energy = 0;
+                self.expiration_timestamp_for_energy = 0;
+            }
         }
     }
 }

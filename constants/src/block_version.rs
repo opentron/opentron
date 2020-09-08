@@ -6,7 +6,7 @@ pub enum ForkPolicy {
     // passOld
     Old,
     // passNew(>4.0.0)
-    New { timestamp: i64, minimum_upgraded: usize },
+    New { timestamp: i64, min_upgrade_percent: u8 },
 }
 
 /// Block versions. These versions match version names on github release page(or PR numbers).
@@ -76,9 +76,16 @@ impl BlockVersion {
             BlockVersion::GreatVoyage4_0_1 => ForkPolicy::New {
                 // GMT 2020-08-07 06:00:00
                 timestamp: 1596780000_000,
-                minimum_upgraded: 22,
+                // 27 * 0.8 = 21.6
+                min_upgrade_percent: 80,
             },
             _ => ForkPolicy::Old,
         }
+    }
+
+    /// The ENERGY_LIMIT fork at block #4727890.
+    #[allow(non_snake_case)]
+    pub const fn ENERGY_LIMIT() -> BlockVersion {
+        BlockVersion::Odyssey3_2
     }
 }

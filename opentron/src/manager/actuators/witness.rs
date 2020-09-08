@@ -145,7 +145,6 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
     }
 
     fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
-        // countVoteAccount
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
 
         // delegationService.withdrawReward(ownerAddress);
@@ -245,12 +244,15 @@ impl BuiltinContractExecutorExt for contract_pb::WithdrawBalanceContract {
 
     fn execute(&self, manager: &mut Manager, ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
-        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
 
         // delegationService.withdrawReward(ownerAddress);
         RewardController::new(manager).withdraw_reward(owner_addr)?;
 
+        // NOTE: Account must be fetched after RewardController.
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
+
         ctx.withdrawal_amount = owner_acct.allowance;
+        log::debug!("calibrated alowance = {}", owner_acct.allowance);
 
         let now = manager.latest_block_timestamp();
 

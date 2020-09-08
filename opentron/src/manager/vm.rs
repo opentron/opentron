@@ -1,15 +1,32 @@
 //! The TVM backend.
 
+use std::collections::HashSet;
+use std::convert::TryFrom;
+
 use ::keys::Address;
 use crypto::keccak256;
+use lazy_static::lazy_static;
 use primitive_types::{H160, H256, U256};
 use proto2::state::{Account, AccountType, SmartContract, TransactionLog};
 use state::db::StateDB;
 use state::keys;
+use log::debug;
 use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
 
 use super::executor::TransactionContext;
 use super::Manager;
+
+lazy_static! {
+    static ref PRECOMPILE_ADDRS: HashSet<H160> = {
+        let mut set = HashSet::new();
+        for &precompile in &[
+            0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0x1000001, 0x1000002, 0x1000003, 0x1000004,
+        ] {
+            set.insert(H160::from_low_u64_be(precompile));
+        }
+        set
+    };
+}
 
 /// StateDB backend, storing all state values in a RocksDB instance.
 pub struct StateBackend<'m, 'c, 'ctx> {
@@ -72,6 +89,10 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     fn exists(&self, address: H160) -> bool {
+        if PRECOMPILE_ADDRS.contains(&address) {
+            return true;
+        }
+
         let addr = Address::from_tvm_bytes(address.as_bytes());
         self.state().get(&keys::Account(addr)).unwrap().is_some()
     }
@@ -121,6 +142,35 @@ impl Backend for StateBackend<'_, '_, '_> {
 
     fn transaction_root_hash(&self) -> H256 {
         *self.ctx.transaction_hash
+    }
+
+    fn validate_multisig(&self, address: H160, perm_id: U256, message: H256, signatures: &[&[u8]]) -> bool {
+        use ::keys::{Public, Signature};
+
+        let addr = Address::from_tvm_bytes(address.as_bytes());
+        let maybe_acct = self.state().get(&keys::Account(addr)).unwrap();
+        if maybe_acct.is_none() {
+            return false;
+        }
+        let acct = maybe_acct.unwrap();
+        if perm_id > U256::from(i32::max_value()) {
+            return false;
+        }
+        let perm_id = perm_id.low_u32() as i32;
+        let recover_addrs = signatures
+            .iter()
+            .map(|&raw_sig| {
+                Signature::try_from(raw_sig)
+                    .and_then(|sig| Public::recover_digest(message.as_bytes(), &sig))
+                    .map(|pubkey| Address::from_public(&pubkey))
+            })
+            .collect::<Result<Vec<_>, _>>();
+        if recover_addrs.is_err() {
+            log::error!("rec_addr failed: {:?}", recover_addrs);
+        }
+        super::actuators::validate_multisig(addr, acct, perm_id, recover_addrs.unwrap(), None, true)
+            .map_err(|e| log::error!("validata multisig error: {:?}", e))
+            .is_ok()
     }
 }
 
@@ -202,10 +252,21 @@ impl ApplyBackend for StateBackend<'_, '_, '_> {
                         }
                     }
                 }
+                // Suicided
                 Apply::Delete { address } => {
                     let addr = Address::from_tvm_bytes(address.as_bytes());
                     self.state_mut().delete_key(&keys::Account(addr)).unwrap();
-                    unimplemented!("TODO: delete account")
+                    self.state_mut().delete_key(&keys::Contract(addr)).unwrap();
+                    self.state_mut().delete_key(&keys::ContractCode(addr)).unwrap();
+                    debug!("suicide and delete account: {}", addr);
+                    let mut has_storage = false;
+                    self.state().for_each_by_prefix(addr.as_bytes(), |key: &keys::ContractStorage, value| {
+                        debug!("{} ({:?} => {:?})", key.0, key.1, value);
+                        has_storage = true;
+                    });
+                    if has_storage {
+                        unimplemented!("TODO: delete account storage")
+                    }
                 }
             }
         }

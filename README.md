@@ -78,7 +78,7 @@ not ready for general use.
     - [x] smart contract support
     - TODO: handle all types of builtin contracts
   - [ ] EVM / TVM
-    - [x] 3.7 TVM <https://github.com/andelf/evm>
+    - [x] 3.7 TVM <https://github.com/opentron/evm> and `tvm` crate
     - [x] 4.0 TVM with zksnark: `ztron` crate
     - [ ] massive tests against resource usage
     - [x] shielded trc20 transaction - ztron

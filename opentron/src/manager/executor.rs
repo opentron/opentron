@@ -40,6 +40,7 @@ pub struct TransactionContext<'a> {
     pub energy_fee: i64,
     pub result: Vec<u8>,
     pub logs: Vec<TransactionLog>,
+    pub contract_status: ContractStatus,
 }
 
 impl<'a> TransactionContext<'a> {
@@ -66,6 +67,7 @@ impl<'a> TransactionContext<'a> {
             energy_fee: 0,
             result: vec![],
             logs: vec![],
+            contract_status: ContractStatus::default(),
         }
     }
 }
@@ -228,6 +230,23 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::ProposalDeleteContract => {
+                let cntr = contract_pb::ProposalDeleteContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> Delete Proposal #{} by {}",
+                    cntr.proposal_id,
+                    b58encode_check(cntr.owner_address()),
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::WitnessCreateContract => {
                 let cntr = contract_pb::WitnessCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
                 debug!(
@@ -303,11 +322,20 @@ impl<'m> TransactionExecutor<'m> {
             ContractType::UnfreezeBalanceContract => {
                 let cntr = contract_pb::UnfreezeBalanceContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
-                debug!(
-                    "=> Unfreeze {} resource={:?}",
-                    b58encode_check(cntr.owner_address()),
-                    ResourceCode::from_i32(cntr.resource).unwrap(),
-                );
+                if cntr.receiver_address.is_empty() {
+                    debug!(
+                        "=> Unfreeze {:?} {}",
+                        ResourceCode::from_i32(cntr.resource).unwrap(),
+                        b58encode_check(cntr.owner_address()),
+                    );
+                } else {
+                    debug!(
+                        "=> Unfreeze {:?} {} receiver={}",
+                        ResourceCode::from_i32(cntr.resource).unwrap(),
+                        b58encode_check(cntr.owner_address()),
+                        b58encode_check(&cntr.receiver_address)
+                    );
+                }
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
@@ -451,6 +479,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::SetAccountIdContract => {
+                let cntr = contract_pb::SetAccountIdContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Account Set ID {}: name={:?}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.account_id
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::AccountCreateContract => {
                 let cntr = contract_pb::AccountCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
@@ -542,6 +588,9 @@ impl<'m> TransactionExecutor<'m> {
             // TVM: Should handle BW first, then remaining can be used for E.
             ContractType::CreateSmartContract => {
                 let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                let contract_status = maybe_result
+                    .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
+                    .unwrap_or_default();
 
                 debug!(
                     "=> Create Smart Contract by {}: name={:?} code_size={}",
@@ -551,7 +600,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
-
+                ctx.contract_status = contract_status;
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
@@ -579,6 +628,7 @@ impl<'m> TransactionExecutor<'m> {
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
+                ctx.contract_status = contract_status;
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
                 BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
                 cntr.validate(self.manager, &mut ctx)?;
@@ -606,6 +656,15 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::ExchangeCreateContract => unimplemented!(),
+            ContractType::ExchangeInjectContract => unimplemented!(),
+            ContractType::ExchangeWithdrawContract => unimplemented!(),
+            ContractType::ExchangeTransactionContract => unimplemented!(),
+            ContractType::UpdateEnergyLimitContract => unimplemented!(),
+            ContractType::ObsoleteVoteAssetContract |
+            ContractType::ObsoleteCustomContract |
+            ContractType::ObsoleteGetContract => unreachable!("obsolete: {:?}", cntr_type),
+            #[allow(unreachable_patterns)]
             _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
         }
     }

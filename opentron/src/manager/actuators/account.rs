@@ -3,7 +3,7 @@
 use std::convert::TryFrom;
 
 use ::keys::Address;
-use log::warn;
+use log::{debug, warn};
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::chain::ContractType;
 use proto2::common::{permission::PermissionType, AccountType, Permission};
@@ -269,6 +269,53 @@ impl BuiltinContractExecutorExt for contract_pb::AccountCreateContract {
         manager
             .state_db
             .must_get(&keys::ChainParameter::CreateNewAccountFeeInSystemContract)
+    }
+}
+
+// Deprecated but not removed.
+impl BuiltinContractExecutorExt for contract_pb::SetAccountIdContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        // validAccountId
+        // Length: 8~32
+        // Charset: '!' to '~'
+        if self.account_id.is_empty() ||
+            self.account_id.len() < 8 ||
+            self.account_id.len() > 32 ||
+            self.account_id.iter().any(|&c| c < 0x21 || c > 0x7e)
+        {
+            return Err("invalid account id".into());
+        }
+
+        let acct = state_db
+            .get(&keys::Account(owner_address))
+            .map_err(|_| "db query error")?
+            .ok_or("account not exists")?;
+
+        if !acct.account_id.is_empty() {
+            return Err("account id is already set".into());
+        }
+
+        debug!("TODO: check account-id reverse index");
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_address = Address::try_from(&self.owner_address).unwrap();
+        let mut acct = manager.state_db.must_get(&keys::Account(owner_address));
+
+        acct.account_id = self.account_id.clone();
+
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), acct)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
     }
 }
 

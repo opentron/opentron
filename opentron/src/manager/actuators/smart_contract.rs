@@ -12,7 +12,7 @@ use proto2::chain::transaction::{result::ContractStatus, Result as TransactionRe
 use proto2::contract as contract_pb;
 use proto2::state::{Account, SmartContract};
 use state::keys;
-use tvm::{backend::ApplyBackend, ExitError, ExitReason};
+use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason};
 
 use super::super::controllers::ForkController;
 use super::super::executor::TransactionContext;
@@ -90,8 +90,12 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         }
         let acct = maybe_owner_acct.unwrap();
 
-        // i.e. the ENERGY_LIMIT fork
-        let energy_limit = if ForkController::new(manager).pass_version(BlockVersion::Odyssey3_2_2)? {
+        // NOTE: VMConfig.getEnergyLimitHardFork is a const false?
+        let energy_limit = if ForkController::new(manager)
+            .pass_version(BlockVersion::ENERGY_LIMIT())
+            .unwrap()
+        {
+            // old style
             if call_value < 0 {
                 return Err("invalid call_value".into());
             }
@@ -105,7 +109,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
             get_account_energy_limit_with_fixed_ratio(manager, &acct, ctx.fee_limit, call_value)
         } else {
-            warn!("use legacy energy limit calculation");
+            // new style
             get_account_energy_limit_with_float_ratio(manager, &acct, ctx.fee_limit, call_value)
         };
 
@@ -184,7 +188,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
             .unwrap();
         manager.state_db.put_key(keys::Contract(cntr_address), cntr).unwrap();
         if !allow_tvm_constantinople {
-            let code = legacy_get_code(&new_cntr.bytecode);
+            let code = legacy_get_runtime_code(&new_cntr.bytecode);
             log::debug!("legacy code size => {}", code.len());
             manager
                 .state_db
@@ -233,7 +237,13 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
             );
         }
 
-        backend.apply(applies, logs, false);
+        if let ExitReason::Succeed(_) = exit_reason {
+            backend.apply(applies, logs, false);
+        } else {
+            drop(backend);
+            drop(applies);
+            drop(logs);
+        }
 
         match exit_reason {
             ExitReason::Succeed(_) => {
@@ -291,6 +301,30 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 debug!("create contract failed, out out energy");
                 Ok(ret)
             }
+            ExitReason::Error(ExitError::IllegalOperation) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} illegal_operation",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    owner_address,
+                    energy_usage,
+                    0,
+                    new_cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::IllegalOperation as i32;
+                debug!("create contract failed, IllegalOperation");
+                Ok(ret)
+            }
             _ => {
                 manager.rollback_layers(1);
                 // TODO: spend energy or spend all energy
@@ -336,7 +370,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             call_token_id = self.call_token_id;
         }
 
-        if ForkController::new(manager).pass_version(BlockVersion::Odyssey3_2_2)? {
+        if ForkController::new(manager).pass_version(BlockVersion::ENERGY_LIMIT())? {
             if call_value < 0 {
                 return Err("invalid call_value".into());
             }
@@ -400,6 +434,29 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
         let origin_address = Address::try_from(&cntr.origin_address).unwrap();
 
+        let energy_limit = ctx.energy_limit as usize;
+
+        // NOTE: OutOfTime is a design flaw, skip VM and accept the result.
+        if ctx.contract_status == ContractStatus::OutOfTime {
+            warn!("contract status is OutOfTime, skip!");
+            let energy_usage = energy_limit as i64;
+            ctx.energy = energy_usage;
+            log::debug!("energy usage: {} (all)", energy_usage);
+            EnergyProcessor::new(manager).consume(
+                owner_address,
+                origin_address,
+                energy_usage,
+                cntr.consume_user_energy_percent,
+                cntr.origin_energy_limit,
+                ctx,
+            )?;
+
+            let mut ret = TransactionResult::success();
+            ret.contract_status = ContractStatus::OutOfTime as i32;
+            debug!("execute contract failed, OutOfTime");
+            return Ok(ret);
+        }
+
         manager.new_layer();
 
         // transfer
@@ -439,7 +496,6 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let data = Rc::new(self.data.to_vec());
         debug!("calling data = {:?}", hex::encode(&self.data));
 
-        let energy_limit = ctx.energy_limit as usize;
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let config = tvm::Config::odyssey_3_7();
         // new_with_precompile
@@ -466,7 +522,13 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
         let (applies, logs) = executor.deconstruct();
 
-        backend.apply(applies, logs, false);
+        if let ExitReason::Succeed(_) = exit_reason {
+            backend.apply(applies, logs, false);
+        } else {
+            drop(backend);
+            drop(applies);
+            drop(logs);
+        }
 
         match exit_reason {
             ExitReason::Succeed(_) => {
@@ -514,7 +576,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
                 let energy_usage = used_energy as i64;
                 ctx.energy = energy_usage;
                 log::debug!(
-                    "energy usage: {}/{} vm_energy={} insufficient",
+                    "energy usage: {}/{} vm_energy={} illegal_operation",
                     energy_usage,
                     energy_limit,
                     used_energy,
@@ -531,6 +593,31 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
                 let mut ret = TransactionResult::success();
                 ret.contract_status = ContractStatus::IllegalOperation as i32;
                 debug!("trigger contract failed, IllegalOperation");
+                Ok(ret)
+            }
+            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::TransferException)) |
+            ExitReason::Error(ExitError::TransferException) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} TransferException",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    origin_address,
+                    energy_usage,
+                    cntr.consume_user_energy_percent,
+                    cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::TransferFailed as i32;
+                debug!("trigger contract failed, TransferException");
                 Ok(ret)
             }
             ExitReason::Revert(_) => {
@@ -659,7 +746,7 @@ impl BuiltinContractExecutorExt for contract_pb::ClearAbiContract {
 // NOTE: This is a really bad implementation.
 // It preserves constructor parameters and is inconsistent with save code energy.
 // Anyway, we are not the inventors of bugs, instead, we are copiers.
-fn legacy_get_code(deploy_code: &[u8]) -> &[u8] {
+fn legacy_get_runtime_code(deploy_code: &[u8]) -> &[u8] {
     const RETURN: u8 = 0xf3;
     const STOP: u8 = 0x00;
     const PUSH1: u8 = 0x60;
@@ -692,7 +779,7 @@ fn generate_created_contract_address(txn_hash: &H256, owner_address: &Address) -
 #[inline]
 fn get_account_energy_limit(manager: &Manager, acct: &Account, fee_limit: i64, call_value: i64) -> i64 {
     if ForkController::new(manager)
-        .pass_version(BlockVersion::Odyssey3_2_2)
+        .pass_version(BlockVersion::ENERGY_LIMIT())
         .unwrap()
     {
         get_account_energy_limit_with_fixed_ratio(manager, &acct, fee_limit, call_value)
@@ -741,7 +828,7 @@ fn get_account_energy_limit_with_float_ratio(
         let left_balance = legacy_get_energy_fee(acct.amount_for_energy(), left_energy, energy_limit);
 
         if left_balance > fee_limit {
-            energy_limit * fee_limit / acct.amount_for_energy()
+            ((energy_limit as i128) * (fee_limit as i128) / (acct.amount_for_energy() as i128)) as i64
         } else {
             left_energy + (fee_limit - left_balance) / energy_price
         }
@@ -749,6 +836,7 @@ fn get_account_energy_limit_with_float_ratio(
     (left_energy + energy_from_balance).min(energy_from_fee_limit)
 }
 
+// getTotalEnergyLimit
 #[inline]
 fn get_total_energy_limit(
     manager: &Manager,
@@ -760,7 +848,7 @@ fn get_total_energy_limit(
 ) -> i64 {
     // TODO: Can origin be null? (use getAccountEnergyLimitWithFixRatio)
     if ForkController::new(manager)
-        .pass_version(BlockVersion::Odyssey3_2_2)
+        .pass_version(BlockVersion::ENERGY_LIMIT())
         .unwrap()
     {
         get_total_energy_limit_with_fixed_ratio(manager, caller, origin, cntr, fee_limit, call_value)
@@ -824,8 +912,7 @@ fn legacy_get_energy_fee(energy_usage: i64, frozen_energy: i64, total_energy: i6
     if total_energy <= 0 {
         0
     } else {
-        // TODO: big integer?
-        frozen_energy * energy_usage / total_energy
+        ((frozen_energy as i128) * (energy_usage as i128) / (total_energy as i128)) as i64
     }
 }
 

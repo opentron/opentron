@@ -141,7 +141,7 @@ impl ProposalUtil<'_> {
             AllowTvm | AllowUpdateAccountName | AllowSameTokenName | AllowDelegateResource => self.accept_true(value),
             TotalEnergyLimit => {
                 // i.e. the ENERGY_LIMIT fork
-                self.require_version(BlockVersion::Odyssey3_2)?;
+                self.require_version(BlockVersion::ENERGY_LIMIT())?;
                 if ForkController::new(self.manager).pass_version(BlockVersion::Odyssey3_2_2)? {
                     return Err("proposal is disabled since 3.2.2".into());
                 }
