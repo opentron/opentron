@@ -19,21 +19,17 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
         let state_db = &manager.state_db;
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
-
         let owner_acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "error while querying db")?;
-        if owner_acct.is_none() {
-            return Err("owner account is not on chain".into());
-        }
-        let owner_acct = owner_acct.unwrap();
+            .map_err(|_| "error while querying db")?
+            .ok_or_else(|| "owner account is not on chain")?;
 
         if self.frozen_balance < 1_000_000 {
             return Err("frozen balance must be greater than 1_TRX".into());
         }
         if self.frozen_balance > owner_acct.balance {
             return Err(format!(
-                "insufficient balance, balance={}, required={}",
+                "insufficient frozen balance, balance={}, required={}",
                 owner_acct.balance, self.frozen_balance
             ));
         }
@@ -61,18 +57,15 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
             }
 
             let receiver_address = Address::try_from(&self.receiver_address).map_err(|_| "invalid receiver_address")?;
-            let maybe_recv_acct = state_db
+            let recv_acct = state_db
                 .get(&keys::Account(receiver_address))
-                .map_err(|_| "error while querying db")?;
-            if maybe_recv_acct.is_none() {
-                return Err("receiver account is not on chain".into());
-            }
-            let recv_acct = maybe_recv_acct.unwrap();
+                .map_err(|_| "error while querying db")?
+                .ok_or_else(|| "receiver account is not on chain")?;
 
             if manager
                 .state_db
-                .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) ==
-                1 &&
+                .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
+                0 &&
                 recv_acct.r#type == AccountType::Contract as i32
             {
                 return Err(
@@ -95,22 +88,19 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
 
         let maybe_recv_addr = Address::try_from(&self.receiver_address).ok();
 
-        // NOTE: In OpenTron, delegate to others and freeze for oneself is handled in the same logic.
-        if let Some(res_type) = ResourceCode::from_i32(self.resource) {
-            if let Some(recv_addr) = maybe_recv_addr {
-                delegate_resource(
-                    manager,
-                    owner_addr,
-                    recv_addr,
-                    res_type,
-                    self.frozen_balance,
-                    expire_time,
-                )?;
-            } else {
-                freeze_resource(manager, owner_addr, res_type, self.frozen_balance, expire_time)?;
-            }
+        // NOTE: In OpenTron, delegate to others and freeze for oneself is handled in almost the same logic.
+        let res_type = ResourceCode::from_i32(self.resource).unwrap();
+        if let Some(recv_addr) = maybe_recv_addr {
+            delegate_resource(
+                manager,
+                owner_addr,
+                recv_addr,
+                res_type,
+                self.frozen_balance,
+                expire_time,
+            )?;
         } else {
-            unreachable!("already verified");
+            freeze_resource(manager, owner_addr, res_type, self.frozen_balance, expire_time)?;
         }
 
         Ok(TransactionResult::success())
@@ -146,7 +136,7 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
 
             let del = manager
                 .state_db
-                .get(&keys::ResourceDelegation(owner_addr, owner_addr))
+                .get(&keys::ResourceDelegation(owner_addr, recv_addr))
                 .map_err(|_| "error while querying db")?
                 .ok_or_else(|| "delegation does not exist")?;
 
@@ -160,7 +150,6 @@ impl BuiltinContractExecutorExt for contract_pb::UnfreezeBalanceContract {
                 0;
 
             // TODO: refactor logic
-
             match res_type {
                 ResourceCode::Bandwidth => {
                     if del.amount_for_bandwidth <= 0 {
@@ -426,8 +415,8 @@ fn delegate_resource(
 
     let maybe_delegated = manager.state_db.get(&key).map_err(|_| "db query error")?;
     let mut delegated = maybe_delegated.unwrap_or_else(|| ResourceDelegation {
-        to_address: to.as_bytes().to_vec(),
         from_address: from.as_bytes().to_vec(),
+        to_address: to.as_bytes().to_vec(),
         ..Default::default()
     });
 
