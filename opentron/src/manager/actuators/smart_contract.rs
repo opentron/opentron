@@ -698,6 +698,51 @@ impl BuiltinContractExecutorExt for contract_pb::UpdateSettingContract {
     }
 }
 
+// Update a contract's `origin_energy_limit` setting.
+impl BuiltinContractExecutorExt for contract_pb::UpdateEnergyLimitContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        if state_db.must_get(&keys::ChainParameter::AllowTvm) == 0 {
+            return Err("TVM is disabled".into());
+        }
+
+        if self.origin_energy_limit <= 0 {
+            return Err("origin energy limit must be greater than 0".into());
+        }
+
+        let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract_address")?;
+
+        let cntr = manager
+            .state_db
+            .get(&keys::Contract(cntr_address))
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "contract not found on chain")?;
+
+        let origin_address = *Address::from_bytes(&cntr.origin_address);
+
+        if origin_address != owner_address {
+            return Err("owner address is not the origin creator of contract".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let cntr_address = Address::try_from(&self.contract_address).unwrap();
+        let mut cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
+
+        cntr.origin_energy_limit = self.origin_energy_limit;
+        manager
+            .state_db
+            .put_key(keys::Contract(cntr_address), cntr)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
 // Update a contract's ABI.
 //
 // NOTE: This is a design flaw, to deceive oneself.

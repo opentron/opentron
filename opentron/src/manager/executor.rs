@@ -567,6 +567,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::UpdateEnergyLimitContract => {
+                let cntr = contract_pb::UpdateEnergyLimitContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Update Contract origin_energy_limit {}, contract={}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.contract_address)
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::ClearAbiContract => {
                 let cntr = contract_pb::ClearAbiContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
@@ -640,6 +658,10 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::ExchangeCreateContract => unimplemented!(),
+            ContractType::ExchangeInjectContract => unimplemented!(),
+            ContractType::ExchangeWithdrawContract => unimplemented!(),
+            ContractType::ExchangeTransactionContract => unimplemented!(),
             #[cfg(feature = "nile")]
             ContractType::ShieldedTransferContract => {
                 let cntr = contract_pb::ShieldedTransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -656,11 +678,6 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
-            ContractType::ExchangeCreateContract => unimplemented!(),
-            ContractType::ExchangeInjectContract => unimplemented!(),
-            ContractType::ExchangeWithdrawContract => unimplemented!(),
-            ContractType::ExchangeTransactionContract => unimplemented!(),
-            ContractType::UpdateEnergyLimitContract => unimplemented!(),
             ContractType::ObsoleteVoteAssetContract |
             ContractType::ObsoleteCustomContract |
             ContractType::ObsoleteGetContract => unreachable!("obsolete: {:?}", cntr_type),
