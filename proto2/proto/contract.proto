@@ -228,9 +228,9 @@ message ProposalDeleteContract {
 
 message ExchangeCreateContract {
   bytes owner_address = 1;
-  bytes first_token_id = 2;
+  string first_token_id = 2;
   int64 first_token_balance = 3;
-  bytes second_token_id = 4;
+  string second_token_id = 4;
   int64 second_token_balance = 5;
 }
 

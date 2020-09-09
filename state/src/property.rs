@@ -16,8 +16,8 @@ pub enum DynamicProperty {
     LatestTokenId,
     /// 0, starts from 1
     LatestProposalId,
-    /// 1
-    NextExchangeId,
+    /// 0, starts from 1
+    LatestExchangeId,
 
     // * Latest Block
     LatestBlockTimestamp,
@@ -97,7 +97,7 @@ impl DynamicProperty {
             (DbVersion, CURRENT_DB_VERSION),
             (LatestTokenId, 1000000),
             (LatestProposalId, 0),
-            (NextExchangeId, 1),
+            (LatestExchangeId, 1),
             // LatestBlockTimestamp,
             // will be overwriten when apply genesis block
             (LatestBlockNumber, -1),

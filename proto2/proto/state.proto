@@ -176,6 +176,16 @@ message Asset {
   int64 id = 41;
 }
 
+message Exchange {
+  int64 id = 1;
+  bytes owner_address = 2;
+  int64 creation_time = 3;
+  int64 first_token_id = 6;
+  int64 first_token_balance = 7;
+  int64 second_token_id = 8;
+  int64 second_token_balance = 9;
+}
+
 message TransactionLog {
   // contract address
   bytes address = 1;
