@@ -10,6 +10,7 @@ use super::super::executor::TransactionContext;
 use super::super::Manager;
 use super::BuiltinContractExecutorExt;
 
+// Create an exchange pair.
 impl BuiltinContractExecutorExt for contract_pb::ExchangeCreateContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
         let state_db = &manager.state_db;
@@ -126,5 +127,131 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeCreateContract {
 
     fn fee(&self, manager: &Manager) -> i64 {
         manager.state_db.must_get(&keys::ChainParameter::ExchangeCreateFee)
+    }
+}
+
+// Withdraw exchange balance by owner.
+impl BuiltinContractExecutorExt for contract_pb::ExchangeWithdrawContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_addr = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+
+        let exch = state_db
+            .get(&keys::Exchange(self.exchange_id))
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "exchange not found on chain")?;
+
+        // Exchange owner implies account.
+        if exch.owner_address != self.owner_address {
+            return Err("exchange is not created by owner address".into());
+        }
+
+        if self.quant <= 0 {
+            return Err("invalid exchange withdraw quant".into());
+        }
+        if exch.first_token_balance == 0 || exch.second_token_balance == 0 {
+            return Err("insufficient token balance in exchange".into());
+        }
+
+        let token_id = if self.token_id == "_" {
+            0
+        } else {
+            self.token_id.parse().map_err(|_| "invalid token id")?
+        };
+
+        log::debug!("exchagne token#{} {} for {:?}", self.token_id, self.quant, exch);
+
+        if token_id == exch.first_token_id {
+            let other_token_amount = ((exch.second_token_balance as i128) * (self.quant as i128) /
+                (exch.first_token_balance as i128)) as i64;
+            if exch.first_token_balance < self.quant || exch.second_token_balance < other_token_amount {
+                return Err("insufficient token balance in exchange".into());
+            }
+            if other_token_amount <= 0 {
+                return Err("withdrawal token amount must be greater than 0".into());
+            }
+            log::debug!("other token amount = {}", other_token_amount);
+
+            // NOTE: The following logic is refactored from decimal arithmetic.
+            let remainder = (exch.second_token_balance as i128) * (self.quant as i128) * 100000_i128 /
+                (exch.first_token_balance as i128) -
+                (other_token_amount as i128) * 100000_i128;
+            if remainder / (other_token_amount as i128) > 10 {
+                return Err("insufficient precision".into());
+            }
+        } else if token_id == exch.second_token_id {
+            let other_token_amount = ((exch.first_token_balance as i128) * (self.quant as i128) /
+                (exch.second_token_balance as i128)) as i64;
+            if exch.second_token_balance < self.quant || exch.first_token_balance < other_token_amount {
+                return Err("insufficient token balance in exchange".into());
+            }
+            if other_token_amount <= 0 {
+                return Err("withdrawal token amount must be greater than 0".into());
+            }
+
+            let remainder = (exch.first_token_balance as i128) * (self.quant as i128) * 100000_i128 /
+                (exch.second_token_balance as i128) -
+                (other_token_amount as i128) * 100000_i128;
+            if remainder / (other_token_amount as i128) > 10 {
+                return Err("insufficient precision".into());
+            }
+        } else {
+            return Err("token is not in the exchange".into());
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_addr = Address::try_from(&self.owner_address).unwrap();
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
+
+        let mut exch = manager.state_db.must_get(&keys::Exchange(self.exchange_id));
+
+        let token_id = if self.token_id == "_" {
+            0
+        } else {
+            self.token_id.parse().unwrap()
+        };
+
+        let (other_token_id, other_token_amount) = if token_id == exch.first_token_id {
+            let other_token_amount = ((exch.second_token_balance as i128) * (self.quant as i128) /
+                (exch.first_token_balance as i128)) as i64;
+            exch.first_token_balance -= self.quant;
+            exch.second_token_balance -= other_token_amount;
+            (exch.second_token_id, other_token_amount)
+        } else {
+            let other_token_amount = ((exch.first_token_balance as i128) * (self.quant as i128) /
+                (exch.second_token_balance as i128)) as i64;
+            exch.second_token_balance -= self.quant;
+            exch.first_token_balance -= other_token_amount;
+            (exch.first_token_id, other_token_amount)
+        };
+
+        if token_id == 0 {
+            owner_acct.adjust_balance(self.quant).unwrap();
+        } else {
+            owner_acct.adjust_token_balance(token_id, self.quant).unwrap();
+        }
+
+        if other_token_id == 0 {
+            owner_acct.adjust_balance(other_token_amount).unwrap();
+        } else {
+            owner_acct
+                .adjust_token_balance(other_token_id, other_token_amount)
+                .unwrap();
+        }
+
+        manager
+            .state_db
+            .put_key(keys::Exchange(exch.id), exch)
+            .map_err(|_| "db insert error")?;
+        manager
+            .state_db
+            .put_key(keys::Account(owner_addr), owner_acct)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
     }
 }

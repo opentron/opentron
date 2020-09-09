@@ -679,8 +679,27 @@ impl<'m> TransactionExecutor<'m> {
 
                 Ok(ctx.into())
             }
+            ContractType::ExchangeWithdrawContract => {
+                let cntr = contract_pb::ExchangeWithdrawContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> ExchangeWithdraw by {}: exchange#{} {}:{}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.exchange_id,
+                    cntr.token_id,
+                    cntr.quant,
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+
+                Ok(ctx.into())
+            }
             ContractType::ExchangeInjectContract => unimplemented!(),
-            ContractType::ExchangeWithdrawContract => unimplemented!(),
             ContractType::ExchangeTransactionContract => unimplemented!(),
             #[cfg(feature = "nile")]
             ContractType::ShieldedTransferContract => {
