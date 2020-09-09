@@ -14,6 +14,7 @@ use super::Manager;
 
 mod account;
 pub mod asset;
+mod exchange;
 mod proposal;
 mod resource;
 #[cfg(feature = "nile")]

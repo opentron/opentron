@@ -658,7 +658,27 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
-            ContractType::ExchangeCreateContract => unimplemented!(),
+            ContractType::ExchangeCreateContract => {
+                let cntr = contract_pb::ExchangeCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> ExchangeCreate by {}: {}:{} <=> {}:{}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.first_token_id,
+                    cntr.first_token_balance,
+                    cntr.second_token_id,
+                    cntr.second_token_balance
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+
+                Ok(ctx.into())
+            }
             ContractType::ExchangeInjectContract => unimplemented!(),
             ContractType::ExchangeWithdrawContract => unimplemented!(),
             ContractType::ExchangeTransactionContract => unimplemented!(),
