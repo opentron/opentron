@@ -391,3 +391,133 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeInjectContract {
         Ok(TransactionResult::success())
     }
 }
+
+impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
+    fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
+        let state_db = &manager.state_db;
+
+        let owner_addr = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
+        let owner_acct = state_db
+            .get(&keys::Account(owner_addr))
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "owner account not found on chain")?;
+        let exch = state_db
+            .get(&keys::Exchange(self.exchange_id))
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "exchange not found on chain")?;
+
+        if self.quant <= 0 {
+            return Err("invalid exchange transaction quant".into());
+        }
+        if self.expected <= 0 {
+            return Err("invalid exchange transaction expected token amount".into());
+        }
+        if exch.first_token_balance == 0 || exch.second_token_balance == 0 {
+            return Err("insufficient token balance in exchange".into());
+        }
+
+        let token_id = if self.token_id == "_" {
+            0
+        } else {
+            self.token_id.parse().map_err(|_| "invalid token id")?
+        };
+
+        let token_balance = if token_id == exch.first_token_id {
+            exch.first_token_balance
+        } else if token_id == exch.second_token_id {
+            exch.second_token_balance
+        } else {
+            return Err("token is not in the exchange".into());
+        };
+        if token_balance + self.quant > EXCHANGE_BALANCE_LIMIT {
+            return Err(format!("token balance in exchange exceeds {}", EXCHANGE_BALANCE_LIMIT));
+        }
+
+        if token_id == 0 {
+            if owner_acct.balance < self.quant {
+                return Err("insufficient balance".into());
+            }
+        } else {
+            if owner_acct.token_balance.get(&token_id).copied().unwrap_or_default() < self.quant {
+                return Err("insufficient token balance".into());
+            }
+        }
+
+        Ok(())
+    }
+
+    fn execute(&self, manager: &mut Manager, _ctx: &mut TransactionContext) -> Result<TransactionResult, String> {
+        let owner_addr = Address::try_from(&self.owner_address).unwrap();
+        let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
+
+        let mut exch = manager.state_db.must_get(&keys::Exchange(self.exchange_id));
+        let sell_token_id = self.token_id.parse().unwrap_or(0);
+
+        let supply = 1_000_000_000_000_000_000_i64;
+
+        let buy_token_amount;
+        let buy_token_id;
+        if exch.first_token_id == sell_token_id {
+            buy_token_id = exch.second_token_id;
+            buy_token_amount = exchange(supply, exch.first_token_balance, exch.second_token_balance, self.quant);
+            exch.first_token_balance -= self.quant;
+            exch.second_token_balance -= buy_token_amount;
+        } else {
+            buy_token_id = exch.first_token_id;
+            buy_token_amount = exchange(supply, exch.second_token_balance, exch.first_token_balance, self.quant);
+            exch.first_token_balance -= buy_token_amount;
+            exch.second_token_balance -= self.quant;
+        }
+
+        log::debug!(
+            "exchange sell #{}:{}, buy #{}:{}",
+            sell_token_id,
+            self.quant,
+            buy_token_id,
+            buy_token_amount
+        );
+
+        if sell_token_id == 0 {
+            owner_acct.adjust_balance(-self.quant).unwrap();
+        } else {
+            owner_acct.adjust_token_balance(sell_token_id, -self.quant).unwrap();
+        }
+        if buy_token_id == 0 {
+            owner_acct.adjust_balance(buy_token_amount).unwrap();
+        } else {
+            owner_acct.adjust_token_balance(buy_token_id, buy_token_amount).unwrap();
+        }
+
+        manager
+            .state_db
+            .put_key(keys::Exchange(exch.id), exch)
+            .map_err(|_| "db insert error")?;
+        manager
+            .state_db
+            .put_key(keys::Account(owner_addr), owner_acct)
+            .map_err(|_| "db insert error")?;
+
+        Ok(TransactionResult::success())
+    }
+}
+
+// NOTE: Sell and buy are different tokens.
+/// Returns: buy token amount(buyTokenQuant).
+fn exchange(mut supply: i64, sell_balance: i64, buy_balance: i64, sell_amount: i64) -> i64 {
+    // exchangeToSupply(sellTokenBalance, sellTokenQuant)
+    log::trace!("balance: {}", sell_balance);
+    let new_balance = (sell_balance + sell_amount) as f64;
+
+    let issued_supply = -supply as f64 * (1.0 - (1.0 + sell_amount as f64 / new_balance).powf(0.0005));
+    log::trace!("issued supply: {}", issued_supply);
+
+    let relay = issued_supply as i64;
+    supply += relay;
+
+    // exchangeFromSupply(buyTokenBalance, relay)
+    supply -= relay;
+    let exchange_balance = buy_balance as f64 * ((1.0 + relay as f64 / supply as f64).powf(2000.0) - 1.0);
+    log::trace!("exchange balance: {}", exchange_balance);
+
+    exchange_balance as i64
+}

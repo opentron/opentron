@@ -719,7 +719,28 @@ impl<'m> TransactionExecutor<'m> {
 
                 Ok(ctx.into())
             }
-            ContractType::ExchangeTransactionContract => unimplemented!(),
+            ContractType::ExchangeTransactionContract => {
+                let cntr =
+                    contract_pb::ExchangeTransactionContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> ExchangeTransaction by {}: exchange#{} {}:{} expected={}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.exchange_id,
+                    cntr.token_id,
+                    cntr.quant,
+                    cntr.expected
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+
+                Ok(ctx.into())
+            }
             #[cfg(feature = "nile")]
             ContractType::ShieldedTransferContract => {
                 let cntr = contract_pb::ShieldedTransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
