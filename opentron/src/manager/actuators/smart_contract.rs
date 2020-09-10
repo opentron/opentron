@@ -301,6 +301,28 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 debug!("create contract failed, out out energy");
                 Ok(ret)
             }
+            ExitReason::Revert(_) => {
+                manager.rollback_layers(1);
+                let energy_usage = used_energy as i64;
+                ctx.energy = energy_usage;
+                if !ret_val.is_empty() {
+                    ctx.result = ret_val;
+                }
+                log::debug!("energy usage: {}/{}", energy_usage, energy_limit);
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    owner_address,
+                    energy_usage,
+                    0,
+                    new_cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::Revert as i32;
+                debug!("create contract failed, revert");
+                Ok(ret)
+            }
             ExitReason::Error(ExitError::IllegalOperation) => {
                 manager.rollback_layers(1);
                 let energy_usage = used_energy as i64;
@@ -325,8 +347,9 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
                 debug!("create contract failed, IllegalOperation");
                 Ok(ret)
             }
-            _ => {
+            exit_code => {
                 manager.rollback_layers(1);
+                log::warn!("UNIMPLEMENTED: {:?}", exit_code);
                 // TODO: spend energy or spend all energy
                 unimplemented!()
             }
@@ -639,7 +662,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
                 let mut ret = TransactionResult::success();
                 ret.contract_status = ContractStatus::Revert as i32;
-                debug!("create contract failed, revert");
+                debug!("trigger contract failed, revert");
                 Ok(ret)
             }
             _ => {
