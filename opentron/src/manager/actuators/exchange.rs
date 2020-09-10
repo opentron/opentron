@@ -310,6 +310,8 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeInjectContract {
             return Err("token is not in the exchange".into());
         };
 
+        log::debug!("inject other token: #{}:{}", other_token_id, other_token_amount);
+
         if other_token_amount <= 0 {
             return Err("inject token amount must be greater than 0".into());
         }
@@ -443,6 +445,16 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
             }
         }
 
+        let supply = 1_000_000_000_000_000_000_i64;
+        let buy_token_amount = if exch.first_token_id == token_id {
+            exchange(supply, exch.first_token_balance, exch.second_token_balance, self.quant)
+        } else {
+            exchange(supply, exch.second_token_balance, exch.first_token_balance, self.quant)
+        };
+        if buy_token_amount < self.expected {
+            return Err("buy token amount must be greater than expected".into());
+        }
+
         Ok(())
     }
 
@@ -460,13 +472,13 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
         if exch.first_token_id == sell_token_id {
             buy_token_id = exch.second_token_id;
             buy_token_amount = exchange(supply, exch.first_token_balance, exch.second_token_balance, self.quant);
-            exch.first_token_balance -= self.quant;
+            exch.first_token_balance += self.quant;
             exch.second_token_balance -= buy_token_amount;
         } else {
             buy_token_id = exch.first_token_id;
             buy_token_amount = exchange(supply, exch.second_token_balance, exch.first_token_balance, self.quant);
             exch.first_token_balance -= buy_token_amount;
-            exch.second_token_balance -= self.quant;
+            exch.second_token_balance += self.quant;
         }
 
         log::debug!(
