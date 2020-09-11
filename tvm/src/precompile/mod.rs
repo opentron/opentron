@@ -57,7 +57,7 @@ pub fn tron_precompile(
         }
         0x2 => {
             const COST: usize = 60;
-            let cost = COST + 12 * (input.len() + 31) / 32;
+            let cost = COST + 12 * ((input.len() + 31) / 32);
 
             let mut hasher = Sha256::new();
             hasher.update(input);
@@ -67,7 +67,7 @@ pub fn tron_precompile(
         }
         0x3 => {
             const COST: usize = 600;
-            let cost = COST + 120 * (input.len() + 31) / 32;
+            let cost = COST + 120 * ((input.len() + 31) / 32);
 
             let mut hasher = Sha256::new();
             hasher.update(input);
