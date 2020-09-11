@@ -6,9 +6,10 @@ use crate::{ExitError, ExitSucceed};
 use digest::Digest;
 use num_bigint::BigUint;
 use num_traits::Zero;
-use primitive_types::{H160, U256};
+use primitive_types::{H160, H256, U256};
 use sha2::Sha256;
 use std::convert::TryFrom;
+use ztron::precompiles::verify_mint_proof;
 
 mod alt_bn128;
 pub mod helper;
@@ -57,7 +58,7 @@ pub fn tron_precompile(
         }
         0x2 => {
             const COST: usize = 60;
-            let cost = COST + 12 * (input.len() + 31) / 32;
+            let cost = COST + 12 * ((input.len() + 31) / 32);
 
             let mut hasher = Sha256::new();
             hasher.update(input);
@@ -67,7 +68,7 @@ pub fn tron_precompile(
         }
         0x3 => {
             const COST: usize = 600;
-            let cost = COST + 120 * (input.len() + 31) / 32;
+            let cost = COST + 120 * ((input.len() + 31) / 32);
 
             let mut hasher = Sha256::new();
             hasher.update(input);
@@ -167,7 +168,30 @@ pub fn tron_precompile(
 
             Some(Ok((ExitSucceed::Returned, ret, cost)))
         }
-        0x1000001 | 1000002 | 1000003 | 1000004 => {
+        0x1000001 => {
+            // verifymintproof, fixed size input.
+            const COST: usize = 150000;
+            const SIZE: usize = 1504;
+
+            if input.len() != SIZE {
+                Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
+            } else {
+                let output = verify_mint_proof(&input);
+                match output {
+                    Ok(raw) => {
+                        let mut ret = Vec::with_capacity(raw.len() + 32);
+                        ret.extend_from_slice(H256::from_low_u64_be(1).as_bytes());
+                        ret.extend_from_slice(&raw);
+                        Some(Ok((ExitSucceed::Returned, ret, COST)))
+                    }
+                    Err(e) => {
+                        eprintln!("verifymintproof error: {:?}", e);
+                        Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
+                    }
+                }
+            }
+        }
+        0x1000002 | 0x1000003 | 0x1000004 => {
             unimplemented!("TODO: shielded TRC20 support");
         }
         _ => None,

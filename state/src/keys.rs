@@ -448,6 +448,35 @@ impl Key<pb::Asset> for Asset {
     }
 }
 
+/// Exchange Pairs.
+#[derive(Debug)]
+pub struct Exchange(pub i64);
+
+impl Key<pb::Exchange> for Exchange {
+    type Target = Vec<u8>;
+    const COL: usize = super::db::COL_EXCHANGE;
+
+    fn key(&self) -> Self::Target {
+        (self.0 as u64).to_be_bytes().to_vec()
+    }
+
+    fn value(val: &pb::Exchange) -> Cow<[u8]> {
+        let mut buf = BytesMut::with_capacity(val.encoded_len());
+        val.encode(&mut buf).unwrap();
+        Cow::from(buf.to_vec())
+    }
+
+    fn parse_value(raw: &[u8]) -> pb::Exchange {
+        pb::Exchange::decode(raw).unwrap()
+    }
+
+    fn parse_key(raw: &[u8]) -> Self {
+        let mut bytes = [0u8; 8];
+        bytes.copy_from_slice(raw);
+        Exchange(u64::from_be_bytes(bytes) as i64)
+    }
+}
+
 #[derive(Debug)]
 pub struct TransactionReceipt(pub H256);
 

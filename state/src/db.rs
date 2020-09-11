@@ -391,6 +391,7 @@ pub const COL_INTERNAL_TRANSACTION: usize = 12;
 pub const COL_TRANSACTION_LOG: usize = 13;
 pub const COL_ACCOUNT_INDEX: usize = 14;
 pub const COL_VOTER_REWARD: usize = 15;
+pub const COL_EXCHANGE: usize = 16;
 
 /// The State DB derived from Chain DB.
 pub struct StateDB {
@@ -496,6 +497,12 @@ fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
         ),
         ColumnFamilyDescriptor::new(
             "voter-reward",
+            ColumnFamilyOptions::default()
+                .optimize_for_small_db()
+                .optimize_for_point_lookup(16),
+        ),
+        ColumnFamilyDescriptor::new(
+            "exchange",
             ColumnFamilyOptions::default()
                 .optimize_for_small_db()
                 .optimize_for_point_lookup(16),

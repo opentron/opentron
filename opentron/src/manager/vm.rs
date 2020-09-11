@@ -6,11 +6,11 @@ use std::convert::TryFrom;
 use ::keys::Address;
 use crypto::keccak256;
 use lazy_static::lazy_static;
+use log::debug;
 use primitive_types::{H160, H256, U256};
 use proto2::state::{Account, AccountType, SmartContract, TransactionLog};
 use state::db::StateDB;
 use state::keys;
-use log::debug;
 use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
 
 use super::executor::TransactionContext;
@@ -64,7 +64,12 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     fn block_hash(&self, number: U256) -> H256 {
-        unimplemented!()
+        if self.block_number() - number > U256::from(256) {
+            return H256::zero();
+        }
+
+        let idx = (number.as_u64() & 0xffff) as usize;
+        self.manager.ref_block_hashes.get(idx).copied().unwrap_or_default()
     }
 
     fn block_number(&self) -> U256 {
@@ -260,10 +265,11 @@ impl ApplyBackend for StateBackend<'_, '_, '_> {
                     self.state_mut().delete_key(&keys::ContractCode(addr)).unwrap();
                     debug!("suicide and delete account: {}", addr);
                     let mut has_storage = false;
-                    self.state().for_each_by_prefix(addr.as_bytes(), |key: &keys::ContractStorage, value| {
-                        debug!("{} ({:?} => {:?})", key.0, key.1, value);
-                        has_storage = true;
-                    });
+                    self.state()
+                        .for_each_by_prefix(addr.as_bytes(), |key: &keys::ContractStorage, value| {
+                            debug!("{} ({:?} => {:?})", key.0, key.1, value);
+                            has_storage = true;
+                        });
                     if has_storage {
                         unimplemented!("TODO: delete account storage")
                     }

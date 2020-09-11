@@ -567,6 +567,24 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::UpdateEnergyLimitContract => {
+                let cntr = contract_pb::UpdateEnergyLimitContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+
+                debug!(
+                    "=> Update Contract origin_energy_limit {}, contract={}",
+                    b58encode_check(&cntr.owner_address()),
+                    b58encode_check(&cntr.contract_address)
+                );
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&cntr.execute(self.manager, &mut ctx)?, &maybe_result);
+
+                debug!("context => {:?}", ctx);
+                Ok(ctx.into())
+            }
             ContractType::ClearAbiContract => {
                 let cntr = contract_pb::ClearAbiContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
@@ -640,6 +658,89 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
+            ContractType::ExchangeCreateContract => {
+                let cntr = contract_pb::ExchangeCreateContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> ExchangeCreate by {}: {}:{} <=> {}:{}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.first_token_id,
+                    cntr.first_token_balance,
+                    cntr.second_token_id,
+                    cntr.second_token_balance
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+
+                Ok(ctx.into())
+            }
+            ContractType::ExchangeWithdrawContract => {
+                let cntr = contract_pb::ExchangeWithdrawContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> ExchangeWithdraw by {}: exchange#{} {}:{}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.exchange_id,
+                    cntr.token_id,
+                    cntr.quant,
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+
+                Ok(ctx.into())
+            }
+            ContractType::ExchangeInjectContract => {
+                let cntr = contract_pb::ExchangeInjectContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> ExchangeInject by {}: exchange#{} {}:{}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.exchange_id,
+                    cntr.token_id,
+                    cntr.quant,
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+
+                Ok(ctx.into())
+            }
+            ContractType::ExchangeTransactionContract => {
+                let cntr =
+                    contract_pb::ExchangeTransactionContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                debug!(
+                    "=> ExchangeTransaction by {}: exchange#{} {}:{} expected={}",
+                    b58encode_check(&cntr.owner_address()),
+                    cntr.exchange_id,
+                    cntr.token_id,
+                    cntr.quant,
+                    cntr.expected
+                );
+
+                let mut ctx = TransactionContext::new(&block.header, &txn);
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, &mut ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(&mut ctx)?;
+                cntr.validate(self.manager, &mut ctx)?;
+                let exec_result = cntr.execute(self.manager, &mut ctx)?;
+                check_transaction_result(&exec_result, &maybe_result);
+                debug!("context => {:?}", ctx);
+
+                Ok(ctx.into())
+            }
             #[cfg(feature = "nile")]
             ContractType::ShieldedTransferContract => {
                 let cntr = contract_pb::ShieldedTransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -656,14 +757,9 @@ impl<'m> TransactionExecutor<'m> {
                 debug!("context => {:?}", ctx);
                 Ok(ctx.into())
             }
-            ContractType::ExchangeCreateContract => unimplemented!(),
-            ContractType::ExchangeInjectContract => unimplemented!(),
-            ContractType::ExchangeWithdrawContract => unimplemented!(),
-            ContractType::ExchangeTransactionContract => unimplemented!(),
-            ContractType::UpdateEnergyLimitContract => unimplemented!(),
             ContractType::ObsoleteVoteAssetContract |
             ContractType::ObsoleteCustomContract |
-            ContractType::ObsoleteGetContract => unreachable!("obsolete: {:?}", cntr_type),
+            ContractType::ObsoleteGetContract => unreachable!("OBSOLETE: {:?}", cntr_type),
             #[allow(unreachable_patterns)]
             _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
         }
