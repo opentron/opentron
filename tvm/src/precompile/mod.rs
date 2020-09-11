@@ -9,7 +9,7 @@ use num_traits::Zero;
 use primitive_types::{H160, H256, U256};
 use sha2::Sha256;
 use std::convert::TryFrom;
-use ztron::precompiles::{verify_mint_proof, verify_transfer_proof};
+use ztron::precompiles::{pedersen_hash, verify_burn_proof, verify_mint_proof, verify_transfer_proof};
 
 mod alt_bn128;
 pub mod helper;
@@ -176,7 +176,7 @@ pub fn tron_precompile(
             if input.len() != SIZE {
                 Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
             } else {
-                let output = verify_mint_proof(&input);
+                let output = verify_mint_proof(input);
                 match output {
                     Ok(raw) => {
                         let mut ret = Vec::with_capacity(raw.len() + 32);
@@ -200,7 +200,7 @@ pub fn tron_precompile(
                 eprintln!("verifytransferproof input size mismatch, len={}", input.len());
                 Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
             } else {
-                let output = verify_transfer_proof(&input);
+                let output = verify_transfer_proof(input);
                 match output {
                     Ok(raw) => {
                         println!("output => {}", hex::encode(&raw));
@@ -216,8 +216,34 @@ pub fn tron_precompile(
                 }
             }
         }
-        0x1000003 | 0x1000004 => {
-            unimplemented!("TODO: shielded TRC20 support");
+        0x1000003 => {
+            // verifyBurnProof
+            const COST: usize = 150000;
+            const SIZE: usize = 512;
+
+            if input.len() != SIZE {
+                Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
+            } else {
+                let output = verify_burn_proof(input);
+                match output {
+                    Ok(_) => Some(Ok((
+                        ExitSucceed::Returned,
+                        H256::from_low_u64_be(1).as_bytes().to_owned(),
+                        COST,
+                    ))),
+                    Err(e) => {
+                        eprintln!("verifyburnproof error: {:?}", e);
+                        Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
+                    }
+                }
+            }
+        }
+        0x1000004 => {
+            // pedersenHash, aka. merkleHash in java-tron
+            const COST: usize = 500;
+            let ret = pedersen_hash(input);
+            // On error, return an empty array.
+            Some(Ok((ExitSucceed::Returned, ret.unwrap_or_default(), COST)))
         }
         _ => None,
     }
