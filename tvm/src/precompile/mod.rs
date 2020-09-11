@@ -9,7 +9,7 @@ use num_traits::Zero;
 use primitive_types::{H160, H256, U256};
 use sha2::Sha256;
 use std::convert::TryFrom;
-use ztron::precompiles::verify_mint_proof;
+use ztron::precompiles::{verify_mint_proof, verify_transfer_proof};
 
 mod alt_bn128;
 pub mod helper;
@@ -191,7 +191,32 @@ pub fn tron_precompile(
                 }
             }
         }
-        0x1000002 | 0x1000003 | 0x1000004 => {
+        0x1000002 => {
+            // verifyTransferProof
+            const COST: usize = 200000;
+            const SIZES: [usize; 4] = [2080, 2368, 2464, 2752];
+
+            if !SIZES.contains(&input.len()) {
+                eprintln!("verifytransferproof input size mismatch, len={}", input.len());
+                Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
+            } else {
+                let output = verify_transfer_proof(&input);
+                match output {
+                    Ok(raw) => {
+                        println!("output => {}", hex::encode(&raw));
+                        let mut ret = Vec::with_capacity(raw.len() + 32);
+                        ret.extend_from_slice(H256::from_low_u64_be(1).as_bytes());
+                        ret.extend_from_slice(&raw);
+                        Some(Ok((ExitSucceed::Returned, ret, COST)))
+                    }
+                    Err(e) => {
+                        eprintln!("verifytransferproof error: {:?}", e);
+                        Some(Ok((ExitSucceed::Returned, H256::zero().as_bytes().to_owned(), COST)))
+                    }
+                }
+            }
+        }
+        0x1000003 | 0x1000004 => {
             unimplemented!("TODO: shielded TRC20 support");
         }
         _ => None,
