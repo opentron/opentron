@@ -51,40 +51,48 @@ not ready for general use.
 ### TODOs
 
 - [ ] Full Tron Protocol implementation
-  - [x] proto2: refactor the protobuf / ~~gRPC~~
+  - [x] proto2: refactor the protobuf
   - [x] primitives
     - [x] use primitive-types
-    - [x] Address, PublicKey, PrivateKey, Signature
+    - [x] keys: Address, PublicKey, PrivateKey, Signature
   - [x] config file
     - [x] genesis block parsing
     - [x] toml config file parsing
     - [x] reorganize chain parameters
+  - [x] chain-db
+    - [x] Block / Transaction
+  - [x] state-db
   - [x] discover protocol
   - [ ] channel protocol
     - [x] demo works
     - [x] sync
     - [ ] TODO: minor bug fix, timeout error
-  - [x] chain
-    - [x] Block / Transaction
-  - [x] state-db
-  - [ ] mempool
+    - [ ] integrate with state-db
+  - [ ] mempool - block producing
   - [x] governance
     - [x] witness schedule
     - [x] voting
     - [x] proposal
-    - [x] block reward
-  - [ ] executor/actuator
-    - [x] basic builtin contract support
-    - [x] smart contract support
-    - TODO: handle all types of builtin contracts
+    - [ ] block reward - still has minor bug
+  - [x] executor/actuator
+    - [x] account
+    - [x] trx/trc10 assets
+    - [x] witness and voting
+    - [x] proposal
+    - [x] resource freeze/unfreeze
+    - [x] exchange
+    - [x] smart contract
+    - [ ] market (4.1)
   - [ ] EVM / TVM
     - [x] 3.7 TVM <https://github.com/opentron/evm> and `tvm` crate
     - [x] 4.0 TVM with zksnark: `ztron` crate
+      - [x] shielded trc20 transaction - ztron
+      - [ ] integration
     - [ ] massive tests against resource usage
-    - [x] shielded trc20 transaction - ztron
   - [ ] RPC replacement
     - will not support gRPC
     - might have json-rpc support
+    - [ ] GraphQL API
 
 ## Quickstart
 
