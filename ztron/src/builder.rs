@@ -29,8 +29,8 @@ lazy_static! {
     pub static ref TX_PROVER: LocalTxProver = {
         use std::path::Path;
 
-        let spend_path = "../ztron-params/sapling-spend.params";
-        let output_path = "../ztron-params/sapling-output.params";
+        let spend_path = "./ztron-params/sapling-spend.params";
+        let output_path = "./ztron-params/sapling-output.params";
 
         eprintln!("loading local tx prover");
 

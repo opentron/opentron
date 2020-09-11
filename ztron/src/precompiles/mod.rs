@@ -39,8 +39,8 @@ lazy_static! {
 
         lazy_static::initialize(&JUBJUB);
 
-        let spend_path = "../ztron-params/sapling-spend.params";
-        let output_path = "../ztron-params/sapling-output.params";
+        let spend_path = "./ztron-params/sapling-spend.params";
+        let output_path = "./ztron-params/sapling-output.params";
 
         let (spend_params, spend_vk, output_params, output_vk, _) =
             load_parameters(Path::new(spend_path), Path::new(output_path), None);
