@@ -97,7 +97,7 @@ impl DynamicProperty {
             (DbVersion, CURRENT_DB_VERSION),
             (LatestTokenId, 1000000),
             (LatestProposalId, 0),
-            (LatestExchangeId, 1),
+            (LatestExchangeId, 0),
             // LatestBlockTimestamp,
             // will be overwriten when apply genesis block
             (LatestBlockNumber, -1),

@@ -35,6 +35,10 @@ jobs:
               run: |
                   ./scripts/download-ztron-params.sh
 
+            - name: Prepare ztron-params for tests
+              run: |
+                  cp -r ./ztron-params ./ztron/
+
             - name: Run tests
               run: cargo test --workspace
               env:

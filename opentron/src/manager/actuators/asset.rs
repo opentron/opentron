@@ -624,7 +624,7 @@ lazy_static! {
 /// So no need to implement any reverse index against token names.
 /// A cache hashmap is enough to speed up legacy assets.
 ///
-/// Should only be used before AllowSameTokenName is ON.
+/// Should only be used before `AllowSameTokenName` is ON.
 ///
 /// NOTE: This is a design flaw. Actually, one should use an asset's abbr instead of name.
 /// Never mind, use asset id(token id) solves.
