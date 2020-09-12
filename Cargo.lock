@@ -686,6 +686,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.17.0"
+source = "git+https://github.com/opentron/evm?branch=tron#b17f7b798b672727fa8e2737ea1656aeaabe973d"
 dependencies = [
  "evm-core",
  "evm-gasometer",
@@ -700,6 +701,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.17.0"
+source = "git+https://github.com/opentron/evm?branch=tron#b17f7b798b672727fa8e2737ea1656aeaabe973d"
 dependencies = [
  "primitive-types",
 ]
@@ -707,6 +709,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.17.0"
+source = "git+https://github.com/opentron/evm?branch=tron#b17f7b798b672727fa8e2737ea1656aeaabe973d"
 dependencies = [
  "evm-core",
  "evm-runtime",
@@ -716,6 +719,7 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.17.0"
+source = "git+https://github.com/opentron/evm?branch=tron#b17f7b798b672727fa8e2737ea1656aeaabe973d"
 dependencies = [
  "evm-core",
  "primitive-types",
@@ -1242,7 +1246,7 @@ dependencies = [
 [[package]]
 name = "juniper"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper.git#092a9851fbad5e848167b61dccfe48101cd6eea7"
+source = "git+https://github.com/graphql-rust/juniper.git#ef82b5a9dbe2526bc00bf9149e11cf2ca2d592db"
 dependencies = [
  "bson",
  "chrono",
@@ -1261,7 +1265,7 @@ dependencies = [
 [[package]]
 name = "juniper_codegen"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper.git#092a9851fbad5e848167b61dccfe48101cd6eea7"
+source = "git+https://github.com/graphql-rust/juniper.git#ef82b5a9dbe2526bc00bf9149e11cf2ca2d592db"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -1272,7 +1276,7 @@ dependencies = [
 [[package]]
 name = "juniper_hyper"
 version = "0.5.2"
-source = "git+https://github.com/graphql-rust/juniper.git#092a9851fbad5e848167b61dccfe48101cd6eea7"
+source = "git+https://github.com/graphql-rust/juniper.git#ef82b5a9dbe2526bc00bf9149e11cf2ca2d592db"
 dependencies = [
  "futures 0.3.5",
  "hyper",
