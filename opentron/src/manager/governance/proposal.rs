@@ -199,7 +199,15 @@ impl ProposalUtil<'_> {
                 self.require_proposal(ChainParameter::AllowTvm)
             }
             AllowTvmShieldedUpgrade => {
-                self.require_version(BlockVersion::GreatVoyage4_0_1)?;
+                // NOTE: On nile, this is GreatVoyage4_0_0, On mainnet, this is GreatVoyage4_0_1.
+                #[cfg(feature = "nile")]
+                {
+                    self.require_version(BlockVersion::GreatVoyage4_0_0)?;
+                }
+                #[cfg(not(feature = "nile"))]
+                {
+                    self.require_version(BlockVersion::GreatVoyage4_0_1)?;
+                }
                 self.accept_bool(value)
             }
             // NOTE: In nile's branch, this is wrongly marked as 4.0.
