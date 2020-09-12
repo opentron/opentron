@@ -42,37 +42,37 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeCreateContract {
             return Err("insufficient TRX balance".into());
         }
 
-        let allow_same_token_name = state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
-        if self.first_token_id == "_" {
+        let first_token_id = get_exchange_token_id(manager, &self.first_token_id)?;
+        let second_token_id = get_exchange_token_id(manager, &self.second_token_id)?;
+
+        if first_token_id == 0 {
             if owner_acct.balance < self.first_token_balance + fee {
                 return Err("insufficient TRX balance".into());
             }
         } else {
-            let token_id = if allow_same_token_name {
-                self.first_token_id.parse().map_err(|_| "invalid token id")?
-            } else {
-                find_asset_by_name(manager, &self.first_token_id)
-                    .ok_or_else(|| "invalid token name")?
-                    .id
-            };
-            if owner_acct.token_balance.get(&token_id).copied().unwrap_or_default() < self.first_token_balance {
+            if owner_acct
+                .token_balance
+                .get(&first_token_id)
+                .copied()
+                .unwrap_or_default() <
+                self.first_token_balance
+            {
                 return Err("insufficient token balance".into());
             }
         }
 
-        if self.second_token_id == "_" {
+        if second_token_id == 0 {
             if owner_acct.balance < self.second_token_balance + fee {
                 return Err("insufficient TRX balance".into());
             }
         } else {
-            let token_id = if allow_same_token_name {
-                self.second_token_id.parse().map_err(|_| "invalid token id")?
-            } else {
-                find_asset_by_name(manager, &self.second_token_id)
-                    .ok_or_else(|| "invalid token name")?
-                    .id
-            };
-            if owner_acct.token_balance.get(&token_id).copied().unwrap_or_default() < self.second_token_balance {
+            if owner_acct
+                .token_balance
+                .get(&second_token_id)
+                .copied()
+                .unwrap_or_default() <
+                self.second_token_balance
+            {
                 return Err("insufficient token balance".into());
             }
         }
@@ -92,23 +92,8 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeCreateContract {
             .unwrap_or(0) +
             1;
 
-        let allow_same_token_name = manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0;
-
-        // Use 0 to denote TRX.
-        let first_token_id = if self.first_token_id == "_" {
-            0
-        } else if allow_same_token_name {
-            self.first_token_id.parse().unwrap()
-        } else {
-            find_asset_by_name(manager, &self.first_token_id).unwrap().id
-        };
-        let second_token_id = if self.second_token_id == "_" {
-            0
-        } else if allow_same_token_name {
-            self.second_token_id.parse().unwrap()
-        } else {
-            find_asset_by_name(manager, &self.second_token_id).unwrap().id
-        };
+        let first_token_id = get_exchange_token_id(manager, &self.first_token_id).unwrap();
+        let second_token_id = get_exchange_token_id(manager, &self.second_token_id).unwrap();
 
         if first_token_id == 0 {
             owner_acct.adjust_balance(-self.first_token_balance).unwrap();
@@ -182,16 +167,7 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeWithdrawContract {
             return Err("insufficient token balance in exchange".into());
         }
 
-        let token_id = if self.token_id == "_" {
-            0
-        } else if state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0 {
-            self.token_id.parse().map_err(|_| "invalid token id")?
-        } else {
-            find_asset_by_name(manager, &self.token_id)
-                .ok_or_else(|| "invalid token name")?
-                .id
-        };
-
+        let token_id = get_exchange_token_id(manager, &self.token_id)?;
         if token_id == exch.first_token_id {
             let other_token_amount = ((exch.second_token_balance as i128) * (self.quant as i128) /
                 (exch.first_token_balance as i128)) as i64;
@@ -238,13 +214,7 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeWithdrawContract {
 
         let mut exch = manager.state_db.must_get(&keys::Exchange(self.exchange_id));
 
-        let token_id = if self.token_id == "_" {
-            0
-        } else if manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0 {
-            self.token_id.parse().unwrap()
-        } else {
-            find_asset_by_name(manager, &self.token_id).unwrap().id
-        };
+        let token_id = get_exchange_token_id(manager, &self.token_id).unwrap();
 
         let (other_token_id, other_token_amount) = if token_id == exch.first_token_id {
             let other_token_amount = ((exch.second_token_balance as i128) * (self.quant as i128) /
@@ -315,15 +285,7 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeInjectContract {
             return Err("insufficient token balance in exchange".into());
         }
 
-        let token_id = if self.token_id == "_" {
-            0
-        } else if state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0 {
-            self.token_id.parse().map_err(|_| "invalid token id")?
-        } else {
-            find_asset_by_name(manager, &self.token_id)
-                .ok_or_else(|| "invalid token name")?
-                .id
-        };
+        let token_id = get_exchange_token_id(manager, &self.token_id)?;
 
         let (other_token_id, other_token_amount) = if token_id == exch.first_token_id {
             let other_token_amount = ((exch.second_token_balance as i128) * (self.quant as i128) /
@@ -387,13 +349,7 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeInjectContract {
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
 
         let mut exch = manager.state_db.must_get(&keys::Exchange(self.exchange_id));
-        let token_id = if self.token_id == "_" {
-            0
-        } else if manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0 {
-            self.token_id.parse().unwrap()
-        } else {
-            find_asset_by_name(manager, &self.token_id).unwrap().id
-        };
+        let token_id = get_exchange_token_id(manager, &self.token_id).unwrap();
 
         let (other_token_id, other_token_amount) = if token_id == exch.first_token_id {
             let other_token_amount = ((exch.second_token_balance as i128) * (self.quant as i128) /
@@ -461,16 +417,7 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
             return Err("insufficient token balance in exchange".into());
         }
 
-        let token_id = if self.token_id == "_" {
-            0
-        } else if state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0 {
-            self.token_id.parse().map_err(|_| "invalid token id")?
-        } else {
-            find_asset_by_name(manager, &self.token_id)
-                .ok_or_else(|| "invalid token name")?
-                .id
-        };
-
+        let token_id = get_exchange_token_id(manager, &self.token_id)?;
         let token_balance = if token_id == exch.first_token_id {
             exch.first_token_balance
         } else if token_id == exch.second_token_id {
@@ -510,13 +457,7 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
 
         let mut exch = manager.state_db.must_get(&keys::Exchange(self.exchange_id));
-        let sell_token_id = if self.token_id == "_" {
-            0
-        } else if manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0 {
-            self.token_id.parse().unwrap()
-        } else {
-            find_asset_by_name(manager, &self.token_id).unwrap().id
-        };
+        let sell_token_id = get_exchange_token_id(manager, &self.token_id).unwrap();
 
         let supply = 1_000_000_000_000_000_000_i64;
 
@@ -585,4 +526,18 @@ fn exchange(mut supply: i64, sell_balance: i64, buy_balance: i64, sell_amount: i
     log::trace!("exchange balance: {}", exchange_balance);
 
     exchange_balance as i64
+}
+
+/// Get token id used by exchange. Use 0 to denote TRX.
+#[inline]
+fn get_exchange_token_id(manager: &Manager, token_id: &str) -> Result<i64, String> {
+    if token_id == "_" {
+        Ok(0)
+    } else if manager.state_db.must_get(&keys::ChainParameter::AllowSameTokenName) != 0 {
+        token_id.parse().map_err(|_| "invalid token id".into())
+    } else {
+        find_asset_by_name(manager, &token_id)
+            .map(|asset| asset.id)
+            .ok_or_else(|| "invalid token name".into())
+    }
 }
