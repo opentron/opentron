@@ -59,12 +59,14 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     // ORIGIN opcode, the transaction sender.
+    // NOTE: TVM uses 21 bytes address here, which is inconsistent.
     fn origin(&self) -> H160 {
         H160::from_slice(self.sender.as_tvm_bytes())
     }
 
     fn block_hash(&self, number: U256) -> H256 {
-        if self.block_number() - number > U256::from(256) {
+        let diff = self.block_number() - number;
+        if diff > U256::from(256) || diff == U256::zero() {
             return H256::zero();
         }
 
