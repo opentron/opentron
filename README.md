@@ -88,8 +88,13 @@ not ready for general use.
     - [x] 4.0 TVM with zksnark: `ztron` crate
       - [x] shielded trc20 transaction - ztron
       - [ ] integration
-    - [ ] massive tests against resource usage
-  - [ ] RPC replacement
+    - [ ] 4.1 TVM
+      - [ ] ASSETISSUE
+      - [ ] REWARDBALACE
+      - [ ] STAKE/UNSTAKE
+      - [ ] CREATE2
+    - [ ] massive tests against resource usage, exit_reason
+  - [ ] RPC API replacement
     - will not support gRPC
     - might have json-rpc support
     - [ ] GraphQL API
