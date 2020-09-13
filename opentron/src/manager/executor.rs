@@ -1,10 +1,11 @@
 //! Transaction executor.
 
+use std::collections::HashMap;
 use std::str;
 
 use ::keys::b58encode_check;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
-use log::{debug, error, warn};
+use log::{debug, error};
 use primitive_types::H256;
 use proto2::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto2::common::ResourceCode;
@@ -353,10 +354,10 @@ impl<'m> TransactionExecutor<'m> {
                 debug!(
                     "=> Vote Witness by {} votes: {:?}",
                     b58encode_check(cntr.owner_address()),
-                    cntr.votes
-                        .iter()
-                        .map(|vote| (b58encode_check(&vote.vote_address), vote.vote_count))
-                        .collect::<std::collections::HashMap<_, _>>()
+                    cntr.votes.iter().fold(HashMap::<String, i64>::new(), |mut votes, vote| {
+                        *votes.entry(b58encode_check(&vote.vote_address)).or_default() += vote.vote_count;
+                        votes
+                    })
                 );
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);
