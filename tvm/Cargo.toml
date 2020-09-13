@@ -19,3 +19,6 @@ lazy_static = "1"
 # evm = { path = '../../evm' }
 evm = { git = "https://github.com/opentron/evm", branch = "tron" }
 ztron = { path = '../ztron' }
+
+[dev-dependencies]
+solc = { path = '../solc' }
