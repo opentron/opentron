@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 use ::keys::Address;
+use log::warn;
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::contract as contract_pb;
 use proto2::state::{Votes, Witness};
@@ -107,15 +108,19 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
         }
 
         let mut total_vote_count = 0_i64;
+        let mut vote_addresses = vec![];
         for vote in &self.votes {
-            let candidate_addr = Address::try_from(&vote.vote_address).map_err(|_| "invalid vote_address")?;
+            let wit_addr = Address::try_from(&vote.vote_address).map_err(|_| "invalid vote_address")?;
             if vote.vote_count <= 0 {
                 return Err("vote count must be greater than 0".into());
             }
+            if !vote_addresses.contains(&wit_addr) {
+                vote_addresses.push(wit_addr);
+            } else {
+                warn!("BUG: duplicated vote address");
+            }
             // witness implies account
-            let maybe_witness = state_db
-                .get(&keys::Witness(candidate_addr))
-                .map_err(|_| "db query error")?;
+            let maybe_witness = state_db.get(&keys::Witness(wit_addr)).map_err(|_| "db query error")?;
             if maybe_witness.is_none() {
                 return Err("witness not found".into());
             }
@@ -152,27 +157,36 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
 
         let mut votes_diff: HashMap<Address, i64> = HashMap::new();
 
-        // if there's prev vote
         let votes_key = keys::Votes(owner_addr);
-        if let Some(old_votes) = manager.state_db.get(&votes_key).map_err(|_| "db query error")? {
-            for vote in old_votes.votes {
-                votes_diff.insert(*Address::from_bytes(&vote.vote_address), -vote.vote_count);
-            }
-        }
+        let old_votes = manager
+            .state_db
+            .get(&votes_key)
+            .map_err(|_| "db query error")?
+            .unwrap_or_default();
 
-        for vote in &self.votes {
-            *votes_diff.entry(*Address::from_bytes(&vote.vote_address)).or_default() += vote.vote_count;
+        if old_votes.votes != self.votes {
+            for vote in old_votes.votes {
+                // NOTE: This is a bug in java-tron, duplicated vote addresses is not checked.
+                // So `insert()` must not be used here.
+                *votes_diff.entry(*Address::from_bytes(&vote.vote_address)).or_default() -= vote.vote_count;
+            }
+
+            for vote in &self.votes {
+                *votes_diff.entry(*Address::from_bytes(&vote.vote_address)).or_default() += vote.vote_count;
+            }
         }
 
         // Save votes.
         for (addr, count_diff) in votes_diff {
-            let mut wit = manager.state_db.must_get(&keys::Witness(addr));
-            wit.vote_count += count_diff;
+            if count_diff != 0 {
+                let mut wit = manager.state_db.must_get(&keys::Witness(addr));
+                wit.vote_count += count_diff;
 
-            manager
-                .state_db
-                .put_key(keys::Witness(addr), wit)
-                .map_err(|_| "db insert error")?;
+                manager
+                    .state_db
+                    .put_key(keys::Witness(addr), wit)
+                    .map_err(|_| "db insert error")?;
+            }
         }
 
         let epoch = manager.state_db.must_get(&keys::DynamicProperty::CurrentEpoch);
@@ -186,7 +200,6 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
                 },
             )
             .map_err(|_| "db insert error")?;
-
         manager
             .state_db
             .put_key(keys::DynamicProperty::HasNewVotesInCurrentEpoch, 1)
@@ -252,7 +265,7 @@ impl BuiltinContractExecutorExt for contract_pb::WithdrawBalanceContract {
         let mut owner_acct = manager.state_db.must_get(&keys::Account(owner_addr));
 
         ctx.withdrawal_amount = owner_acct.allowance;
-        log::debug!("calibrated alowance = {}", owner_acct.allowance);
+        log::debug!("calibrated allowance = {}", owner_acct.allowance);
 
         let now = manager.latest_block_timestamp();
 

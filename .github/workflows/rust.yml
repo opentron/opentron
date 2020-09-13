@@ -40,6 +40,6 @@ jobs:
                   cp -r ./ztron-params ./ztron/
 
             - name: Run tests
-              run: cargo test --workspace
+              run: cargo test --workspace --lib
               env:
                   LD_LIBRARY_PATH: /usr/local/lib
