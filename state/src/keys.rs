@@ -395,6 +395,12 @@ impl Key<H256> for ContractStorage {
     fn parse_value(raw: &[u8]) -> H256 {
         H256::from_slice(raw)
     }
+
+    fn parse_key(raw: &[u8]) -> Self {
+        let addr = *Address::from_bytes(&raw[..21]);
+        let index = H256::from_slice(&raw[21..]);
+        ContractStorage(addr, index)
+    }
 }
 
 #[derive(Debug)]
