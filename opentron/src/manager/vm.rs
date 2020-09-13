@@ -266,14 +266,19 @@ impl ApplyBackend for StateBackend<'_, '_, '_> {
                     self.state_mut().delete_key(&keys::Contract(addr)).unwrap();
                     self.state_mut().delete_key(&keys::ContractCode(addr)).unwrap();
                     debug!("suicide and delete account: {}", addr);
-                    let mut has_storage = false;
-                    self.state()
-                        .for_each_by_prefix(addr.as_bytes(), |key: &keys::ContractStorage, value| {
-                            debug!("{} ({:?} => {:?})", key.0, key.1, value);
-                            has_storage = true;
-                        });
-                    if has_storage {
-                        unimplemented!("TODO: delete account storage")
+                    let mut to_be_deleted: Vec<keys::ContractStorage> = Vec::new();
+                    {
+                        let to_be_deleted = &mut to_be_deleted;
+                        self.state()
+                            .for_each_by_prefix(addr.as_bytes(), move |key: &keys::ContractStorage, value| {
+                                debug!("suicide DELETE {} ({} => {:?})", key.0, key.1, value);
+                                to_be_deleted.push(key.clone());
+                            });
+                    }
+                    if !to_be_deleted.is_empty() {
+                        for key in to_be_deleted {
+                            self.state_mut().delete_key(&key).unwrap()
+                        }
                     }
                 }
             }
