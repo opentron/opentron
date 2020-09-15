@@ -27,6 +27,8 @@ pub enum BlockVersion {
     /// - Support Of Resource Delegation.
     /// - UpdateEnergyLimitContract
     /// - TotalEnergyLimit
+    /// - AllowTvmTransferTrc10Upgrade
+    ///   - CALLTOKEN, TOKENBALANCE, CALLTOKENVALUE, CALLTOKENID
     ///
     /// Renamed: ENERGY_LIMIT
     Odyssey3_2 = 5,
@@ -41,8 +43,16 @@ pub enum BlockVersion {
     /// - AllowProtoFilterNum
     /// - AllowAccountStateRoot
     /// - AllowTvmConstantinopleUpgrade
+    ///   - ClearABI
+    ///   - reject delegate resource to contract address
+    ///   - Save runtime code from deploy code
+    ///   - SHL, SHR, SAR, fake CREATE2, EXTCODEHASH
+    ///   - Introduce TransferException
     Odyssey3_6_0 = 8,
     /// - AllowTvmSolidity059Upgrade
+    ///   - create account while transfer TRX/TRC10
+    ///   - batchvalidatesig, validatemultisig
+    ///   - ISCONTRACT
     /// - AdaptiveResourceLimitTargetRatio
     /// - AdaptiveResourceLimitMultiplier
     /// - AllowChangeDelegation
@@ -67,18 +77,29 @@ pub enum BlockVersion {
     ///
     /// - support AllowTvmShieldedUpgrade proposal
     GreatVoyage4_0_1 = 17,
+    /// Unreleased.
+    ///
+    /// - AllowPbft
+    /// - AllowTvmIstanbulUpgrade
+    /// - AllowTvmStakeUpgrade
+    /// - AllowTvmAssetIssueUpgrade
+    /// - AllowMarketTransaction
+    ///   - MarketSellFee
+    ///   - MarketCancelFee
+    GreatVoyage4_1_0 = 19,
 }
 
 impl BlockVersion {
     pub fn fork_policy(&self) -> ForkPolicy {
         match *self {
-            BlockVersion::Odyssey3_2 => ForkPolicy::AtBlock { block_number: 4727890 },
+            BlockVersion::GreatVoyage4_1_0 => unimplemented!(),
             BlockVersion::GreatVoyage4_0_1 => ForkPolicy::New {
                 // GMT 2020-08-07 06:00:00
                 timestamp: 1596780000_000,
                 // 27 * 0.8 = 21.6
                 min_upgrade_percent: 80,
             },
+            BlockVersion::Odyssey3_2 => ForkPolicy::AtBlock { block_number: 4727890 },
             _ => ForkPolicy::Old,
         }
     }
