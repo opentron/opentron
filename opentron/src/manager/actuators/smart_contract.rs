@@ -12,7 +12,7 @@ use proto2::chain::transaction::{result::ContractStatus, Result as TransactionRe
 use proto2::contract as contract_pb;
 use proto2::state::{Account, SmartContract};
 use state::keys;
-use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason};
+use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
 
 use super::super::controllers::ForkController;
 use super::super::executor::TransactionContext;
@@ -198,10 +198,13 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         // execution
         let energy_limit = ctx.energy_limit as usize;
+
+        let upgrade = get_current_tvm_upgrade(manager);
+        let precompile = upgrade.precompile();
+        let config = upgrade.into();
+
         let mut backend = StateBackend::new(owner_address, manager, ctx);
-        let config = tvm::Config::odyssey_3_7();
-        // new_with_precompile
-        let mut executor = tvm::StackExecutor::new(&backend, energy_limit, &config);
+        let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
 
         let vm_ctx = tvm::Context {
             // contract address
@@ -357,7 +360,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
     }
 }
 
-// Calling smart contract. `call` logic.
+// Calling smart contract method.
 impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
         let state_db = &manager.state_db;
@@ -367,7 +370,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         }
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
-        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract_address")?;
+        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract address")?;
 
         let maybe_cntr = manager
             .state_db
@@ -519,11 +522,12 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let data = Rc::new(self.data.to_vec());
         debug!("calling data = {:?}", hex::encode(&self.data));
 
+        let upgrade = get_current_tvm_upgrade(manager);
+        let precompile = upgrade.precompile();
+        let config = upgrade.into();
+
         let mut backend = StateBackend::new(owner_address, manager, ctx);
-        let config = tvm::Config::odyssey_3_7();
-        // new_with_precompile
-        let mut executor =
-            tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, tvm::precompile::tron_precompile);
+        let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
 
         let vm_ctx = tvm::Context {
             // contract address
@@ -981,6 +985,31 @@ fn legacy_get_energy_fee(energy_usage: i64, frozen_energy: i64, total_energy: i6
         0
     } else {
         ((frozen_energy as i128) * (energy_usage as i128) / (total_energy as i128)) as i64
+    }
+}
+
+// TODO: Optimize and cache values.
+fn get_current_tvm_upgrade(manager: &Manager) -> TvmUpgrade {
+    TvmUpgrade {
+        asset_transfer: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmTransferTrc10Upgrade) !=
+            0,
+        constantinople: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
+            0,
+        solidity059: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmSolidity059Upgrade) !=
+            0,
+        shielded: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmShieldedUpgrade) !=
+            0,
+        stake: false,
+        istanbul: false,
+        asset_issue: false,
     }
 }
 
