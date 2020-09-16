@@ -647,6 +647,32 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
                 debug!("trigger contract failed, TransferException");
                 Ok(ret)
             }
+            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::Unknown)) |
+            ExitReason::Error(ExitError::Unknown) => {
+                manager.rollback_layers(1);
+                // NOTE: use up all energy
+                let energy_usage = energy_limit as i64;
+                ctx.energy = energy_usage;
+                log::debug!(
+                    "energy usage: {}/{} vm_energy={} Unknown",
+                    energy_usage,
+                    energy_limit,
+                    used_energy,
+                );
+                EnergyProcessor::new(manager).consume(
+                    owner_address,
+                    origin_address,
+                    energy_usage,
+                    cntr.consume_user_energy_percent,
+                    cntr.origin_energy_limit,
+                    ctx,
+                )?;
+
+                let mut ret = TransactionResult::success();
+                ret.contract_status = ContractStatus::Unknown as i32;
+                debug!("trigger contract failed, Unknown");
+                Ok(ret)
+            }
             ExitReason::Revert(_) => {
                 manager.rollback_layers(1);
                 let energy_usage = used_energy as i64;
