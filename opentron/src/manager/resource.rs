@@ -579,7 +579,9 @@ impl EnergyProcessor<'_> {
         }
 
         let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
-        let energy_remain = e_limit - new_e_usage;
+        // NOTE: Adjusted usage might exceed limit, when total energy weight changes or there's unfreeze.
+        // So, `.max(0)` to set its lower bound.
+        let energy_remain = (e_limit - new_e_usage).max(0);
         if energy_remain == 0 {
             return 0;
         }
