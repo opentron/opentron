@@ -503,9 +503,6 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             cntr.origin_energy_limit,
             ctx,
         )?;
-        if ctx.origin_energy_usage != 0 && (ctx.energy_fee != 0 || ctx.energy_usage != 0) {
-            return Err("mixed energy usage".into());
-        }
         let mut ret = TransactionResult::success();
         ret.contract_status = exit_reason.as_contrat_status() as i32;
         debug!(
