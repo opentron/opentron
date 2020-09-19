@@ -14,6 +14,7 @@ use super::super::executor::TransactionContext;
 use super::super::Manager;
 use super::BuiltinContractExecutorExt;
 
+/// The TRZ token id.
 const SHIELDED_TOKEN_ID: i64 = 1000016;
 // TODO: This following 2 should be chain parameters. Never mind, this is a dead feature.
 const SHIELDED_TRANSACTION_FEE: i64 = 10_000_000;

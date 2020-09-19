@@ -1,3 +1,4 @@
+/// TRX transfer.
 use std::convert::TryFrom;
 
 use ::keys::Address;
