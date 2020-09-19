@@ -17,7 +17,6 @@ use opentron::channel::server::channel_server;
 use opentron::context::AppContext;
 use opentron::discovery::server::discovery_server;
 use opentron::graphql::server::graphql_server;
-use opentron::util::get_my_ip;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ! init app command line arguments
@@ -72,10 +71,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 // NOTE: #[tokio::main] conflicts with slog_scope, cause data race in global static resource release.
 async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
-    let mut ctx = AppContext::from_config(config_file)?;
+    let ctx = AppContext::from_config(config_file)?;
     info!("load config => \n{:#?}", ctx.config);
-    ctx.outbound_ip = get_my_ip().await.unwrap_or("127.0.0.1".into());
-    info!("outbound ip address: {}", ctx.outbound_ip);
     let ctx = Arc::new(ctx);
 
     let (done, _) = broadcast::channel::<()>(1);

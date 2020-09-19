@@ -28,8 +28,8 @@ struct Ip {
     origin: String,
 }
 
-pub async fn get_my_ip() -> Result<String, Box<dyn Error>> {
-    let ip = reqwest::get("http://httpbin.org/ip").await?.json::<Ip>().await?;
+pub fn get_my_ip() -> Result<String, Box<dyn Error>> {
+    let ip = reqwest::blocking::get("http://httpbin.org/ip")?.json::<Ip>()?;
     Ok(ip.origin)
 }
 

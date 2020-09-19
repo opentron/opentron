@@ -9,6 +9,7 @@ use chrono::Utc;
 pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
     let ctx = AppContext::from_config(config_path)?;
 
+    /*
     let mut db_manager = Manager::new(&ctx.config, &ctx.genesis_config);
 
     let ref_block_hashes = ctx
@@ -18,14 +19,15 @@ pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> 
         println!("{} {:x}=> {:?}", i, i, v);
     }*/
     db_manager.init_ref_blocks(ref_block_hashes);
+    */
+
+    let mut db_manager = ctx.manager.write().unwrap();
 
     let mut start_time = Utc::now().timestamp_millis();
     let mut n_blocks = 0;
 
     let start_block = db_manager.latest_block_number() as u64 + 1;
 
-    // 741457, first AssetIssueContract
-    // 768881, first CreateSmartContract
     for i in start_block.. {
         let blk = ctx.chain_db.get_block_by_number(i)?;
 
