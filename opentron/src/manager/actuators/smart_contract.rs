@@ -219,7 +219,6 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
         let mut exit_reason = executor.execute(&mut rt);
-        log::debug!("TVM exit code => {:?}", exit_reason);
         let mut used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
 
@@ -469,7 +468,6 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
         let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
         let exit_reason = executor.execute(&mut rt);
-        log::debug!("TVM exit code => {:?}", exit_reason);
         let used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
 
