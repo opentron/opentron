@@ -30,11 +30,8 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessCreateContract {
 
         let owner_acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "error while querying db")?;
-        if owner_acct.is_none() {
-            return Err("owner account is not on chain".into());
-        }
-        let owner_acct = owner_acct.unwrap();
+            .map_err(|_| "error while querying db")?
+            .ok_or_else(|| "owner account is not on chain")?;
 
         let maybe_witness = state_db
             .get(&keys::Witness(owner_address))
@@ -76,6 +73,7 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessCreateContract {
         // TODO: setIsWitness for account,  getAllowMultiSign for witness permission
 
         owner_acct.adjust_balance(-ctx.contract_fee).unwrap();
+        manager.add_to_blackhole(ctx.contract_fee).unwrap();
         manager
             .state_db
             .put_key(keys::Account(owner_address), owner_acct)
@@ -129,13 +127,10 @@ impl BuiltinContractExecutorExt for contract_pb::VoteWitnessContract {
                 .ok_or("mathematical overflow")?;
         }
 
-        let maybe_owner_acct = state_db
+        let owner_acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "error while querying db")?;
-        if maybe_owner_acct.is_none() {
-            return Err("owner account is not on chain".into());
-        }
-        let owner_acct = maybe_owner_acct.unwrap();
+            .map_err(|_| "error while querying db")?
+            .ok_or_else(|| "owner account is not on chain")?;
 
         // 1_TRX for 1_TP
         let tp = owner_acct.tron_power();
@@ -218,13 +213,10 @@ impl BuiltinContractExecutorExt for contract_pb::WithdrawBalanceContract {
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
 
-        let maybe_acct = state_db
+        let acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "db query error")?;
-        if maybe_acct.is_none() {
-            return Err("account not exists".into());
-        }
-        let acct = maybe_acct.unwrap();
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "account not exists")?;
 
         let is_gr = manager
             .genesis_config
