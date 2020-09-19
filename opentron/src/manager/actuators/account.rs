@@ -26,13 +26,10 @@ impl BuiltinContractExecutorExt for contract_pb::AccountUpdateContract {
         }
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
-        let maybe_acct = state_db
+        let acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "db query error")?;
-        if maybe_acct.is_none() {
-            return Err("account not exists".into());
-        }
-        let acct = maybe_acct.unwrap();
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "account not exists")?;
 
         let allow_update_account_name = state_db.must_get(&keys::ChainParameter::AllowUpdateAccountName) != 0;
         if !acct.name.is_empty() && !allow_update_account_name {
@@ -75,13 +72,10 @@ impl BuiltinContractExecutorExt for contract_pb::AccountPermissionUpdateContract
         }
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
-        let maybe_acct = state_db
+        let acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "db query error")?;
-        if maybe_acct.is_none() {
-            return Err("account not exists".into());
-        }
-        let acct = maybe_acct.unwrap();
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "account not exists")?;
 
         if self.owner.is_none() {
             return Err("missing owner permission".into());
@@ -201,13 +195,10 @@ impl BuiltinContractExecutorExt for contract_pb::AccountCreateContract {
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
         let new_address = Address::try_from(&self.account_address).map_err(|_| "invalid account_address")?;
 
-        let maybe_owner_acct = state_db
+        let owner_acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "db query error")?;
-        if maybe_owner_acct.is_none() {
-            return Err("account not exists".into());
-        }
-        let owner_acct = maybe_owner_acct.unwrap();
+            .map_err(|_| "db query error")?
+            .ok_or_else(|| "account not exists")?;
 
         let maybe_new_acct = state_db
             .get(&keys::Account(new_address))
