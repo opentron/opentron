@@ -12,7 +12,7 @@ use proto2::chain::transaction::{result::ContractStatus, Result as TransactionRe
 use proto2::contract as contract_pb;
 use proto2::state::{Account, SmartContract};
 use state::keys;
-use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason};
+use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
 
 use super::super::controllers::ForkController;
 use super::super::executor::TransactionContext;
@@ -109,7 +109,6 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
             get_account_energy_limit_with_fixed_ratio(manager, &acct, ctx.fee_limit, call_value)
         } else {
-            // new style
             get_account_energy_limit_with_float_ratio(manager, &acct, ctx.fee_limit, call_value)
         };
 
@@ -198,10 +197,13 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         // execution
         let energy_limit = ctx.energy_limit as usize;
+
+        let upgrade = get_current_tvm_upgrade(manager);
+        let precompile = upgrade.precompile();
+        let config = upgrade.into();
+
         let mut backend = StateBackend::new(owner_address, manager, ctx);
-        let config = tvm::Config::odyssey_3_7();
-        // new_with_precompile
-        let mut executor = tvm::StackExecutor::new(&backend, energy_limit, &config);
+        let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
 
         let vm_ctx = tvm::Context {
             // contract address
@@ -217,7 +219,6 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
         let mut exit_reason = executor.execute(&mut rt);
-        log::debug!("TVM exit code => {:?}", exit_reason);
         let mut used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
 
@@ -237,127 +238,57 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
             );
         }
 
-        if let ExitReason::Succeed(_) = exit_reason {
+        if exit_reason.is_succeed() {
             backend.apply(applies, logs, false);
+            if allow_tvm_constantinople {
+                manager
+                    .state_db
+                    .put_key(keys::ContractCode(cntr_address), ret_val.clone())
+                    .unwrap();
+            }
         } else {
             drop(backend);
             drop(applies);
             drop(logs);
+            manager.rollback_layers(1);
         }
+        ctx.result = ret_val;
 
-        match exit_reason {
-            ExitReason::Succeed(_) => {
-                let energy_usage = (used_energy + save_code_energy) as i64;
-                log::debug!("TVM result size(deployed code) => {:?}", ret_val.len());
-                if allow_tvm_constantinople {
-                    manager
-                        .state_db
-                        .put_key(keys::ContractCode(cntr_address), ret_val.clone())
-                        .unwrap();
-                    ctx.result = ret_val;
-                } else {
-                    ctx.result = ret_val;
-                }
-                ctx.energy = energy_usage;
-                log::debug!(
-                    "energy usage: {}/{} vm_energy={} save_code_energy={}",
-                    energy_usage,
-                    energy_limit,
-                    used_energy,
-                    save_code_energy
-                );
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    owner_address,
-                    energy_usage,
-                    0,
-                    new_cntr.origin_energy_limit,
-                    ctx,
-                )?;
+        let energy_usage = if exit_reason.is_succeed() {
+            (used_energy + save_code_energy) as i64
+        } else if exit_reason.is_fatal() {
+            energy_limit as i64
+        } else {
+            used_energy as i64
+        };
 
-                Ok(TransactionResult::success())
-            }
-            ExitReason::Error(ExitError::OutOfGas) => {
-                manager.rollback_layers(1);
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                log::debug!(
-                    "energy usage: {}/{} vm_energy={} insufficient",
-                    energy_usage,
-                    energy_limit,
-                    used_energy,
-                );
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    owner_address,
-                    energy_usage,
-                    0,
-                    new_cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                let mut ret = TransactionResult::success();
-                ret.contract_status = ContractStatus::OutOfEnergy as i32;
-                debug!("create contract failed, out out energy");
-                Ok(ret)
-            }
-            ExitReason::Revert(_) => {
-                manager.rollback_layers(1);
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                if !ret_val.is_empty() {
-                    ctx.result = ret_val;
-                }
-                log::debug!("energy usage: {}/{}", energy_usage, energy_limit);
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    owner_address,
-                    energy_usage,
-                    0,
-                    new_cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                let mut ret = TransactionResult::success();
-                ret.contract_status = ContractStatus::Revert as i32;
-                debug!("create contract failed, revert");
-                Ok(ret)
-            }
-            ExitReason::Error(ExitError::IllegalOperation) => {
-                manager.rollback_layers(1);
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                log::debug!(
-                    "energy usage: {}/{} vm_energy={} illegal_operation",
-                    energy_usage,
-                    energy_limit,
-                    used_energy,
-                );
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    owner_address,
-                    energy_usage,
-                    0,
-                    new_cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                let mut ret = TransactionResult::success();
-                ret.contract_status = ContractStatus::IllegalOperation as i32;
-                debug!("create contract failed, IllegalOperation");
-                Ok(ret)
-            }
-            exit_code => {
-                manager.rollback_layers(1);
-                log::warn!("UNIMPLEMENTED: {:?}", exit_code);
-                // TODO: spend energy or spend all energy
-                unimplemented!()
-            }
-        }
+        log::debug!(
+            "energy usage: {}/{} vm_energy={}",
+            energy_usage,
+            energy_limit,
+            used_energy,
+        );
+        // consume energy
+        EnergyProcessor::new(manager).consume(
+            owner_address,
+            owner_address,
+            energy_usage,
+            0,
+            new_cntr.origin_energy_limit,
+            ctx,
+        )?;
+        let mut ret = TransactionResult::success();
+        ret.contract_status = exit_reason.as_contrat_status() as i32;
+        debug!(
+            "deploy contract, vm_exit_reason={:?} contract_status={:?}",
+            exit_reason,
+            exit_reason.as_contrat_status()
+        );
+        Ok(ret)
     }
 }
 
-// Calling smart contract. `call` logic.
+// Calling smart contract method.
 impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
         let state_db = &manager.state_db;
@@ -367,7 +298,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         }
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
-        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract_address")?;
+        let cntr_address = Address::try_from(&self.contract_address).map_err(|_| "invalid contract address")?;
 
         let maybe_cntr = manager
             .state_db
@@ -519,11 +450,12 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let data = Rc::new(self.data.to_vec());
         debug!("calling data = {:?}", hex::encode(&self.data));
 
+        let upgrade = get_current_tvm_upgrade(manager);
+        let precompile = upgrade.precompile();
+        let config = upgrade.into();
+
         let mut backend = StateBackend::new(owner_address, manager, ctx);
-        let config = tvm::Config::odyssey_3_7();
-        // new_with_precompile
-        let mut executor =
-            tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, tvm::precompile::tron_precompile);
+        let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
 
         let vm_ctx = tvm::Context {
             // contract address
@@ -536,141 +468,47 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
         let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
         let exit_reason = executor.execute(&mut rt);
-        log::debug!("TVM exit code => {:?}", exit_reason);
         let used_energy = executor.used_gas();
         let ret_val = rt.machine().return_value();
-        if !ret_val.is_empty() {
-            debug!("return value: {:?}", hex::encode(&ret_val));
-        }
 
         let (applies, logs) = executor.deconstruct();
 
-        if let ExitReason::Succeed(_) = exit_reason {
+        if exit_reason.is_succeed() {
             backend.apply(applies, logs, false);
         } else {
             drop(backend);
             drop(applies);
             drop(logs);
+            manager.rollback_layers(1);
         }
 
-        match exit_reason {
-            ExitReason::Succeed(_) => {
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                ctx.result = ret_val;
-                log::debug!("energy usage: {}/{}", energy_usage, energy_limit);
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    origin_address,
-                    energy_usage,
-                    cntr.consume_user_energy_percent,
-                    cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                Ok(TransactionResult::success())
-            }
-            ExitReason::Error(ExitError::OutOfGas) => {
-                manager.rollback_layers(1);
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                log::debug!(
-                    "energy usage: {}/{} vm_energy={} insufficient",
-                    energy_usage,
-                    energy_limit,
-                    used_energy,
-                );
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    origin_address,
-                    energy_usage,
-                    cntr.consume_user_energy_percent,
-                    cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                let mut ret = TransactionResult::success();
-                ret.contract_status = ContractStatus::OutOfEnergy as i32;
-                debug!("trigger contract failed, OutOfEnergy");
-                Ok(ret)
-            }
-            ExitReason::Error(ExitError::IllegalOperation) => {
-                manager.rollback_layers(1);
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                log::debug!(
-                    "energy usage: {}/{} vm_energy={} illegal_operation",
-                    energy_usage,
-                    energy_limit,
-                    used_energy,
-                );
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    origin_address,
-                    energy_usage,
-                    cntr.consume_user_energy_percent,
-                    cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                let mut ret = TransactionResult::success();
-                ret.contract_status = ContractStatus::IllegalOperation as i32;
-                debug!("trigger contract failed, IllegalOperation");
-                Ok(ret)
-            }
-            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::TransferException)) |
-            ExitReason::Error(ExitError::TransferException) => {
-                manager.rollback_layers(1);
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                log::debug!(
-                    "energy usage: {}/{} vm_energy={} TransferException",
-                    energy_usage,
-                    energy_limit,
-                    used_energy,
-                );
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    origin_address,
-                    energy_usage,
-                    cntr.consume_user_energy_percent,
-                    cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                let mut ret = TransactionResult::success();
-                ret.contract_status = ContractStatus::TransferFailed as i32;
-                debug!("trigger contract failed, TransferException");
-                Ok(ret)
-            }
-            ExitReason::Revert(_) => {
-                manager.rollback_layers(1);
-                let energy_usage = used_energy as i64;
-                ctx.energy = energy_usage;
-                if !ret_val.is_empty() {
-                    ctx.result = ret_val;
-                }
-                log::debug!("energy usage: {}/{}", energy_usage, energy_limit);
-                EnergyProcessor::new(manager).consume(
-                    owner_address,
-                    origin_address,
-                    energy_usage,
-                    cntr.consume_user_energy_percent,
-                    cntr.origin_energy_limit,
-                    ctx,
-                )?;
-
-                let mut ret = TransactionResult::success();
-                ret.contract_status = ContractStatus::Revert as i32;
-                debug!("trigger contract failed, revert");
-                Ok(ret)
-            }
-            _ => {
-                manager.rollback_layers(1);
-                // TODO: spend energy or spend all energy
-                unimplemented!()
-            }
+        if !ret_val.is_empty() {
+            debug!("return value: {:?}", hex::encode(&ret_val));
+            ctx.result = ret_val;
         }
+
+        let energy_usage = if exit_reason.is_fatal() {
+            energy_limit as i64
+        } else {
+            used_energy as i64
+        };
+        // consume energy
+        EnergyProcessor::new(manager).consume(
+            owner_address,
+            origin_address,
+            energy_usage,
+            cntr.consume_user_energy_percent,
+            cntr.origin_energy_limit,
+            ctx,
+        )?;
+        let mut ret = TransactionResult::success();
+        ret.contract_status = exit_reason.as_contrat_status() as i32;
+        debug!(
+            "trigger contract, vm_exit_reason={:?} contract_status={:?}",
+            exit_reason,
+            exit_reason.as_contrat_status()
+        );
+        Ok(ret)
     }
 }
 
@@ -865,7 +703,7 @@ fn get_account_energy_limit_with_fixed_ratio(
 ) -> i64 {
     let energy_price = manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
 
-    let left_energy = EnergyUtil::new(manager).get_left_energy(acct);
+    let left_energy = EnergyUtil::new(manager).get_left_frozen_energy(acct);
     let energy_from_balance = (acct.balance - call_value).max(0) / energy_price;
 
     let available_energy = left_energy + energy_from_balance;
@@ -875,7 +713,17 @@ fn get_account_energy_limit_with_fixed_ratio(
     available_energy.min(energy_from_fee_limit)
 }
 
-/// getAccountEnergyLimitWithFloatRatio
+// getEnergyFee(long callerEnergyUsage, long callerEnergyFrozen, long callerEnergyTotal)
+#[inline]
+fn legacy_get_energy_fee(energy_usage: i64, frozen_energy: i64, total_energy: i64) -> i64 {
+    if total_energy <= 0 {
+        0
+    } else {
+        ((frozen_energy as i128) * (energy_usage as i128) / (total_energy as i128)) as i64
+    }
+}
+
+/// getAccountEnergyLimitWithFloatRatio, before ENERGY_LIMIT fork.
 fn get_account_energy_limit_with_float_ratio(
     manager: &Manager,
     acct: &Account,
@@ -884,24 +732,30 @@ fn get_account_energy_limit_with_float_ratio(
 ) -> i64 {
     let energy_price = manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
 
-    let left_energy = EnergyUtil::new(manager).get_left_energy(acct);
-    let call_value = call_value.max(0);
-    let energy_from_balance = (acct.balance - call_value).max(0) / energy_price;
+    // getAccountLeftEnergyFromFreeze
+    let left_energy_from_freeze = EnergyUtil::new(manager).get_left_frozen_energy(acct);
+    let energy_from_left_balance = (acct.balance - call_value.max(0)).max(0) / energy_price;
+    let amount_for_energy = acct.amount_for_energy();
 
-    let energy_from_fee_limit = if acct.amount_for_energy() == 0 {
+    let energy_from_fee_limit = if amount_for_energy == 0 {
         fee_limit / energy_price
     } else {
         let energy_limit = EnergyUtil::new(manager).calculate_global_energy_limit(acct);
         // getEnergyFee(totalBalanceForEnergyFreeze, leftEnergyFromFreeze, totalEnergyFromFreeze)
-        let left_balance = legacy_get_energy_fee(acct.amount_for_energy(), left_energy, energy_limit);
+        // getEnergyFee(callerEnergyUsage, callerEnergyFrozen, callerEnergyTotal) ->
+        //   callerEnergyFrozen * callerEnergyUsage / callerEnergyTotal
+        let left_balance_for_freeze = legacy_get_energy_fee(amount_for_energy, left_energy_from_freeze, energy_limit);
 
-        if left_balance > fee_limit {
-            ((energy_limit as i128) * (fee_limit as i128) / (acct.amount_for_energy() as i128)) as i64
+        if left_balance_for_freeze >= fee_limit {
+            ((energy_limit as i128) * (fee_limit as i128) / (amount_for_energy as i128)) as i64
         } else {
-            left_energy + (fee_limit - left_balance) / energy_price
+            left_energy_from_freeze + (fee_limit - left_balance_for_freeze) / energy_price
         }
     };
-    (left_energy + energy_from_balance).min(energy_from_fee_limit)
+    i64::min(
+        left_energy_from_freeze + energy_from_left_balance,
+        energy_from_fee_limit,
+    )
 }
 
 // getTotalEnergyLimit
@@ -915,6 +769,7 @@ fn get_total_energy_limit(
     call_value: i64,
 ) -> i64 {
     // TODO: Can origin be null? (use getAccountEnergyLimitWithFixRatio)
+    // if block.number > BlockNumForEneryLimit
     if ForkController::new(manager)
         .pass_version(BlockVersion::ENERGY_LIMIT())
         .unwrap()
@@ -938,7 +793,7 @@ fn get_total_energy_limit_with_fixed_ratio(
     let consume_user_energy_percent = cntr.consume_user_energy_percent;
     assert!(cntr.origin_energy_limit >= 0);
 
-    let origin_energy_left = EnergyUtil::new(manager).get_left_energy(origin);
+    let origin_energy_left = EnergyUtil::new(manager).get_left_frozen_energy(origin);
     let origin_energy_limit = if consume_user_energy_percent > 0 {
         assert!(consume_user_energy_percent <= 100);
         i64::min(
@@ -952,7 +807,7 @@ fn get_total_energy_limit_with_fixed_ratio(
     caller_energy_limit + origin_energy_limit
 }
 
-/// getTotalEnergyLimitWithFloatRatio
+/// getTotalEnergyLimitWithFloatRatio, before ENERGY_LIMIT fork.
 fn get_total_energy_limit_with_float_ratio(
     manager: &Manager,
     caller: &Account,
@@ -965,7 +820,7 @@ fn get_total_energy_limit_with_float_ratio(
     let consume_user_energy_percent = cntr.consume_user_energy_percent;
 
     // creatorEnergyFromFreeze
-    let origin_energy_limit = EnergyUtil::new(manager).get_left_energy(origin);
+    let origin_energy_limit = EnergyUtil::new(manager).get_left_frozen_energy(origin);
 
     if origin_energy_limit * consume_user_energy_percent > (100 - consume_user_energy_percent) * caller_energy_limit {
         caller_energy_limit * 100 / consume_user_energy_percent
@@ -974,13 +829,71 @@ fn get_total_energy_limit_with_float_ratio(
     }
 }
 
-// getEnergyFee(long callerEnergyUsage, long callerEnergyFrozen, long callerEnergyTotal)
-#[inline]
-fn legacy_get_energy_fee(energy_usage: i64, frozen_energy: i64, total_energy: i64) -> i64 {
-    if total_energy <= 0 {
-        0
-    } else {
-        ((frozen_energy as i128) * (energy_usage as i128) / (total_energy as i128)) as i64
+// TODO: Optimize and cache values.
+fn get_current_tvm_upgrade(manager: &Manager) -> TvmUpgrade {
+    TvmUpgrade {
+        asset_transfer: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmTransferTrc10Upgrade) !=
+            0,
+        constantinople: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
+            0,
+        solidity059: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmSolidity059Upgrade) !=
+            0,
+        shielded: manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmShieldedUpgrade) !=
+            0,
+        stake: false,
+        istanbul: false,
+        asset_issue: false,
+    }
+}
+
+/// Helper for `tvm::ExitReason`.
+trait ExitReasonExt {
+    /// Convert VM exit reason to ContractStatus.
+    fn as_contrat_status(&self) -> ContractStatus;
+    /// Fatal spends all remain energy.
+    fn is_fatal(&self) -> bool;
+    /// Is exit reason `ExitReason::Succeed`.
+    fn is_succeed(&self) -> bool;
+}
+
+impl ExitReasonExt for ExitReason {
+    fn as_contrat_status(&self) -> ContractStatus {
+        match *self {
+            ExitReason::Succeed(_) => ContractStatus::Success,
+            ExitReason::Error(ExitError::OutOfGas) => ContractStatus::OutOfEnergy,
+            ExitReason::Error(ExitError::IllegalOperation) => ContractStatus::IllegalOperation,
+            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::TransferException)) |
+            ExitReason::Error(ExitError::TransferException) => ContractStatus::TransferFailed,
+            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::Unknown)) |
+            ExitReason::Error(ExitError::Unknown) => ContractStatus::Unknown,
+            ExitReason::Revert(_) => ContractStatus::Revert,
+            _ => unimplemented!("TODO: handle code {:?}", self),
+        }
+    }
+
+    fn is_fatal(&self) -> bool {
+        match *self {
+            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::TransferException)) |
+            ExitReason::Error(ExitError::TransferException) |
+            ExitReason::Fatal(ExitFatal::CallErrorAsFatal(ExitError::Unknown)) |
+            ExitReason::Error(ExitError::Unknown) => true,
+            _ => false,
+        }
+    }
+
+    fn is_succeed(&self) -> bool {
+        match *self {
+            ExitReason::Succeed(_) => true,
+            _ => false,
+        }
     }
 }
 

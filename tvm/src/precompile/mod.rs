@@ -50,6 +50,9 @@ pub fn tron_precompile(
     _target_gas: Option<usize>,
     backend: &dyn Backend,
 ) -> Option<Result<(ExitSucceed, Vec<u8>, usize), ExitError>> {
+    if address > H160::from_low_u64_be(0xffffffff) {
+        return None;
+    }
     match address.to_low_u64_be() {
         0x1 => {
             const COST: usize = 3000;

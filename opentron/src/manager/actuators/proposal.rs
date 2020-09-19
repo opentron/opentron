@@ -1,7 +1,7 @@
+//! Proposal handling for chain governance.
 use std::convert::TryFrom;
 
 use ::keys::Address;
-use log::info;
 use proto2::chain::transaction::Result as TransactionResult;
 use proto2::contract as contract_pb;
 use proto2::state::{proposal::State as ProposalState, Proposal};
@@ -29,7 +29,6 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
         if self.parameters.is_empty() {
             return Err("empty parameter".into());
         }
-
         for (&key, &value) in self.parameters.iter() {
             ProposalUtil::new(manager).validate(key, value)?
         }
@@ -59,9 +58,6 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
             ..Default::default()
         };
 
-        info!("now => {} future => {}", now, expiration_time);
-        info!("created => {:?}", proposal);
-
         manager
             .state_db
             .put_key(keys::Proposal(proposal_id), proposal)
@@ -86,11 +82,6 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalApproveContract {
             .map_err(|_| "db query error")?;
         if maybe_wit.is_none() {
             return Err("account is not a witness".into());
-        }
-
-        let latest_proposal_id = manager.state_db.must_get(&keys::DynamicProperty::LatestProposalId);
-        if self.proposal_id > latest_proposal_id {
-            return Err("proposal does not exist".into());
         }
 
         let maybe_proposal = manager
@@ -154,13 +145,13 @@ impl BuiltinContractExecutorExt for contract_pb::ProposalDeleteContract {
                 proposal.proposal_id, owner_address
             ));
         }
+        // NOTE: Pending implies not-expired, not-cancelled
         if proposal.state != ProposalState::Pending as i32 {
             return Err(format!(
                 "proposal #{} is not in pending state(expired or cancelled)",
                 proposal.proposal_id
             ));
         }
-        // NOTE: Pending implies not-expired, not-cancelled
 
         Ok(())
     }

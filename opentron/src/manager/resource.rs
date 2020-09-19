@@ -540,7 +540,7 @@ impl EnergyProcessor<'_> {
                 .put_key(keys::Account(addr), acct.clone())
                 .unwrap();
         }
-        assert!(consumed < energy_used);
+        assert!(consumed < energy_used && consumed >= 0);
 
         // Will consume burnt energy
         let energy_price = self.manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
@@ -553,7 +553,12 @@ impl EnergyProcessor<'_> {
             return Err("insufficient balance to burn for energy".into());
         }
 
-        debug!("E usage: frozen={} burnt={}", consumed, energy_used - consumed);
+        debug!(
+            "E usage: total={} frozen={} burnt={} ",
+            energy_used,
+            consumed,
+            energy_used - consumed
+        );
 
         self.manager.add_to_blackhole(energy_fee).unwrap();
         self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
@@ -574,8 +579,9 @@ impl EnergyProcessor<'_> {
         }
 
         let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
-
-        let energy_remain = e_limit - new_e_usage;
+        // NOTE: Adjusted usage might exceed limit, when total energy weight changes or there's unfreeze.
+        // So, `.max(0)` to set its lower bound.
+        let energy_remain = (e_limit - new_e_usage).max(0);
         if energy_remain == 0 {
             return 0;
         }
@@ -713,7 +719,7 @@ impl EnergyUtil<'_> {
     }
 
     // getAccountLeftEnergyFromFreeze
-    pub fn get_left_energy(&self, acct: &Account) -> i64 {
+    pub fn get_left_frozen_energy(&self, acct: &Account) -> i64 {
         let now = self.manager.get_head_slot();
 
         let e_usage = acct.resource().energy_used;
@@ -727,7 +733,7 @@ impl EnergyUtil<'_> {
 
     // getOriginUsage
     pub fn get_origin_usage(&self, origin_acct: &Account, origin_energy_limit: i64, origin_usage: i64) -> i64 {
-        let energy_left = self.get_left_energy(origin_acct);
+        let energy_left = self.get_left_frozen_energy(origin_acct);
         if ForkController::new(self.manager)
             .pass_version(BlockVersion::ENERGY_LIMIT())
             .unwrap()
@@ -738,23 +744,23 @@ impl EnergyUtil<'_> {
         }
     }
 
+    // calculateGlobalEnergyLimit
     pub fn calculate_global_energy_limit(&self, acct: &Account) -> i64 {
-        let amount_for_e = acct.amount_for_energy();
-        if amount_for_e < 1_000_000 {
+        let amount_for_energy = acct.amount_for_energy();
+        if amount_for_energy < 1_000_000 {
             return 0;
         }
-        let e_weight = amount_for_e / 1_000_000;
-        let total_e_limit = self
+        let energy_weight = amount_for_energy / 1_000_000;
+        let total_energy_limit = self
             .manager
             .state_db
             .must_get(&keys::ChainParameter::TotalEnergyCurrentLimit);
-
-        let total_e_weight = self
+        let total_energy_weight = self
             .manager
             .state_db
             .must_get(&keys::DynamicProperty::TotalEnergyWeight);
 
-        assert!(total_e_limit > 0, "total energy limit must be greater than 0");
-        return (e_weight as f64 * (total_e_limit as f64 / total_e_weight as f64)) as i64;
+        assert!(total_energy_limit > 0, "total energy limit must be greater than 0");
+        (energy_weight as f64 * (total_energy_limit as f64 / total_energy_weight as f64)) as i64
     }
 }

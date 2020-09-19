@@ -1,3 +1,4 @@
+/// TRX transfer.
 use std::convert::TryFrom;
 
 use ::keys::Address;
@@ -10,6 +11,8 @@ use state::keys;
 use super::super::executor::TransactionContext;
 use super::super::Manager;
 use super::BuiltinContractExecutorExt;
+
+const TRANSFER_FEE: i64 = 0;
 
 impl BuiltinContractExecutorExt for contract_pb::TransferContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
@@ -30,26 +33,8 @@ impl BuiltinContractExecutorExt for contract_pb::TransferContract {
 
         let owner_acct = state_db
             .get(&keys::Account(owner_address))
-            .map_err(|_| "error while querying db")?;
-
-        if owner_acct.is_none() {
-            return Err("owner account is not on chain".into());
-        }
-        let owner_acct = owner_acct.unwrap();
-
-        let to_acct = state_db
-            .get(&keys::Account(to_address))
-            .map_err(|_| "error while querying db")?;
-
-        if to_acct.is_none() {
-            ctx.new_account_created = true;
-            // NOTE: CreateNewAccountFeeInSystemContract is 0, account creation fee is handled by BandwidthProcessor.
-            fee += state_db.must_get(&keys::ChainParameter::CreateNewAccountFeeInSystemContract);
-        } else if to_acct.as_ref().unwrap().r#type == AccountType::Contract as i32 &&
-            state_db.must_get(&keys::ChainParameter::ForbidTransferToContract) == 1
-        {
-            return Err("cannot transfer to a smart contract address".into());
-        }
+            .map_err(|_| "error while querying db")?
+            .ok_or_else(|| "owner account is not on chain")?;
 
         if let Some(spend) = self.amount.checked_add(fee) {
             if owner_acct.balance < spend {
@@ -62,9 +47,28 @@ impl BuiltinContractExecutorExt for contract_pb::TransferContract {
             return Err("math overflow".into());
         }
 
-        if let Some(to_acct) = to_acct {
-            if to_acct.balance.checked_add(self.amount).is_none() {
-                return Err("math overflow".into());
+        let maybe_to_acct = state_db
+            .get(&keys::Account(to_address))
+            .map_err(|_| "error while querying db")?;
+
+        match maybe_to_acct {
+            None => {
+                ctx.new_account_created = true;
+                // NOTE: CreateNewAccountFeeInSystemContract is 0,
+                // account creation fee is handled by BandwidthProcessor.
+                fee += state_db.must_get(&keys::ChainParameter::CreateNewAccountFeeInSystemContract);
+            }
+            Some(to_acct)
+                if to_acct.r#type == AccountType::Contract as i32 &&
+                    state_db.must_get(&keys::ChainParameter::ForbidTransferToContract) == 1 =>
+            {
+                return Err("cannot transfer to a smart contract address".into());
+            }
+            Some(to_acct) => {
+                to_acct
+                    .balance
+                    .checked_add(self.amount)
+                    .ok_or_else(|| "math overflow")?;
             }
         }
 
@@ -105,5 +109,9 @@ impl BuiltinContractExecutorExt for contract_pb::TransferContract {
             .map_err(|e| e.to_string())?;
 
         Ok(TransactionResult::success())
+    }
+
+    fn fee(&self, _: &Manager) -> i64 {
+        TRANSFER_FEE
     }
 }
