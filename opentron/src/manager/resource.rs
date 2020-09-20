@@ -612,7 +612,7 @@ impl EnergyProcessor<'_> {
 
         let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
 
-        if energy_used > (e_limit - new_e_usage) {
+        if energy_used > 0 && energy_used > (e_limit - new_e_usage) {
             return false;
         }
 
