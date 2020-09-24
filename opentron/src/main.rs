@@ -63,16 +63,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rt.block_on(fut)
         }
         _ => {
-            let fut = run(config_file);
+            let ctx = AppContext::from_config(config_file)?;
+            info!("load config => \n{:#?}", ctx.config);
+
+            let fut = run(ctx);
             rt.block_on(fut)
         }
     }
 }
 
 // NOTE: #[tokio::main] conflicts with slog_scope, cause data race in global static resource release.
-async fn run<P: AsRef<Path>>(config_file: P) -> Result<(), Box<dyn Error>> {
-    let ctx = AppContext::from_config(config_file)?;
-    info!("load config => \n{:#?}", ctx.config);
+async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
     let ctx = Arc::new(ctx);
 
     let (done, _) = broadcast::channel::<()>(1);
