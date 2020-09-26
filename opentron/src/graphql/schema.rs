@@ -631,15 +631,17 @@ impl Block {
         let mut logs = vec![];
         for (index, txn) in self.transactions.read().unwrap().as_ref().unwrap().iter().enumerate() {
             if let Some(receipt) = manager.state().get(&keys::TransactionReceipt(txn.hash))? {
-                for log_entry in &receipt.vm_logs {
-                    if filter.matches(log_entry) {
+                receipt
+                    .vm_logs
+                    .into_iter()
+                    .filter(|log_entry| filter.matches(log_entry))
+                    .for_each(|log_entry| {
                         logs.push(Log {
                             index: index as i32,
-                            inner: log_entry.clone(),
+                            inner: log_entry,
                             txn_hash: txn.hash,
                         });
-                    }
-                }
+                    });
             }
         }
         Ok(logs)
@@ -811,15 +813,17 @@ impl QueryRoot {
             let txn_hashes = db.get_transaction_hashes_by_block_number(block_num)?;
             for (index, &txn_hash) in txn_hashes.iter().enumerate() {
                 if let Some(receipt) = manager.state().get(&keys::TransactionReceipt(txn_hash))? {
-                    for log_entry in &receipt.vm_logs {
-                        if filter.matches(log_entry) {
+                    receipt
+                        .vm_logs
+                        .into_iter()
+                        .filter(|log_entry| filter.matches(log_entry))
+                        .for_each(|log_entry| {
                             logs.push(Log {
                                 index: index as i32,
-                                inner: log_entry.clone(),
+                                inner: log_entry,
                                 txn_hash: txn_hash,
                             });
-                        }
-                    }
+                        });
                 }
             }
         }
