@@ -243,23 +243,40 @@ impl ChainDB {
         txns
     }
 
-    pub fn get_block_transaction_hashes(&self, hash: &H256) -> Result<Vec<H256>, BoxError> {
+    pub fn get_transaction_hashes_by_block_number(&self, num: i64) -> Result<Vec<H256>, BoxError> {
+        let mut lower_bound = [0u8; 8];
+        BE::write_u64(&mut lower_bound[..], num as u64);
+        let mut upper_bound = [0u8; 8];
+        BE::write_u64(&mut upper_bound[..], num as u64 + 1);
+
+        let ropts = ReadOptions::default()
+            .iterate_lower_bound(&lower_bound)
+            .iterate_upper_bound(&upper_bound);
+        let txn_hashes = self
+            .transaction
+            .new_iterator(&ropts)
+            .keys()
+            .map(|key| Ok(H256::from_slice(&key[32 + 8..])))
+            .collect::<Result<Vec<_>, BoxError>>();
+        drop(ropts);
+        txn_hashes
+    }
+
+    pub fn get_transaction_hashes_by_block_hash(&self, hash: &H256) -> Result<Vec<H256>, BoxError> {
         let mut upper_bound = hash.as_bytes().to_vec();
         upper_bound.push(0xFF); // [0xcafebabe00 .. 0xcafebabeff]
 
         let ropts = ReadOptions::default()
             .iterate_lower_bound(&hash.as_bytes())
             .iterate_upper_bound(&upper_bound);
-        let txns = self
+        let txn_hashes = self
             .transaction
             .new_iterator(&ropts)
             .keys()
-            .map(|key| {
-                Ok(H256::from_slice(&key[32 + 8..]))
-            })
+            .map(|key| Ok(H256::from_slice(&key[32 + 8..])))
             .collect::<Result<Vec<_>, BoxError>>();
         drop(ropts);
-        txns
+        txn_hashes
     }
 
     pub fn get_block_header_by_number(&self, num: i64) -> Result<IndexedBlockHeader, BoxError> {

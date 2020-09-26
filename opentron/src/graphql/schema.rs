@@ -244,6 +244,12 @@ struct FilterCriteria {
     topics: Option<Vec<Vec<Bytes32>>>,
 }
 
+impl FilterCriteria {
+    fn matches(&self, log: &state::TransactionLog) -> bool {
+        matches_addrs(&self.addresses, log) && matches_topics(&self.topics, &log.topics)
+    }
+}
+
 #[derive(InputObject)]
 /// BlockFilterCriteria encapsulates log filter criteria for a filter applied
 /// to a single block.
@@ -269,35 +275,39 @@ struct BlockFilterCriteria {
 
 impl BlockFilterCriteria {
     fn matches(&self, log: &state::TransactionLog) -> bool {
-        if let Some(ref addrs) = self.addresses {
-            if !addrs.is_empty() {
-                if addrs
-                    .iter()
-                    .find(|addr| addr.0.as_bytes() == &log.address[..])
-                    .is_none()
-                {
-                    return false;
-                }
+        matches_addrs(&self.addresses, log) && matches_topics(&self.topics, &log.topics)
+    }
+}
+
+fn matches_addrs(addrs: &Option<Vec<Address>>, log: &state::TransactionLog) -> bool {
+    if let Some(ref addrs) = *addrs {
+        if !addrs.is_empty() {
+            if addrs
+                .iter()
+                .find(|addr| addr.0.as_bytes() == &log.address[..])
+                .is_none()
+            {
+                return false;
             }
         }
-        self.matches_topics(&log.topics)
     }
+    true
+}
 
-    fn matches_topics(&self, target: &[Vec<u8>]) -> bool {
-        match self.topics {
-            None => true,
-            Some(ref topics) if topics.is_empty() => true,
-            Some(ref topics) if topics.len() > target.len() => false,
-            Some(ref topics) => {
-                for (lhs_topics, rhs) in topics.iter().zip(target.iter()) {
-                    if !lhs_topics.is_empty() {
-                        if lhs_topics.iter().find(|topic| topic.0.as_bytes() == &rhs[..]).is_none() {
-                            return false;
-                        }
+fn matches_topics(topics: &Option<Vec<Vec<Bytes32>>>, target: &[Vec<u8>]) -> bool {
+    match *topics {
+        None => true,
+        Some(ref topics) if topics.is_empty() => true,
+        Some(ref topics) if topics.len() > target.len() => false,
+        Some(ref topics) => {
+            for (lhs_topics, rhs) in topics.iter().zip(target.iter()) {
+                if !lhs_topics.is_empty() {
+                    if lhs_topics.iter().find(|topic| topic.0.as_bytes() == &rhs[..]).is_none() {
+                        return false;
                     }
                 }
-                true
             }
+            true
         }
     }
 }
@@ -763,7 +773,7 @@ impl QueryRoot {
             None => block_height,
         };
         if to_num - from.0 > MAX_NUMBER_OF_BATCH_ITEMS_PER_REQUEST {
-            return Err(FieldError::from("exceeds the maximum number of items per request"));
+            return Err(FieldError::from("exceeds the maximum number of blocks per request"));
         }
         Ok((from.0..=to_num).map(|num| Block::from_number(Long(num))).collect())
     }
@@ -780,8 +790,40 @@ impl QueryRoot {
     }
 
     /// Logs returns log entries matching the provided filter.
-    async fn logs(&self, _ctx: &Context<'_>, _filter: FilterCriteria) -> FieldResult<Vec<Log>> {
-        unimplemented!()
+    async fn logs(&self, ctx: &Context<'_>, filter: FilterCriteria) -> FieldResult<Vec<Log>> {
+        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let defaut_block = manager.latest_block_number();
+
+        let from_block = filter.from_block.unwrap_or(defaut_block.into()).0;
+        let to_block = filter.to_block.unwrap_or(defaut_block.into()).0;
+
+        if from_block > to_block {
+            return Err("fromBlock should be lower than toBlock".into());
+        }
+
+        if to_block - from_block > MAX_NUMBER_OF_BATCH_ITEMS_PER_REQUEST {
+            return Err(FieldError::from("exceeds the maximum number of blocks per request"));
+        }
+
+        let mut logs = vec![];
+        for block_num in from_block..=to_block {
+            let txn_hashes = db.get_transaction_hashes_by_block_number(block_num)?;
+            for (index, &txn_hash) in txn_hashes.iter().enumerate() {
+                if let Some(receipt) = manager.state().get(&keys::TransactionReceipt(txn_hash))? {
+                    for log_entry in &receipt.vm_logs {
+                        if filter.matches(log_entry) {
+                            logs.push(Log {
+                                index: index as i32,
+                                inner: log_entry.clone(),
+                                txn_hash: txn_hash,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        Ok(logs)
     }
 
     /// Syncing returns information on the current synchronisation state.
