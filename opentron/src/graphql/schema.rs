@@ -164,10 +164,57 @@ enum VmStatus {
 }
 
 /// Log is a Tron event log.
-pub struct Log {}
+pub struct Log {
+    index: i32,
+    inner: state::TransactionLog,
+    txn_hash: H256,
+}
 
 #[Object]
-impl Log {}
+impl Log {
+    /// Index is the index of this log in the block.
+    async fn index(&self) -> i32 {
+        self.index
+    }
+
+    /// Account is the account which generated this log - this will always
+    /// be a contract account.
+    async fn account(&self, ctx: &Context<'_>) -> FieldResult<Account> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let addr = TryFrom::try_from(&self.inner.address).unwrap();
+        let acct = manager
+            .state()
+            .get(&keys::Account(addr))?
+            .ok_or_else(|| "account not found")?;
+
+        Ok(Account {
+            address: addr.into(),
+            inner: acct,
+        })
+    }
+
+    /// Topics is a list of 0-4 indexed topics for the log.
+    async fn topics(&self) -> Vec<Bytes32> {
+        self.inner
+            .topics
+            .iter()
+            .map(|topic| H256::from_slice(topic).into())
+            .collect()
+    }
+
+    /// Data is unindexed data for this log.
+    async fn data(&self) -> Bytes {
+        Bytes(self.inner.data.clone())
+    }
+
+    /// Transaction is the transaction that generated this log entry.
+    async fn transaction(&self, ctx: &Context<'_>) -> FieldResult<Transaction> {
+        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
+        Ok(Transaction {
+            inner: db.get_transaction_by_id(&self.txn_hash)?,
+        })
+    }
+}
 
 #[derive(InputObject)]
 /// FilterCriteria encapsulates log filter criteria for searching log entries.
@@ -218,6 +265,41 @@ struct BlockFilterCriteria {
     ///  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
     // [[Bytes32!]!]
     topics: Option<Vec<Vec<Bytes32>>>,
+}
+
+impl BlockFilterCriteria {
+    fn matches(&self, log: &state::TransactionLog) -> bool {
+        if let Some(ref addrs) = self.addresses {
+            if !addrs.is_empty() {
+                if addrs
+                    .iter()
+                    .find(|addr| addr.0.as_bytes() == &log.address[..])
+                    .is_none()
+                {
+                    return false;
+                }
+            }
+        }
+        self.matches_topics(&log.topics)
+    }
+
+    fn matches_topics(&self, target: &[Vec<u8>]) -> bool {
+        match self.topics {
+            None => true,
+            Some(ref topics) if topics.is_empty() => true,
+            Some(ref topics) if topics.len() > target.len() => false,
+            Some(ref topics) => {
+                for (lhs_topics, rhs) in topics.iter().zip(target.iter()) {
+                    if !lhs_topics.is_empty() {
+                        if lhs_topics.iter().find(|topic| topic.0.as_bytes() == &rhs[..]).is_none() {
+                            return false;
+                        }
+                    }
+                }
+                true
+            }
+        }
+    }
 }
 
 /// CallData represents the data associated with a local contract call.
@@ -533,8 +615,24 @@ impl Block {
     }
 
     /// Logs returns a filtered set of logs from this block.
-    async fn logs(&self, _ctx: &Context<'_>, _filter: BlockFilterCriteria) -> FieldResult<Vec<Log>> {
-        unimplemented!()
+    async fn logs(&self, ctx: &Context<'_>, filter: BlockFilterCriteria) -> FieldResult<Vec<Log>> {
+        self.require_txns(ctx)?;
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let mut logs = vec![];
+        for (index, txn) in self.transactions.read().unwrap().as_ref().unwrap().iter().enumerate() {
+            if let Some(receipt) = manager.state().get(&keys::TransactionReceipt(txn.hash))? {
+                for log_entry in &receipt.vm_logs {
+                    if filter.matches(log_entry) {
+                        logs.push(Log {
+                            index: index as i32,
+                            inner: log_entry.clone(),
+                            txn_hash: txn.hash,
+                        });
+                    }
+                }
+            }
+        }
+        Ok(logs)
     }
 
     // eip1767:
@@ -676,7 +774,6 @@ impl QueryRoot {
     /// Transaction returns a transaction specified by its hash.
     async fn transaction(&self, ctx: &Context<'_>, hash: Bytes32) -> FieldResult<Transaction> {
         let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
-
         Ok(Transaction {
             inner: db.get_transaction_by_id(&hash.0)?,
         })
@@ -708,7 +805,6 @@ impl QueryRoot {
     /// Account fetches an Tron account at the current block's state.
     async fn account(&self, ctx: &Context<'_>, address: Address) -> FieldResult<Account> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
-
         let acct = manager
             .state()
             .get(&keys::Account(address.0))?
