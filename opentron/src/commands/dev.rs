@@ -3,7 +3,6 @@ use log::info;
 use std::path::Path;
 
 use crate::context::AppContext;
-use crate::manager::Manager;
 use chrono::Utc;
 
 pub async fn main<P: AsRef<Path>>(config_path: P, _matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {

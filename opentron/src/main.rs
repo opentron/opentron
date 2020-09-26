@@ -1,7 +1,6 @@
 // NOTE: Embedding slog macros and select! requires increasing recursion_limit.
 #![recursion_limit = "1024"]
 use std::error::Error;
-use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::Mutex;
