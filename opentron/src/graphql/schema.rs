@@ -6,6 +6,7 @@ use ::state::keys;
 use async_graphql::{Context, Enum, FieldError, FieldResult, InputObject, Object, SimpleObject};
 use byteorder::{ByteOrder, BE};
 use chain::{IndexedBlockHeader, IndexedTransaction};
+use chrono::{DateTime, TimeZone, Utc};
 use primitive_types::H256;
 use proto2::state;
 use std::mem;
@@ -253,12 +254,12 @@ pub struct CallResult {
 /// SyncState contains the current synchronisation state of the client.
 #[derive(SimpleObject)]
 pub struct SyncState {
-    /// StartingBlock is the block number at which synchronisation started.
-    starting_block: Long,
     /// CurrentBlock is the point at which synchronisation has presently reached.
     current_block: Long,
     /// HighestBlock is the latest known block number.
     highest_block: Long,
+    /// SolidBlock is the safe block for comfirmations.
+    solid_block: Long,
     /// StateBlock is the block number of StateDB.
     state_block: Long,
     /// PulledStates is the number of state entries fetched so far, or null
@@ -556,6 +557,54 @@ impl Block {
     // account, call, estimateGas: block state not supported
 }
 
+#[derive(SimpleObject)]
+pub struct ChainParameter {
+    id: i32,
+    key: String,
+    value: i64,
+}
+
+pub struct Chain;
+
+#[Object]
+impl Chain {
+    /// Chain parameters.
+    async fn parameters(&self, ctx: &Context<'_>) -> FieldResult<Vec<ChainParameter>> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let mut params = Vec::with_capacity(50);
+        {
+            let params = &mut params;
+            manager.state().for_each(move |key: &keys::ChainParameter, value| {
+                params.push(ChainParameter {
+                    id: *key as i32,
+                    key: format!("{:?}", key),
+                    value: *value,
+                });
+            });
+        }
+        Ok(params)
+    }
+
+    /// Get a chain parameter.
+    async fn parameter(&self, ctx: &Context<'_>, id: i32) -> FieldResult<ChainParameter> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let param = keys::ChainParameter::from_i32(id).ok_or_else(|| "invalid parameter id")?;
+        let value = manager.state().must_get(&param);
+        Ok(ChainParameter {
+            id: id,
+            key: format!("{:?}", param),
+            value,
+        })
+    }
+
+    /// Next maintenance time.
+    async fn next_maintenance_time(&self, ctx: &Context<'_>) -> DateTime<Utc> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let ts = manager.state().must_get(&keys::DynamicProperty::NextMaintenanceTime);
+        Utc.timestamp(ts / 1_000, ts as u32 % 1_000 * 1_000_000)
+    }
+}
+
 pub struct QueryRoot;
 
 #[Object]
@@ -644,9 +693,10 @@ impl QueryRoot {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
 
         SyncState {
-            starting_block: Long(db.get_block_height()),
             current_block: Long(db.get_block_height()),
+            // FIXME: wrong impl
             highest_block: Long(db.get_block_height()),
+            solid_block: Long(manager.solid_block_number()),
             state_block: Long(manager.latest_block_number()),
             pulled_states: None,
             known_states: None,
@@ -699,5 +749,10 @@ impl QueryRoot {
             .get(&keys::Asset(token_id))?
             .ok_or_else(|| "asset not found")?;
         Ok(Asset(asset))
+    }
+
+    /// Chain query.
+    async fn chain(&self) -> Chain {
+        Chain
     }
 }

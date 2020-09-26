@@ -28,7 +28,7 @@ pub trait Key<T>: Sized {
     fn parse_value(raw: &[u8]) -> T;
 
     /// Parse db key.
-    fn parse_key(_raw: &[u8]) -> Self {
+    fn parse_key(_raw: &[u8]) -> Option<Self> {
         unreachable!("key parsing is not implemented")
     }
 }
@@ -49,6 +49,14 @@ impl Key<i64> for ChainParameter {
 
     fn parse_value(raw: &[u8]) -> i64 {
         BE::read_u64(raw) as _
+    }
+
+    fn parse_key(raw: &[u8]) -> Option<Self> {
+        if raw[0] == b'p' {
+            ChainParameter::from_i32(BE::read_u64(&raw[1..]) as i32)
+        } else {
+            None
+        }
     }
 }
 
@@ -177,8 +185,8 @@ impl Key<pb::Witness> for Witness {
         pb::Witness::decode(raw).unwrap()
     }
 
-    fn parse_key(raw: &[u8]) -> Self {
-        Witness(*Address::from_bytes(raw))
+    fn parse_key(raw: &[u8]) -> Option<Self> {
+        Some(Witness(*Address::from_bytes(raw)))
     }
 }
 
@@ -230,8 +238,8 @@ impl Key<pb::Account> for Account {
         pb::Account::decode(raw).unwrap()
     }
 
-    fn parse_key(raw: &[u8]) -> Self {
-        Account(*Address::from_bytes(raw))
+    fn parse_key(raw: &[u8]) -> Option<Self> {
+        Some(Account(*Address::from_bytes(raw)))
     }
 }
 
@@ -396,10 +404,10 @@ impl Key<H256> for ContractStorage {
         H256::from_slice(raw)
     }
 
-    fn parse_key(raw: &[u8]) -> Self {
+    fn parse_key(raw: &[u8]) -> Option<Self> {
         let addr = *Address::from_bytes(&raw[..21]);
         let index = H256::from_slice(&raw[21..]);
-        ContractStorage(addr, index)
+        Some(ContractStorage(addr, index))
     }
 }
 
@@ -447,10 +455,10 @@ impl Key<pb::Asset> for Asset {
         pb::Asset::decode(raw).unwrap()
     }
 
-    fn parse_key(raw: &[u8]) -> Self {
+    fn parse_key(raw: &[u8]) -> Option<Self> {
         let mut bytes = [0u8; 8];
         bytes.copy_from_slice(raw);
-        Asset(u64::from_be_bytes(bytes) as i64)
+        Some(Asset(u64::from_be_bytes(bytes) as i64))
     }
 }
 
@@ -476,10 +484,10 @@ impl Key<pb::Exchange> for Exchange {
         pb::Exchange::decode(raw).unwrap()
     }
 
-    fn parse_key(raw: &[u8]) -> Self {
+    fn parse_key(raw: &[u8]) -> Option<Self> {
         let mut bytes = [0u8; 8];
         bytes.copy_from_slice(raw);
-        Exchange(u64::from_be_bytes(bytes) as i64)
+        Some(Exchange(u64::from_be_bytes(bytes) as i64))
     }
 }
 

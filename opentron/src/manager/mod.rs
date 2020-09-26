@@ -526,6 +526,11 @@ impl Manager {
     }
 
     #[inline]
+    pub fn solid_block_number(&self) -> i64 {
+        self.state_db.must_get(&keys::DynamicProperty::LatestSolidBlockNumber)
+    }
+
+    #[inline]
     pub fn latest_block_number(&self) -> i64 {
         self.state_db.must_get(&keys::DynamicProperty::LatestBlockNumber)
     }
