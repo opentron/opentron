@@ -1,16 +1,16 @@
-use futures::future::FutureExt;
-use hyper::{
-    service::{make_service_fn, service_fn},
-    Body, Method, Response, Server, StatusCode,
-};
-use juniper::{EmptySubscription, RootNode};
+use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
+
+use async_graphql::{EmptyMutation, EmptySubscription, Schema};
+use async_graphql_warp::BadRequest;
+use http::StatusCode;
 use log::{info, warn};
-use slog::slog_info;
+use std::convert::Infallible;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
+use warp::{Filter, Rejection};
 
-use super::model::Context;
-use super::schema::{Mutation, Query, Schema};
+use super::schema::QueryRoot;
 use crate::context::AppContext;
 
 pub async fn graphql_server(ctx: Arc<AppContext>, mut shutdown_signal: broadcast::Receiver<()>) {
@@ -21,49 +21,42 @@ pub async fn graphql_server(ctx: Arc<AppContext>, mut shutdown_signal: broadcast
         return;
     }
 
-    let addr = config.endpoint.parse().expect("malformed endpoint address");
+    let addr: SocketAddr = config.endpoint.parse().expect("malformed graphql endpoint address");
 
-    let root_node: Arc<Schema> = Arc::new(RootNode::new(Query, Mutation, EmptySubscription::new()));
-    let ctx = Arc::new(Context { app: ctx });
+    let schema = Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
+        .data(ctx)
+        .finish();
 
-    let graphql_service = make_service_fn(move |_| {
-        let root_node = root_node.clone();
-        let ctx = ctx.clone();
-        let logger = slog_scope::logger();
-
-        async move {
-            Ok::<_, hyper::Error>(service_fn(move |req| {
-                let root_node = root_node.clone();
-                let ctx = ctx.clone();
-
-                slog_info!(
-                    logger,
-                    "{:?} {} {:?} {:?}",
-                    req.method(),
-                    req.uri(),
-                    req.headers().get("user-agent").unwrap(),
-                    req.headers().get("x-forwarded-for"),
-                );
-                async move {
-                    match (req.method(), req.uri().path()) {
-                        (&Method::GET, "/") => juniper_hyper::graphiql("/graphql", None).await,
-                        (&Method::GET, "/playground") => juniper_hyper::playground("/graphql", None).await,
-                        (&Method::GET, "/graphql") | (&Method::POST, "/graphql") => {
-                            juniper_hyper::graphql(root_node, ctx, req).await
-                        }
-                        _ => {
-                            let mut response = Response::new(Body::empty());
-                            *response.status_mut() = StatusCode::NOT_FOUND;
-                            Ok(response)
-                        }
-                    }
-                }
-            }))
-        }
+    let graphql_post = async_graphql_warp::graphql(schema).and_then(
+        |(schema, request): (Schema<_, _, _>, async_graphql::Request)| async move {
+            info!("req: {:?}", request.query);
+            Ok::<_, Infallible>(async_graphql_warp::Response::from(schema.execute(request).await))
+        },
+    );
+    let graphql_playground = warp::path::end().and(warp::get()).map(|| {
+        warp::http::Response::builder()
+            .header("content-type", "text/html")
+            .body(playground_source(GraphQLPlaygroundConfig::new("/")))
     });
 
-    let server = Server::bind(&addr).serve(graphql_service);
-    info!("listening on http://{}", addr);
+    let routes = graphql_playground
+        .or(graphql_post)
+        .recover(|err: Rejection| async move {
+            if let Some(BadRequest(err)) = err.find() {
+                return Ok::<_, Infallible>(warp::reply::with_status(err.to_string(), StatusCode::BAD_REQUEST));
+            }
 
-    let _ = server.with_graceful_shutdown(shutdown_signal.recv().map(|_| ())).await;
+            Ok(warp::reply::with_status(
+                "INTERNAL_SERVER_ERROR".to_string(),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))
+        });
+
+    let (listening_addr, fut) = warp::serve(routes).bind_with_graceful_shutdown(addr, async move {
+        shutdown_signal.recv().await.ok();
+    });
+
+    info!("listening on http://{}", listening_addr);
+
+    fut.await;
 }

@@ -80,6 +80,10 @@ impl Manager {
         }
     }
 
+    pub(crate) fn state(&self) -> &StateDB {
+        &self.state_db
+    }
+
     pub fn init_ref_blocks(&mut self, hashes: Vec<H256>) {
         debug!("update num of ref_hashes => {:?}", hashes.len());
         self.ref_block_hashes = hashes;
@@ -150,9 +154,11 @@ impl Manager {
                 return Err(new_error("verifying block witness signature failed"));
             }
         }
-        // 2. verify merkle tree
         if !block.verify_merkle_root_hash() {
-            return Err(new_error("verify block merkle root hash failed"));
+            return Err(new_error(&format!(
+                "verify block merkle root hash failed, block={}",
+                block.number(),
+            )));
         }
 
         // TODO: check dup block? (StateManager.receiveBlock)
