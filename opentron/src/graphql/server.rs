@@ -3,7 +3,7 @@ use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::{EmptyMutation, EmptySubscription, Schema};
 use async_graphql_warp::BadRequest;
 use http::StatusCode;
-use log::{info, warn};
+use log::{info, warn, trace};
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -29,7 +29,7 @@ pub async fn graphql_server(ctx: Arc<AppContext>, mut shutdown_signal: broadcast
 
     let graphql_post = async_graphql_warp::graphql(schema).and_then(
         |(schema, request): (Schema<_, _, _>, async_graphql::Request)| async move {
-            info!("req: {:?}", request.query);
+            trace!("req: {:?}", request.query);
             Ok::<_, Infallible>(async_graphql_warp::Response::from(schema.execute(request).await))
         },
     );

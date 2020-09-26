@@ -1,4 +1,5 @@
 use std::convert::TryFrom;
+use std::str;
 use std::sync::{Arc, RwLock};
 
 use ::state::keys;
@@ -9,9 +10,9 @@ use primitive_types::H256;
 use proto2::state;
 use std::mem;
 
+use super::contract::{AccountType, Contract};
 use super::model::NodeInfo;
 use super::scalar::{Address, Bytes, Bytes32, Long};
-use super::contract::Contract;
 use crate::context::AppContext;
 
 const CODE_VERSION: &'static str = "0.1.0";
@@ -70,13 +71,275 @@ impl Account {
         Long(self.inner.token_balance.get(&id).copied().unwrap_or_default())
     }
 
+    /// Allowance of the account.
+    async fn allowance(&self) -> Long {
+        Long(self.inner.allowance)
+    }
+
+    /// Name of this account.
     async fn name(&self) -> &str {
         &self.inner.name
     }
 
-    async fn r#type(&self) -> i32 {
-        self.inner.r#type
+    /// Type of this account.
+    async fn r#type(&self) -> AccountType {
+        AccountType::from_i32(self.inner.r#type)
     }
+
+    /// Tron Power of the account.
+    async fn power(&self) -> Long {
+        self.inner.tron_power().into()
+    }
+}
+
+/// Asset is a TRC10 token.
+pub struct Asset(state::Asset);
+
+#[Object]
+impl Asset {
+    /// Asset id, aka. token id.
+    async fn id(&self) -> i64 {
+        self.0.id
+    }
+
+    /// Asset name, used as identifier before AllowSameTokenName.
+    async fn name(&self) -> &str {
+        &self.0.name
+    }
+
+    /// Asset symbol, aka. abbr.
+    async fn symbol(&self) -> &str {
+        &self.0.abbr
+    }
+
+    /// Description of the asset.
+    async fn description(&self) -> &str {
+        unsafe { str::from_utf8_unchecked(&self.0.description) }
+    }
+
+    /// URL of the asset.
+    async fn url(&self) -> &str {
+        &self.0.url
+    }
+
+    /// Totol supply of the asset.
+    async fn total_supply(&self) -> Long {
+        self.0.total_supply.into()
+    }
+
+    /// Decimals of the asset, aka. precision.
+    async fn decimals(&self) -> i32 {
+        self.0.precision
+    }
+
+    /// Issuer of the asset.
+    async fn owner(&self) -> Address {
+        Address(TryFrom::try_from(&self.0.owner_address).unwrap())
+    }
+
+    /// Returns the amount of tokens owned by account.
+    async fn balance_of(&self, ctx: &Context<'_>, account: Address) -> FieldResult<Long> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let acct = manager
+            .state()
+            .get(&keys::Account(account.0))?
+            .ok_or_else(|| "account not found")?;
+        Ok(acct.token_balance.get(&self.0.id).copied().unwrap_or(0).into())
+    }
+}
+
+/// Rename from `ContractStatus`, or `contractResult`.
+#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[repr(i32)]
+enum VmStatus {
+    Default = 0,
+    Success = 1,
+    Revert = 2,
+    IllegalOperation = 8,
+    OutOfTime = 11,
+    OutOfEnergy = 10,
+    TransferFailed = 14,
+    Unknown = 13,
+}
+
+/// Log is a Tron event log.
+pub struct Log {}
+
+#[Object]
+impl Log {}
+
+#[derive(InputObject)]
+/// FilterCriteria encapsulates log filter criteria for searching log entries.
+struct FilterCriteria {
+    /// FromBlock is the block at which to start searching, inclusive. Defaults
+    /// to the latest block if not supplied.
+    from_block: Option<Long>,
+    /// ToBlock is the block at which to stop searching, inclusive. Defaults
+    /// to the latest block if not supplied.
+    to_block: Option<Long>,
+    /// Addresses is a list of addresses that are of interest. If this list is
+    /// empty, results will not be filtered by address.
+    // [Address!]
+    addresses: Option<Vec<Address>>,
+    /// Topics list restricts matches to particular event topics. Each event has a list
+    /// of topics. Topics matches a prefix of that list. An empty element array matches any
+    /// topic. Non-empty elements represent an alternative that matches any of the
+    /// contained topics.
+    ///
+    /// Examples:
+    ///  - [] or nil          matches any topic list
+    ///  - [[A]]              matches topic A in first position
+    ///  - [[], [B]]          matches any topic in first position, B in second position
+    ///  - [[A], [B]]         matches topic A in first position, B in second position
+    ///  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
+    // [[Bytes32!]!]
+    topics: Option<Vec<Vec<Bytes32>>>,
+}
+
+#[derive(InputObject)]
+/// BlockFilterCriteria encapsulates log filter criteria for a filter applied
+/// to a single block.
+struct BlockFilterCriteria {
+    /// Addresses is a list of addresses that are of interest. If this list is
+    /// empty, results will not be filtered by address.
+    // [Address!]
+    addresses: Option<Vec<Address>>,
+    /// Topics list restricts matches to particular event topics. Each event has a list
+    /// of topics. Topics matches a prefix of that list. An empty element array matches any
+    /// topic. Non-empty elements represent an alternative that matches any of the
+    /// contained topics.
+    ///
+    /// Examples:
+    ///  - [] or nil          matches any topic list
+    ///  - [[A]]              matches topic A in first position
+    ///  - [[], [B]]          matches any topic in first position, B in second position
+    ///  - [[A], [B]]         matches topic A in first position, B in second position
+    ///  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
+    // [[Bytes32!]!]
+    topics: Option<Vec<Vec<Bytes32>>>,
+}
+
+/// CallData represents the data associated with a local contract call.
+/// All fields are optional.
+#[derive(InputObject)]
+pub struct CallData {
+    /// From is the address making the call.
+    from: Option<Address>,
+    /// To is the address the call is sent to. (contract address)
+    to: Option<Address>,
+    /// FeeLimit is the max amount of energy sent with the call.
+    fee_limit: Option<Long>,
+    /// Data is the data sent to the callee.
+    data: Option<Bytes>,
+    /// Value is the value, in sun, sent along with the call.
+    value: Option<Long>,
+    /// TokenId is the TRC10 token ID.
+    token_id: Option<i64>,
+    /// TokenValue is the TRC10 token value.
+    token_value: Option<Long>,
+}
+
+/// CallResult is the result of a local call operation.
+#[derive(SimpleObject)]
+pub struct CallResult {
+    /// FromData is the return data of the called contract.
+    data: Bytes,
+    /// EnergyUsed is the amount of gas used by the call, after any refunds.
+    energy_used: Long,
+    /// VmStatus is the result of the call.
+    vm_status: VmStatus,
+}
+
+/// SyncState contains the current synchronisation state of the client.
+#[derive(SimpleObject)]
+pub struct SyncState {
+    /// StartingBlock is the block number at which synchronisation started.
+    starting_block: Long,
+    /// CurrentBlock is the point at which synchronisation has presently reached.
+    current_block: Long,
+    /// HighestBlock is the latest known block number.
+    highest_block: Long,
+    /// StateBlock is the block number of StateDB.
+    state_block: Long,
+    /// PulledStates is the number of state entries fetched so far, or null
+    /// if this is not known or not relevant.
+    pulled_states: Option<Long>,
+    /// KnownStates is the number of states the node knows of so far, or null
+    /// if this is not known or not relevant.
+    known_states: Option<Long>,
+}
+
+/// Transaction is a Tron transaction.
+pub struct Transaction {
+    inner: IndexedTransaction,
+}
+
+#[Object]
+impl Transaction {
+    /// Hash is the hash of this transaction.
+    async fn hash(&self) -> Bytes32 {
+        Bytes32(self.inner.hash)
+    }
+
+    /// Index is the index of this transaction in the parent block. This will
+    /// be null if the transaction has not yet been mined.
+    async fn index(&self, ctx: &Context<'_>) -> FieldResult<i32> {
+        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
+        Ok(db.get_transaction_index(&self.inner.hash)?)
+    }
+
+    /// Block is the block this transaction was mined in. This will be null if
+    /// the transaction has not yet been mined.
+    async fn block(&self, ctx: &Context<'_>) -> FieldResult<Block> {
+        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
+        let block_hash = db.get_transaction_block_hash(&self.inner.hash)?;
+        Ok(Block::from_hash(Bytes32(block_hash)))
+    }
+
+    /// Return status of TVM. Only meaningful for VM involved transactions.
+    async fn vm_status(&self) -> VmStatus {
+        let maybe_result = self.inner.raw.result.get(0);
+        let contract_status = maybe_result.map(|ret| ret.contract_status).unwrap_or_default();
+        // FIXME: unsafe
+        unsafe { mem::transmute(contract_status) }
+    }
+
+    /*
+    /// Builtin contract type.
+    async fn contract_type(&self) -> String {
+        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
+        format!("{:?}", ContractType::from_i32(cntr.r#type).unwrap())
+    }
+    */
+
+    /// Permission ID of this transaction. 0 for owner permission, 2 and above for active permission.
+    async fn permission_id(&self) -> i32 {
+        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
+        cntr.permission_id
+    }
+
+    /// Expiration timestamp of this transaction.
+    async fn expiration(&self) -> i64 {
+        self.inner.raw.raw_data.as_ref().unwrap().expiration
+    }
+
+    /// Memo data of this transaction.
+    async fn memo(&self) -> Bytes {
+        Bytes(self.inner.raw.raw_data.as_ref().unwrap().data.clone())
+    }
+
+    /// Inner system contract of this transaction. (builtin contract)
+    async fn contract(&self) -> Contract {
+        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
+        Contract::from(cntr)
+    }
+
+    // eip1767:
+    //
+    // nonce
+    // status
+    // gasUsed
+    // cumulativeGasUsed
 }
 
 #[derive(Debug)]
@@ -293,198 +556,6 @@ impl Block {
     // account, call, estimateGas: block state not supported
 }
 
-/// Rename from `ContractStatus`, or `contractResult`.
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
-#[repr(i32)]
-enum VmStatus {
-    Default = 0,
-    Success = 1,
-    Revert = 2,
-    IllegalOperation = 8,
-    OutOfTime = 11,
-    OutOfEnergy = 10,
-    TransferFailed = 14,
-    Unknown = 13,
-}
-
-/// Transaction is a Tron transaction.
-pub struct Transaction {
-    inner: IndexedTransaction,
-}
-
-#[Object]
-impl Transaction {
-    /// Hash is the hash of this transaction.
-    async fn hash(&self) -> Bytes32 {
-        Bytes32(self.inner.hash)
-    }
-
-    /// Index is the index of this transaction in the parent block. This will
-    /// be null if the transaction has not yet been mined.
-    async fn index(&self, ctx: &Context<'_>) -> FieldResult<i32> {
-        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
-        Ok(db.get_transaction_index(&self.inner.hash)?)
-    }
-
-    /// Block is the block this transaction was mined in. This will be null if
-    /// the transaction has not yet been mined.
-    async fn block(&self, ctx: &Context<'_>) -> FieldResult<Block> {
-        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
-        let block_hash = db.get_transaction_block_hash(&self.inner.hash)?;
-        Ok(Block::from_hash(Bytes32(block_hash)))
-    }
-
-    /// Return status of TVM. Only meaningful for VM involved transactions.
-    async fn vm_status(&self) -> VmStatus {
-        let maybe_result = self.inner.raw.result.get(0);
-        let contract_status = maybe_result.map(|ret| ret.contract_status).unwrap_or_default();
-        // FIXME: unsafe
-        unsafe { mem::transmute(contract_status) }
-    }
-
-    /*
-    /// Builtin contract type.
-    async fn contract_type(&self) -> String {
-        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
-        format!("{:?}", ContractType::from_i32(cntr.r#type).unwrap())
-    }
-    */
-
-    /// Permission ID of this transaction. 0 for owner permission, 2 and above for active permission.
-    async fn permission_id(&self) -> i32 {
-        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
-        cntr.permission_id
-    }
-
-    /// Expiration timestamp of this transaction.
-    async fn expiration(&self) -> i64 {
-        self.inner.raw.raw_data.as_ref().unwrap().expiration
-    }
-
-    /// Memo data of this transaction.
-    async fn memo(&self) -> Bytes {
-        Bytes(self.inner.raw.raw_data.as_ref().unwrap().data.clone())
-    }
-
-    /// Inner system contract of this transaction. (builtin contract)
-    async fn contract(&self) -> Contract {
-        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
-        Contract::from(cntr)
-    }
-
-    // eip1767:
-    //
-    // nonce
-    // status
-    // gasUsed
-    // cumulativeGasUsed
-}
-
-/// # Log is a Tron event log.
-pub struct Log {}
-
-#[Object]
-impl Log {}
-
-#[derive(InputObject)]
-/// FilterCriteria encapsulates log filter criteria for searching log entries.
-struct FilterCriteria {
-    /// FromBlock is the block at which to start searching, inclusive. Defaults
-    /// to the latest block if not supplied.
-    from_block: Option<Long>,
-    /// ToBlock is the block at which to stop searching, inclusive. Defaults
-    /// to the latest block if not supplied.
-    to_block: Option<Long>,
-    /// Addresses is a list of addresses that are of interest. If this list is
-    /// empty, results will not be filtered by address.
-    // [Address!]
-    addresses: Option<Vec<Address>>,
-    /// Topics list restricts matches to particular event topics. Each event has a list
-    /// of topics. Topics matches a prefix of that list. An empty element array matches any
-    /// topic. Non-empty elements represent an alternative that matches any of the
-    /// contained topics.
-    ///
-    /// Examples:
-    ///  - [] or nil          matches any topic list
-    ///  - [[A]]              matches topic A in first position
-    ///  - [[], [B]]          matches any topic in first position, B in second position
-    ///  - [[A], [B]]         matches topic A in first position, B in second position
-    ///  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
-    // [[Bytes32!]!]
-    topics: Option<Vec<Vec<Bytes32>>>,
-}
-
-#[derive(InputObject)]
-/// BlockFilterCriteria encapsulates log filter criteria for a filter applied
-/// to a single block.
-struct BlockFilterCriteria {
-    /// Addresses is a list of addresses that are of interest. If this list is
-    /// empty, results will not be filtered by address.
-    // [Address!]
-    addresses: Option<Vec<Address>>,
-    /// Topics list restricts matches to particular event topics. Each event has a list
-    /// of topics. Topics matches a prefix of that list. An empty element array matches any
-    /// topic. Non-empty elements represent an alternative that matches any of the
-    /// contained topics.
-    ///
-    /// Examples:
-    ///  - [] or nil          matches any topic list
-    ///  - [[A]]              matches topic A in first position
-    ///  - [[], [B]]          matches any topic in first position, B in second position
-    ///  - [[A], [B]]         matches topic A in first position, B in second position
-    ///  - [[A, B]], [C, D]]  matches topic (A OR B) in first position, (C OR D) in second position
-    // [[Bytes32!]!]
-    topics: Option<Vec<Vec<Bytes32>>>,
-}
-
-/// CallData represents the data associated with a local contract call.
-/// All fields are optional.
-#[derive(InputObject)]
-pub struct CallData {
-    /// From is the address making the call.
-    from: Option<Address>,
-    /// To is the address the call is sent to. (contract address)
-    to: Option<Address>,
-    /// FeeLimit is the max amount of energy sent with the call.
-    fee_limit: Option<Long>,
-    /// Data is the data sent to the callee.
-    data: Option<Bytes>,
-    /// Value is the value, in sun, sent along with the call.
-    value: Option<Long>,
-    /// TokenId is the TRC10 token ID.
-    token_id: Option<i64>,
-    /// TokenValue is the TRC10 token value.
-    token_value: Option<Long>,
-}
-
-/// CallResult is the result of a local call operation.
-#[derive(SimpleObject)]
-pub struct CallResult {
-    /// FromData is the return data of the called contract.
-    data: Bytes,
-    /// EnergyUsed is the amount of gas used by the call, after any refunds.
-    energy_used: Long,
-    /// VmStatus is the result of the call.
-    vm_status: VmStatus,
-}
-
-/// SyncState contains the current synchronisation state of the client.
-#[derive(SimpleObject)]
-pub struct SyncState {
-    /// StartingBlock is the block number at which synchronisation started.
-    starting_block: Long,
-    /// CurrentBlock is the point at which synchronisation has presently reached.
-    current_block: Long,
-    /// HighestBlock is the latest known block number.
-    highest_block: Long,
-    /// PulledStates is the number of state entries fetched so far, or null
-    /// if this is not known or not relevant.
-    pulled_states: Option<Long>,
-    /// KnownStates is the number of states the node knows of so far, or null
-    /// if this is not known or not relevant.
-    known_states: Option<Long>,
-}
-
 pub struct QueryRoot;
 
 #[Object]
@@ -570,11 +641,13 @@ impl QueryRoot {
     /// Syncing returns information on the current synchronisation state.
     async fn syncing(&self, ctx: &Context<'_>) -> SyncState {
         let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
 
         SyncState {
             starting_block: Long(db.get_block_height()),
             current_block: Long(db.get_block_height()),
             highest_block: Long(db.get_block_height()),
+            state_block: Long(manager.latest_block_number()),
             pulled_states: None,
             known_states: None,
         }
@@ -603,5 +676,28 @@ impl QueryRoot {
     /// successful execution of a transaction at the current block's state.
     async fn estimate_energy(&self, _ctx: &Context<'_>, _data: CallData) -> FieldResult<Long> {
         unimplemented!()
+    }
+
+    // Tron extensions.
+
+    /// Asset fetches an Tron asset(TRC10 token).
+    async fn asset(&self, ctx: &Context<'_>, issuer: Option<Address>, id: Option<i64>) -> FieldResult<Asset> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let token_id = match (issuer, id) {
+            (None, Some(token_id)) => token_id,
+            (Some(issuer_addr), None) => {
+                let acct = manager
+                    .state()
+                    .get(&keys::Account(issuer_addr.0))?
+                    .ok_or_else(|| "issuer not found")?;
+                acct.issued_asset_id
+            }
+            _ => return Err("either issuer or asset id should be provided".into()),
+        };
+        let asset = manager
+            .state()
+            .get(&keys::Asset(token_id))?
+            .ok_or_else(|| "asset not found")?;
+        Ok(Asset(asset))
     }
 }

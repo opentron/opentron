@@ -17,7 +17,7 @@ pub enum AccountType {
 }
 
 impl AccountType {
-    fn from_i32(val: i32) -> Self {
+    pub fn from_i32(val: i32) -> Self {
         match val {
             0 => AccountType::Normal,
             1 => AccountType::AssetIssue,
