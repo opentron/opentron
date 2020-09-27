@@ -1,15 +1,12 @@
-use std::path::Path;
-
+use chain_db::CheckResult;
 use clap::ArgMatches;
-use log::info;
-use chain_db::{ChainDB, CheckResult};
-use config::Config;
 
-pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
-    let config = Config::load_from_file(config_path)?;
-    info!("config file loaded");
-    let db = ChainDB::new(&config.storage.data_dir);
-    info!("db opened");
+use log::info;
+
+use crate::context::AppContext;
+
+pub async fn main(ctx: AppContext, matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
+    let ref db = ctx.chain_db;
 
     db.await_background_jobs();
 
@@ -20,22 +17,6 @@ pub async fn main<P: AsRef<Path>>(config_path: P, matches: &ArgMatches<'_>) -> R
             println!("compact => {:?}", ret);
         }
         Some("merkle_tree") => {
-            /*
-            let patch = config
-                .merkle_tree_patch
-                .map(|patch| {
-                    patch
-                        .iter()
-                        .map(|patch| {
-                            (
-                                H256::from_slice(&hex::decode(&patch.txn).unwrap()),
-                                H256::from_slice(&hex::decode(&patch.tree_node_hash).unwrap()),
-                            )
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
-            */
             db.verify_merkle_tree(&Default::default())?;
         }
         Some("parent_hash") => {

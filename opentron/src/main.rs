@@ -48,23 +48,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .enable_all()
         .build()?;
 
+    let ctx = AppContext::from_config(config_file)?;
+    info!("load config => \n{:#?}", ctx.config);
+
     match matches.subcommand() {
         ("check", Some(arg_matches)) => {
-            let fut = opentron::commands::check::main(config_file, arg_matches);
+            let fut = opentron::commands::check::main(ctx, arg_matches);
             rt.block_on(fut)
         }
         ("fix", Some(arg_matches)) => {
-            let fut = opentron::commands::fix::main(config_file, arg_matches);
+            let fut = opentron::commands::fix::main(ctx, arg_matches);
             rt.block_on(fut)
         }
-        ("dev", Some(arg_matches)) => {
-            let fut = opentron::commands::dev::main(config_file, arg_matches);
+        ("dev", Some(_)) => {
+            let fut = opentron::commands::dev::main(ctx);
             rt.block_on(fut)
         }
         _ => {
-            let ctx = AppContext::from_config(config_file)?;
-            info!("load config => \n{:#?}", ctx.config);
-
             let fut = run(ctx);
             rt.block_on(fut)
         }
