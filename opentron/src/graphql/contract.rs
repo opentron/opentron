@@ -1,181 +1,15 @@
+use std::convert::TryInto;
+
 use chrono::{DateTime, TimeZone, Utc};
-use keys::b58encode_check;
+use primitive_types::H256;
 use proto2::chain::transaction::Contract as ContractPb;
 use proto2::common::Permission as PermissionPb;
 
-#[derive(juniper::GraphQLObject)]
-pub struct TransferContract {
-    pub owner_address: String,
-    pub to_address: String,
-    pub amount: f64,
-}
+use super::scalar::{Address, Bytes, Bytes32, Long};
 
-#[derive(juniper::GraphQLObject)]
-pub struct TransferAssetContract {
-    owner_address: String,
-    to_address: String,
-    /// after ALLOW_SAME_TOKEN_NAME
-    token_id: Option<i32>,
-    /// before ALLOW_SAME_TOKEN_NAME
-    token_name: Option<String>,
-    amount: f64,
-}
+use async_graphql::{Enum, SimpleObject, Union};
 
-#[derive(juniper::GraphQLObject)]
-pub struct FrozenSupply {
-    frozen_amount: f64,
-    frozen_days: i32,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct AssetIssueContract {
-    owner_address: String,
-    name: String,
-    abbr: String,
-    total_supply: f64,
-    frozen_supply: Vec<FrozenSupply>,
-    num: i32,
-    trx_num: i32,
-    precision: i32,
-    start_time: DateTime<Utc>,
-    end_time: DateTime<Utc>,
-    description: String,
-    url: String,
-    /// FreeAssetNetLimit
-    free_bandwidth: f64,
-    /// PublicFreeAssetNetLimit
-    public_free_bandwidth: f64,
-    // int64 order = 11;  // useless
-    // int32 vote_score = 16;
-    // public_free_asset_net_usage = 24;
-    // public_latest_free_net_time = 25;
-    // string id = 41;
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct ParticipateAssetIssueContract {
-    owner_address: String,
-    to_address: String,
-    /// after ALLOW_SAME_TOKEN_NAME
-    token_id: Option<i32>,
-    /// before ALLOW_SAME_TOKEN_NAME
-    token_name: Option<String>,
-    amount: f64,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct Vote {
-    vote_address: String,
-    count: f64,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct WitnessCreateContract {
-    owner_address: String,
-    url: String,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct WithdrawBalanceContract {
-    owner_address: String,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct UpdateBrokerageContract {
-    owner_address: String,
-    /// Brokerage in percent, dividend payout ratio.
-    brokerage: i32,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct VoteWitnessContract {
-    owner_address: String,
-    votes: Vec<Vote>,
-}
-
-#[derive(juniper::GraphQLEnum, PartialEq, Eq)]
-pub enum ResourceCode {
-    Bandwidth,
-    Energy,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct FreezeBalanceContract {
-    owner_address: String,
-    receiver_address: String,
-    resource: ResourceCode,
-    frozen_balance: f64,
-    frozen_duration: i32,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct UnfreezeBalanceContract {
-    owner_address: String,
-    receiver_address: String,
-    resource: ResourceCode,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct Parameter {
-    key: i32,
-    value: f64, // max: 9007199254740992
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct ProposalCreateContract {
-    owner_address: String,
-    parameters: Vec<Parameter>,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct ProposalApproveContract {
-    owner_address: String,
-    proposal_id: i32,
-    is_approve: bool,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct ProposalDeleteContract {
-    owner_address: String,
-    proposal_id: i32,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct SmartContract {
-    name: String,
-    origin_address: String,
-    contract_address: Option<String>,
-    /// ABI as JSON string.
-    abi: Option<String>,
-    code: String,
-    /// Percent, 0 to 100.
-    user_resource_percent: i32,
-    origin_energy_limit: f64,
-    code_hash: Option<String>,
-    // When smart contract is created by a trigger smart contract call.
-    txn_hash: Option<String>,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct CreateSmartContract {
-    owner_address: String,
-    new_smart_contract: SmartContract,
-    call_value: f64, // moved from inner struct
-    call_token_value: f64,
-    call_token_id: i32,
-}
-
-#[derive(juniper::GraphQLObject)]
-pub struct TriggerSmartContract {
-    owner_address: String,
-    contract_address: String,
-    data: String,
-    call_value: f64,
-    call_token_value: f64,
-    call_token_id: i32,
-}
-
-#[derive(juniper::GraphQLEnum, PartialEq, Eq)]
+#[derive(Enum, Clone, Copy, PartialEq, Eq)]
 pub enum AccountType {
     Normal = 0,
     AssetIssue = 1,
@@ -183,7 +17,7 @@ pub enum AccountType {
 }
 
 impl AccountType {
-    fn from_i32(val: i32) -> Self {
+    pub fn from_i32(val: i32) -> Self {
         match val {
             0 => AccountType::Normal,
             1 => AccountType::AssetIssue,
@@ -193,21 +27,236 @@ impl AccountType {
     }
 }
 
-#[derive(juniper::GraphQLObject)]
+#[derive(SimpleObject)]
 pub struct AccountCreateContract {
-    owner_address: String,
-    account_address: String,
-    r#type: AccountType,
+    pub owner_address: Address,
+    pub account_address: Address,
+    pub r#type: AccountType,
 }
 
-#[derive(juniper::GraphQLObject)]
+#[derive(SimpleObject)]
+pub struct TransferContract {
+    pub owner_address: Address,
+    pub to_address: Address,
+    pub amount: Long,
+}
+
+#[derive(SimpleObject)]
+pub struct TransferAssetContract {
+    pub owner_address: Address,
+    pub to_address: Address,
+    /// after ALLOW_SAME_TOKEN_NAME
+    pub token_id: Option<i64>,
+    /// before ALLOW_SAME_TOKEN_NAME
+    pub token_name: Option<String>,
+    pub amount: Long,
+}
+
+#[derive(SimpleObject)]
+pub struct Vote {
+    vote_address: Address,
+    count: Long,
+}
+
+#[derive(SimpleObject)]
+pub struct VoteWitnessContract {
+    owner_address: Address,
+    votes: Vec<Vote>,
+}
+
+#[derive(SimpleObject)]
+pub struct WitnessCreateContract {
+    owner_address: Address,
+    url: String,
+}
+
+#[derive(SimpleObject)]
+pub struct FrozenSupply {
+    frozen_amount: Long,
+    frozen_days: i32,
+}
+
+#[derive(SimpleObject)]
+pub struct AssetIssueContract {
+    owner_address: Address,
+    name: String,
+    abbr: String,
+    total_supply: Long,
+    frozen_supply: Vec<FrozenSupply>,
+    num: i32,
+    trx_num: i32,
+    precision: i32,
+    start_time: DateTime<Utc>,
+    end_time: DateTime<Utc>,
+    description: String,
+    url: String,
+    /// FreeAssetNetLimit
+    free_bandwidth: Long,
+    /// PublicFreeAssetNetLimit
+    public_free_bandwidth: Long,
+}
+
+#[derive(SimpleObject)]
+pub struct WitnessUpdateContract {
+    owner_address: Address,
+    update_url: String,
+}
+
+#[derive(SimpleObject)]
+pub struct ParticipateAssetIssueContract {
+    owner_address: Address,
+    to_address: Address,
+    /// after ALLOW_SAME_TOKEN_NAME
+    token_id: Option<i32>,
+    /// before ALLOW_SAME_TOKEN_NAME
+    token_name: Option<String>,
+    amount: Long,
+}
+
 /// Set account name.
+#[derive(SimpleObject)]
 pub struct AccountUpdateContract {
-    owner_address: String,
+    owner_address: Address,
     account_name: String,
 }
 
-#[derive(juniper::GraphQLEnum, PartialEq, Eq)]
+#[derive(Enum, Clone, Copy, PartialEq, Eq)]
+pub enum ResourceCode {
+    Bandwidth,
+    Energy,
+}
+
+#[derive(SimpleObject)]
+pub struct FreezeBalanceContract {
+    owner_address: Address,
+    receiver_address: Option<Address>,
+    resource: ResourceCode,
+    frozen_balance: Long,
+    frozen_duration: i32,
+}
+
+#[derive(SimpleObject)]
+pub struct UnfreezeBalanceContract {
+    owner_address: Address,
+    receiver_address: Option<Address>,
+    resource: ResourceCode,
+}
+
+#[derive(SimpleObject)]
+pub struct WithdrawBalanceContract {
+    owner_address: Address,
+}
+
+#[derive(SimpleObject)]
+pub struct UnfreezeAssetContract {
+    owner_address: Address,
+}
+
+#[derive(SimpleObject)]
+pub struct UpdateAssetContract {
+    owner_address: Address,
+    description: String,
+    url: String,
+    new_limit: Long,
+    new_public_limit: Long,
+}
+
+#[derive(SimpleObject)]
+pub struct Parameter {
+    key: i32,
+    value: Long, // max: 9007199254740992
+}
+
+#[derive(SimpleObject)]
+pub struct ProposalCreateContract {
+    owner_address: Address,
+    parameters: Vec<Parameter>,
+}
+
+#[derive(SimpleObject)]
+pub struct ProposalApproveContract {
+    owner_address: Address,
+    proposal_id: i32,
+    is_approve: bool,
+}
+
+#[derive(SimpleObject)]
+pub struct ProposalDeleteContract {
+    owner_address: Address,
+    proposal_id: i32,
+}
+
+#[derive(SimpleObject)]
+pub struct SetAccountIdContract {
+    owner_address: Address,
+    account_id: String,
+}
+
+#[derive(SimpleObject)]
+pub struct SmartContract {
+    name: String,
+    origin_address: Address,
+    contract_address: Option<Address>,
+    /// ABI as JSON string.
+    abi: Option<String>,
+    code: Bytes,
+    /// Percent, 0 to 100.
+    user_resource_percent: i32,
+    origin_energy_limit: Long,
+    code_hash: Option<Bytes32>,
+    // When smart contract is created by a trigger smart contract call.
+    // txn_hash: Option<Bytes32>,
+}
+
+#[derive(SimpleObject)]
+pub struct CreateSmartContract {
+    owner_address: Address,
+    new_smart_contract: SmartContract,
+    call_value: Long, // moved out from inner struct
+    call_token_value: Long,
+    call_token_id: i32,
+}
+
+#[derive(SimpleObject)]
+pub struct TriggerSmartContract {
+    owner_address: Address,
+    contract_address: Address,
+    data: Bytes,
+    call_value: Long,
+    call_token_value: Long,
+    call_token_id: i32,
+}
+
+#[derive(SimpleObject)]
+pub struct UpdateSettingContract {
+    owner_address: Address,
+    contract_address: Address,
+    consume_user_energy_percent: i32,
+}
+
+// TODO: Exchange
+
+#[derive(SimpleObject)]
+pub struct UpdateEnergyLimitContract {
+    owner_address: Address,
+    contract_address: Address,
+    origin_energy_limit: Long,
+}
+
+#[derive(SimpleObject)]
+pub struct ClearABIContract {
+    owner_address: Address,
+    contract_address: Address,
+}
+
+#[derive(SimpleObject)]
+pub struct UpdateBrokerageContract {
+    owner_address: Address,
+    /// Brokerage in percent, dividend payout ratio.
+    brokerage: i32,
+}
+
+#[derive(Enum, Clone, Copy, PartialEq, Eq)]
 pub enum PermissionType {
     Owner = 0,
     Witness = 1,
@@ -225,13 +274,13 @@ impl PermissionType {
     }
 }
 
-#[derive(juniper::GraphQLObject)]
+#[derive(SimpleObject)]
 pub struct PermissionKey {
-    address: String,
+    address: Address,
     weight: i32,
 }
 
-#[derive(juniper::GraphQLObject)]
+#[derive(SimpleObject)]
 pub struct Permission {
     r#type: PermissionType,
     id: i32,
@@ -258,7 +307,7 @@ impl From<PermissionPb> for Permission {
                 .keys
                 .iter()
                 .map(|key| PermissionKey {
-                    address: b58encode_check(&key.address),
+                    address: Address((&key.address).try_into().unwrap()),
                     weight: key.weight as _,
                 })
                 .collect(),
@@ -266,15 +315,15 @@ impl From<PermissionPb> for Permission {
     }
 }
 
-#[derive(juniper::GraphQLObject)]
+#[derive(SimpleObject)]
 pub struct AccountPermissionUpdateContract {
-    owner_address: String,
-    owner: Option<Permission>,
-    actives: Vec<Permission>,
+    owner_address: Address,
+    owner: Permission,
     witness: Option<Permission>,
+    actives: Vec<Permission>,
 }
 
-#[derive(juniper::GraphQLUnion)]
+#[derive(Union)]
 pub enum Contract {
     TransferContract(TransferContract),
     TransferAssetContract(TransferAssetContract),
@@ -294,26 +343,69 @@ pub enum Contract {
     AccountCreateContract(AccountCreateContract),
     AccountUpdateContract(AccountUpdateContract),
     AccountPermissionUpdateContract(AccountPermissionUpdateContract),
-    // VoteAssetContract = 3,
-    // WitnessUpdateContract = 8,
+    WitnessUpdateContract(WitnessUpdateContract),
+    UnfreezeAssetContract(UnfreezeAssetContract),
+    UpdateAssetContract(UpdateAssetContract),
+    SetAccountIdContract(SetAccountIdContract),
+    UpdateSettingContract(UpdateSettingContract),
+    UpdateEnergyLimitContract(UpdateEnergyLimitContract),
+    ClearABIContract(ClearABIContract),
     /*
-    WithdrawBalanceContract = 13,
-    UnfreezeAssetContract = 14,
-    UpdateAssetContract = 15,
-    SetAccountIdContract = 19,
-    UpdateSettingContract = 33,
+    VoteAssetContract(VoteAssetContract),
     ExchangeCreateContract = 41,
     ExchangeInjectContract = 42,
     ExchangeWithdrawContract = 43,
     ExchangeTransactionContract = 44,
-    UpdateEnergyLimitContract = 45,
-    ClearABIContract = 48,
     ShieldedTransferContract = 51,
     */
 }
 
-impl From<ContractPb> for Contract {
-    fn from(pb: ContractPb) -> Self {
+impl Contract {
+    pub fn owner_address(&self) -> Address {
+        use self::Contract::*;
+        match *self {
+            TransferContract(ref inner) => inner.owner_address,
+            TransferAssetContract(ref inner) => inner.owner_address,
+            AssetIssueContract(ref inner) => inner.owner_address,
+            ParticipateAssetIssueContract(ref inner) => inner.owner_address,
+            WitnessCreateContract(ref inner) => inner.owner_address,
+            WithdrawBalanceContract(ref inner) => inner.owner_address,
+            UpdateBrokerageContract(ref inner) => inner.owner_address,
+            VoteWitnessContract(ref inner) => inner.owner_address,
+            FreezeBalanceContract(ref inner) => inner.owner_address,
+            UnfreezeBalanceContract(ref inner) => inner.owner_address,
+            ProposalCreateContract(ref inner) => inner.owner_address,
+            ProposalApproveContract(ref inner) => inner.owner_address,
+            ProposalDeleteContract(ref inner) => inner.owner_address,
+            CreateSmartContract(ref inner) => inner.owner_address,
+            TriggerSmartContract(ref inner) => inner.owner_address,
+            AccountCreateContract(ref inner) => inner.owner_address,
+            AccountUpdateContract(ref inner) => inner.owner_address,
+            AccountPermissionUpdateContract(ref inner) => inner.owner_address,
+            WitnessUpdateContract(ref inner) => inner.owner_address,
+            UnfreezeAssetContract(ref inner) => inner.owner_address,
+            UpdateAssetContract(ref inner) => inner.owner_address,
+            SetAccountIdContract(ref inner) => inner.owner_address,
+            UpdateSettingContract(ref inner) => inner.owner_address,
+            UpdateEnergyLimitContract(ref inner) => inner.owner_address,
+            ClearABIContract(ref inner) => inner.owner_address,
+        }
+    }
+
+    pub fn to_address(&self) -> Option<Address> {
+        use self::Contract::*;
+        match *self {
+            TransferContract(ref inner) => Some(inner.to_address),
+            TransferAssetContract(ref inner) => Some(inner.to_address),
+            TriggerSmartContract(ref inner) => Some(inner.contract_address),
+            AccountCreateContract(ref inner) => Some(inner.account_address),
+            _ => None,
+        }
+    }
+}
+
+impl From<&ContractPb> for Contract {
+    fn from(pb: &ContractPb) -> Self {
         use prost::Message;
         use proto2::chain::ContractType;
         use proto2::contract as contract_pb;
@@ -324,37 +416,37 @@ impl From<ContractPb> for Contract {
             Some(ContractType::TransferContract) => {
                 let cntr = contract_pb::TransferContract::decode(raw).unwrap();
                 let inner = TransferContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    to_address: b58encode_check(&cntr.to_address),
-                    amount: cntr.amount as _,
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
+                    to_address: Address(cntr.to_address.try_into().unwrap()),
+                    amount: cntr.amount.into(),
                 };
                 Contract::TransferContract(inner)
             }
             Some(ContractType::TransferAssetContract) => {
                 let cntr = contract_pb::TransferAssetContract::decode(raw).unwrap();
                 let inner = TransferAssetContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    to_address: b58encode_check(&cntr.to_address),
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
+                    to_address: Address(cntr.to_address.try_into().unwrap()),
                     token_id: cntr.asset_name.parse().ok(),
                     token_name: Some(cntr.asset_name),
-                    amount: cntr.amount as _,
+                    amount: cntr.amount.into(),
                 };
                 Contract::TransferAssetContract(inner)
             }
             Some(ContractType::AssetIssueContract) => {
                 let cntr = contract_pb::AssetIssueContract::decode(raw).unwrap();
                 let inner = AssetIssueContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
                     name: cntr.name.clone(),
                     abbr: cntr.abbr.clone(),
                     description: hex::encode(&cntr.description),
                     url: cntr.url.clone(),
-                    total_supply: cntr.total_supply as _,
+                    total_supply: cntr.total_supply.into(),
                     frozen_supply: cntr
                         .frozen_supply
                         .iter()
                         .map(|sup| FrozenSupply {
-                            frozen_amount: sup.frozen_amount as _,
+                            frozen_amount: sup.frozen_amount.into(),
                             frozen_days: sup.frozen_days as _,
                         })
                         .collect(),
@@ -364,29 +456,29 @@ impl From<ContractPb> for Contract {
                     start_time: Utc.timestamp(cntr.start_time / 1_000, cntr.start_time as u32 % 1_000 * 1_000_000),
                     end_time: Utc.timestamp(cntr.end_time / 1_000, cntr.end_time as u32 % 1_000 * 1_000_000),
                     /// FreeAssetNetLimit
-                    free_bandwidth: cntr.free_asset_bandwidth_limit as _,
+                    free_bandwidth: cntr.free_asset_bandwidth_limit.into(),
                     /// PublicFreeAssetNetLimit
-                    public_free_bandwidth: cntr.public_free_asset_bandwidth_limit as _,
+                    public_free_bandwidth: cntr.public_free_asset_bandwidth_limit.into(),
                 };
                 Contract::AssetIssueContract(inner)
             }
             Some(ContractType::ParticipateAssetIssueContract) => {
                 let cntr = contract_pb::ParticipateAssetIssueContract::decode(raw).unwrap();
                 let inner = ParticipateAssetIssueContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    to_address: b58encode_check(&cntr.to_address),
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
+                    to_address: Address(cntr.to_address.try_into().unwrap()),
                     token_id: cntr.asset_name.parse().ok(),
                     token_name: Some(cntr.asset_name),
-                    amount: cntr.amount as _,
+                    amount: cntr.amount.into(),
                 };
                 Contract::ParticipateAssetIssueContract(inner)
             }
             Some(ContractType::FreezeBalanceContract) => {
                 let cntr = contract_pb::FreezeBalanceContract::decode(raw).unwrap();
                 let inner = FreezeBalanceContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    receiver_address: b58encode_check(&cntr.receiver_address),
-                    frozen_balance: cntr.frozen_balance as _,
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
+                    receiver_address: cntr.receiver_address.try_into().map(Address).ok(),
+                    frozen_balance: cntr.frozen_balance.into(),
                     frozen_duration: cntr.frozen_balance as _,
                     resource: if cntr.resource == 0 {
                         ResourceCode::Bandwidth
@@ -399,8 +491,8 @@ impl From<ContractPb> for Contract {
             Some(ContractType::UnfreezeBalanceContract) => {
                 let cntr = contract_pb::UnfreezeBalanceContract::decode(raw).unwrap();
                 let inner = UnfreezeBalanceContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    receiver_address: b58encode_check(&cntr.receiver_address),
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
+                    receiver_address: cntr.receiver_address.try_into().map(Address).ok(),
                     resource: if cntr.resource == 0 {
                         ResourceCode::Bandwidth
                     } else {
@@ -412,7 +504,7 @@ impl From<ContractPb> for Contract {
             Some(ContractType::WitnessCreateContract) => {
                 let cntr = contract_pb::WitnessCreateContract::decode(raw).unwrap();
                 let inner = WitnessCreateContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
                     url: String::from_utf8(cntr.url).unwrap(),
                 };
                 Contract::WitnessCreateContract(inner)
@@ -420,81 +512,82 @@ impl From<ContractPb> for Contract {
             Some(ContractType::WithdrawBalanceContract) => {
                 let cntr = contract_pb::WithdrawBalanceContract::decode(raw).unwrap();
                 let inner = WithdrawBalanceContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
                 };
                 Contract::WithdrawBalanceContract(inner)
             }
             Some(ContractType::UpdateBrokerageContract) => {
                 let cntr = contract_pb::UpdateBrokerageContract::decode(raw).unwrap();
                 let inner = UpdateBrokerageContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: Address(cntr.owner_address.try_into().unwrap()),
                     brokerage: cntr.brokerage as _,
                 };
                 Contract::UpdateBrokerageContract(inner)
             }
             Some(ContractType::VoteWitnessContract) => {
-                let cntr = contract_pb::VoteWitnessContract::decode(raw).unwrap();
+                let contract_pb::VoteWitnessContract {
+                    owner_address, votes, ..
+                } = contract_pb::VoteWitnessContract::decode(raw).unwrap();
                 let inner = VoteWitnessContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    votes: cntr
-                        .votes
-                        .iter()
+                    owner_address: Address(owner_address.try_into().unwrap()),
+                    votes: votes
+                        .into_iter()
                         .map(|vote| Vote {
-                            vote_address: b58encode_check(&vote.vote_address),
-                            count: vote.vote_count as _,
+                            vote_address: Address(vote.vote_address.try_into().unwrap()),
+                            count: vote.vote_count.into(),
                         })
                         .collect(),
                 };
                 Contract::VoteWitnessContract(inner)
             }
             Some(ContractType::CreateSmartContract) => {
-                let cntr = contract_pb::CreateSmartContract::decode(raw).unwrap();
-                let smart_cntr = cntr.new_contract.as_ref().unwrap();
+                let contract_pb::CreateSmartContract {
+                    owner_address,
+                    new_contract,
+                    call_token_value,
+                    call_token_id,
+                } = contract_pb::CreateSmartContract::decode(raw).unwrap();
+                let new_contract = new_contract.unwrap();
 
                 let new_smart_contract = SmartContract {
-                    origin_address: b58encode_check(&smart_cntr.origin_address),
-                    name: smart_cntr.name.clone(),
-                    abi: smart_cntr
+                    origin_address: Address(new_contract.origin_address.try_into().unwrap()),
+                    name: new_contract.name.clone(),
+                    abi: new_contract
                         .abi
                         .as_ref()
                         .map(|abi| &abi.entries)
                         .and_then(|entries| serde_json::to_string(entries).ok()),
-                    code: hex::encode(&smart_cntr.bytecode),
-                    user_resource_percent: smart_cntr.consume_user_energy_percent as _,
-                    origin_energy_limit: smart_cntr.origin_energy_limit as _,
-                    contract_address: if !smart_cntr.contract_address.is_empty() {
-                        Some(b58encode_check(&smart_cntr.contract_address))
+                    code: Bytes(new_contract.bytecode.clone()),
+                    user_resource_percent: new_contract.consume_user_energy_percent as _,
+                    origin_energy_limit: new_contract.origin_energy_limit.into(),
+                    contract_address: if !new_contract.contract_address.is_empty() {
+                        Some(Address(new_contract.contract_address.try_into().unwrap()))
                     } else {
                         None
                     },
-                    code_hash: if !smart_cntr.code_hash.is_empty() {
-                        Some(hex::encode(&smart_cntr.code_hash))
-                    } else {
-                        None
-                    },
-                    txn_hash: if !smart_cntr.txn_hash.is_empty() {
-                        Some(hex::encode(&smart_cntr.txn_hash))
+                    code_hash: if !new_contract.code_hash.is_empty() {
+                        Some(H256::from_slice(&new_contract.code_hash).into())
                     } else {
                         None
                     },
                 };
                 let inner = CreateSmartContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: owner_address.try_into().map(Address).unwrap(),
                     new_smart_contract,
-                    call_value: smart_cntr.call_value as _,
-                    call_token_value: cntr.call_token_value as _,
-                    call_token_id: cntr.call_token_id as _,
+                    call_value: new_contract.call_value.into(),
+                    call_token_value: call_token_value.into(),
+                    call_token_id: call_token_id as _,
                 };
                 Contract::CreateSmartContract(inner)
             }
             Some(ContractType::TriggerSmartContract) => {
                 let cntr = contract_pb::TriggerSmartContract::decode(raw).unwrap();
                 let inner = TriggerSmartContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    contract_address: b58encode_check(&cntr.contract_address),
-                    call_value: cntr.call_value as _,
-                    data: hex::encode(&cntr.data),
-                    call_token_value: cntr.call_token_value as _,
+                    owner_address: cntr.owner_address.try_into().map(Address).unwrap(),
+                    contract_address: cntr.contract_address.try_into().map(Address).unwrap(),
+                    data: Bytes(cntr.data.clone()),
+                    call_value: cntr.call_value.into(),
+                    call_token_value: cntr.call_token_value.into(),
                     call_token_id: cntr.call_token_id as _,
                 };
                 Contract::TriggerSmartContract(inner)
@@ -502,13 +595,13 @@ impl From<ContractPb> for Contract {
             Some(ContractType::ProposalCreateContract) => {
                 let cntr = contract_pb::ProposalCreateContract::decode(raw).unwrap();
                 let inner = ProposalCreateContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: cntr.owner_address.try_into().map(Address).unwrap(),
                     parameters: cntr
                         .parameters
                         .iter()
                         .map(|(&k, &v)| Parameter {
                             key: k as _,
-                            value: v as _,
+                            value: v.into(),
                         })
                         .collect(),
                 };
@@ -517,7 +610,7 @@ impl From<ContractPb> for Contract {
             Some(ContractType::ProposalApproveContract) => {
                 let cntr = contract_pb::ProposalApproveContract::decode(raw).unwrap();
                 let inner = ProposalApproveContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: cntr.owner_address.try_into().map(Address).unwrap(),
                     proposal_id: cntr.proposal_id as _,
                     is_approve: cntr.is_approval,
                 };
@@ -526,7 +619,7 @@ impl From<ContractPb> for Contract {
             Some(ContractType::ProposalDeleteContract) => {
                 let cntr = contract_pb::ProposalDeleteContract::decode(raw).unwrap();
                 let inner = ProposalDeleteContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: cntr.owner_address.try_into().map(Address).unwrap(),
                     proposal_id: cntr.proposal_id as _,
                 };
                 Contract::ProposalDeleteContract(inner)
@@ -534,8 +627,8 @@ impl From<ContractPb> for Contract {
             Some(ContractType::AccountCreateContract) => {
                 let cntr = contract_pb::AccountCreateContract::decode(raw).unwrap();
                 let inner = AccountCreateContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
-                    account_address: b58encode_check(&cntr.account_address),
+                    owner_address: cntr.owner_address.try_into().map(Address).unwrap(),
+                    account_address: cntr.account_address.try_into().map(Address).unwrap(),
                     r#type: AccountType::from_i32(cntr.r#type),
                 };
                 Contract::AccountCreateContract(inner)
@@ -543,7 +636,7 @@ impl From<ContractPb> for Contract {
             Some(ContractType::AccountUpdateContract) => {
                 let cntr = contract_pb::AccountUpdateContract::decode(raw).unwrap();
                 let inner = AccountUpdateContract {
-                    owner_address: b58encode_check(&cntr.owner_address),
+                    owner_address: cntr.owner_address.try_into().map(Address).unwrap(),
                     account_name: cntr.account_name.clone(),
                 };
                 Contract::AccountUpdateContract(inner)
@@ -556,8 +649,8 @@ impl From<ContractPb> for Contract {
                     actives,
                 } = contract_pb::AccountPermissionUpdateContract::decode(raw).unwrap();
                 let inner = AccountPermissionUpdateContract {
-                    owner_address: b58encode_check(&owner_address),
-                    owner: owner.map(Permission::from),
+                    owner_address: owner_address.try_into().map(Address).unwrap(),
+                    owner: owner.map(Permission::from).unwrap(),
                     witness: witness.map(Permission::from),
                     actives: actives.into_iter().map(Permission::from).collect(),
                 };

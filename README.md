@@ -87,7 +87,7 @@ not ready for general use.
     - [x] 3.7 TVM <https://github.com/opentron/evm> and `tvm` crate
     - [x] 4.0 TVM with zksnark: `ztron` crate
       - [x] shielded trc20 transaction - ztron
-      - [ ] integration
+      - [x] integration
     - [ ] 4.1 TVM
       - [ ] ASSETISSUE
       - [ ] REWARDBALACE
@@ -97,7 +97,8 @@ not ready for general use.
   - [ ] RPC API replacement
     - will not support gRPC
     - might have json-rpc support
-    - [ ] GraphQL API
+    - [x] GraphQL API for chain query and state query
+    - [ ] GraphQL API to broadcast transaction
 
 ## Quickstart
 

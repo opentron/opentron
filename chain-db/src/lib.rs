@@ -224,6 +224,81 @@ impl ChainDB {
         transactions.map(|txns| IndexedBlock::new(header, txns))
     }
 
+    pub fn get_block_transactions(&self, hash: &H256) -> Result<Vec<IndexedTransaction>, BoxError> {
+        let mut upper_bound = hash.as_bytes().to_vec();
+        upper_bound.push(0xFF); // [0xcafebabe00 .. 0xcafebabeff]
+
+        let ropts = ReadOptions::default()
+            .iterate_lower_bound(&hash.as_bytes())
+            .iterate_upper_bound(&upper_bound);
+        let txns = self
+            .transaction
+            .new_iterator(&ropts)
+            .map(|(key, val)| {
+                let txn = Transaction::decode(val)?;
+                Ok(IndexedTransaction::new(H256::from_slice(&key[32 + 8..]), txn))
+            })
+            .collect::<Result<Vec<_>, BoxError>>();
+        drop(ropts);
+        txns
+    }
+
+    pub fn get_transaction_hashes_by_block_number(&self, num: i64) -> Result<Vec<H256>, BoxError> {
+        let mut lower_bound = [0u8; 8];
+        BE::write_u64(&mut lower_bound[..], num as u64);
+        let mut upper_bound = [0u8; 8];
+        BE::write_u64(&mut upper_bound[..], num as u64 + 1);
+
+        let ropts = ReadOptions::default()
+            .iterate_lower_bound(&lower_bound)
+            .iterate_upper_bound(&upper_bound);
+        let txn_hashes = self
+            .transaction
+            .new_iterator(&ropts)
+            .keys()
+            .map(|key| Ok(H256::from_slice(&key[32 + 8..])))
+            .collect::<Result<Vec<_>, BoxError>>();
+        drop(ropts);
+        txn_hashes
+    }
+
+    pub fn get_transaction_hashes_by_block_hash(&self, hash: &H256) -> Result<Vec<H256>, BoxError> {
+        let mut upper_bound = hash.as_bytes().to_vec();
+        upper_bound.push(0xFF); // [0xcafebabe00 .. 0xcafebabeff]
+
+        let ropts = ReadOptions::default()
+            .iterate_lower_bound(&hash.as_bytes())
+            .iterate_upper_bound(&upper_bound);
+        let txn_hashes = self
+            .transaction
+            .new_iterator(&ropts)
+            .keys()
+            .map(|key| Ok(H256::from_slice(&key[32 + 8..])))
+            .collect::<Result<Vec<_>, BoxError>>();
+        drop(ropts);
+        txn_hashes
+    }
+
+    pub fn get_block_header_by_number(&self, num: i64) -> Result<IndexedBlockHeader, BoxError> {
+        let mut headers = self.get_block_headers_by_number(num as u64);
+        if headers.is_empty() {
+            return Err(Box::new(io::Error::new(io::ErrorKind::Other, "not found")));
+        }
+        if headers.len() != 1 {
+            return Err(Box::new(io::Error::new(io::ErrorKind::Other, "chain fork")));
+        }
+        let header = headers.pop().unwrap();
+        Ok(header)
+    }
+
+    pub fn get_block_header(&self, hash: &H256) -> Result<IndexedBlockHeader, BoxError> {
+        self.block_header
+            .get(ReadOptions::default_instance(), hash.as_bytes())
+            .map_err(From::from)
+            .and_then(|raw_header| BlockHeader::decode(&*raw_header).map_err(From::from))
+            .map(|header| IndexedBlockHeader::new(hash.clone(), header))
+    }
+
     /// handles fork
     pub fn get_block_headers_by_number(&self, num: u64) -> Vec<IndexedBlockHeader> {
         let mut lower_bound = [0u8; 32];
@@ -308,10 +383,24 @@ impl ChainDB {
         Ok(txn)
     }
 
-    pub fn get_block_header_by_transaction(&self, txn: &IndexedTransaction) -> Result<IndexedBlockHeader, BoxError> {
+    pub fn get_transaction_index(&self, id: &H256) -> Result<i32, BoxError> {
+        let key = self
+            .transaction_block
+            .get(ReadOptions::default_instance(), id.as_bytes())?;
+        Ok(BE::read_u64(&key[32..]) as i32)
+    }
+
+    pub fn get_transaction_block_hash(&self, id: &H256) -> Result<H256, BoxError> {
+        let key = self
+            .transaction_block
+            .get(ReadOptions::default_instance(), id.as_bytes())?;
+        Ok(H256::from_slice(&key[..32]))
+    }
+
+    pub fn get_block_header_by_transaction_hash(&self, txn_hash: &H256) -> Result<IndexedBlockHeader, BoxError> {
         let block_key = self
             .transaction_block
-            .get(ReadOptions::default_instance(), txn.hash.as_bytes())?;
+            .get(ReadOptions::default_instance(), txn_hash.as_bytes())?;
         self.block_header
             .get(ReadOptions::default_instance(), &block_key[..32])
             .map(|raw| BlockHeader::decode(&*raw).unwrap())

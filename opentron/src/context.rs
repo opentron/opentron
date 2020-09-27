@@ -5,12 +5,15 @@ use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::{Arc, RwLock};
 
 use chain_db::ChainDB;
+use config::genesis::GenesisConfig;
+use config::Config;
 use futures::channel::oneshot;
 use log::info;
 use primitive_types::H256;
 use proto2::common::BlockId;
-use config::Config;
-use config::genesis::GenesisConfig;
+
+use crate::manager::Manager;
+use crate::util::get_my_ip;
 
 pub struct AppContext {
     pub outbound_ip: String,
@@ -24,6 +27,7 @@ pub struct AppContext {
     pub recent_blk_ids: RwLock<HashSet<H256>>,
     pub syncing: RwLock<bool>,
     pub peers: RwLock<Vec<oneshot::Sender<()>>>,
+    pub manager: RwLock<Manager>,
 }
 
 impl AppContext {
@@ -36,7 +40,6 @@ impl AppContext {
         let genesis_blk = genesis_config.to_indexed_block()?;
 
         let chain_db = ChainDB::new(&config.storage.data_dir);
-
         if !chain_db.has_block(&genesis_blk) {
             if let Ok(_) = chain_db.get_genesis_block() {
                 panic!("genesis block config is inconsistent with db");
@@ -45,6 +48,9 @@ impl AppContext {
             info!("inserted genesis block to db");
         }
         chain_db.report_status();
+
+        let outbound_ip = get_my_ip().unwrap_or("127.0.0.1".into());
+        info!("outbound ip address: {}", outbound_ip);
 
         let genesis_block_id = BlockId {
             number: 0,
@@ -57,18 +63,23 @@ impl AppContext {
         info!("genesis block id => {}", hex::encode(&genesis_block_id.hash));
         info!("chain-db loaded");
 
+        let mut db_manager = Manager::new(&config, &genesis_config);
+        let ref_block_hashes = chain_db.ref_block_hashes_of_block_num(db_manager.latest_block_number());
+        db_manager.init_ref_blocks(ref_block_hashes);
+
         Ok(AppContext {
             chain_db,
             config,
             genesis_config,
             node_id,
-            outbound_ip: String::new(),
+            outbound_ip,
             genesis_block_id: Some(genesis_block_id),
             running: Arc::new(AtomicBool::new(true)),
             num_active_connections: AtomicU32::new(0),
             recent_blk_ids: RwLock::new(HashSet::new()),
             syncing: RwLock::new(true),
             peers: RwLock::default(),
+            manager: RwLock::new(db_manager),
         })
     }
 }

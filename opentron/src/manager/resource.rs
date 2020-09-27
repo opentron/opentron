@@ -512,9 +512,12 @@ impl EnergyProcessor<'_> {
             assert!(self.consume_frozen_energy(origin, origin_acct, origin_usage, now));
             ctx.origin_energy_usage = origin_usage;
         }
-        if caller_usage > 0 {
-            self.consume_energy(caller, caller_acct, caller_usage, now, ctx)?;
-        }
+
+        // NOTE: Even when `caller_usage` is zero, `latestConsumeTime` is updated.
+        // So, do not optimize with `if caller_usage > 0` here.
+        //
+        // See-also: https://github.com/opentron/opentron/issues/31
+        self.consume_energy(caller, caller_acct, caller_usage, now, ctx)?;
         debug!("E usage: caller={} origin={}", caller_usage, origin_usage);
 
         Ok(())
@@ -609,7 +612,7 @@ impl EnergyProcessor<'_> {
 
         let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
 
-        if energy_used > (e_limit - new_e_usage) {
+        if energy_used > 0 && energy_used > (e_limit - new_e_usage) {
             return false;
         }
 

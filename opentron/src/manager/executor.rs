@@ -157,7 +157,7 @@ impl<'m> TransactionExecutor<'m> {
         // - multisig verifiy
         // - validate (except bandwidth)
         // - handle bandwidth
-        // - TODO: handle mutisig fee
+        // - handle mutisig fee
         // - execute logic
         //
         // Which is diffent from java-tron:
@@ -167,7 +167,8 @@ impl<'m> TransactionExecutor<'m> {
         // - runtime.validate
         // - runtime.execute
         //
-        // Bandwidth consumption must come before transaction execution, since some type of transaction cause bandwidth usage changes(freeze/unfreeze).
+        // Bandwidth consumption must come before transaction execution,
+        // since some type of transaction cause bandwidth usage changes(freeze/unfreeze).
         match cntr_type {
             ContractType::TransferContract => {
                 let cntr = contract_pb::TransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
@@ -635,11 +636,9 @@ impl<'m> TransactionExecutor<'m> {
             }
             ContractType::TriggerSmartContract => {
                 let cntr = contract_pb::TriggerSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
-                // smart contract status
                 let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
                     .unwrap_or_default();
-                debug!("contract_status => {:?}", contract_status);
                 debug!(
                     "=> Calling Smart Contract by {}: contract={}",
                     b58encode_check(&cntr.owner_address()),
@@ -746,7 +745,7 @@ impl<'m> TransactionExecutor<'m> {
             ContractType::ShieldedTransferContract => {
                 let cntr = contract_pb::ShieldedTransferContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
 
-                warn!("=> Shielded Transaction");
+                log::warn!("=> Shielded Transaction, use dummy implementation");
                 // NOTE: dummy implementation
 
                 let mut ctx = TransactionContext::new(&block.header, &txn);

@@ -347,7 +347,7 @@ impl OverlayDB {
                     match value {
                         Some(_) => {
                             deleted.insert(key.to_vec());
-                        },
+                        }
                         None => (),
                     }
                 }
@@ -356,7 +356,8 @@ impl OverlayDB {
 
         for key in self
             .inner
-            .new_iterator_cf(&ReadOptions::default().iterate_lower_bound(prefix), col).keys()
+            .new_iterator_cf(&ReadOptions::default().iterate_lower_bound(prefix), col)
+            .keys()
         {
             if !key.starts_with(prefix) {
                 return Ok(());
@@ -613,7 +614,9 @@ impl StateDB {
         F: FnMut(&K, &T) -> (),
     {
         self.db.for_each(&self.cols[K::COL], move |key, value| {
-            func(&K::parse_key(key), &K::parse_value(value))
+            if let Some(key) = K::parse_key(key) {
+                func(&key, &K::parse_value(value));
+            }
         });
     }
 
@@ -621,9 +624,12 @@ impl StateDB {
     where
         F: FnMut(&K, &T) -> (),
     {
-        self.db.for_each_by_prefix(&self.cols[K::COL], prefix, move |key, value| {
-            func(&K::parse_key(key), &K::parse_value(value))
-        });
+        self.db
+            .for_each_by_prefix(&self.cols[K::COL], prefix, move |key, value| {
+                if let Some(key) = K::parse_key(key) {
+                    func(&key, &K::parse_value(value));
+                }
+            });
     }
 
     pub fn init_genesis(&mut self, genesis: &GenesisConfig, chain: &ChainConfig) -> Result<(), BoxError> {

@@ -130,6 +130,8 @@ message Transaction {
       OUT_OF_ENERGY = 10;
       // TransferException
       TRANSFER_FAILED = 14;
+      // Un-caught exception
+      UNKNOWN = 13;
       // Maybe not used
       BAD_JUMP_DESTINATION = 3;
       OUT_OF_MEMORY = 4;
@@ -138,7 +140,6 @@ message Transaction {
       STACK_TOO_LARGE = 7;
       STACK_OVERFLOW = 9;
       JVM_STACK_OVER_FLOW = 12;
-      UNKNOWN = 13;
     }
 
     int64 fee = 1;
@@ -148,6 +149,7 @@ message Transaction {
     // renamed: contractRet
     ContractStatus contract_status = 3;
 
+    // NOTE: not used, bad design.
     // renamed: assetIssueID
     string asset_issue_id = 14;
     int64 withdraw_amount = 15;
@@ -170,10 +172,12 @@ message Transaction {
 
   message Raw {
     bytes ref_block_bytes = 1;
+    // unused
     int64 ref_block_num = 3;
     bytes ref_block_hash = 4;
     // max = now + 86400_000
     int64 expiration = 8;
+    // unused
     repeated Authority auths = 9;
     // used as transaction memo
     // max size = 512000
@@ -181,8 +185,9 @@ message Transaction {
     // only support size = 1, repeated list here for extension
     // changed: from repeated to optional(default for proto3)
     Contract contract = 11;
-    // scripts not used
+    // unused
     bytes scripts = 12;
+    // unused
     int64 timestamp = 14;
     int64 fee_limit = 18;
 
