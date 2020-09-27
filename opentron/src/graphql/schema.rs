@@ -23,7 +23,21 @@ const MAX_NUMBER_OF_BATCH_ITEMS_PER_REQUEST: i64 = 1000;
 /// Account is an Tron account.
 pub struct Account {
     address: Address,
-    inner: state::Account,
+    inner: RwLock<Option<state::Account>>,
+}
+
+impl Account {
+    fn require_inner(&self, ctx: &Context<'_>) -> FieldResult<()> {
+        if self.inner.read().unwrap().is_none() {
+            let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+            let acct = manager
+                .state()
+                .get(&keys::Account(self.address.0))?
+                .ok_or_else(|| "account not found")?;
+            *self.inner.write().unwrap() = Some(acct);
+        }
+        Ok(())
+    }
 }
 
 #[Object]
@@ -34,14 +48,18 @@ impl Account {
     }
 
     /// Balance is the balance of the account, in sun.
-    async fn balance(&self) -> Long {
-        Long(self.inner.balance)
+    async fn balance(&self, ctx: &Context<'_>) -> FieldResult<Long> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        Ok(inner.as_ref().unwrap().balance.into())
     }
 
     /// Code contains the smart contract code for this account, if the account
     /// is a (non-self-destructed) contract.
     async fn code(&self, ctx: &Context<'_>) -> FieldResult<Bytes> {
-        if self.inner.r#type != state::AccountType::Contract as i32 {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        if inner.as_ref().unwrap().r#type != state::AccountType::Contract as i32 {
             return Ok(Bytes(vec![]));
         }
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
@@ -56,7 +74,9 @@ impl Account {
     /// Storage provides access to the storage of a contract account, indexed
     /// by its 32 byte slot identifier.
     async fn storage(&self, ctx: &Context<'_>, slot: Bytes32) -> FieldResult<Bytes32> {
-        if self.inner.r#type != state::AccountType::Contract as i32 {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        if inner.as_ref().unwrap().r#type != state::AccountType::Contract as i32 {
             return Ok(Bytes32::from(H256::zero()));
         }
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
@@ -68,28 +88,45 @@ impl Account {
     }
 
     /// Token balance of token id, in minimum unit.
-    async fn token_balance(&self, id: i64) -> Long {
-        Long(self.inner.token_balance.get(&id).copied().unwrap_or_default())
+    async fn token_balance(&self, ctx: &Context<'_>, id: i64) -> FieldResult<Long> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        Ok(inner
+            .as_ref()
+            .unwrap()
+            .token_balance
+            .get(&id)
+            .copied()
+            .unwrap_or(0)
+            .into())
     }
 
     /// Allowance of the account.
-    async fn allowance(&self) -> Long {
-        Long(self.inner.allowance)
+    async fn allowance(&self, ctx: &Context<'_>) -> FieldResult<Long> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        Ok(inner.as_ref().unwrap().allowance.into())
     }
 
     /// Name of this account.
-    async fn name(&self) -> &str {
-        &self.inner.name
+    async fn name(&self, ctx: &Context<'_>) -> FieldResult<String> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        Ok(inner.as_ref().unwrap().name.clone())
     }
 
     /// Type of this account.
-    async fn r#type(&self) -> AccountType {
-        AccountType::from_i32(self.inner.r#type)
+    async fn r#type(&self, ctx: &Context<'_>) -> FieldResult<AccountType> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        Ok(AccountType::from_i32(inner.as_ref().unwrap().r#type))
     }
 
     /// Tron Power of the account.
-    async fn power(&self) -> Long {
-        self.inner.tron_power().into()
+    async fn power(&self, ctx: &Context<'_>) -> FieldResult<Long> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        Ok(inner.as_ref().unwrap().tron_power().into())
     }
 }
 
@@ -179,18 +216,12 @@ impl Log {
 
     /// Account is the account which generated this log - this will always
     /// be a contract account.
-    async fn account(&self, ctx: &Context<'_>) -> FieldResult<Account> {
-        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
-        let addr = TryFrom::try_from(&self.inner.address).unwrap();
-        let acct = manager
-            .state()
-            .get(&keys::Account(addr))?
-            .ok_or_else(|| "account not found")?;
-
-        Ok(Account {
-            address: addr.into(),
-            inner: acct,
-        })
+    async fn account(&self) -> Account {
+        let address = TryFrom::try_from(&self.inner.address).map(Address).unwrap();
+        Account {
+            address,
+            inner: RwLock::default(),
+        }
     }
 
     /// Topics is a list of 0-4 indexed topics for the log.
@@ -431,35 +462,23 @@ impl Transaction {
 
     /// From is the account that sent this transaction - this will always be
     /// an externally owned account.
-    async fn from(&self, ctx: &Context<'_>) -> FieldResult<Account> {
+    async fn from(&self) -> Account {
         let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
         let address = Contract::from(cntr).owner_address();
-        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
-        let acct = manager
-            .state()
-            .get(&keys::Account(address.0))?
-            .ok_or_else(|| "account not found")?;
-
-        Ok(Account { address, inner: acct })
+        Account {
+            address,
+            inner: RwLock::default(),
+        }
     }
 
     /// To is the account the transaction was sent to. This is null for
     /// contract-creating transactions.
-    async fn to(&self, ctx: &Context<'_>) -> FieldResult<Option<Account>> {
+    async fn to(&self) -> Option<Account> {
         let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
-        let address = Contract::from(cntr).to_address();
-        match address {
-            None => Ok(None),
-            Some(address) => {
-                let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
-                let acct = manager
-                    .state()
-                    .get(&keys::Account(address.0))?
-                    .ok_or_else(|| "account not found")?;
-
-                Ok(Some(Account { address, inner: acct }))
-            }
-        }
+        Contract::from(cntr).to_address().map(|address| Account {
+            address,
+            inner: RwLock::default(),
+        })
     }
 
     // nonce
@@ -609,22 +628,12 @@ impl Block {
     /// Witness is the account that mined this block.
     async fn witness(&self, ctx: &Context<'_>) -> FieldResult<Account> {
         self.require_header(ctx)?;
-        match *self.header.read().unwrap() {
-            Some(ref header) => {
-                let addr = ::keys::Address::try_from(header.witness())?;
-                let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
-
-                let acct = manager
-                    .state()
-                    .get(&keys::Account(addr))?
-                    .ok_or_else(|| "account not found")?;
-                Ok(Account {
-                    address: addr.into(),
-                    inner: acct,
-                })
-            }
-            _ => unreachable!(),
-        }
+        let header = self.header.read().unwrap();
+        let address = ::keys::Address::try_from(header.as_ref().unwrap().witness())?;
+        Ok(Account {
+            address: address.into(),
+            inner: RwLock::default(),
+        })
     }
 
     /// Timestamp is the unix timestamp at which this block was mined.
@@ -893,7 +902,10 @@ impl QueryRoot {
             .get(&keys::Account(address.0))?
             .ok_or_else(|| "account not found")?;
 
-        Ok(Account { address, inner: acct })
+        Ok(Account {
+            address,
+            inner: RwLock::new(Some(acct)),
+        })
     }
 
     /// Call executes a local call operation at the current block's state.
