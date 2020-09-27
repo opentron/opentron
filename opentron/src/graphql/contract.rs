@@ -360,6 +360,50 @@ pub enum Contract {
     */
 }
 
+impl Contract {
+    pub fn owner_address(&self) -> Address {
+        use self::Contract::*;
+        match *self {
+            TransferContract(ref inner) => inner.owner_address,
+            TransferAssetContract(ref inner) => inner.owner_address,
+            AssetIssueContract(ref inner) => inner.owner_address,
+            ParticipateAssetIssueContract(ref inner) => inner.owner_address,
+            WitnessCreateContract(ref inner) => inner.owner_address,
+            WithdrawBalanceContract(ref inner) => inner.owner_address,
+            UpdateBrokerageContract(ref inner) => inner.owner_address,
+            VoteWitnessContract(ref inner) => inner.owner_address,
+            FreezeBalanceContract(ref inner) => inner.owner_address,
+            UnfreezeBalanceContract(ref inner) => inner.owner_address,
+            ProposalCreateContract(ref inner) => inner.owner_address,
+            ProposalApproveContract(ref inner) => inner.owner_address,
+            ProposalDeleteContract(ref inner) => inner.owner_address,
+            CreateSmartContract(ref inner) => inner.owner_address,
+            TriggerSmartContract(ref inner) => inner.owner_address,
+            AccountCreateContract(ref inner) => inner.owner_address,
+            AccountUpdateContract(ref inner) => inner.owner_address,
+            AccountPermissionUpdateContract(ref inner) => inner.owner_address,
+            WitnessUpdateContract(ref inner) => inner.owner_address,
+            UnfreezeAssetContract(ref inner) => inner.owner_address,
+            UpdateAssetContract(ref inner) => inner.owner_address,
+            SetAccountIdContract(ref inner) => inner.owner_address,
+            UpdateSettingContract(ref inner) => inner.owner_address,
+            UpdateEnergyLimitContract(ref inner) => inner.owner_address,
+            ClearABIContract(ref inner) => inner.owner_address,
+        }
+    }
+
+    pub fn to_address(&self) -> Option<Address> {
+        use self::Contract::*;
+        match *self {
+            TransferContract(ref inner) => Some(inner.to_address),
+            TransferAssetContract(ref inner) => Some(inner.to_address),
+            TriggerSmartContract(ref inner) => Some(inner.contract_address),
+            AccountCreateContract(ref inner) => Some(inner.account_address),
+            _ => None,
+        }
+    }
+}
+
 impl From<&ContractPb> for Contract {
     fn from(pb: &ContractPb) -> Self {
         use prost::Message;

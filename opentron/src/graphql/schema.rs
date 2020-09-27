@@ -428,11 +428,48 @@ impl Transaction {
     }
 
     // eip1767:
-    //
+
+    /// From is the account that sent this transaction - this will always be
+    /// an externally owned account.
+    async fn from(&self, ctx: &Context<'_>) -> FieldResult<Account> {
+        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
+        let address = Contract::from(cntr).owner_address();
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let acct = manager
+            .state()
+            .get(&keys::Account(address.0))?
+            .ok_or_else(|| "account not found")?;
+
+        Ok(Account { address, inner: acct })
+    }
+
+    /// To is the account the transaction was sent to. This is null for
+    /// contract-creating transactions.
+    async fn to(&self, ctx: &Context<'_>) -> FieldResult<Option<Account>> {
+        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
+        let address = Contract::from(cntr).to_address();
+        match address {
+            None => Ok(None),
+            Some(address) => {
+                let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+                let acct = manager
+                    .state()
+                    .get(&keys::Account(address.0))?
+                    .ok_or_else(|| "account not found")?;
+
+                Ok(Some(Account { address, inner: acct }))
+            }
+        }
+    }
+
     // nonce
     // status
     // gasUsed
     // cumulativeGasUsed
+    // value
+    // gasPrice
+    // gas
+    // inputData
 }
 
 #[derive(Debug)]
