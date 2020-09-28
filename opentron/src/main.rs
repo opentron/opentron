@@ -7,7 +7,7 @@ use std::sync::Mutex;
 
 use futures::channel::oneshot;
 use futures::join;
-use log::info;
+use log::{debug, info};
 use slog::{o, Drain};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio::sync::broadcast;
@@ -48,8 +48,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .enable_all()
         .build()?;
 
+    info!("load config from {:?}", config_file);
     let ctx = AppContext::from_config(config_file)?;
-    info!("load config => \n{:#?}", ctx.config);
+    debug!("load config => \n{:#?}", ctx.config);
 
     match matches.subcommand() {
         ("check", Some(arg_matches)) => {
