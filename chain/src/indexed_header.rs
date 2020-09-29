@@ -20,6 +20,13 @@ impl IndexedBlockHeader {
         }
     }
 
+    /// Explicit conversion of the raw BlockHeader into IndexedBlockHeader.
+    ///
+    /// Hashes the contents of block header.
+    pub fn from_raw(header: BlockHeader) -> Option<Self> {
+        get_block_header_hash(&header).map(|hash| IndexedBlockHeader::new(hash, header))
+    }
+
     /// Create a dummy block header.
     pub fn dummy(number: i64) -> Self {
         let mut hash = H256::zero();
@@ -28,13 +35,6 @@ impl IndexedBlockHeader {
             hash,
             raw: BlockHeader::default(),
         }
-    }
-
-    /// Explicit conversion of the raw BlockHeader into IndexedBlockHeader.
-    ///
-    /// Hashes the contents of block header.
-    pub fn from_raw(header: BlockHeader) -> Self {
-        IndexedBlockHeader::new(get_block_header_hash(&header), header)
     }
 
     pub fn number(&self) -> i64 {
@@ -65,7 +65,9 @@ impl IndexedBlockHeader {
     }
 
     pub fn verify(&self) -> bool {
-        get_block_header_hash(&self.raw) == self.hash
+        get_block_header_hash(&self.raw)
+            .map(|hash| hash == self.hash)
+            .unwrap_or(false)
     }
 }
 
@@ -75,14 +77,14 @@ impl cmp::PartialEq for IndexedBlockHeader {
     }
 }
 
-fn get_block_header_hash(header: &BlockHeader) -> H256 {
-    let raw_header = header.raw_data.as_ref().unwrap();
+fn get_block_header_hash(header: &BlockHeader) -> Option<H256> {
+    let raw_header = header.raw_data.as_ref()?;
     let block_numer = raw_header.number;
 
     let mut buf: Vec<u8> = Vec::with_capacity(255);
-    raw_header.encode(&mut buf).unwrap();
+    raw_header.encode(&mut buf).ok()?; // encode failure?
 
     let mut block_hash = sha256(&buf);
     BE::write_i64(&mut block_hash[..8], block_numer);
-    block_hash
+    Some(block_hash)
 }

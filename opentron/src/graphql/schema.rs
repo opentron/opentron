@@ -966,7 +966,7 @@ impl MutationRoot {
         let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
 
         let txn = Transaction::decode(&*data.0)?;
-        let indexed_txn = IndexedTransaction::from_raw(txn);
+        let indexed_txn = IndexedTransaction::from_raw(txn).ok_or("invalid transaction")?;
 
         let receipt = manager.dry_run_transaction(&indexed_txn)?;
 

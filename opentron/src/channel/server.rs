@@ -316,17 +316,14 @@ async fn sync_channel_handler(
         rx.fuse()
     };
 
-    let highest_block = ctx.chain_db.get_block_by_number(ctx.chain_db.get_block_height() as u64).ok();
+    let highest_block = ctx
+        .chain_db
+        .get_block_by_number(ctx.chain_db.get_block_height() as u64)
+        .ok();
     let highest_block_id = highest_block
         .as_ref()
         .map(|blk| blk.block_id())
         .unwrap_or(ctx.genesis_block_id.clone().unwrap());
-    /*
-     let highest_block_id = BlockId {
-         number: 19822000,
-         hash: hex::decode("00000000012e75b0c3dcb528f9bc31a43f7098d97b59f618387b958b4180bf8d").unwrap(),
-     };
-    */
 
     let mut last_block_number = highest_block_id.number;
     let mut last_block_number_in_this_batch = 0_i64;
@@ -468,7 +465,7 @@ async fn sync_channel_handler(
                         writer.send(ChannelMessage::FetchBlockInventory(block_inv)).await?;
                     }
                     Ok(ChannelMessage::Block(block)) => {
-                        let block = IndexedBlock::from_raw(block);
+                        let block = IndexedBlock::from_raw(block).unwrap();
                         if !ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
                             if syncing {
                                 if block.number() % 100 == 0 {

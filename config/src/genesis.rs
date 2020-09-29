@@ -103,7 +103,7 @@ impl GenesisConfig {
             .map(|alloc| alloc.to_transaction(&sender))
             .collect::<Result<Vec<Transaction>, Box<dyn Error>>>()?;
 
-        Ok(IndexedBlock::from_header_and_txns(self.to_block_header(), transactions))
+        Ok(IndexedBlock::from_raw_header_and_txns(self.to_block_header(), transactions).unwrap())
     }
 }
 
