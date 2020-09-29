@@ -947,3 +947,19 @@ impl QueryRoot {
         Chain
     }
 }
+
+
+pub struct MutationRoot;
+
+#[Object]
+impl MutationRoot {
+    /// SendRawTransaction sends an protobuf-encoded transaction to the network.
+    async fn send_raw_transaction(&self, _data: Bytes) -> FieldResult<Bytes32> {
+        unimplemented!()
+    }
+
+    /// DryRunRawTransaction runs an protobuf-encoded transaction and returns the receipt as json.
+    async fn dry_run_raw_transaction(&self, _data: Bytes) -> FieldResult<String> {
+        unimplemented!()
+    }
+}
