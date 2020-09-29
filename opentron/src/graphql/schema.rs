@@ -948,7 +948,6 @@ impl QueryRoot {
     }
 }
 
-
 pub struct MutationRoot;
 
 #[Object]
@@ -959,7 +958,20 @@ impl MutationRoot {
     }
 
     /// DryRunRawTransaction runs an protobuf-encoded transaction and returns the receipt as json.
-    async fn dry_run_raw_transaction(&self, _data: Bytes) -> FieldResult<String> {
-        unimplemented!()
+    async fn dry_run_raw_transaction(&self, ctx: &Context<'_>, data: Bytes) -> FieldResult<String> {
+        use chain::IndexedTransaction;
+        use prost::Message;
+        use proto2::chain::Transaction;
+
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+
+        let txn = Transaction::decode(&*data.0)?;
+        let indexed_txn = IndexedTransaction::from_raw(txn);
+
+        let receipt = manager.dry_run_transaction(&indexed_txn)?;
+
+        println!("rec => {:?}", receipt);
+
+        Ok(format!("=> {:?}", receipt))
     }
 }

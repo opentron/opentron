@@ -20,6 +20,16 @@ impl IndexedBlockHeader {
         }
     }
 
+    /// Create a dummy block header.
+    pub fn dummy(number: i64) -> Self {
+        let mut hash = H256::zero();
+        BE::write_u64(&mut hash.as_bytes_mut()[..8], number as u64);
+        IndexedBlockHeader {
+            hash,
+            raw: BlockHeader::default(),
+        }
+    }
+
     /// Explicit conversion of the raw BlockHeader into IndexedBlockHeader.
     ///
     /// Hashes the contents of block header.

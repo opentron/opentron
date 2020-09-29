@@ -1,10 +1,11 @@
 use ::keys::{b58encode_check, Address};
-use chain::{IndexedBlock, IndexedTransaction};
+use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
 use log::{debug, info, trace, warn};
 use primitive_types::H256;
 use prost::Message;
+use proto2::state::TransactionReceipt;
 use state::db::StateDB;
 use state::keys;
 use std::convert::{TryFrom, TryInto};
@@ -33,7 +34,7 @@ fn new_error(msg: &str) -> Error {
     Box::new(io::Error::new(io::ErrorKind::Other, msg))
 }
 
-/// DB Manager.
+/// State DB Manager.
 pub struct Manager {
     state_db: StateDB,
     genesis_block_timestamp: i64,
@@ -144,7 +145,7 @@ impl Manager {
             panic!("only accepts block number > 1");
         }
 
-        // 1. verify witness signature
+        // . verify witness signature
         if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
             let recovered = block.recover_witness()?;
             if self.state_db.must_get(&keys::ChainParameter::AllowMultisig) == 1 {
@@ -154,6 +155,8 @@ impl Manager {
                 return Err(new_error("verifying block witness signature failed"));
             }
         }
+
+        // . verify merkle root hash of transaction
         if !block.verify_merkle_root_hash() {
             return Err(new_error(&format!(
                 "verify block merkle root hash failed, block={}",
@@ -163,7 +166,7 @@ impl Manager {
 
         // TODO: check dup block? (StateManager.receiveBlock)
 
-        // NOTE: mainnet does not support shielded TRC10 transaction.
+        // NOTE: mainnet does not support shielded TRC10 transaction. No need to check shielded transaction count.
 
         // . reject smaller block number
         if block.number() <= self.latest_block_number() {
@@ -180,6 +183,7 @@ impl Manager {
             return Err(new_error("chain fork!"));
         }
 
+        // . block version check
         if block.version() > constants::CURRENT_BLOCK_VERSION as i32 {
             warn!(
                 "encounter newer block version, YOU MUST UPGRADE OpenTron. block_version={}",
@@ -283,7 +287,8 @@ impl Manager {
         Ok(())
     }
 
-    // NOTE: rename TransactionInfo to TransactionReceipt
+    // NOTE: TransactionInfo is renamed to TransactionReceipt
+    /// Process the transaction and saves result to current StateDB layer.
     fn process_transaction(&mut self, txn: &IndexedTransaction, block: &IndexedBlock) -> Result<()> {
         // 1.validateTapos
         if !self.validate_transaction_tapos(txn) {
@@ -303,9 +308,31 @@ impl Manager {
         // 6.cusumeMultiSigFee (NOTE: move to BandwidthProcessor)
 
         // 7. transaction is executed by TransactionTrace.
-        let txn_receipt = TransactionExecutor::new(self).execute(txn, block)?;
+        let txn_receipt = TransactionExecutor::new(self).execute(txn, &block.header)?;
         self.state_db.put_key(keys::TransactionReceipt(txn.hash), txn_receipt)?;
         Ok(())
+    }
+
+    /// Dry run the transaction, return Receipt.
+    pub fn dry_run_transaction(&mut self, txn: &IndexedTransaction) -> Result<TransactionReceipt> {
+        /*if !self.validate_transaction_tapos(txn) {
+            return Err(new_error("tapos validation failed"));
+        }
+        if !self.valide_transaction_common(txn) {
+            return Err(new_error("message size or expiration validation failed"));
+        }*/
+        let fake_block_number = self.latest_block_number() + 1;
+        let block_header = IndexedBlockHeader::dummy(fake_block_number);
+
+        let old_layers = self.layers;
+        self.new_layer();
+
+        let maybe_receipt = TransactionExecutor::new(self).execute(txn, &block_header);
+
+        let added_layers = self.layers - old_layers;
+        debug!("dry run, rollback layers={}", added_layers);
+        self.rollback_layers(added_layers);
+        Ok(maybe_receipt?)
     }
 
     fn validate_transaction_tapos(&self, txn: &IndexedTransaction) -> bool {
@@ -341,7 +368,7 @@ impl Manager {
     }
 
     fn validate_duplicated_transaction(&self, _txn: &IndexedTransaction) -> bool {
-        // TODO: not used in barse sync. used in block producing
+        // TODO: not used in sync. used in block producing
         true
     }
 
