@@ -86,8 +86,10 @@ async fn passive_channel_service(
                         match conn {
                             Some(Ok(sock)) => {
                                 let ctx = ctx.clone();
+                                ctx.num_passive_connections.fetch_add(1, Ordering::SeqCst);
                                 tokio::spawn(async move {
-                                    let _ = handshake_handler(ctx, sock).await;
+                                    let _ = handshake_handler(ctx.clone(), sock).await;
+                                    ctx.num_passive_connections.fetch_sub(1, Ordering::SeqCst);
                                 });
                             },
                             Some(Err(e)) => error!("accept failed = {:?}", e),

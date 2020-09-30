@@ -772,10 +772,13 @@ impl QueryRoot {
 
     /// Current Node info.
     async fn node_info(&self, ctx: &Context<'_>) -> NodeInfo {
-        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
+        let app = ctx.data_unchecked::<Arc<AppContext>>();
+        let ref db = app.chain_db;
         NodeInfo {
-            code_version: CODE_VERSION.into(),
-            syncing: *ctx.data_unchecked::<Arc<AppContext>>().syncing.read().unwrap(),
+            code_version: CODE_VERSION,
+            syncing: app.syncing.load(std::sync::atomic::Ordering::Relaxed),
+            num_active_connections: app.num_active_connections.load(std::sync::atomic::Ordering::Relaxed),
+            num_passive_connections: 0,
             num_running_compactions: db.get_db_property("rocksdb.num-running-compactions") as _,
             num_running_flushes: db.get_db_property("rocksdb.num-running-flushes") as _,
             num_immutable_mem_table: db.get_accumulated_db_property("rocksdb.num-immutable-mem-table") as _,

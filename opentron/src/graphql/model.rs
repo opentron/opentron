@@ -1,12 +1,17 @@
 
 use async_graphql::SimpleObject;
 
-#[derive(SimpleObject)]/// Misc node info
+/// Running node info.
+#[derive(SimpleObject)]
 pub struct NodeInfo {
     /// Running code version.
-    pub code_version: String,
+    pub code_version: &'static str,
     /// Is node syncing.
     pub syncing: bool,
+    /// Number of active(outgoing) connections.
+    pub num_active_connections: u32,
+    /// Number of passive(incoming) connections.
+    pub num_passive_connections: u32,
     /// Number of currently running compactions.
     pub num_running_compactions: i32,
     /// Number of currently running flushes.

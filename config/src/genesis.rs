@@ -86,7 +86,7 @@ impl GenesisConfig {
             timestamp: self.timestamp,
             witness_address: self.mantra.as_bytes().to_owned(),
             parent_hash: parse_hex(&self.parent_hash),
-            // merkle_root_hash: tree.root_hash().as_bytes().to_owned(),
+            // merkle_root_hash will be filled by indexed block header
             ..Default::default()
         };
         BlockHeader {
@@ -108,24 +108,12 @@ impl GenesisConfig {
 }
 
 fn parse_hex(encoded: &str) -> Vec<u8> {
-    if encoded.starts_with("0x") || encoded.starts_with("0X") {
+    if encoded.starts_with("0x") {
         hex::decode(&encoded[2..]).unwrap()
     } else {
         hex::decode(encoded).unwrap()
     }
 }
-
-// pub fn calculate_block_id(block: &Block) -> H256 {
-// let mut sha256 = Sha256::new();
-// let mut buf: Vec<u8> = Vec::with_capacity(255);
-// let raw_header = &block.block_header.as_ref().unwrap().raw_data.as_ref().unwrap();
-// let block_numer = raw_header.number;
-// raw_header.encode(&mut buf).unwrap();
-// sha256.input(&buf);
-// let mut block_hash: H256 = unsafe { mem::transmute(sha256.result()) };
-// BE::write_i64(&mut block_hash[..8], block_numer);
-// block_hash
-// }
 
 #[cfg(test)]
 mod tests {
