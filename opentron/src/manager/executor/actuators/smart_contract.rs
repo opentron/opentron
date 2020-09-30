@@ -14,12 +14,11 @@ use proto2::state::{Account, SmartContract};
 use state::keys;
 use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
 
-use super::super::controllers::ForkController;
-use super::super::executor::TransactionContext;
-use super::super::resource::EnergyProcessor;
-use super::super::resource::EnergyUtil;
-use super::super::vm::StateBackend;
+use super::super::super::version_fork::ForkController;
+use super::super::super::resource::{EnergyProcessor, EnergyUtil};
+use super::super::super::vm::StateBackend;
 use super::super::Manager;
+use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 
 const MAX_CONTRACT_NAME_LENGTH: usize = 32;

@@ -13,6 +13,7 @@ use state::db::StateDB;
 use state::keys;
 use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};
 
+use super::executor::actuators::validate_multisig;
 use super::executor::TransactionContext;
 use super::Manager;
 
@@ -175,7 +176,7 @@ impl Backend for StateBackend<'_, '_, '_> {
         if recover_addrs.is_err() {
             log::error!("rec_addr failed: {:?}", recover_addrs);
         }
-        super::actuators::validate_multisig(addr, acct, perm_id, recover_addrs.unwrap(), None, true)
+        validate_multisig(addr, acct, perm_id, recover_addrs.unwrap(), None, true)
             .map_err(|e| log::error!("validata multisig error: {:?}", e))
             .is_ok()
     }

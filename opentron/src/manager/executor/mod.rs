@@ -13,9 +13,11 @@ use proto2::contract as contract_pb;
 use proto2::state::{ResourceReceipt, TransactionLog, TransactionReceipt};
 use state::keys;
 
-use super::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
-use super::resource::BandwidthProcessor;
-use super::Manager;
+use self::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
+use crate::manager::resource::BandwidthProcessor;
+use crate::manager::Manager;
+
+pub mod actuators;
 
 pub struct TransactionContext<'a> {
     // Transaction static context.

@@ -9,8 +9,8 @@ use proto2::contract as contract_pb;
 use proto2::state::ResourceDelegation;
 use state::keys;
 
-use super::super::executor::TransactionContext;
-use super::super::governance::reward::RewardController;
+use super::super::TransactionContext;
+use super::super::super::governance::reward::RewardController;
 use super::super::Manager;
 use super::BuiltinContractExecutorExt;
 
