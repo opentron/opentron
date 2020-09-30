@@ -137,17 +137,19 @@ impl FromStr for Address {
         Self: Sized,
     {
         if s.len() == 34 {
+            // T-address, aka. base58check address.
             b58decode_check(s).and_then(Address::try_from)
         } else if s.len() == 42 && s[..2] == hex::encode(&[ADDRESS_TYPE_PREFIX]) {
+            // 41-address, aka. hex address.
             Vec::from_hex(s)
                 .map_err(|_| Error::InvalidAddress)
                 .and_then(Address::try_from)
-        } else if s.len() == 44 && (s.starts_with("0x") || s.starts_with("0X")) {
+        } else if s.len() == 42 && s.starts_with("0x") {
+            // 0x-address, aka. eth address
             Vec::from_hex(&s.as_bytes()[2..])
                 .map_err(|_| Error::InvalidAddress)
-                .and_then(Address::try_from)
+                .map(|bs| Address::from_tvm_bytes(&bs))
         } else {
-            println!("len ={} {}", s.len(), s.as_bytes()[0]);
             Err(Error::InvalidAddress)
         }
     }
