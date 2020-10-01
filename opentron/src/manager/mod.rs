@@ -10,17 +10,17 @@ use state::db::StateDB;
 use state::keys;
 use std::convert::{TryFrom, TryInto};
 
+use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;
 use self::governance::proposal::ProposalController;
 use self::governance::reward::RewardController;
 use self::resource::EnergyProcessor;
-use self::executor::TransactionExecutor;
 
-pub mod version_fork;
+pub mod executor;
 pub mod governance;
 pub mod resource;
+pub mod version_fork;
 pub mod vm;
-pub mod executor;
 
 type Error = Box<dyn ::std::error::Error>;
 type Result<T, E = Error> = ::std::result::Result<T, E>;
@@ -321,7 +321,10 @@ impl Manager {
             return Err(new_error("message size or expiration validation failed"));
         }*/
         let fake_block_number = self.latest_block_number() + 1;
-        let block_header = IndexedBlockHeader::dummy(fake_block_number);
+        let block_header = IndexedBlockHeader::dummy(
+            fake_block_number,
+            self.latest_block_timestamp() + constants::BLOCK_PRODUCING_INTERVAL,
+        );
 
         let old_layers = self.layers;
         self.new_layer();

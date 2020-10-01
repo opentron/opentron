@@ -22,7 +22,7 @@ pub mod actuators;
 pub struct TransactionContext<'a> {
     // Transaction static context.
     pub block_header: &'a IndexedBlockHeader,
-    pub transaction_hash: &'a H256,
+    pub transaction_hash: H256,
     // Bandwidth, including account creation.
     pub bandwidth_usage: i64,
     pub bandwidth_fee: i64,
@@ -53,7 +53,7 @@ impl<'a> TransactionContext<'a> {
     ) -> TransactionContext<'b> {
         TransactionContext {
             block_header,
-            transaction_hash: &transaction.hash,
+            transaction_hash: transaction.hash,
             bandwidth_usage: 0,
             bandwidth_fee: 0,
             contract_fee: 0,
@@ -62,6 +62,30 @@ impl<'a> TransactionContext<'a> {
             withdrawal_amount: 0,
             unfrozen_amount: 0,
             fee_limit: transaction.raw.raw_data.as_ref().unwrap().fee_limit,
+            // will be filled while validating
+            energy: 0,
+            energy_limit: 0,
+            energy_usage: 0,
+            origin_energy_usage: 0,
+            energy_fee: 0,
+            result: vec![],
+            logs: vec![],
+            contract_status: ContractStatus::default(),
+        }
+    }
+
+    pub fn dummy<'b>(block_header: &'b IndexedBlockHeader) -> TransactionContext<'b> {
+        TransactionContext {
+            block_header,
+            transaction_hash: H256::zero(),
+            bandwidth_usage: 0,
+            bandwidth_fee: 0,
+            contract_fee: 0,
+            multisig_fee: 0,
+            new_account_created: false,
+            withdrawal_amount: 0,
+            unfrozen_amount: 0,
+            fee_limit: 1000_000_000,
             // will be filled while validating
             energy: 0,
             energy_limit: 0,
@@ -142,6 +166,34 @@ pub struct TransactionExecutor<'m> {
 impl<'m> TransactionExecutor<'m> {
     pub fn new<'a>(manager: &'a mut Manager) -> TransactionExecutor<'a> {
         TransactionExecutor { manager }
+    }
+
+    pub fn execute_constant_smart_contract(
+        &mut self,
+        trigger: &contract_pb::TriggerSmartContract,
+        energy_limit: i64,
+    ) -> Result<TransactionReceipt, String> {
+        debug!(
+            "=> Execute Smart Contract by {}: contract={}",
+            b58encode_check(&trigger.owner_address()),
+            b58encode_check(&trigger.contract_address),
+        );
+
+        let next_block_number = self.manager.latest_block_number() + 1;
+
+        let block_header = IndexedBlockHeader::dummy(
+            next_block_number,
+            self.manager.latest_block_timestamp() + constants::BLOCK_PRODUCING_INTERVAL,
+        );
+
+        let mut ctx = TransactionContext::dummy(&block_header);
+        ctx.energy_limit = energy_limit;
+
+        let exec_result =
+            self::actuators::smart_contract::execute_constant_smart_contract(self.manager, &trigger, &mut ctx)?;
+        debug!("context => {:?}", ctx);
+        debug!("result => {:?}", exec_result);
+        Ok(ctx.into())
     }
 
     // runtime.execute

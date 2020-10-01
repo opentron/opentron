@@ -351,8 +351,8 @@ pub struct CallData {
     from: Option<Address>,
     /// To is the address the call is sent to. (contract address)
     to: Option<Address>,
-    /// FeeLimit is the max amount of energy sent with the call.
-    fee_limit: Option<Long>,
+    /// EnergyLimit is the max amount of energy sent with the call.
+    energy_limit: Option<Long>,
     /// Data is the data sent to the callee.
     data: Option<Bytes>,
     /// Value is the value, in sun, sent along with the call.
@@ -912,8 +912,31 @@ impl QueryRoot {
     }
 
     /// Call executes a local call operation at the current block's state.
-    async fn call(&self, _ctx: &Context<'_>, _data: CallData) -> FieldResult<CallResult> {
-        unimplemented!()
+    async fn call(&self, ctx: &Context<'_>, data: CallData) -> FieldResult<CallResult> {
+        use crate::manager::executor::TransactionExecutor;
+        use proto2::contract::TriggerSmartContract;
+
+        let trigger = TriggerSmartContract {
+            owner_address: data.from.unwrap().0.as_bytes().to_vec(),
+            contract_address: data.to.unwrap().0.as_bytes().to_vec(),
+            data: data.data.unwrap().0,
+            ..Default::default()
+        };
+
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+        let energy_limit = data.energy_limit.map(|val| val.0).unwrap_or(1000_000_000);
+
+        let receipt = TransactionExecutor::new(manager).execute_constant_smart_contract(&trigger, energy_limit)?;
+
+        Ok(CallResult {
+            data: Bytes(receipt.vm_result),
+            energy_used: receipt
+                .resource_receipt
+                .map(|receipt| receipt.energy)
+                .unwrap_or_default()
+                .into(),
+            vm_status: unsafe { mem::transmute(receipt.vm_status) },
+        })
     }
 
     /// EstimateEnergy estimates the amount of energy that will be required for

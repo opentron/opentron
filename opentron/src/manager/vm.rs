@@ -97,6 +97,7 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     fn exists(&self, address: H160) -> bool {
+        // FIXME: should test TvmUpgrade
         if PRECOMPILE_ADDRS.contains(&address) {
             return true;
         }
@@ -149,7 +150,7 @@ impl Backend for StateBackend<'_, '_, '_> {
     }
 
     fn transaction_root_hash(&self) -> H256 {
-        *self.ctx.transaction_hash
+        self.ctx.transaction_hash
     }
 
     fn validate_multisig(&self, address: H160, perm_id: U256, message: H256, signatures: &[&[u8]]) -> bool {

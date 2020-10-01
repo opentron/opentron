@@ -19,7 +19,7 @@ mod proposal;
 mod resource;
 #[cfg(feature = "nile")]
 mod shielded;
-mod smart_contract;
+pub mod smart_contract;
 mod transfer;
 mod witness;
 
