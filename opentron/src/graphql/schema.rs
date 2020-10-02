@@ -187,7 +187,7 @@ impl Asset {
 }
 
 /// Rename from `ContractStatus`, or `contractResult`.
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(i32)]
 enum VmStatus {
     Default = 0,
@@ -920,14 +920,15 @@ impl QueryRoot {
             owner_address: data.from.unwrap().0.as_bytes().to_vec(),
             contract_address: data.to.unwrap().0.as_bytes().to_vec(),
             data: data.data.unwrap().0,
-            ..Default::default()
+            call_value: data.value.map(|val| val.0).unwrap_or_default(),
+            call_token_id: data.token_id.unwrap_or_default(),
+            call_token_value: data.token_value.map(|val| val.0).unwrap_or_default(),
         };
 
         let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
-        let energy_limit = data.energy_limit.map(|val| val.0).unwrap_or(1000_000_000);
+        let energy_limit = data.energy_limit.map(|val| val.0).unwrap_or(100_000_000);
 
-        let receipt = TransactionExecutor::new(manager).execute_constant_smart_contract(&trigger, energy_limit)?;
-
+        let receipt = TransactionExecutor::new(manager).execute_smart_contract(&trigger, energy_limit)?;
         Ok(CallResult {
             data: Bytes(receipt.vm_result),
             energy_used: receipt
@@ -941,8 +942,14 @@ impl QueryRoot {
 
     /// EstimateEnergy estimates the amount of energy that will be required for
     /// successful execution of a transaction at the current block's state.
-    async fn estimate_energy(&self, _ctx: &Context<'_>, _data: CallData) -> FieldResult<Long> {
-        unimplemented!()
+    async fn estimate_energy(&self, ctx: &Context<'_>, data: CallData) -> FieldResult<Long> {
+        self.call(ctx, data).await.and_then(|result| {
+            if result.vm_status == VmStatus::Default || result.vm_status == VmStatus::Success {
+                Ok(result.energy_used)
+            } else {
+                Err(format!("vm execution result: {:?}", result.vm_status).into())
+            }
+        })
     }
 
     // Tron extensions.

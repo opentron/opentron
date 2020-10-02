@@ -649,7 +649,8 @@ impl BuiltinContractExecutorExt for contract_pb::ClearAbiContract {
     }
 }
 
-pub fn execute_constant_smart_contract(
+// Dry run a TriggerSmartContract. Use 1 db layer and rollback.
+pub fn execute_smart_contract(
     manager: &mut Manager,
     trigger: &contract_pb::TriggerSmartContract,
     ctx: &mut TransactionContext,
@@ -657,13 +658,47 @@ pub fn execute_constant_smart_contract(
     let owner_address = Address::try_from(&trigger.owner_address).map_err(|_| "invalid owner address")?;
     let cntr_address = Address::try_from(&trigger.contract_address).map_err(|_| "invalid contract address")?;
 
-    // let cntr = manager.state_db.must_get(&keys::Contract(cntr_address));
-
     let energy_limit = ctx.energy_limit as usize;
 
-    // do not transfer
-    if trigger.call_value > 0 && trigger.call_token_value > 0 {
-        return Err("cannot transfer in a constant contract call".into());
+    manager.new_layer();
+
+    // transfer
+    if trigger.call_value > 0 || trigger.call_token_value > 0 {
+        let mut owner_acct = manager
+            .state_db
+            .get(&keys::Account(owner_address))
+            .unwrap()
+            .ok_or_else(|| "owner account not found")?;
+        let mut cntr_acct = manager
+            .state_db
+            .get(&keys::Account(cntr_address))
+            .unwrap()
+            .ok_or_else(|| "contract not found")?;
+        if trigger.call_value > 0 {
+            if owner_acct.adjust_balance(-trigger.call_value).is_err() {
+                return Err("insufficient balance".into());
+            }
+            cntr_acct.adjust_balance(trigger.call_value).unwrap();
+        }
+        if trigger.call_token_value > 0 {
+            if owner_acct
+                .adjust_token_balance(trigger.call_token_id, -trigger.call_token_value)
+                .is_err()
+            {
+                return Err("insufficient token balance".into());
+            }
+            cntr_acct
+                .adjust_token_balance(trigger.call_token_id, trigger.call_token_value)
+                .unwrap();
+        }
+        manager
+            .state_db
+            .put_key(keys::Account(cntr_address), cntr_acct)
+            .unwrap();
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), owner_acct)
+            .unwrap();
     }
 
     // build execution context
@@ -674,13 +709,12 @@ pub fn execute_constant_smart_contract(
         .unwrap_or_default();
     let code = Rc::new(code);
     let data = Rc::new(trigger.data.to_vec());
-    debug!("calling data = {:?}", hex::encode(&trigger.data));
 
     let upgrade = get_current_tvm_upgrade(manager);
     let precompile = upgrade.precompile();
     let config = upgrade.into();
 
-    let backend = StateBackend::new(owner_address, manager, ctx);
+    let mut backend = StateBackend::new(owner_address, manager, ctx);
     let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
 
     let vm_ctx = tvm::Context {
@@ -698,9 +732,10 @@ pub fn execute_constant_smart_contract(
     let ret_val = rt.machine().return_value();
 
     let (applies, logs) = executor.deconstruct();
-    drop(applies);
-    drop(logs);
+    backend.apply(applies, logs, false);
     drop(backend);
+
+    manager.rollback_layers(1);
 
     if !ret_val.is_empty() {
         debug!("return value: {:?}", hex::encode(&ret_val));
@@ -716,9 +751,10 @@ pub fn execute_constant_smart_contract(
     // energy is for total energy used.
     ctx.energy = energy_usage;
     let mut ret = TransactionResult::success();
+    ctx.contract_status = exit_reason.as_contrat_status();
     ret.contract_status = exit_reason.as_contrat_status() as i32;
     debug!(
-        "trigger constant contract, vm_exit_reason={:?} contract_status={:?}",
+        "trigger contract, vm_exit_reason={:?} contract_status={:?}",
         exit_reason,
         exit_reason.as_contrat_status()
     );

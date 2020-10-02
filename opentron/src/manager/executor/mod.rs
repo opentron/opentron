@@ -126,6 +126,7 @@ impl From<TransactionContext<'_>> for TransactionReceipt {
                 r.origin_energy_usage = ctx.origin_energy_usage;
             });
             receipt.vm_result = ctx.result;
+            receipt.vm_status = ctx.contract_status as i32;
             receipt.vm_logs = ctx.logs;
         }
         receipt
@@ -168,13 +169,13 @@ impl<'m> TransactionExecutor<'m> {
         TransactionExecutor { manager }
     }
 
-    pub fn execute_constant_smart_contract(
+    pub fn execute_smart_contract(
         &mut self,
         trigger: &contract_pb::TriggerSmartContract,
         energy_limit: i64,
     ) -> Result<TransactionReceipt, String> {
         debug!(
-            "=> Execute Smart Contract by {}: contract={}",
+            "=> Execute Smart Contract, owner={} contract={}",
             b58encode_check(&trigger.owner_address()),
             b58encode_check(&trigger.contract_address),
         );
@@ -190,7 +191,7 @@ impl<'m> TransactionExecutor<'m> {
         ctx.energy_limit = energy_limit;
 
         let exec_result =
-            self::actuators::smart_contract::execute_constant_smart_contract(self.manager, &trigger, &mut ctx)?;
+            self::actuators::smart_contract::execute_smart_contract(self.manager, &trigger, &mut ctx)?;
         debug!("context => {:?}", ctx);
         debug!("result => {:?}", exec_result);
         Ok(ctx.into())
