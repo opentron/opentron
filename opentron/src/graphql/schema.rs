@@ -364,14 +364,31 @@ pub struct CallData {
 }
 
 /// CallResult is the result of a local call operation.
-#[derive(SimpleObject)]
 pub struct CallResult {
-    /// FromData is the return data of the called contract.
     data: Bytes,
-    /// EnergyUsed is the amount of gas used by the call, after any refunds.
     energy_used: Long,
-    /// VmStatus is the result of the call.
     vm_status: VmStatus,
+    logs: Vec<Log>,
+}
+
+#[Object]
+impl CallResult {
+    /// FromData is the return data of the called contract.
+    async fn data(&self) -> &Bytes {
+        &self.data
+    }
+    /// EnergyUsed is the amount of gas used by the call, after any refunds.
+    async fn energy_used(&self) -> Long {
+        self.energy_used
+    }
+    /// VmStatus is the result of the call.
+    async fn vm_status(&self) -> VmStatus {
+        self.vm_status
+    }
+    /// Result logs.
+    async fn logs(&self) -> &[Log] {
+        &self.logs
+    }
 }
 
 /// SyncState contains the current synchronisation state of the client.
@@ -937,6 +954,15 @@ impl QueryRoot {
                 .unwrap_or_default()
                 .into(),
             vm_status: unsafe { mem::transmute(receipt.vm_status) },
+            logs: receipt
+                .vm_logs
+                .into_iter()
+                .map(|log| Log {
+                    inner: log,
+                    index: 0,
+                    txn_hash: H256::default(),
+                })
+                .collect(),
         })
     }
 
