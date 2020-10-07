@@ -365,29 +365,39 @@ pub struct CallData {
 
 /// CallResult is the result of a local call operation.
 pub struct CallResult {
-    data: Bytes,
-    energy_used: Long,
-    vm_status: VmStatus,
-    logs: Vec<Log>,
+    receipt: state::TransactionReceipt,
 }
 
 #[Object]
 impl CallResult {
     /// FromData is the return data of the called contract.
-    async fn data(&self) -> &Bytes {
-        &self.data
+    async fn data(&self) -> Bytes {
+        Bytes(self.receipt.vm_result.clone())
     }
     /// EnergyUsed is the amount of gas used by the call, after any refunds.
     async fn energy_used(&self) -> Long {
-        self.energy_used
+        self.receipt
+            .resource_receipt
+            .as_ref()
+            .map(|receipt| receipt.energy)
+            .unwrap_or_default()
+            .into()
     }
     /// VmStatus is the result of the call.
     async fn vm_status(&self) -> VmStatus {
-        self.vm_status
+        unsafe { mem::transmute(self.receipt.vm_status) }
     }
     /// Result logs.
-    async fn logs(&self) -> &[Log] {
-        &self.logs
+    async fn logs(&self) -> Vec<Log> {
+        self.receipt
+            .vm_logs
+            .iter()
+            .map(|log| Log {
+                inner: log.clone(),
+                index: 0,
+                txn_hash: H256::default(),
+            })
+            .collect()
     }
 }
 
@@ -946,34 +956,24 @@ impl QueryRoot {
         let energy_limit = data.energy_limit.map(|val| val.0).unwrap_or(100_000_000);
 
         let receipt = TransactionExecutor::new(manager).execute_smart_contract(&trigger, energy_limit)?;
-        Ok(CallResult {
-            data: Bytes(receipt.vm_result),
-            energy_used: receipt
-                .resource_receipt
-                .map(|receipt| receipt.energy)
-                .unwrap_or_default()
-                .into(),
-            vm_status: unsafe { mem::transmute(receipt.vm_status) },
-            logs: receipt
-                .vm_logs
-                .into_iter()
-                .map(|log| Log {
-                    inner: log,
-                    index: 0,
-                    txn_hash: H256::default(),
-                })
-                .collect(),
-        })
+        Ok(CallResult { receipt })
     }
 
     /// EstimateEnergy estimates the amount of energy that will be required for
     /// successful execution of a transaction at the current block's state.
     async fn estimate_energy(&self, ctx: &Context<'_>, data: CallData) -> FieldResult<Long> {
         self.call(ctx, data).await.and_then(|result| {
-            if result.vm_status == VmStatus::Default || result.vm_status == VmStatus::Success {
-                Ok(result.energy_used)
+            if result.receipt.vm_status == VmStatus::Default as i32 ||
+                result.receipt.vm_status == VmStatus::Success as i32
+            {
+                Ok(result
+                    .receipt
+                    .resource_receipt
+                    .map(|res| res.energy)
+                    .unwrap_or(0)
+                    .into())
             } else {
-                Err(format!("vm execution result: {:?}", result.vm_status).into())
+                Err(format!("vm execution result: {:?}", result.receipt.vm_status).into())
             }
         })
     }
