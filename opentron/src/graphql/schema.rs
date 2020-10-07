@@ -374,7 +374,7 @@ impl CallResult {
     async fn data(&self) -> Bytes {
         Bytes(self.receipt.vm_result.clone())
     }
-    /// EnergyUsed is the amount of gas used by the call, after any refunds.
+    /// EnergyUsed is the amount of energy used by the call, after any refunds.
     async fn energy_used(&self) -> Long {
         self.receipt
             .resource_receipt
@@ -383,11 +383,21 @@ impl CallResult {
             .unwrap_or_default()
             .into()
     }
+    /// BandwidthUsed is the amount of bandwidth used by the call.
+    async fn bandwidth_used(&self) -> Long {
+        self.receipt
+            .resource_receipt
+            .as_ref()
+            .map(|receipt| receipt.bandwidth_usage)
+            .unwrap_or_default()
+            .into()
+
+    }
     /// VmStatus is the result of the call.
     async fn vm_status(&self) -> VmStatus {
         unsafe { mem::transmute(self.receipt.vm_status) }
     }
-    /// Result logs.
+    /// Result VM logs.
     async fn logs(&self) -> Vec<Log> {
         self.receipt
             .vm_logs
@@ -1017,7 +1027,7 @@ impl MutationRoot {
     }
 
     /// DryRunRawTransaction runs an protobuf-encoded transaction and returns the receipt as json.
-    async fn dry_run_raw_transaction(&self, ctx: &Context<'_>, data: Bytes) -> FieldResult<String> {
+    async fn dry_run_raw_transaction(&self, ctx: &Context<'_>, data: Bytes) -> FieldResult<CallResult> {
         use chain::IndexedTransaction;
         use prost::Message;
         use proto2::chain::Transaction;
@@ -1029,8 +1039,7 @@ impl MutationRoot {
 
         let receipt = manager.dry_run_transaction(&indexed_txn)?;
 
-        println!("rec => {:?}", receipt);
+        Ok(CallResult { receipt })
 
-        Ok(format!("=> {:?}", receipt))
     }
 }
