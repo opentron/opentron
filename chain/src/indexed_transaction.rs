@@ -25,12 +25,12 @@ impl IndexedTransaction {
     /// Explicit conversion of the raw Transaction into IndexedTransaction.
     ///
     /// Hashes transaction contents.
-    pub fn from_raw<T>(transaction: T) -> Self
+    pub fn from_raw<T>(transaction: T) -> Option<Self>
     where
         Transaction: From<T>,
     {
         let transaction = Transaction::from(transaction);
-        Self::new(get_transaction_hash(&transaction), transaction)
+        get_transaction_hash(&transaction).map(|hash| Self::new(hash, transaction))
     }
 
     /// Recover owner address.
@@ -54,7 +54,9 @@ impl IndexedTransaction {
     }
 
     pub fn verify(&self) -> bool {
-        get_transaction_hash(&self.raw) == self.hash
+        get_transaction_hash(&self.raw)
+            .map(|hash| hash == self.hash)
+            .unwrap_or(false)
     }
 }
 
@@ -72,8 +74,8 @@ impl Hash for IndexedTransaction {
     }
 }
 
-fn get_transaction_hash(transaction: &Transaction) -> H256 {
+fn get_transaction_hash(transaction: &Transaction) -> Option<H256> {
     let mut buf = Vec::with_capacity(255);
-    transaction.raw_data.as_ref().unwrap().encode(&mut buf).unwrap(); // won't fail?
-    sha256(&buf)
+    transaction.raw_data.as_ref()?.encode(&mut buf).ok()?; // won't fail?
+    Some(sha256(&buf))
 }

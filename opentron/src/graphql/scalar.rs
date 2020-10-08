@@ -26,8 +26,8 @@ impl ScalarType for Bytes32 {
                 .as_u64()
                 .map(H256::from_low_u64_be)
                 .map(Bytes32)
-                .ok_or(InputValueError::Custom("invalid number type".into())),
-            _ => Err(InputValueError::ExpectedType(value)),
+                .ok_or(InputValueError::custom("invalid number type")),
+            _ => Err(InputValueError::expected_type(value)),
         }
     }
 
@@ -51,7 +51,7 @@ impl ScalarType for Address {
     fn parse(value: Value) -> InputValueResult<Self> {
         match value {
             Value::String(value) => Ok(value.parse().map(Address)?),
-            _ => Err(InputValueError::ExpectedType(value)),
+            _ => Err(InputValueError::expected_type(value)),
         }
     }
 
@@ -75,7 +75,7 @@ impl ScalarType for Bytes {
                     Ok(hex::decode(value).map(Bytes)?)
                 }
             }
-            _ => Err(InputValueError::ExpectedType(value)),
+            _ => Err(InputValueError::expected_type(value)),
         }
     }
 
@@ -107,8 +107,8 @@ impl ScalarType for Long {
             Value::Number(value) => value
                 .as_i64()
                 .map(Long)
-                .ok_or(InputValueError::Custom("invalid number type".into())),
-            _ => Err(InputValueError::ExpectedType(value)),
+                .ok_or(InputValueError::custom("invalid number type")),
+            _ => Err(InputValueError::expected_type(value)),
         }
     }
 

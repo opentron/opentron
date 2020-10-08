@@ -9,8 +9,8 @@ use proto2::chain::{transaction::Result as TransactionResult, ContractType};
 use proto2::state::Account;
 use state::keys;
 
-use super::executor::TransactionContext;
 use super::Manager;
+use super::TransactionContext;
 
 mod account;
 pub mod asset;
@@ -19,7 +19,7 @@ mod proposal;
 mod resource;
 #[cfg(feature = "nile")]
 mod shielded;
-mod smart_contract;
+pub mod smart_contract;
 mod transfer;
 mod witness;
 
@@ -52,7 +52,7 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
     ) -> Result<(), String> {
         let owner_address = Address::try_from(self.owner_address()).map_err(|_| "invalid owner_address")?;
         let maybe_acct = manager
-            .state_db
+            .state()
             .get(&keys::Account(owner_address))
             .map_err(|_| "db query error")?;
         if maybe_acct.is_none() {
@@ -62,7 +62,7 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
         let operation_mask = Some(self.type_code() as i32);
         let has_multi = recover_addrs.len() > 1;
 
-        let allow_multisig = manager.state_db.must_get(&keys::ChainParameter::AllowMultisig) != 0;
+        let allow_multisig = manager.state().must_get(&keys::ChainParameter::AllowMultisig) != 0;
         validate_multisig(
             owner_address,
             acct,
@@ -72,7 +72,7 @@ pub trait BuiltinContractExecutorExt: BuiltinContractExt {
             allow_multisig,
         )?;
         if has_multi {
-            ctx.multisig_fee = manager.state_db.must_get(&keys::ChainParameter::MultisigFee);
+            ctx.multisig_fee = manager.state().must_get(&keys::ChainParameter::MultisigFee);
         }
         Ok(())
     }

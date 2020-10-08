@@ -7,8 +7,8 @@ use proto2::contract as contract_pb;
 use proto2::state::{proposal::State as ProposalState, Proposal};
 use state::keys;
 
-use super::super::executor::TransactionContext;
-use super::super::governance::proposal::ProposalUtil;
+use super::super::TransactionContext;
+use super::super::super::governance::proposal::ProposalUtil;
 use super::super::Manager;
 use super::BuiltinContractExecutorExt;
 

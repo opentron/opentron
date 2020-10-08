@@ -3,7 +3,7 @@ use std::str;
 use std::sync::{Arc, RwLock};
 
 use ::state::keys;
-use async_graphql::{Context, Enum, FieldError, FieldResult, InputObject, Object, SimpleObject};
+use async_graphql::{Context, Enum, Error, Result, InputObject, Object, SimpleObject};
 use byteorder::{ByteOrder, BE};
 use chain::{IndexedBlockHeader, IndexedTransaction};
 use chrono::{DateTime, TimeZone, Utc};
@@ -27,7 +27,7 @@ pub struct Account {
 }
 
 impl Account {
-    fn require_inner(&self, ctx: &Context<'_>) -> FieldResult<()> {
+    fn require_inner(&self, ctx: &Context<'_>) -> Result<()> {
         if self.inner.read().unwrap().is_none() {
             let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
             let acct = manager
@@ -48,7 +48,7 @@ impl Account {
     }
 
     /// Balance is the balance of the account, in sun.
-    async fn balance(&self, ctx: &Context<'_>) -> FieldResult<Long> {
+    async fn balance(&self, ctx: &Context<'_>) -> Result<Long> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         Ok(inner.as_ref().unwrap().balance.into())
@@ -56,7 +56,7 @@ impl Account {
 
     /// Code contains the smart contract code for this account, if the account
     /// is a (non-self-destructed) contract.
-    async fn code(&self, ctx: &Context<'_>) -> FieldResult<Bytes> {
+    async fn code(&self, ctx: &Context<'_>) -> Result<Bytes> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         if inner.as_ref().unwrap().r#type != state::AccountType::Contract as i32 {
@@ -73,7 +73,7 @@ impl Account {
 
     /// Storage provides access to the storage of a contract account, indexed
     /// by its 32 byte slot identifier.
-    async fn storage(&self, ctx: &Context<'_>, slot: Bytes32) -> FieldResult<Bytes32> {
+    async fn storage(&self, ctx: &Context<'_>, slot: Bytes32) -> Result<Bytes32> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         if inner.as_ref().unwrap().r#type != state::AccountType::Contract as i32 {
@@ -88,7 +88,7 @@ impl Account {
     }
 
     /// Token balance of token id, in minimum unit.
-    async fn token_balance(&self, ctx: &Context<'_>, id: i64) -> FieldResult<Long> {
+    async fn token_balance(&self, ctx: &Context<'_>, id: i64) -> Result<Long> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         Ok(inner
@@ -102,28 +102,28 @@ impl Account {
     }
 
     /// Allowance of the account.
-    async fn allowance(&self, ctx: &Context<'_>) -> FieldResult<Long> {
+    async fn allowance(&self, ctx: &Context<'_>) -> Result<Long> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         Ok(inner.as_ref().unwrap().allowance.into())
     }
 
     /// Name of this account.
-    async fn name(&self, ctx: &Context<'_>) -> FieldResult<String> {
+    async fn name(&self, ctx: &Context<'_>) -> Result<String> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         Ok(inner.as_ref().unwrap().name.clone())
     }
 
     /// Type of this account.
-    async fn r#type(&self, ctx: &Context<'_>) -> FieldResult<AccountType> {
+    async fn r#type(&self, ctx: &Context<'_>) -> Result<AccountType> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         Ok(AccountType::from_i32(inner.as_ref().unwrap().r#type))
     }
 
     /// Tron Power of the account.
-    async fn power(&self, ctx: &Context<'_>) -> FieldResult<Long> {
+    async fn power(&self, ctx: &Context<'_>) -> Result<Long> {
         self.require_inner(ctx)?;
         let inner = self.inner.read().unwrap();
         Ok(inner.as_ref().unwrap().tron_power().into())
@@ -176,7 +176,7 @@ impl Asset {
     }
 
     /// Returns the amount of tokens owned by account.
-    async fn balance_of(&self, ctx: &Context<'_>, account: Address) -> FieldResult<Long> {
+    async fn balance_of(&self, ctx: &Context<'_>, account: Address) -> Result<Long> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         let acct = manager
             .state()
@@ -187,7 +187,7 @@ impl Asset {
 }
 
 /// Rename from `ContractStatus`, or `contractResult`.
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
 #[repr(i32)]
 enum VmStatus {
     Default = 0,
@@ -239,7 +239,7 @@ impl Log {
     }
 
     /// Transaction is the transaction that generated this log entry.
-    async fn transaction(&self, ctx: &Context<'_>) -> FieldResult<Transaction> {
+    async fn transaction(&self, ctx: &Context<'_>) -> Result<Transaction> {
         let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
         Ok(Transaction {
             inner: db.get_transaction_by_id(&self.txn_hash)?,
@@ -351,8 +351,8 @@ pub struct CallData {
     from: Option<Address>,
     /// To is the address the call is sent to. (contract address)
     to: Option<Address>,
-    /// FeeLimit is the max amount of energy sent with the call.
-    fee_limit: Option<Long>,
+    /// EnergyLimit is the max amount of energy sent with the call.
+    energy_limit: Option<Long>,
     /// Data is the data sent to the callee.
     data: Option<Bytes>,
     /// Value is the value, in sun, sent along with the call.
@@ -364,14 +364,51 @@ pub struct CallData {
 }
 
 /// CallResult is the result of a local call operation.
-#[derive(SimpleObject)]
 pub struct CallResult {
+    receipt: state::TransactionReceipt,
+}
+
+#[Object]
+impl CallResult {
     /// FromData is the return data of the called contract.
-    data: Bytes,
-    /// EnergyUsed is the amount of gas used by the call, after any refunds.
-    energy_used: Long,
+    async fn data(&self) -> Bytes {
+        Bytes(self.receipt.vm_result.clone())
+    }
+    /// EnergyUsed is the amount of energy used by the call, after any refunds.
+    async fn energy_used(&self) -> Long {
+        self.receipt
+            .resource_receipt
+            .as_ref()
+            .map(|receipt| receipt.energy)
+            .unwrap_or_default()
+            .into()
+    }
+    /// BandwidthUsed is the amount of bandwidth used by the call.
+    async fn bandwidth_used(&self) -> Long {
+        self.receipt
+            .resource_receipt
+            .as_ref()
+            .map(|receipt| receipt.bandwidth_usage)
+            .unwrap_or_default()
+            .into()
+
+    }
     /// VmStatus is the result of the call.
-    vm_status: VmStatus,
+    async fn vm_status(&self) -> VmStatus {
+        unsafe { mem::transmute(self.receipt.vm_status) }
+    }
+    /// Result VM logs.
+    async fn logs(&self) -> Vec<Log> {
+        self.receipt
+            .vm_logs
+            .iter()
+            .map(|log| Log {
+                inner: log.clone(),
+                index: 0,
+                txn_hash: H256::default(),
+            })
+            .collect()
+    }
 }
 
 /// SyncState contains the current synchronisation state of the client.
@@ -407,14 +444,14 @@ impl Transaction {
 
     /// Index is the index of this transaction in the parent block. This will
     /// be null if the transaction has not yet been mined.
-    async fn index(&self, ctx: &Context<'_>) -> FieldResult<i32> {
+    async fn index(&self, ctx: &Context<'_>) -> Result<i32> {
         let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
         Ok(db.get_transaction_index(&self.inner.hash)?)
     }
 
     /// Block is the block this transaction was mined in. This will be null if
     /// the transaction has not yet been mined.
-    async fn block(&self, ctx: &Context<'_>) -> FieldResult<Block> {
+    async fn block(&self, ctx: &Context<'_>) -> Result<Block> {
         let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
         let block_hash = db.get_transaction_block_hash(&self.inner.hash)?;
         Ok(Block::from_hash(Bytes32(block_hash)))
@@ -522,7 +559,7 @@ impl Block {
         }
     }
 
-    fn require_header(&self, ctx: &Context<'_>) -> FieldResult<()> {
+    fn require_header(&self, ctx: &Context<'_>) -> Result<()> {
         if self.header.read().unwrap().is_none() {
             let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
             match self.identifier {
@@ -539,7 +576,7 @@ impl Block {
         Ok(())
     }
 
-    fn require_txns(&self, ctx: &Context<'_>) -> FieldResult<()> {
+    fn require_txns(&self, ctx: &Context<'_>) -> Result<()> {
         if self.transactions.read().unwrap().is_none() {
             self.require_header(ctx)?;
             if let Some(ref header) = *self.header.read().unwrap() {
@@ -569,7 +606,7 @@ impl Block {
     }
 
     /// Hash is the block hash of this block.
-    async fn hash(&self, ctx: &Context<'_>) -> FieldResult<Bytes32> {
+    async fn hash(&self, ctx: &Context<'_>) -> Result<Bytes32> {
         match self.identifier {
             BlockIdentifier::Hash(hash) => Ok(hash),
             _ => {
@@ -585,7 +622,7 @@ impl Block {
     }
 
     /// Parent is the parent block of this block.
-    async fn parent(&self, ctx: &Context<'_>) -> FieldResult<Option<Block>> {
+    async fn parent(&self, ctx: &Context<'_>) -> Result<Option<Block>> {
         if let Some(ref header) = *self.header.read().unwrap() {
             if header.number() == 0 {
                 return Ok(None);
@@ -604,7 +641,7 @@ impl Block {
 
     /// TransactionsRoot is the hash of the root of the trie of transactions in this block.
     // "txTrieRoot" in TRON
-    async fn transactions_root(&self, ctx: &Context<'_>) -> FieldResult<Bytes32> {
+    async fn transactions_root(&self, ctx: &Context<'_>) -> Result<Bytes32> {
         self.require_header(ctx)?;
         if let Some(ref header) = *self.header.read().unwrap() {
             let txn_root = H256::from_slice(header.merkle_root_hash());
@@ -616,7 +653,7 @@ impl Block {
 
     /// TransactionCount is the number of transactions in this block. if
     /// transactions are not available for this block, this field will be null.
-    async fn transaction_count(&self, ctx: &Context<'_>) -> FieldResult<Option<i32>> {
+    async fn transaction_count(&self, ctx: &Context<'_>) -> Result<Option<i32>> {
         self.require_txns(ctx)?;
         if let Some(ref txns) = *self.transactions.read().unwrap() {
             Ok(Some(txns.len() as _))
@@ -626,7 +663,7 @@ impl Block {
     }
 
     /// Witness is the account that mined this block.
-    async fn witness(&self, ctx: &Context<'_>) -> FieldResult<Account> {
+    async fn witness(&self, ctx: &Context<'_>) -> Result<Account> {
         self.require_header(ctx)?;
         let header = self.header.read().unwrap();
         let address = ::keys::Address::try_from(header.as_ref().unwrap().witness())?;
@@ -637,7 +674,7 @@ impl Block {
     }
 
     /// Timestamp is the unix timestamp at which this block was mined.
-    async fn timestamp(&self, ctx: &Context<'_>) -> FieldResult<i64> {
+    async fn timestamp(&self, ctx: &Context<'_>) -> Result<i64> {
         self.require_header(ctx)?;
         match *self.header.read().unwrap() {
             Some(ref header) => Ok(header.timestamp()),
@@ -647,7 +684,7 @@ impl Block {
 
     /// Transactions is a list of transactions associated with this block. If
     /// transactions are unavailable for this block, this field will be null.
-    async fn transactions(&self, ctx: &Context<'_>) -> FieldResult<Vec<Transaction>> {
+    async fn transactions(&self, ctx: &Context<'_>) -> Result<Vec<Transaction>> {
         self.require_txns(ctx)?;
         match *self.transactions.read().unwrap() {
             Some(ref txns) => {
@@ -661,7 +698,7 @@ impl Block {
     /// TransactionAt returns the transaction at the specified index. If
     /// transactions are unavailable for this block, or if the index is out of
     /// bounds, this field will be null.
-    async fn transaction_at(&self, ctx: &Context<'_>, index: i32) -> FieldResult<Option<Transaction>> {
+    async fn transaction_at(&self, ctx: &Context<'_>, index: i32) -> Result<Option<Transaction>> {
         self.require_txns(ctx)?;
         match self.transactions.read().unwrap().as_ref().unwrap().get(index as usize) {
             // TODO: avoid clone
@@ -671,7 +708,7 @@ impl Block {
     }
 
     /// Logs returns a filtered set of logs from this block.
-    async fn logs(&self, ctx: &Context<'_>, filter: BlockFilterCriteria) -> FieldResult<Vec<Log>> {
+    async fn logs(&self, ctx: &Context<'_>, filter: BlockFilterCriteria) -> Result<Vec<Log>> {
         self.require_txns(ctx)?;
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         let mut logs = vec![];
@@ -725,7 +762,7 @@ pub struct Chain;
 #[Object]
 impl Chain {
     /// Chain parameters.
-    async fn parameters(&self, ctx: &Context<'_>) -> FieldResult<Vec<ChainParameter>> {
+    async fn parameters(&self, ctx: &Context<'_>) -> Result<Vec<ChainParameter>> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         let mut params = Vec::with_capacity(50);
         {
@@ -742,7 +779,7 @@ impl Chain {
     }
 
     /// Get a chain parameter.
-    async fn parameter(&self, ctx: &Context<'_>, id: i32) -> FieldResult<ChainParameter> {
+    async fn parameter(&self, ctx: &Context<'_>, id: i32) -> Result<ChainParameter> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         let param = keys::ChainParameter::from_i32(id).ok_or_else(|| "invalid parameter id")?;
         let value = manager.state().must_get(&param);
@@ -772,10 +809,13 @@ impl QueryRoot {
 
     /// Current Node info.
     async fn node_info(&self, ctx: &Context<'_>) -> NodeInfo {
-        let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
+        let app = ctx.data_unchecked::<Arc<AppContext>>();
+        let ref db = app.chain_db;
         NodeInfo {
-            code_version: CODE_VERSION.into(),
-            syncing: *ctx.data_unchecked::<Arc<AppContext>>().syncing.read().unwrap(),
+            code_version: CODE_VERSION,
+            syncing: app.syncing.load(std::sync::atomic::Ordering::Relaxed),
+            num_active_connections: app.num_active_connections.load(std::sync::atomic::Ordering::Relaxed),
+            num_passive_connections: 0,
             num_running_compactions: db.get_db_property("rocksdb.num-running-compactions") as _,
             num_running_flushes: db.get_db_property("rocksdb.num-running-flushes") as _,
             num_immutable_mem_table: db.get_accumulated_db_property("rocksdb.num-immutable-mem-table") as _,
@@ -786,7 +826,7 @@ impl QueryRoot {
 
     /// Block fetches an Tron block by number or by hash. If neither is
     /// supplied, the most recent known block is returned.
-    async fn block(&self, ctx: &Context<'_>, number: Option<Long>, hash: Option<Bytes32>) -> FieldResult<Block> {
+    async fn block(&self, ctx: &Context<'_>, number: Option<Long>, hash: Option<Bytes32>) -> Result<Block> {
         if let Some(num) = number {
             return Ok(Block::from_number(num));
         }
@@ -804,24 +844,24 @@ impl QueryRoot {
 
     /// Blocks returns all the blocks between two numbers, inclusive. If
     /// to is not supplied, it defaults to the most recent known block.
-    async fn blocks(&self, ctx: &Context<'_>, from: Long, to: Option<Long>) -> FieldResult<Vec<Block>> {
+    async fn blocks(&self, ctx: &Context<'_>, from: Long, to: Option<Long>) -> Result<Vec<Block>> {
         let ref chain_db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
         let block_height = chain_db.get_block_height();
 
         if from.0 > block_height {
-            return Err(FieldError::from("from is out of range"));
+            return Err(Error::from("from is out of range"));
         }
         let to_num = match to {
             Some(to) => {
                 if to.0 < from.0 {
-                    return Err(FieldError::from("from <= to check failed"));
+                    return Err(Error::from("from <= to check failed"));
                 }
                 to.0
             }
             None => block_height,
         };
         if to_num - from.0 > MAX_NUMBER_OF_BATCH_ITEMS_PER_REQUEST {
-            return Err(FieldError::from("exceeds the maximum number of blocks per request"));
+            return Err(Error::from("exceeds the maximum number of blocks per request"));
         }
         Ok((from.0..=to_num).map(|num| Block::from_number(Long(num))).collect())
     }
@@ -830,7 +870,7 @@ impl QueryRoot {
     // pending: Pending!
 
     /// Transaction returns a transaction specified by its hash.
-    async fn transaction(&self, ctx: &Context<'_>, hash: Bytes32) -> FieldResult<Transaction> {
+    async fn transaction(&self, ctx: &Context<'_>, hash: Bytes32) -> Result<Transaction> {
         let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
         Ok(Transaction {
             inner: db.get_transaction_by_id(&hash.0)?,
@@ -838,7 +878,7 @@ impl QueryRoot {
     }
 
     /// Logs returns log entries matching the provided filter.
-    async fn logs(&self, ctx: &Context<'_>, filter: FilterCriteria) -> FieldResult<Vec<Log>> {
+    async fn logs(&self, ctx: &Context<'_>, filter: FilterCriteria) -> Result<Vec<Log>> {
         let ref db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         let defaut_block = manager.latest_block_number();
@@ -851,7 +891,7 @@ impl QueryRoot {
         }
 
         if to_block - from_block > MAX_NUMBER_OF_BATCH_ITEMS_PER_REQUEST {
-            return Err(FieldError::from("exceeds the maximum number of blocks per request"));
+            return Err(Error::from("exceeds the maximum number of blocks per request"));
         }
 
         let mut logs = vec![];
@@ -895,7 +935,7 @@ impl QueryRoot {
     // NOTE: Tron does not support block history, so the following query is moved from Block to Query.
 
     /// Account fetches an Tron account at the current block's state.
-    async fn account(&self, ctx: &Context<'_>, address: Address) -> FieldResult<Account> {
+    async fn account(&self, ctx: &Context<'_>, address: Address) -> Result<Account> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         let acct = manager
             .state()
@@ -909,20 +949,49 @@ impl QueryRoot {
     }
 
     /// Call executes a local call operation at the current block's state.
-    async fn call(&self, _ctx: &Context<'_>, _data: CallData) -> FieldResult<CallResult> {
-        unimplemented!()
+    async fn call(&self, ctx: &Context<'_>, data: CallData) -> Result<CallResult> {
+        use crate::manager::executor::TransactionExecutor;
+        use proto2::contract::TriggerSmartContract;
+
+        let trigger = TriggerSmartContract {
+            owner_address: data.from.unwrap().0.as_bytes().to_vec(),
+            contract_address: data.to.unwrap().0.as_bytes().to_vec(),
+            data: data.data.unwrap().0,
+            call_value: data.value.map(|val| val.0).unwrap_or_default(),
+            call_token_id: data.token_id.unwrap_or_default(),
+            call_token_value: data.token_value.map(|val| val.0).unwrap_or_default(),
+        };
+
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+        let energy_limit = data.energy_limit.map(|val| val.0).unwrap_or(100_000_000);
+
+        let receipt = TransactionExecutor::new(manager).execute_smart_contract(&trigger, energy_limit)?;
+        Ok(CallResult { receipt })
     }
 
     /// EstimateEnergy estimates the amount of energy that will be required for
     /// successful execution of a transaction at the current block's state.
-    async fn estimate_energy(&self, _ctx: &Context<'_>, _data: CallData) -> FieldResult<Long> {
-        unimplemented!()
+    async fn estimate_energy(&self, ctx: &Context<'_>, data: CallData) -> Result<Long> {
+        self.call(ctx, data).await.and_then(|result| {
+            if result.receipt.vm_status == VmStatus::Default as i32 ||
+                result.receipt.vm_status == VmStatus::Success as i32
+            {
+                Ok(result
+                    .receipt
+                    .resource_receipt
+                    .map(|res| res.energy)
+                    .unwrap_or(0)
+                    .into())
+            } else {
+                Err(format!("vm execution result: {:?}", result.receipt.vm_status).into())
+            }
+        })
     }
 
     // Tron extensions.
 
     /// Asset fetches an Tron asset(TRC10 token).
-    async fn asset(&self, ctx: &Context<'_>, issuer: Option<Address>, id: Option<i64>) -> FieldResult<Asset> {
+    async fn asset(&self, ctx: &Context<'_>, issuer: Option<Address>, id: Option<i64>) -> Result<Asset> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         let token_id = match (issuer, id) {
             (None, Some(token_id)) => token_id,
@@ -945,5 +1014,32 @@ impl QueryRoot {
     /// Chain query.
     async fn chain(&self) -> Chain {
         Chain
+    }
+}
+
+pub struct MutationRoot;
+
+#[Object]
+impl MutationRoot {
+    /// SendRawTransaction sends an protobuf-encoded transaction to the network.
+    async fn send_raw_transaction(&self, _data: Bytes) -> Result<Bytes32> {
+        unimplemented!()
+    }
+
+    /// DryRunRawTransaction runs an protobuf-encoded transaction and returns the receipt as json.
+    async fn dry_run_raw_transaction(&self, ctx: &Context<'_>, data: Bytes) -> Result<CallResult> {
+        use chain::IndexedTransaction;
+        use prost::Message;
+        use proto2::chain::Transaction;
+
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+
+        let txn = Transaction::decode(&*data.0)?;
+        let indexed_txn = IndexedTransaction::from_raw(txn).ok_or("invalid transaction")?;
+
+        let receipt = manager.dry_run_transaction(&indexed_txn)?;
+
+        Ok(CallResult { receipt })
+
     }
 }

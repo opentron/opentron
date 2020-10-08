@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::error::Error;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32};
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 
 use chain_db::ChainDB;
 use config::genesis::GenesisConfig;
@@ -22,10 +22,11 @@ pub struct AppContext {
     pub config: Config,
     pub genesis_config: GenesisConfig,
     pub chain_db: ChainDB,
-    pub running: Arc<AtomicBool>,
+    pub running: AtomicBool,
+    pub syncing: AtomicBool,
     pub num_active_connections: AtomicU32,
+    pub num_passive_connections: AtomicU32,
     pub recent_blk_ids: RwLock<HashSet<H256>>,
-    pub syncing: RwLock<bool>,
     pub peers: RwLock<Vec<oneshot::Sender<()>>>,
     pub manager: RwLock<Manager>,
 }
@@ -42,10 +43,10 @@ impl AppContext {
         let chain_db = ChainDB::new(&config.storage.data_dir);
         if !chain_db.has_block(&genesis_blk) {
             if let Ok(_) = chain_db.get_genesis_block() {
-                panic!("genesis block config is inconsistent with db");
+                panic!("genesis block config is inconsistent with chain-db");
             }
             chain_db.insert_block(&genesis_blk)?;
-            info!("inserted genesis block to db");
+            info!("inserted genesis block to chain-db");
         }
         chain_db.report_status();
 
@@ -74,10 +75,11 @@ impl AppContext {
             node_id,
             outbound_ip,
             genesis_block_id: Some(genesis_block_id),
-            running: Arc::new(AtomicBool::new(true)),
+            running: AtomicBool::new(true),
+            syncing: AtomicBool::new(false),
             num_active_connections: AtomicU32::new(0),
+            num_passive_connections: AtomicU32::new(0),
             recent_blk_ids: RwLock::new(HashSet::new()),
-            syncing: RwLock::new(true),
             peers: RwLock::default(),
             manager: RwLock::new(db_manager),
         })

@@ -1,4 +1,4 @@
-//! Fork controller.
+//! Block version fork controller.
 
 use constants::block_version::{BlockVersion, ForkPolicy};
 use state::keys;

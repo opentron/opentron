@@ -14,12 +14,11 @@ use proto2::state::{Account, SmartContract};
 use state::keys;
 use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
 
-use super::super::controllers::ForkController;
-use super::super::executor::TransactionContext;
-use super::super::resource::EnergyProcessor;
-use super::super::resource::EnergyUtil;
-use super::super::vm::StateBackend;
+use super::super::super::resource::{EnergyProcessor, EnergyUtil};
+use super::super::super::version_fork::ForkController;
+use super::super::super::vm::StateBackend;
 use super::super::Manager;
+use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 
 const MAX_CONTRACT_NAME_LENGTH: usize = 32;
@@ -261,7 +260,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         } else {
             used_energy as i64
         };
-
+        ctx.energy = energy_usage;
         log::debug!(
             "energy usage: {}/{} vm_energy={}",
             energy_usage,
@@ -492,6 +491,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         } else {
             used_energy as i64
         };
+        ctx.energy = energy_usage;
         // consume energy
         EnergyProcessor::new(manager).consume(
             owner_address,
@@ -647,6 +647,118 @@ impl BuiltinContractExecutorExt for contract_pb::ClearAbiContract {
 
         Ok(TransactionResult::success())
     }
+}
+
+// Dry run a TriggerSmartContract. Use 1 db layer and rollback.
+pub fn execute_smart_contract(
+    manager: &mut Manager,
+    trigger: &contract_pb::TriggerSmartContract,
+    ctx: &mut TransactionContext,
+) -> Result<TransactionResult, String> {
+    let owner_address = Address::try_from(&trigger.owner_address).map_err(|_| "invalid owner address")?;
+    let cntr_address = Address::try_from(&trigger.contract_address).map_err(|_| "invalid contract address")?;
+
+    let energy_limit = ctx.energy_limit as usize;
+
+    manager.new_layer();
+
+    // transfer
+    if trigger.call_value > 0 || trigger.call_token_value > 0 {
+        let mut owner_acct = manager
+            .state_db
+            .get(&keys::Account(owner_address))
+            .unwrap()
+            .ok_or_else(|| "owner account not found")?;
+        let mut cntr_acct = manager
+            .state_db
+            .get(&keys::Account(cntr_address))
+            .unwrap()
+            .ok_or_else(|| "contract not found")?;
+        if trigger.call_value > 0 {
+            if owner_acct.adjust_balance(-trigger.call_value).is_err() {
+                return Err("insufficient balance".into());
+            }
+            cntr_acct.adjust_balance(trigger.call_value).unwrap();
+        }
+        if trigger.call_token_value > 0 {
+            if owner_acct
+                .adjust_token_balance(trigger.call_token_id, -trigger.call_token_value)
+                .is_err()
+            {
+                return Err("insufficient token balance".into());
+            }
+            cntr_acct
+                .adjust_token_balance(trigger.call_token_id, trigger.call_token_value)
+                .unwrap();
+        }
+        manager
+            .state_db
+            .put_key(keys::Account(cntr_address), cntr_acct)
+            .unwrap();
+        manager
+            .state_db
+            .put_key(keys::Account(owner_address), owner_acct)
+            .unwrap();
+    }
+
+    // build execution context
+    let code = manager
+        .state()
+        .get(&keys::ContractCode(cntr_address))
+        .map_err(|_| "db query error")?
+        .unwrap_or_default();
+    let code = Rc::new(code);
+    let data = Rc::new(trigger.data.to_vec());
+
+    let upgrade = get_current_tvm_upgrade(manager);
+    let precompile = upgrade.precompile();
+    let config = upgrade.into();
+
+    let mut backend = StateBackend::new(owner_address, manager, ctx);
+    let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
+
+    let vm_ctx = tvm::Context {
+        // contract address
+        address: H160::from_slice(cntr_address.as_tvm_bytes()),
+        caller: H160::from_slice(owner_address.as_tvm_bytes()),
+        call_value: trigger.call_value.into(),
+        call_token_id: trigger.call_token_id.into(),
+        call_token_value: trigger.call_token_value.into(),
+    };
+
+    let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
+    let exit_reason = executor.execute(&mut rt);
+    let used_energy = executor.used_gas();
+    let ret_val = rt.machine().return_value();
+
+    let (applies, logs) = executor.deconstruct();
+    backend.apply(applies, logs, false);
+    drop(backend);
+
+    manager.rollback_layers(1);
+
+    if !ret_val.is_empty() {
+        debug!("return value: {:?}", hex::encode(&ret_val));
+        ctx.result = ret_val;
+    }
+
+    let energy_usage = if exit_reason.is_fatal() {
+        energy_limit as i64
+    } else {
+        used_energy as i64
+    };
+    // NOTE: energy_usage, origin_usage is for actual consumption.
+    // energy is for total energy used.
+    ctx.energy = energy_usage;
+    let mut ret = TransactionResult::success();
+    ctx.contract_status = exit_reason.as_contrat_status();
+    ret.contract_status = exit_reason.as_contrat_status() as i32;
+    debug!(
+        "trigger contract, vm_exit_reason={:?} contract_status={:?}",
+        exit_reason,
+        exit_reason.as_contrat_status()
+    );
+    Ok(ret)
 }
 
 // NOTE: This is a really bad implementation.

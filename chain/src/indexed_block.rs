@@ -40,7 +40,7 @@ impl IndexedBlock {
         }
     }
 
-    pub fn from_header_and_txns(header: BlockHeader, txns: Vec<Transaction>) -> Self {
+    pub fn from_raw_header_and_txns(header: BlockHeader, txns: Vec<Transaction>) -> Option<Self> {
         Self::from_raw(Block {
             block_header: Some(header),
             transactions: txns,
@@ -50,25 +50,31 @@ impl IndexedBlock {
     /// Explicit conversion of the raw Block into IndexedBlock.
     ///
     /// Hashes block header + transactions.
-    pub fn from_raw(block: Block) -> Self {
+    pub fn from_raw(block: Block) -> Option<Self> {
         let Block {
             block_header,
             transactions,
         } = block;
         // Only compute in parallel if there is enough work to benefit it
-        let transactions: Vec<_> = if transactions.len() > 200 {
-            transactions.into_par_iter().map(IndexedTransaction::from_raw).collect()
+        let transactions = if transactions.len() > 200 {
+            transactions
+                .into_par_iter()
+                .map(IndexedTransaction::from_raw)
+                .collect::<Option<Vec<_>>>()?
         } else {
-            transactions.into_iter().map(IndexedTransaction::from_raw).collect()
+            transactions
+                .into_iter()
+                .map(IndexedTransaction::from_raw)
+                .collect::<Option<Vec<_>>>()?
         };
-        let mut block_header = block_header.unwrap();
-        if block_header.raw_data.as_ref().unwrap().merkle_root_hash.is_empty() {
+        let mut block_header = block_header?;
+        if block_header.raw_data.as_ref()?.merkle_root_hash.is_empty() {
             block_header
                 .raw_data
                 .as_mut()
                 .map(|raw| raw.merkle_root_hash = merkle_root(&transactions).as_bytes().to_owned());
         }
-        Self::new(IndexedBlockHeader::from_raw(block_header), transactions)
+        IndexedBlockHeader::from_raw(block_header).map(|header| Self::new(header, transactions))
     }
 
     pub fn hash(&self) -> &H256 {

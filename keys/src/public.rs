@@ -159,7 +159,7 @@ impl FromStr for Public {
             Vec::from_hex(s)
                 .map_err(|_| Error::InvalidPublic)
                 .and_then(Self::try_from)
-        } else if s.len() == 128 + 2 && (s.starts_with("0x") || s.starts_with("0X")) {
+        } else if s.len() == 128 + 2 && s.starts_with("0x") {
             Vec::from_hex(&s.as_bytes()[2..])
                 .map_err(|_| Error::InvalidPublic)
                 .and_then(Self::try_from)

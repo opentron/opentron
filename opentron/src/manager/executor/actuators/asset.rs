@@ -13,13 +13,13 @@ use proto2::contract as contract_pb;
 use proto2::state::{asset::FrozenSupply, Account, Asset};
 use state::keys;
 
-use super::super::executor::TransactionContext;
 use super::super::Manager;
+use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 
 impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
-        let state_db = &manager.state_db;
+        let state_db = manager.state();
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
 
@@ -227,7 +227,7 @@ impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
 // Transfer TRC10(Asset) tokens, creating to_account when it is not on chain.
 impl BuiltinContractExecutorExt for contract_pb::TransferAssetContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {
-        let state_db = &manager.state_db;
+        let state_db = manager.state();
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
         let to_address = Address::try_from(&self.to_address).map_err(|_| "invalid to_address")?;
@@ -351,7 +351,7 @@ impl BuiltinContractExecutorExt for contract_pb::TransferAssetContract {
 // Participate asset issuing while asset is in issuing period. Buy new TRC10 token using TRX.
 impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
-        let state_db = &manager.state_db;
+        let state_db = manager.state();
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
         let to_address = Address::try_from(&self.to_address).map_err(|_| "invalid to_address")?;
@@ -467,7 +467,7 @@ impl BuiltinContractExecutorExt for contract_pb::ParticipateAssetIssueContract {
 // Update an asset' url, description, per-account free bw limit, global free bw limit.
 impl BuiltinContractExecutorExt for contract_pb::UpdateAssetContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
-        let state_db = &manager.state_db;
+        let state_db = manager.state();
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
 
@@ -536,7 +536,7 @@ impl BuiltinContractExecutorExt for contract_pb::UpdateAssetContract {
 // Unfreeze an asset's frozen_supply.
 impl BuiltinContractExecutorExt for contract_pb::UnfreezeAssetContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {
-        let state_db = &manager.state_db;
+        let state_db = manager.state();
 
         let owner_address = Address::try_from(&self.owner_address).map_err(|_| "invalid owner_address")?;
 

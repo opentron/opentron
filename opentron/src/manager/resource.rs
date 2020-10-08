@@ -10,8 +10,9 @@ use proto2::contract::TransferAssetContract;
 use proto2::state::Account;
 use state::keys;
 
-use super::actuators::BuiltinContractExt;
-use super::controllers::ForkController;
+use super::version_fork::ForkController;
+use super::executor::actuators::asset::find_asset_by_name;
+use super::executor::actuators::BuiltinContractExt;
 use super::executor::TransactionContext;
 use super::Manager;
 
@@ -240,8 +241,7 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
             let token_id = cntr.asset_name.parse().unwrap();
             self.manager.state_db.must_get(&keys::Asset(token_id))
         } else {
-            super::actuators::asset::find_asset_by_name(self.manager, &cntr.asset_name)
-                .expect("must find by asset name")
+            find_asset_by_name(self.manager, &cntr.asset_name).expect("must find by asset name")
         };
         let token_id = asset.id;
 
