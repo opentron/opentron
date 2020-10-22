@@ -10,10 +10,10 @@ use proto2::contract::TransferAssetContract;
 use proto2::state::Account;
 use state::keys;
 
-use super::version_fork::ForkController;
 use super::executor::actuators::asset::find_asset_by_name;
 use super::executor::actuators::BuiltinContractExt;
 use super::executor::TransactionContext;
+use super::version_fork::ForkController;
 use super::Manager;
 
 /// Bandwidth processor, `BandwidthProcessor.java`.
@@ -614,6 +614,14 @@ impl EnergyProcessor<'_> {
 
         if energy_used > 0 && energy_used > (e_limit - new_e_usage) {
             return false;
+        }
+
+        if energy_used == 0 && e_limit - new_e_usage < 0 {
+            return true;
+        }
+
+        if energy_used == 0 && e_limit - new_e_usage == 0 {
+            panic!("TODO: how to to handle this");
         }
 
         let latest_op_ts = self
