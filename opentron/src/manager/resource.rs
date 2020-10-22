@@ -482,6 +482,7 @@ impl EnergyProcessor<'_> {
         EnergyProcessor { manager }
     }
 
+    /// payEnergyBill
     pub fn consume(
         &mut self,
         caller: Address,
@@ -620,10 +621,6 @@ impl EnergyProcessor<'_> {
             return true;
         }
 
-        if energy_used == 0 && e_limit - new_e_usage == 0 {
-            panic!("TODO: how to to handle this");
-        }
-
         let latest_op_ts = self
             .manager
             .state_db
@@ -633,7 +630,9 @@ impl EnergyProcessor<'_> {
         acct.latest_operation_timestamp = latest_op_ts;
         acct.resource_mut().energy_used = new_e_usage;
         acct.resource_mut().energy_latest_slot = now;
-        debug!("E usage: {}/{} (+{})", new_e_usage, e_limit, energy_used);
+        if energy_used > 0 {
+            debug!("E usage: {}/{} (+{})", new_e_usage, e_limit, energy_used);
+        }
 
         self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
         self.manager.block_energy_usage += energy_used;
