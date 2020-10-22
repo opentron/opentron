@@ -5,8 +5,9 @@ use std::str;
 
 use ::keys::b58encode_check;
 use chain::{IndexedBlockHeader, IndexedTransaction};
-use log::{debug, error};
+use log::{debug, error, warn};
 use primitive_types::H256;
+use prost::Message;
 use proto2::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto2::common::ResourceCode;
 use proto2::contract as contract_pb;
@@ -190,8 +191,7 @@ impl<'m> TransactionExecutor<'m> {
         let mut ctx = TransactionContext::dummy(&block_header);
         ctx.energy_limit = energy_limit;
 
-        let exec_result =
-            self::actuators::smart_contract::execute_smart_contract(self.manager, &trigger, &mut ctx)?;
+        let exec_result = self::actuators::smart_contract::execute_smart_contract(self.manager, &trigger, &mut ctx)?;
         debug!("context => {:?}", ctx);
         debug!("result => {:?}", exec_result);
         Ok(ctx.into())
@@ -668,7 +668,21 @@ impl<'m> TransactionExecutor<'m> {
             }
             // TVM: Should handle BW first, then remaining can be used for E.
             ContractType::CreateSmartContract => {
-                let cntr = contract_pb::CreateSmartContract::from_any(cntr.parameter.as_ref().unwrap()).unwrap();
+                // See-also: https://github.com/opentron/opentron/issues/34
+                let cntr = match &*format!("{:?}", txn.hash) {
+                    "0xd7506ce73f42c802fedb367cd803975d328ef331767711313a965d7cb935fc3e" |
+                    "0xc8b66021c09ec0e18bea68750630fa7dd066cd1d5e3162074e96baa652c3b884" => {
+                        warn!("try fix protobuf bug at {:?}", txn.hash);
+                        let mut raw = cntr.parameter.as_ref().unwrap().value.clone();
+                        // rm trailing `220123`
+                        let _ = raw.split_off(raw.len() - 3);
+                        contract_pb::CreateSmartContract::decode(&raw[..]).unwrap()
+                    }
+                    _ => {
+                        let raw = cntr.parameter.as_ref().unwrap().value.clone();
+                        contract_pb::CreateSmartContract::decode(&raw[..]).expect("protobuf decode error")
+                    }
+                };
                 let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
                     .unwrap_or_default();
