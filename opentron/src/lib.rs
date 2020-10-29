@@ -1,4 +1,5 @@
 #![recursion_limit = "2048"]
+#![feature(asm)]
 
 pub mod channel;
 pub mod commands;

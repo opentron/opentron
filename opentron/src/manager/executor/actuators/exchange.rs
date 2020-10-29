@@ -508,22 +508,21 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
 }
 
 // NOTE: Sell and buy are different tokens.
+// exchange(long sellTokenBalance, long buyTokenBalance, long sellTokenQuant)
 /// Returns: buy token amount(buyTokenQuant).
 fn exchange(mut supply: i64, sell_balance: i64, buy_balance: i64, sell_amount: i64) -> i64 {
     // exchangeToSupply(sellTokenBalance, sellTokenQuant)
-    log::trace!("balance: {}", sell_balance);
-    let new_balance = (sell_balance + sell_amount) as f64;
+    let new_balance = sell_balance + sell_amount;
 
-    let issued_supply = -supply as f64 * (1.0 - (1.0 + sell_amount as f64 / new_balance).powf(0.0005));
-    log::trace!("issued supply: {}", issued_supply);
+    let issued_supply = -supply as f64 * (1.0 - java8_math_pow(1.0 + sell_amount as f64 / new_balance as f64, 0.0005));
 
     let relay = issued_supply as i64;
     supply += relay;
 
     // exchangeFromSupply(buyTokenBalance, relay)
     supply -= relay;
+    // NOTE: OK to use Rust `f64::powf`, for X > 1.
     let exchange_balance = buy_balance as f64 * ((1.0 + relay as f64 / supply as f64).powf(2000.0) - 1.0);
-    log::trace!("exchange balance: {}", exchange_balance);
 
     exchange_balance as i64
 }
@@ -540,4 +539,30 @@ fn get_exchange_token_id(manager: &Manager, token_id: &str) -> Result<i64, Strin
             .map(|asset| asset.id)
             .ok_or_else(|| "invalid token name".into())
     }
+}
+
+/// Java8 version of `Math.pow()` under x86.
+///
+/// See-also: https://github.com/opentron/opentron/issues/36
+///
+/// NOTE: This is a partial implementation, only operates on -1<=X<=1.
+#[inline]
+fn java8_math_pow(x: f64, y: f64) -> f64 {
+    let mut ret = 0_f64;
+    unsafe {
+        asm!(
+            "fld qword ptr [{y}]",
+            "fld qword ptr [{x}]",
+            "fyl2x",
+            "f2xm1",
+            "fld1",
+            "faddp st(1), st(0)",
+            "fstp qword ptr [{v}]",
+            x = in(reg) &x,
+            y = in(reg) &y,
+            v = in(reg) &mut ret,
+            options(nostack)
+        );
+    }
+    ret
 }
