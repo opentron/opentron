@@ -10,8 +10,8 @@ use proto2::contract as contract_pb;
 use proto2::state::Exchange;
 use state::keys;
 
-use super::super::TransactionContext;
 use super::super::Manager;
+use super::super::TransactionContext;
 use super::asset::find_asset_by_name;
 use super::BuiltinContractExecutorExt;
 
@@ -565,4 +565,19 @@ fn java8_math_pow(x: f64, y: f64) -> f64 {
         );
     }
     ret
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn java8_math_pow_of_block_4137160() {
+        let val = java8_math_pow(1.0061363892207218_f64, 0.0005_f64);
+        let expected = 1.0000030588238054;
+        let errored = 1.0000030588238051;
+
+        assert_eq!(val, expected);
+        assert!(val != errored);
+    }
 }
