@@ -669,20 +669,41 @@ impl<'m> TransactionExecutor<'m> {
             // TVM: Should handle BW first, then remaining can be used for E.
             ContractType::CreateSmartContract => {
                 // See-also: https://github.com/opentron/opentron/issues/34
-                let cntr = match &*format!("{:?}", txn.hash) {
-                    "0xd7506ce73f42c802fedb367cd803975d328ef331767711313a965d7cb935fc3e" |
-                    "0xc8b66021c09ec0e18bea68750630fa7dd066cd1d5e3162074e96baa652c3b884" => {
+                // Sea-also: https://github.com/opentron/opentron/issues/38
+                let raw_cntr = &cntr.parameter.as_ref().unwrap().value[..];
+                let maybe_cntr = contract_pb::CreateSmartContract::decode(raw_cntr);
+
+                let cntr = match maybe_cntr {
+                    Ok(cntr) => cntr,
+                    Err(e) => {
+                        warn!("pb error: {:?}", e);
                         warn!("try fix protobuf bug at {:?}", txn.hash);
-                        let mut raw = cntr.parameter.as_ref().unwrap().value.clone();
-                        // rm trailing `220123`
-                        let _ = raw.split_off(raw.len() - 3);
-                        contract_pb::CreateSmartContract::decode(&raw[..]).unwrap()
-                    }
-                    _ => {
-                        let raw = cntr.parameter.as_ref().unwrap().value.clone();
-                        contract_pb::CreateSmartContract::decode(&raw[..]).expect("protobuf decode error")
+                        let mut raw = raw_cntr.to_vec();
+                        match &*format!("{:?}", txn.hash) {
+                            "0xd7506ce73f42c802fedb367cd803975d328ef331767711313a965d7cb935fc3e" |
+                            "0xc8b66021c09ec0e18bea68750630fa7dd066cd1d5e3162074e96baa652c3b884" => {
+                                // rm trailing `220123`
+                                let _ = raw.split_off(raw.len() - 3);
+                                contract_pb::CreateSmartContract::decode(&raw[..]).expect("pb decode error")
+                            }
+                            "0xa58995a7160be51ec2388f749c8abe1468c0cac795a8e879f912837882e0d490" |
+                            "0x73d96abda1756f724871dfba418aa1e8c1c7526070e4d69fb247171f753d1158" |
+                            "0x46ff9d24e110296dadb7ad70b8ab817050999fdad147170a2d360997051db9e6" |
+                            "0x0c4d57f340a94593dce4a87aa4d1d277c19edb3869d3427aa51a688f756b9af6" |
+                            "0xa6b98c471b496d9f00ea2b7b0fc0173e84be0b26dd9cd7dab4907f822fbcf57a" |
+                            "0x31ae94f0d236c7bda7c1776296497f5c073d0845e7214b9c3c46a55c44f6775e" => {
+                                // rm trailing `22022727`
+                                let _ = raw.split_off(raw.len() - 4);
+                                contract_pb::CreateSmartContract::decode(&raw[..]).expect("pb decode error")
+                            }
+                            _ => {
+                                warn!("HEX: {}", hex::encode(raw));
+                                return Err("cannot handle protobuf bug".into());
+                            }
+                        }
                     }
                 };
+
                 let contract_status = maybe_result
                     .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
                     .unwrap_or_default();
