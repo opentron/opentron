@@ -14,12 +14,13 @@
 ```bash
 # Install RocksDB (https://github.com/bh1xuw/rust-rocks#how-to-compile)
 brew install rocksdb
-# Install Protobuf
-brew install protobuf
 
-# Clone OpenTron
-git clone --recurse-submodules https://github.com/oikos-cash/OpenTron.git
-cd OpenTron
+# Install Protobuf
+brew install protobuf cmake wget
+
+# Clone opentron
+git clone --recurse-submodules https://github.com/opentron/opentron.git
+cd opentron
 
 # Download ztron params
 ./scripts/download-ztron-params.sh
@@ -40,8 +41,8 @@ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/proto
 unzip protoc-3.11.4-linux-x86_64.zip
 sudo cp -rv bin include /usr/local
 
-git clone --recurse-submodules https://github.com/oikos-cash/OpenTron.git
-cd OpenTron
+git clone --recurse-submodules https://github.com/opentron/opentron.git
+cd opentron
 
 # Download ztron params
 ./scripts/download-ztron-params.sh
