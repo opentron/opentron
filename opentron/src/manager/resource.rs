@@ -482,7 +482,13 @@ impl EnergyProcessor<'_> {
         EnergyProcessor { manager }
     }
 
-    /// payEnergyBill
+    /// payEnergyBill - for both caller and origin.
+    ///
+    /// Situations:
+    /// - caller == origin, consume caller
+    /// - caller != origin
+    ///   - if origin has enough frozen energy, split energy bill by caller_percent
+    ///   - else, consume caller
     pub fn consume(
         &mut self,
         caller: Address,
@@ -496,34 +502,38 @@ impl EnergyProcessor<'_> {
             return Ok(());
         }
 
+        // NOTE: Won't handle origin = NULL due to type safety.
+
         let now = self.manager.get_head_slot();
         let caller_acct = self.manager.state_db.must_get(&keys::Account(caller));
+
         if caller == origin {
             debug!("E usage: caller=origin={}", energy_used);
             return self.consume_energy(caller, caller_acct, energy_used, now, ctx);
         }
 
-        let origin_acct = self.manager.state_db.must_get(&keys::Account(origin));
+        let mut origin_acct = self.manager.state_db.must_get(&keys::Account(origin));
 
         let mut origin_usage = energy_used * (100 - caller_percent) / 100;
         origin_usage = EnergyUtil::new(self.manager).get_origin_usage(&origin_acct, origin_energy_limit, origin_usage);
-        let caller_usage = energy_used - origin_usage;
 
-        if origin_usage > 0 {
-            assert!(self.consume_frozen_energy(origin, origin_acct, origin_usage, now));
+        if self.consume_frozen_energy(&mut origin_acct, origin_usage, now) {
+            self.manager
+                .state_db
+                .put_key(keys::Account(origin), origin_acct)
+                .unwrap();
             ctx.origin_energy_usage = origin_usage;
         }
 
-        // NOTE: Even when `caller_usage` is zero, `latestConsumeTime` is updated.
-        // So, do not optimize with `if caller_usage > 0` here.
-        //
-        // See-also: https://github.com/opentron/opentron/issues/31
+        let caller_usage = energy_used - origin_usage;
+
         self.consume_energy(caller, caller_acct, caller_usage, now, ctx)?;
         debug!("E usage: caller={} origin={}", caller_usage, origin_usage);
 
         Ok(())
     }
 
+    /// payEnergyBill - for single account.
     fn consume_energy(
         &mut self,
         addr: Address,
@@ -532,109 +542,79 @@ impl EnergyProcessor<'_> {
         now: i64,
         ctx: &mut TransactionContext,
     ) -> Result<(), String> {
-        if self.consume_frozen_energy(addr, acct.clone(), energy_used, now) {
+        let energy_left = EnergyUtil::new(self.manager).get_left_frozen_energy(&acct);
+
+        if energy_left >= energy_used {
+            assert!(self.consume_frozen_energy(&mut acct, energy_used, now) || energy_used == 0);
             ctx.energy_usage = energy_used;
-            return Ok(());
+            if energy_used > 0 {
+                debug!("E usage: total={} frozen={}", energy_used, energy_used,);
+            }
+        } else {
+            let consumed = self.consume_frozen_energy(&mut acct, energy_left, now);
+            ctx.energy_usage = energy_left;
+            if consumed {
+                assert!(energy_left >= 0);
+            } else {
+                assert!(energy_left == 0);
+            }
+
+            // NOTE: Since this implementation is lightweight, no need to check pass VERSION_3_6_5.
+            self.manager.block_energy_usage += energy_used - energy_left;
+
+            let energy_price = self.manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
+            let energy_fee = (energy_used - energy_left) * energy_price;
+
+            if acct.adjust_balance(-energy_fee).is_err() {
+                return Err("insufficient balance to burn for energy".into());
+            }
+            ctx.energy_fee = energy_fee;
+            self.manager.add_to_blackhole(energy_fee).unwrap();
+
+            debug!(
+                "E usage: total={} frozen={} burnt={} fee={}",
+                energy_used,
+                energy_left,
+                energy_used - energy_left,
+                energy_fee
+            );
         }
-
-        let consumed = self.consume_remain_frozen_energy(&mut acct, now);
-        if consumed > 0 {
-            self.manager
-                .state_db
-                .put_key(keys::Account(addr), acct.clone())
-                .unwrap();
-        }
-        assert!(consumed < energy_used && consumed >= 0);
-
-        // Will consume burnt energy
-        let energy_price = self.manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
-        let energy_fee = (energy_used - consumed) * energy_price;
-
-        ctx.energy_fee = energy_fee;
-        ctx.energy_usage = consumed;
-
-        if acct.adjust_balance(-energy_fee).is_err() {
-            return Err("insufficient balance to burn for energy".into());
-        }
-
-        debug!(
-            "E usage: total={} frozen={} burnt={} ",
-            energy_used,
-            consumed,
-            energy_used - consumed
-        );
-
-        self.manager.add_to_blackhole(energy_fee).unwrap();
         self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
-
-        self.manager.block_energy_usage += energy_used - consumed;
 
         Ok(())
     }
 
-    // Consume all remain E, return how much it consumed.
-    fn consume_remain_frozen_energy(&mut self, acct: &mut Account, now: i64) -> i64 {
-        let e_usage = acct.resource().energy_used;
-        let e_latest_slot = acct.resource().energy_latest_slot;
-        let e_limit = EnergyUtil::new(self.manager).calculate_global_energy_limit(&acct);
-
-        if e_limit == 0 {
-            return 0;
-        }
-
-        let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
-        // NOTE: Adjusted usage might exceed limit, when total energy weight changes or there's unfreeze.
-        // So, `.max(0)` to set its lower bound.
-        let energy_remain = (e_limit - new_e_usage).max(0);
-        if energy_remain == 0 {
-            return 0;
-        }
-
-        let latest_op_ts = self
-            .manager
-            .state_db
-            .must_get(&keys::DynamicProperty::LatestBlockTimestamp);
-        new_e_usage = adjust_usage(new_e_usage, energy_remain, now, now);
-
-        acct.latest_operation_timestamp = latest_op_ts;
-        acct.resource_mut().energy_used = new_e_usage;
-        acct.resource_mut().energy_latest_slot = now;
-
-        self.manager.block_energy_usage += energy_remain;
-
-        energy_remain
-    }
-
-    // useEnergy
-    fn consume_frozen_energy(&mut self, addr: Address, mut acct: Account, energy_used: i64, now: i64) -> bool {
+    // energyProcessor.useEnergy - caller must save acct.
+    fn consume_frozen_energy(&mut self, acct: &mut Account, energy_used: i64, now: i64) -> bool {
         let e_usage = acct.resource().energy_used;
         let e_latest_slot = acct.resource().energy_latest_slot;
         let e_limit = EnergyUtil::new(self.manager).calculate_global_energy_limit(&acct);
 
         let mut new_e_usage = adjust_usage(e_usage, 0, e_latest_slot, now);
 
-        if energy_used > 0 && energy_used > (e_limit - new_e_usage) {
+        debug!(
+            "energy usage = {}, e_limit - new_e_usage = {}",
+            energy_used,
+            e_limit - new_e_usage
+        );
+        if energy_used > e_limit - new_e_usage {
             return false;
         }
 
-        if energy_used == 0 && e_limit - new_e_usage < 0 {
-            return true;
-        }
-
+        debug!("E: used={} remain={}", energy_used, e_limit - new_e_usage);
         let latest_op_ts = self
             .manager
             .state_db
             .must_get(&keys::DynamicProperty::LatestBlockTimestamp);
         new_e_usage = adjust_usage(new_e_usage, energy_used, now, now);
 
-        acct.latest_operation_timestamp = latest_op_ts;
         acct.resource_mut().energy_used = new_e_usage;
+        acct.latest_operation_timestamp = latest_op_ts;
         acct.resource_mut().energy_latest_slot = now;
         if energy_used > 0 {
             debug!("E usage: {}/{} (+{})", new_e_usage, e_limit, energy_used);
         }
 
-        self.manager.state_db.put_key(keys::Account(addr), acct).unwrap();
         self.manager.block_energy_usage += energy_used;
 
         true
