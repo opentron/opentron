@@ -974,6 +974,7 @@ fn get_current_tvm_upgrade(manager: &Manager) -> TvmUpgrade {
         stake: false,
         istanbul: false,
         asset_issue: false,
+        multisig: manager.state_db.must_get(&keys::ChainParameter::AllowMultisig) != 0,
     }
 }
 

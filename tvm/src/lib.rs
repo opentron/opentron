@@ -25,6 +25,8 @@ pub struct TvmUpgrade {
     pub istanbul: bool,
     /// AllowTvmAssetIssueUpgrade
     pub asset_issue: bool,
+    /// AllowMultisig
+    pub multisig: bool,
 }
 
 impl TvmUpgrade {
@@ -48,6 +50,9 @@ impl From<TvmUpgrade> for Config {
             panic!("inconsistent TVM state");
         }
         let mut config = Config::tvm();
+        if upgrade.multisig {
+            config.has_buggy_origin = false;
+        }
         if upgrade.asset_transfer {
             config.allow_tvm_asset_transfer();
         }
