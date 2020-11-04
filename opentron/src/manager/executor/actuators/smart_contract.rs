@@ -419,16 +419,27 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             }
             cntr_acct.adjust_balance(self.call_value).unwrap();
         }
-        if self.call_token_value > 0 {
-            if owner_acct
-                .adjust_token_balance(self.call_token_id, -self.call_token_value)
-                .is_err()
-            {
-                return Err("insufficient token balance".into()); // validate error
+        // token transfer
+        let mut call_token_value = 0_i64;
+        let mut call_token_id = 0_i64;
+        let allow_trc10_transfer = manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmTransferTrc10Upgrade) !=
+            0;
+        // See-also: https://github.com/opentron/opentron/issues/41
+        // NOTE: Ignores value if allow_trc10_transfer is off.
+        if allow_trc10_transfer {
+            call_token_value = self.call_token_value;
+            call_token_id = self.call_token_id;
+            if call_token_value > 0 {
+                if owner_acct
+                    .adjust_token_balance(call_token_id, -call_token_value)
+                    .is_err()
+                {
+                    return Err("insufficient token balance".into()); // validate error
+                }
+                cntr_acct.adjust_token_balance(call_token_id, call_token_value).unwrap();
             }
-            cntr_acct
-                .adjust_token_balance(self.call_token_id, self.call_token_value)
-                .unwrap();
         }
         manager
             .state_db
@@ -461,8 +472,8 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             address: H160::from_slice(cntr_address.as_tvm_bytes()),
             caller: H160::from_slice(owner_address.as_tvm_bytes()),
             call_value: self.call_value.into(),
-            call_token_id: self.call_token_id.into(),
-            call_token_value: self.call_token_value.into(),
+            call_token_id: call_token_id.into(),
+            call_token_value: call_token_value.into(),
         };
 
         let mut rt = tvm::Runtime::new(code, data, vm_ctx, &config);
