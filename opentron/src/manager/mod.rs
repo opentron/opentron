@@ -204,7 +204,7 @@ impl Manager {
         let elapsed = (Utc::now().timestamp_nanos() - started_at) as f64 / 1_000_000.0;
         if !block.transactions.is_empty() {
             info!(
-                "block #{} v{} txns={:<3} total_time={}ms",
+                "block #{} v{} txns={:<3} total_time={:.3}ms",
                 block.number(),
                 block.version(),
                 block.transactions.len(),
@@ -212,7 +212,7 @@ impl Manager {
             );
         } else {
             trace!(
-                "block #{} v{} empty total_time={}ms",
+                "block #{} v{} empty total_time={:.3}ms",
                 block.number(),
                 block.version(),
                 elapsed
