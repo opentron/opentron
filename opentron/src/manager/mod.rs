@@ -197,7 +197,7 @@ impl Manager {
         // . applyBlock = processBlock + updateFork
         self.process_block(block)?;
 
-        // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is not removed.
+        // NOTE: OpenTron use different logic to handle verson fork. So `updateFork` is removed.
         // And no need to updateFork.
         self.commit_current_layers();
 
@@ -247,7 +247,6 @@ impl Manager {
         }
 
         // 4. Adaptive energy processor:
-        // TODO, no energy implemented
         if self.block_energy_usage > 0 {
             if self.state_db.must_get(&keys::ChainParameter::AllowAdaptiveEnergy) != 0 {
                 debug!("block energy = {}", self.block_energy_usage);

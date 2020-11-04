@@ -42,24 +42,22 @@ impl TvmUpgrade {
     ) -> fn(H160, &[u8], Option<usize>, &dyn Backend) -> Option<Result<(ExitSucceed, Vec<u8>, usize), ExitError>> {
         return self::precompile::tron_precompile;
     }
-}
 
-impl From<TvmUpgrade> for Config {
-    fn from(upgrade: TvmUpgrade) -> Self {
-        if !upgrade.validate() {
+    pub fn to_tvm_config(&self) -> Config {
+        if !self.validate() {
             panic!("inconsistent TVM state");
         }
         let mut config = Config::tvm();
-        if upgrade.multisig {
+        if self.multisig {
             config.has_buggy_origin = false;
         }
-        if upgrade.asset_transfer {
+        if self.asset_transfer {
             config.allow_tvm_asset_transfer();
         }
-        if upgrade.constantinople {
+        if self.constantinople {
             config.allow_tvm_constantinople();
         }
-        if upgrade.solidity059 {
+        if self.solidity059 {
             config.allow_tvm_solidity059();
         }
         // TODO: handle 4.1 update.

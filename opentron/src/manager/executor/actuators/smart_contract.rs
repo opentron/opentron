@@ -152,15 +152,13 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
         let mut cntr = self.new_contract.as_ref().unwrap().clone();
         cntr.contract_address = cntr_address.as_bytes().to_vec();
 
-        let allow_tvm_constantinople = manager
-            .state_db
-            .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
-            0;
-
         let call_value = new_cntr.call_value;
         if call_value > 0 {
             if owner_acct.adjust_balance(-call_value).is_err() {
-                return Err("insufficient balance".into()); // validate error
+                return Err(format!(
+                    "insufficient balance, balance={} required={}",
+                    owner_acct.balance, call_value
+                )); // validate error
             }
             cntr_acct.adjust_balance(call_value).unwrap();
         }
@@ -185,9 +183,14 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
             .put_key(keys::Account(owner_address), owner_acct)
             .unwrap();
         manager.state_db.put_key(keys::Contract(cntr_address), cntr).unwrap();
+
+        let allow_tvm_constantinople = manager
+            .state_db
+            .must_get(&keys::ChainParameter::AllowTvmConstantinopleUpgrade) !=
+            0;
         if !allow_tvm_constantinople {
             let code = legacy_get_runtime_code(&new_cntr.bytecode);
-            log::debug!("legacy code size => {}", code.len());
+            log::debug!("save legacy code size => {}", code.len());
             manager
                 .state_db
                 .put_key(keys::ContractCode(cntr_address), code.to_vec())
@@ -199,7 +202,7 @@ impl BuiltinContractExecutorExt for contract_pb::CreateSmartContract {
 
         let upgrade = get_current_tvm_upgrade(manager);
         let precompile = upgrade.precompile();
-        let config = upgrade.into();
+        let config = upgrade.to_tvm_config();
 
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
@@ -309,11 +312,9 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
         let cntr = maybe_cntr.unwrap();
         let origin_address = *Address::from_bytes(&cntr.origin_address);
 
-        let fee_limit = ctx.fee_limit;
         let call_value = self.call_value;
         let mut call_token_value = 0_i64;
         let mut call_token_id = 0_i64;
-
         let allow_trc10_transfer = manager
             .state_db
             .must_get(&keys::ChainParameter::AllowTvmTransferTrc10Upgrade) !=
@@ -350,13 +351,11 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             .get(&keys::ContractCode(cntr_address))
             .map_err(|_| "db query error")?;
         if code.is_some() && !code.as_ref().unwrap().is_empty() {
-            log::debug!("fee_limit => {}", ctx.fee_limit);
             if ctx.fee_limit < 0 || ctx.fee_limit > MAX_FEE_LIMIT {
                 return Err("invalid fee_limit".into());
             }
 
             // TODO: check constant call
-
             let caller_acct = manager
                 .state_db
                 .get(&keys::Account(owner_address))
@@ -365,14 +364,13 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
             let origin_acct = manager.state_db.must_get(&keys::Account(origin_address));
 
             let energy_limit = if owner_address == origin_address {
-                get_account_energy_limit(manager, &caller_acct, fee_limit, call_value)
+                get_account_energy_limit(manager, &caller_acct, ctx.fee_limit, call_value)
             } else {
-                get_total_energy_limit(manager, &caller_acct, &origin_acct, &cntr, fee_limit, call_value)
+                get_total_energy_limit(manager, &caller_acct, &origin_acct, &cntr, ctx.fee_limit, call_value)
             };
-            debug!("energy_limit = {}", energy_limit);
             ctx.energy_limit = energy_limit;
         } else {
-            warn!("code is empty!");
+            warn!("contract code is empty!");
         }
         Ok(())
     }
@@ -412,43 +410,51 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
         manager.new_layer();
 
-        // transfer
+        let mut has_transfer = false;
+        // transfer TRX
         if self.call_value > 0 {
+            has_transfer = true;
             if owner_acct.adjust_balance(-self.call_value).is_err() {
-                return Err("insufficient balance".into()); // validate error
+                return Err(format!(
+                    "insufficient balance, balance={} required={}",
+                    owner_acct.balance, self.call_value
+                )); // validate error
             }
             cntr_acct.adjust_balance(self.call_value).unwrap();
         }
-        // token transfer
+        // transfer TRC10
         let mut call_token_value = 0_i64;
         let mut call_token_id = 0_i64;
-        let allow_trc10_transfer = manager
-            .state_db
-            .must_get(&keys::ChainParameter::AllowTvmTransferTrc10Upgrade) !=
-            0;
         // See-also: https://github.com/opentron/opentron/issues/41
         // NOTE: Ignores value if allow_trc10_transfer is off.
-        if allow_trc10_transfer {
+        if self.call_token_value > 0 &&
+            manager
+                .state_db
+                .must_get(&keys::ChainParameter::AllowTvmTransferTrc10Upgrade) !=
+                0
+        {
+            has_transfer = true;
             call_token_value = self.call_token_value;
             call_token_id = self.call_token_id;
-            if call_token_value > 0 {
-                if owner_acct
-                    .adjust_token_balance(call_token_id, -call_token_value)
-                    .is_err()
-                {
-                    return Err("insufficient token balance".into()); // validate error
-                }
-                cntr_acct.adjust_token_balance(call_token_id, call_token_value).unwrap();
+            if owner_acct
+                .adjust_token_balance(call_token_id, -call_token_value)
+                .is_err()
+            {
+                return Err("insufficient token balance".into()); // validate error
             }
+            cntr_acct.adjust_token_balance(call_token_id, call_token_value).unwrap();
         }
-        manager
-            .state_db
-            .put_key(keys::Account(cntr_address), cntr_acct)
-            .unwrap();
-        manager
-            .state_db
-            .put_key(keys::Account(owner_address), owner_acct)
-            .unwrap();
+
+        if has_transfer {
+            manager
+                .state_db
+                .put_key(keys::Account(cntr_address), cntr_acct)
+                .unwrap();
+            manager
+                .state_db
+                .put_key(keys::Account(owner_address), owner_acct)
+                .unwrap();
+        }
 
         // build execution context
         let code = manager
@@ -462,7 +468,7 @@ impl BuiltinContractExecutorExt for contract_pb::TriggerSmartContract {
 
         let upgrade = get_current_tvm_upgrade(manager);
         let precompile = upgrade.precompile();
-        let config = upgrade.into();
+        let config = upgrade.to_tvm_config();
 
         let mut backend = StateBackend::new(owner_address, manager, ctx);
         let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
@@ -687,7 +693,10 @@ pub fn execute_smart_contract(
             .ok_or_else(|| "contract not found")?;
         if trigger.call_value > 0 {
             if owner_acct.adjust_balance(-trigger.call_value).is_err() {
-                return Err("insufficient balance".into());
+                return Err(format!(
+                    "insufficient balance, balance={} required={}",
+                    owner_acct.balance, trigger.call_value
+                ));
             }
             cntr_acct.adjust_balance(trigger.call_value).unwrap();
         }
@@ -723,7 +732,7 @@ pub fn execute_smart_contract(
 
     let upgrade = get_current_tvm_upgrade(manager);
     let precompile = upgrade.precompile();
-    let config = upgrade.into();
+    let config = upgrade.to_tvm_config();
 
     let mut backend = StateBackend::new(owner_address, manager, ctx);
     let mut executor = tvm::StackExecutor::new_with_precompile(&backend, energy_limit, &config, precompile);
@@ -940,13 +949,15 @@ fn get_total_energy_limit_with_float_ratio(
     call_value: i64,
 ) -> i64 {
     let caller_energy_limit = get_account_energy_limit_with_float_ratio(manager, caller, fee_limit, call_value);
-    let consume_user_energy_percent = cntr.consume_user_energy_percent;
+    let user_energy_percent = cntr.consume_user_energy_percent;
+    let origin_energy_percent = 100 - user_energy_percent;
 
     // creatorEnergyFromFreeze
     let origin_energy_limit = EnergyUtil::new(manager).get_left_frozen_energy(origin);
 
-    if origin_energy_limit * consume_user_energy_percent > (100 - consume_user_energy_percent) * caller_energy_limit {
-        caller_energy_limit * 100 / consume_user_energy_percent
+    // orgin/caller > origin_percent/user_percent
+    if origin_energy_limit * user_energy_percent > caller_energy_limit * origin_energy_percent {
+        caller_energy_limit * 100 / user_energy_percent
     } else {
         caller_energy_limit + origin_energy_limit
     }
