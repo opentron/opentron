@@ -9,9 +9,9 @@ use proto2::contract as contract_pb;
 use proto2::state::ResourceDelegation;
 use state::keys;
 
-use super::super::TransactionContext;
 use super::super::super::governance::reward::RewardController;
 use super::super::Manager;
+use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 
 impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
@@ -86,9 +86,17 @@ impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
         let duration = self.frozen_duration * DAY_IN_MS;
         let expire_time = now + duration;
 
-        let maybe_recv_addr = Address::try_from(&self.receiver_address).ok();
+        // NOTE: before AllowDelegateResource, receiver_address is not checked in `validate`.
+        // Avoid using receiver_address before AllowDelegateResource.
+        //
+        // See-also: https://github.com/opentron/opentron/issues/44
+        let maybe_recv_addr = if manager.state_db.must_get(&keys::ChainParameter::AllowDelegateResource) != 0 {
+            Address::try_from(&self.receiver_address).ok()
+        } else {
+            None
+        };
 
-        // NOTE: In OpenTron, delegate to others and freeze for oneself is handled in almost the same logic.
+        // NOTE: In OpenTron, delegate to others and freeze for oneself is handled ~~in almost the same logic~~.
         let res_type = ResourceCode::from_i32(self.resource).unwrap();
         if let Some(recv_addr) = maybe_recv_addr {
             delegate_resource(
