@@ -16,7 +16,8 @@ CALLTOKEN, TOKENBALANCE, CALLTOKENVALUE, CALLTOKENID
 
 Version: 3.5
 
-Add `isTokenTransferMsg = true` property to token call. Check token id.
+- Add `isTokenTransferMsg = true` property to token call. Check token id
+- Fix `ORIGIN` opcode, 21-bytes to 20-byte
 
 NOTE: This TVM change is under multisig scope. Might be useless.
 
@@ -46,13 +47,10 @@ Version: 4.0.0 / 4.0.1
 
 NOTE: `pedersenHash` is called `merkleTree` in java-tron, which is inconsistent.
 
-### AllowTvmStakeUpgrade, AllowTvmIstanbulUpgrade, AllowTvmAssetIssueUpgrade
+### AllowTvmIstanbulUpgrade
 
-AllowTvmStake, AllowTvmIstanbul, AllowTvmAssetIssue
+Version: 4.1.0
 
-Version: 4.1
-
-- New OpCode: STAKE, UNSTAKE, WITHDRAWREWARD, REWARDBALANCE, TOKENISSUE, UPDATEASSET, ISSRCANDIDATE
 - Impl EVM OpCode: CHAINID, SELFBALANCE
 - OpCode Change:
   - CREATE2 impl
@@ -60,5 +58,3 @@ Version: 4.1
   - bn128add: energy change from 500 to 150
   - bn128mul: energy change from 40000 to 6000
   - bn128pairing: energy change
-
-NOTE: This is the first release with multiple TVM upgrade proposals, which is inconsistent.
