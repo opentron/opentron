@@ -3,7 +3,7 @@ use std::str;
 use std::sync::{Arc, RwLock};
 
 use ::state::keys;
-use async_graphql::{Context, Enum, Error, Result, InputObject, Object, SimpleObject};
+use async_graphql::{Context, Enum, Error, InputObject, Object, Result, SimpleObject};
 use byteorder::{ByteOrder, BE};
 use chain::{IndexedBlockHeader, IndexedTransaction};
 use chrono::{DateTime, TimeZone, Utc};
@@ -391,7 +391,6 @@ impl CallResult {
             .map(|receipt| receipt.bandwidth_usage)
             .unwrap_or_default()
             .into()
-
     }
     /// VmStatus is the result of the call.
     async fn vm_status(&self) -> VmStatus {
@@ -954,7 +953,7 @@ impl QueryRoot {
         use proto2::contract::TriggerSmartContract;
 
         let trigger = TriggerSmartContract {
-            owner_address: data.from.unwrap().0.as_bytes().to_vec(),
+            owner_address: data.from.unwrap_or_else(Default::default).0.as_bytes().to_vec(),
             contract_address: data.to.unwrap().0.as_bytes().to_vec(),
             data: data.data.unwrap().0,
             call_value: data.value.map(|val| val.0).unwrap_or_default(),
@@ -1040,6 +1039,5 @@ impl MutationRoot {
         let receipt = manager.dry_run_transaction(&indexed_txn)?;
 
         Ok(CallResult { receipt })
-
     }
 }

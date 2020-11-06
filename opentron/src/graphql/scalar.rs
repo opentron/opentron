@@ -46,6 +46,12 @@ impl From<keys::Address> for Address {
     }
 }
 
+impl Default for Address {
+    fn default() -> Address {
+        Address(keys::Address::default())
+    }
+}
+
 #[Scalar]
 impl ScalarType for Address {
     fn parse(value: Value) -> InputValueResult<Self> {
