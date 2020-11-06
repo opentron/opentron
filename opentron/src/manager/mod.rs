@@ -232,18 +232,19 @@ impl Manager {
         // 2. reset block energy statistics, used in adaptive energy
         self.block_energy_usage = 0;
 
-        // NOTE: won't pre-check transaction signature. useless.
+        // 3. Pre-check transaction signature in parallel.
+        let recovered_owners = block.recover_transaction_owners();
 
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
-        for txn in &block.transactions {
+        for (txn, recovered_addrs) in block.transactions.iter().zip(recovered_owners.into_iter()) {
             debug!(
                 "transaction => {:?} at block #{} v{}",
                 txn.hash,
                 block.number(),
                 block.version()
             );
-            self.process_transaction(&txn, block)?;
+            self.process_transaction(&txn, recovered_addrs, block)?;
         }
 
         // 4. Adaptive energy processor:
@@ -287,7 +288,12 @@ impl Manager {
 
     // NOTE: TransactionInfo is renamed to TransactionReceipt
     /// Process the transaction and saves result to current StateDB layer.
-    fn process_transaction(&mut self, txn: &IndexedTransaction, block: &IndexedBlock) -> Result<()> {
+    fn process_transaction(
+        &mut self,
+        txn: &IndexedTransaction,
+        recovered_addrs: Result<Vec<Address>, impl std::error::Error>,
+        block: &IndexedBlock,
+    ) -> Result<()> {
         // 1.validateTapos
         if !self.validate_transaction_tapos(txn) {
             return Err(new_error("tapos validation failed"));
@@ -301,12 +307,14 @@ impl Manager {
             return Err(new_error("duplicated transaction"));
         }
 
-        // 4.validateSignature (NOTE: move to executor)
+        // 4.validateSignature (NOTE: move partial logic to executor)
+        let recovered_addrs = recovered_addrs.map_err(|_| new_error("error while recover address from signature"))?;
+
         // 5.cusumeBandwidth (NOTE: move to executor)
         // 6.cusumeMultiSigFee (NOTE: move to BandwidthProcessor)
 
         // 7. transaction is executed by TransactionTrace.
-        let txn_receipt = TransactionExecutor::new(self).execute(txn, &block.header)?;
+        let txn_receipt = TransactionExecutor::new(self).execute(txn, recovered_addrs, &block.header)?;
         self.state_db.put_key(keys::TransactionReceipt(txn.hash), txn_receipt)?;
         Ok(())
     }
@@ -328,7 +336,7 @@ impl Manager {
         let old_layers = self.layers;
         self.new_layer();
 
-        let maybe_receipt = TransactionExecutor::new(self).execute(txn, &block_header);
+        let maybe_receipt = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
 
         let added_layers = self.layers - old_layers;
         debug!("dry run, rollback layers={}", added_layers);

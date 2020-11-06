@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::str;
 
-use ::keys::b58encode_check;
+use ::keys::{b58encode_check, Address};
 use chain::{IndexedBlockHeader, IndexedTransaction};
 use log::{debug, error, warn};
 use primitive_types::H256;
@@ -201,11 +201,11 @@ impl<'m> TransactionExecutor<'m> {
     pub fn execute(
         &mut self,
         txn: &IndexedTransaction,
+        recover_addrs: Vec<Address>,
         block_header: &IndexedBlockHeader,
     ) -> Result<TransactionReceipt, String> {
         let cntr = txn.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
         let cntr_type = ContractType::from_i32(cntr.r#type).expect("unhandled system contract type");
-        let recover_addrs = txn.recover_owner().expect("error while verifying signature");
         let maybe_result = txn.raw.result.get(0);
 
         let permission_id = cntr.permission_id;

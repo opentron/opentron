@@ -77,6 +77,15 @@ impl IndexedBlock {
         IndexedBlockHeader::from_raw(block_header).map(|header| Self::new(header, transactions))
     }
 
+    /// Recover owner addresses of transactiones.
+    pub fn recover_transaction_owners(&self) -> Vec<Result<Vec<Address>, keys::Error>> {
+        if self.transactions.len() > 10 {
+            self.transactions.par_iter().map(|txn| txn.recover_owner()).collect()
+        } else {
+            self.transactions.iter().map(|txn| txn.recover_owner()).collect()
+        }
+    }
+
     pub fn hash(&self) -> &H256 {
         &self.header.hash
     }
