@@ -633,12 +633,14 @@ impl StateDB {
     }
 
     pub fn init_genesis(&mut self, genesis: &GenesisConfig, chain: &ChainConfig) -> Result<(), BoxError> {
-        if let Some(ver) = self.get(&keys::DynamicProperty::DbVersion)? {
-            info!("state-db is already inited, ver: {}", ver);
+        if let Some(db_ver) = self.get(&keys::DynamicProperty::DbVersion)? {
             // TODO: check migration here
             let latest_block_hash = self.must_get(&keys::LatestBlockHash);
-            info!("latest block hash {:?}", latest_block_hash);
-            info!("block num {:?}", self.must_get(&DynamicProperty::LatestBlockNumber));
+            let latest_block_numer = self.must_get(&DynamicProperty::LatestBlockNumber);
+            info!(
+                "state-db is already inited, db version: {}, block number: {}, block hash: {:?}",
+                db_ver, latest_block_numer, latest_block_hash
+            );
 
             return Ok(());
         }
@@ -657,7 +659,7 @@ impl StateDB {
         // WitnessSchedule is inited in first maintenance cycle.
 
         self.db.solidify_layers()?;
-        info!("inited state-db from genesis");
+        info!("state-db is inited from genesis");
         Ok(())
     }
 
@@ -665,7 +667,6 @@ impl StateDB {
         let mut witnesses: Vec<(Address, i64)> = vec![];
         for witness in &genesis.witnesses {
             let addr = witness.address.parse::<Address>()?;
-            println!("{:?}", witness);
             let wit = state_pb::Witness {
                 address: addr.as_bytes().to_vec(),
                 url: witness.url.clone(),
@@ -693,7 +694,6 @@ impl StateDB {
 
         for alloc in &genesis.allocs {
             let addr: Address = alloc.address.parse()?;
-            println!("{:?}", alloc);
             let acct = state_pb::Account {
                 name: alloc.name.clone(),
                 balance: alloc.balance,
