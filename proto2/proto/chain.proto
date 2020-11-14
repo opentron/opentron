@@ -99,12 +99,16 @@ enum ContractType {
   UpdateBrokerageContract = 49;
   // NOTE: Only used in active permission bits, and nile testnet.
   ShieldedTransferContract = 51;
+  // NOTE: Introduced in 4.1
+  MarketSellAssetContract = 52;
+  MarketCancelOrderContract = 53;
 }
 
 message Transaction {
   message Contract {
     ContractType type = 1;
     google.protobuf.Any parameter = 2;
+    // NOE: Not used.
     bytes provider = 3;
     // renamed: ContractName
     bytes contract_name = 4;
@@ -142,14 +146,14 @@ message Transaction {
       JVM_STACK_OVER_FLOW = 12;
     }
 
-    int64 fee = 1;
     // renamed: ret
-    // NOTE: Actually not used. Always = 0
+    // NOTE: Actually meaningless in a block storage. Always = 0
     Status status = 2;
     // renamed: contractRet
     ContractStatus contract_status = 3;
 
-    // NOTE: not used, bad design.
+    // NOTE: All following fields are not used. Some can be found in TransactionInfo.
+    int64 fee = 1;
     // renamed: assetIssueID
     string asset_issue_id = 14;
     int64 withdraw_amount = 15;
