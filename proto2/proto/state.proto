@@ -241,6 +241,8 @@ message TransactionReceipt {
 
 // Chain parameters, known as proposals, can be changed via proposal.
 enum ChainParameter {
+  // # Chain core parameters.
+  //
   // The maintenance interval of SRs.
   //
   // Renamed: `MaintenanceTimeInterval`
@@ -267,8 +269,11 @@ enum ChainParameter {
   //
   // Note: 1 to remove, -1 denotes already removed
   RemovePowerOfGr = 10;
+  // Enabled: 4.1
+  AllowPbft = 40;
 
-  // New features and fixes of new versions.
+  // # New features and fixes of new versions.
+  //
   // Allow update an accunt's name; Allow duplicate names.
   //
   // Default: 0
@@ -306,7 +311,7 @@ enum ChainParameter {
   //
   // Default: 0
   //
-  // Mainnet: 0 (not passed)
+  // Mainnet: 0 (not passed due to bad design)
   ForbidTransferToContract = 35;
   // Add `UpdateBrokerageContract`, something to do with witness reward. Decentralized vote dividend.
   // TODO: bad naming
@@ -315,7 +320,13 @@ enum ChainParameter {
   //
   // Enabled: 3.6.5
   AllowChangeDelegation = 30;
+  // Add market transaction support.
+  //
+  // Enabled: 4.1
+  AllowMarketTransaction = 44;
 
+  // # Fees
+  //
   // Fees, in SUN.
   // Renamed: `TransactionFee`
   //
@@ -325,6 +336,12 @@ enum ChainParameter {
   //
   // Mainnet: 10
   EnergyFee = 11;
+  // Used in `CreateAccount`, `Transfer`, `TransferAsset`.
+  //
+  // Default: 0
+  CreateNewAccountFeeInSystemContract = 7;
+  // Default: 1
+  CreateNewAccountBandwidthRate = 8;
   // The cost of applying to be an SR account.
   //
   // Renamed: `AccountUpgradeCost`
@@ -359,13 +376,12 @@ enum ChainParameter {
   //
   // Range: [0, 100_000_000000]
   MultisigFee = 23;
-  // Used in `CreateAccount`, `Transfer`, `TransferAsset`.
-  //
-  // Default: 0
-  CreateNewAccountFeeInSystemContract = 7;
-  // Default: 1
-  CreateNewAccountBandwidthRate = 8;
+  // Market fees.
+  MarketSellFee = 45;
+  MarketCancelFee = 46;
 
+  // # Energy / bandwidth model
+  //
   // Adaptive energy.
   // Enabled by EnergyLimit update, Deprecated by 3.2.2.
   //
@@ -397,6 +413,8 @@ enum ChainParameter {
   // Default: 1000
   AdaptiveResourceLimitMultiplier = 29;
 
+  // # Witness and rewarding
+  //
   // Witness rewards. Standby witness = 27 active witnesses + 100 partner witnesses.
   // SR block generation reward.
   //
@@ -426,7 +444,8 @@ enum ChainParameter {
   // Mainnet: 160_000_000
   StandbyWitnessPayPerBlock = 31;
 
-  // TVM updates
+  // # TVM updates
+  //
   // TVM v3.2 update. CALLTOKEN, TOKENBALANCE, CALLTOKENVALUE, CALLTOKENID.
   //
   // Requires: `AllowSameTokenName`
@@ -461,14 +480,17 @@ enum ChainParameter {
   //
   // Default: config, 0
   AllowTvmShieldedUpgrade = 39;
+  // TVM 4.1 update. CHAINID, SELFBALANCE, CREATE2 support.
+  //
+  // Enabled: 4.1
+  AllowTvmIstanbulUpgrade = 41;
 
-  // Useless.
+  // # Useless.
   //
   // Enabled: 3.6
   //
   // Default: 0
   AllowProtoFilterNum = 24;
-
   // Legacy. Only available on nile testnet.
   //
   // Enabled: 3.7

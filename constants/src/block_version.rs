@@ -77,12 +77,8 @@ pub enum BlockVersion {
     ///
     /// - support AllowTvmShieldedUpgrade proposal
     GreatVoyage4_0_1 = 17,
-    /// Unreleased.
-    ///
     /// - AllowPbft
     /// - AllowTvmIstanbulUpgrade
-    /// - AllowTvmStakeUpgrade
-    /// - AllowTvmAssetIssueUpgrade
     /// - AllowMarketTransaction
     ///   - MarketSellFee
     ///   - MarketCancelFee
@@ -92,7 +88,12 @@ pub enum BlockVersion {
 impl BlockVersion {
     pub fn fork_policy(&self) -> ForkPolicy {
         match *self {
-            BlockVersion::GreatVoyage4_1_0 => unimplemented!(),
+            BlockVersion::GreatVoyage4_1_0 => ForkPolicy::New {
+                // GMT 2020-08-07 06:00:00
+                timestamp: 1596780000_000,
+                // 27 * 0.8 = 21.6
+                min_upgrade_percent: 80,
+            },
             BlockVersion::GreatVoyage4_0_1 => ForkPolicy::New {
                 // GMT 2020-08-07 06:00:00
                 timestamp: 1596780000_000,

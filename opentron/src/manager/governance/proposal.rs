@@ -210,6 +210,23 @@ impl ProposalUtil<'_> {
                 }
                 self.accept_bool(value)
             }
+            AllowPbft => {
+                self.require_version(BlockVersion::GreatVoyage4_1_0)?;
+                self.accept_true(value)
+            }
+            AllowTvmIstanbulUpgrade => {
+                self.require_version(BlockVersion::GreatVoyage4_1_0)?;
+                self.accept_true(value)
+            }
+            AllowMarketTransaction => {
+                self.require_version(BlockVersion::GreatVoyage4_1_0)?;
+                self.accept_true(value)
+            }
+            MarketSellFee | MarketCancelFee => {
+                self.require_version(BlockVersion::GreatVoyage4_1_0)?;
+                self.require_proposal(ChainParameter::AllowMarketTransaction)?;
+                self.accept_range_value(value, 0, 10_000_000_000)
+            }
             // NOTE: In nile's branch, this is wrongly marked as 4.0.
             //
             // See-also: https://github.com/tronprotocol/java-tron/pull/3372
@@ -224,6 +241,7 @@ impl ProposalUtil<'_> {
         }
     }
 
+    /// Is is the block version fork passed?
     fn require_version(&self, version: BlockVersion) -> Result<(), String> {
         if !ForkController::new(self.manager).pass_version(version)? {
             return Err("proposal is unavaliable for current chain version".into());
