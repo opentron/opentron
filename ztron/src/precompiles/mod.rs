@@ -7,11 +7,9 @@
 use bellman::groth16::{Parameters, PreparedVerifyingKey, Proof};
 use bls12_381::Bls12;
 use ff::PrimeField;
+use group::GroupEncoding;
 use lazy_static::lazy_static;
 use primitive_types::U256;
-// use zcash_primitives::jubjub::edwards;
-// use zcash_primitives::jubjub::Unknown;
-use group::GroupEncoding;
 use zcash_primitives::merkle_tree::Hashable;
 use zcash_primitives::redjubjub::{PublicKey, Signature};
 use zcash_primitives::sapling::{merkle_hash, Node};

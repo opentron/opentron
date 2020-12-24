@@ -1,13 +1,13 @@
 use bech32::{FromBase32, ToBase32};
 use ff::Field;
 use ff::PrimeField;
+use group::GroupEncoding;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::mem;
 use std::str::FromStr;
 use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
 use zcash_primitives::primitives::{Diversifier, PaymentAddress};
-use group::GroupEncoding; // serialization; to_bytes
 
 pub fn generate_rcm() -> Vec<u8> {
     let mut rng = rand::rngs::OsRng;
