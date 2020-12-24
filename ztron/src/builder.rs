@@ -4,24 +4,23 @@ use crypto_api_chachapoly::ChachaPolyIetf;
 use ff::{Field, PrimeField};
 use keys::Address;
 use lazy_static::lazy_static;
-use pairing::bls12_381::{Bls12, Fr};
 use primitive_types::U256;
 use rand::{rngs::OsRng, CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
-use zcash_primitives::jubjub::edwards;
-use zcash_primitives::jubjub::fs::{Fs, FsRepr};
-use zcash_primitives::jubjub::Unknown;
+// use zcash_primitives::jubjub::edwards;
+// use zcash_primitives::jubjub::fs::{Fs, FsRepr};
+// use zcash_primitives::jubjub::Unknown;
 use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
 use zcash_primitives::merkle_tree::MerklePath;
 use zcash_primitives::note_encryption::{Memo, SaplingNoteEncryption};
-use zcash_primitives::primitives::{Diversifier, Note, PaymentAddress};
+use zcash_primitives::primitives::{Diversifier, Note, PaymentAddress, Rseed};
 use zcash_primitives::prover::TxProver;
 use zcash_primitives::redjubjub::{PrivateKey, PublicKey, Signature};
 use zcash_primitives::sapling;
 use zcash_primitives::sapling::Node;
 use zcash_primitives::transaction::components::{Amount, GROTH_PROOF_SIZE};
-use zcash_primitives::JUBJUB;
 use zcash_proofs::prover::LocalTxProver;
+use group::GroupEncoding;
 
 use crate::keys::ZAddress;
 
@@ -74,10 +73,11 @@ pub fn parse_merkle_path(path: &[u8], position: u64) -> Result<MerklePath<Node>,
     MerklePath::from_slice(&formated_path).map_err(|_| Error::InvalidMerklePath)
 }
 
-pub fn parse_rcm(value: &[u8]) -> Result<Fs, Error> {
-    let mut r = FsRepr::default();
-    r.as_mut().copy_from_slice(value);
-    Fs::from_repr(r).ok_or(Error::InvalidRcm)
+pub fn parse_rcm(value: &[u8]) -> Result<jubjub::Fr, Error> {
+    let mut r = [0u8; 32];
+    r.copy_from_slice(value);
+    // TODO: handle error
+    Ok(jubjub::Fr::from_bytes(&r).unwrap())
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -97,18 +97,18 @@ struct TransparentOutput {
 }
 
 struct SaplingSpend {
-    expsk: ExpandedSpendingKey<Bls12>,
+    expsk: ExpandedSpendingKey,
     diversifier: Diversifier,
-    note: Note<Bls12>,
-    alpha: Fs,
+    note: Note,
+    alpha: jubjub::Fr,
     merkle_path: MerklePath<Node>,
 }
 
 pub struct SpendDescription {
-    pub cv: edwards::Point<Bls12, Unknown>,
-    pub anchor: Fr,
+    pub cv: jubjub::ExtendedPoint,
+    pub anchor: bls12_381::Scalar,
     pub nullifier: [u8; 32],
-    pub rk: PublicKey<Bls12>,
+    pub rk: PublicKey,
     pub zkproof: [u8; GROTH_PROOF_SIZE],
     pub spend_auth_sig: Option<Signature>,
 }
@@ -117,28 +117,28 @@ impl SpendDescription {
     fn generate_spend_sig(&mut self, spend: &SaplingSpend, sighash: &[u8; 32]) {
         let mut rng = rand::rngs::OsRng;
 
-        let spend_sig = sapling::spend_sig(PrivateKey(spend.expsk.ask), spend.alpha, sighash, &mut rng, &JUBJUB);
+        let spend_sig = sapling::spend_sig(PrivateKey(spend.expsk.ask), spend.alpha, sighash, &mut rng);
         self.spend_auth_sig = Some(spend_sig);
     }
 }
 
 impl SaplingSpend {
     fn generate_spend_proof<P: TxProver>(&self, ctx: &mut P::SaplingProvingContext, prover: &P) -> SpendDescription {
-        let fvk = FullViewingKey::from_expanded_spending_key(&self.expsk, &JUBJUB);
+        let fvk = FullViewingKey::from_expanded_spending_key(&self.expsk);
         let nf = {
             let mut raw = [0u8; 32];
-            raw.copy_from_slice(&self.note.nf(&fvk.vk, self.merkle_path.position, &JUBJUB));
+            raw.copy_from_slice(&self.note.nf(&fvk.vk, self.merkle_path.position));
             raw
         };
-        let proof_generation_key = self.expsk.proof_generation_key(&JUBJUB);
-        let anchor = self.merkle_path.root(Node::new(self.note.cm(&JUBJUB).into())).into();
+        let proof_generation_key = self.expsk.proof_generation_key();
+        let anchor = self.merkle_path.root(Node::new(self.note.cmu().into())).into();
 
         let (zkproof, cv, rk) = prover
             .spend_proof(
                 ctx,
                 proof_generation_key,
                 self.diversifier,
-                self.note.r,
+                self.note.rseed,
                 self.alpha,
                 self.note.value,
                 anchor,
@@ -159,15 +159,15 @@ impl SaplingSpend {
 
 pub struct SaplingOutput {
     ovk: OutgoingViewingKey,
-    to: PaymentAddress<Bls12>,
-    note: Note<Bls12>,
+    to: PaymentAddress,
+    note: Note,
     memo: Memo,
 }
 
 pub struct OutputDescription {
-    pub cv: edwards::Point<Bls12, Unknown>,
-    pub cmu: Fr,
-    pub ephemeral_key: edwards::Point<Bls12, Unknown>,
+    pub cv: jubjub::ExtendedPoint,
+    pub cmu: bls12_381::Scalar,
+    pub ephemeral_key: jubjub::ExtendedPoint,
     pub enc_ciphertext: [u8; 580],
     pub out_ciphertext: [u8; 80],
     pub zkproof: [u8; GROTH_PROOF_SIZE],
@@ -177,11 +177,11 @@ impl SaplingOutput {
     pub fn new<R: RngCore + CryptoRng>(
         rng: &mut R,
         ovk: OutgoingViewingKey,
-        to: PaymentAddress<Bls12>,
+        to: PaymentAddress,
         value: Amount,
         memo: Option<Memo>,
     ) -> Result<Self, Error> {
-        let g_d = match to.g_d(&JUBJUB) {
+        let g_d = match to.g_d() {
             Some(g_d) => g_d,
             None => return Err(Error::InvalidAddress),
         };
@@ -189,13 +189,13 @@ impl SaplingOutput {
             return Err(Error::InvalidAmount);
         }
 
-        let rcm = Fs::random(rng);
+        let rcm = jubjub::Fr::random(rng);
 
         let note = Note {
             g_d,
             pk_d: to.pk_d().clone(),
             value: value.into(),
-            r: rcm,
+            rseed: Rseed::BeforeZip212(rcm),
         };
 
         Ok(SaplingOutput {
@@ -209,10 +209,10 @@ impl SaplingOutput {
     fn generate_output_proof<P: TxProver>(&self, ctx: &mut P::SaplingProvingContext, prover: &P) -> OutputDescription {
         let mut rng = rand::rngs::OsRng;
 
-        let cmu = self.note.cm(&JUBJUB); // note commitment
+        let cmu = self.note.cmu(); // note commitment
 
-        let enc = SaplingNoteEncryption::new(
-            self.ovk,
+        let mut enc = SaplingNoteEncryption::new(
+            Some(self.ovk),
             self.note.clone(),
             self.to.clone(),
             self.memo.clone(),
@@ -224,9 +224,13 @@ impl SaplingOutput {
         let epk = enc.epk().clone();
 
         // zkproof, value_commitment
-        let (zkproof, cv) = prover.output_proof(ctx, *enc.esk(), self.to.clone(), self.note.r, self.note.value);
+        let rcm = match self.note.rseed {
+            Rseed::BeforeZip212(rcm) => rcm,
+            _ => unreachable!(),
+        };
+        let (zkproof, cv) = prover.output_proof(ctx, *enc.esk(), self.to.clone(), rcm, self.note.value);
 
-        let c_out = enc.encrypt_outgoing_plaintext(&cv, &self.note.cm(&JUBJUB));
+        let c_out = enc.encrypt_outgoing_plaintext(&cv, &self.note.cmu());
 
         OutputDescription {
             cv,
@@ -259,7 +263,7 @@ fn abi_encode_transfer(spends: &[SpendDescription], outputs: &[OutputDescription
                 let mut raw = Vec::with_capacity(10 * 32);
                 raw.extend_from_slice(&spend_desc.nullifier[..]);
                 raw.extend_from_slice(spend_desc.anchor.to_repr().as_ref());
-                spend_desc.cv.write(&mut raw).unwrap();
+                raw.extend_from_slice(&spend_desc.cv.to_bytes()[..]);
                 spend_desc.rk.write(&mut raw).unwrap();
                 raw.extend_from_slice(&spend_desc.zkproof[..]);
                 Token::FixedBytes(raw)
@@ -282,8 +286,8 @@ fn abi_encode_transfer(spends: &[SpendDescription], outputs: &[OutputDescription
             .map(|output_desc| {
                 let mut raw = Vec::with_capacity(9 * 32);
                 raw.extend_from_slice(output_desc.cmu.to_repr().as_ref());
-                output_desc.cv.write(&mut raw).unwrap();
-                output_desc.ephemeral_key.write(&mut raw).unwrap();
+                raw.extend_from_slice(&output_desc.cv.to_bytes());
+                raw.extend_from_slice(&output_desc.ephemeral_key.to_bytes());
                 raw.extend_from_slice(&output_desc.zkproof[..]);
                 Token::FixedBytes(raw)
             })
@@ -336,7 +340,7 @@ fn abi_encode_burn(
         let mut raw = Vec::with_capacity(10 * 32);
         raw.extend_from_slice(&spend_desc.nullifier[..]);
         raw.extend_from_slice(spend_desc.anchor.to_repr().as_ref());
-        spend_desc.cv.write(&mut raw).unwrap();
+        raw.extend_from_slice(spend_desc.cv.to_bytes().as_ref());
         spend_desc.rk.write(&mut raw).unwrap();
         raw.extend_from_slice(&spend_desc.zkproof[..]);
         Token::FixedBytes(raw)
@@ -369,8 +373,8 @@ fn abi_encode_burn(
             .map(|output_desc| {
                 let mut raw = Vec::with_capacity(9 * 32);
                 raw.extend_from_slice(output_desc.cmu.to_repr().as_ref());
-                output_desc.cv.write(&mut raw).unwrap();
-                output_desc.ephemeral_key.write(&mut raw).unwrap();
+                raw.extend_from_slice(output_desc.cv.to_bytes().as_ref());
+                raw.extend_from_slice(output_desc.ephemeral_key.to_bytes().as_ref());
                 raw.extend_from_slice(&output_desc.zkproof[..]);
                 Token::FixedBytes(raw)
             })
@@ -407,7 +411,7 @@ pub struct Builder<R: RngCore + CryptoRng> {
     contract_address: Address,
     scaling_factor: U256,
     pub value_balance: Amount,
-    anchor: Option<Fr>,
+    anchor: Option<bls12_381::Scalar>,
     spends: Vec<SaplingSpend>,
     outputs: Vec<SaplingOutput>,
     transparent_input: Option<TransparentInput>,
@@ -439,9 +443,9 @@ impl<R: RngCore + CryptoRng> Builder<R> {
     /// Adds a Sapling note to be spent in this transaction.
     pub fn add_sapling_spend(
         &mut self,
-        expsk: ExpandedSpendingKey<Bls12>,
+        expsk: ExpandedSpendingKey,
         diversifier: Diversifier,
-        note: Note<Bls12>,
+        note: Note,
         merkle_path: MerklePath<Node>,
     ) -> Result<(), Error> {
         if self.spends.len() >= 2 {
@@ -449,9 +453,9 @@ impl<R: RngCore + CryptoRng> Builder<R> {
         }
 
         // Consistency check: all anchors must equal the first one
-        let cm = Node::new(note.cm(&JUBJUB).into());
+        let cm = Node::new(note.cmu().into());
         if let Some(anchor) = self.anchor {
-            let path_root: Fr = merkle_path.root(cm).into();
+            let path_root: bls12_381::Scalar = merkle_path.root(cm).into();
             if path_root != anchor {
                 return Err(Error::AnchorMismatch);
             }
@@ -459,7 +463,7 @@ impl<R: RngCore + CryptoRng> Builder<R> {
             self.anchor = Some(merkle_path.root(cm).into())
         }
 
-        let alpha = Fs::random(&mut self.rng);
+        let alpha = jubjub::Fr::random(&mut self.rng);
 
         self.value_balance += Amount::from_u64(note.value).map_err(|_| Error::InvalidAmount)?;
 
@@ -560,8 +564,8 @@ impl<R: RngCore + CryptoRng> Builder<R> {
         transaction_data.extend_from_slice(&shielded_output_value.to_be_bytes()[..]);
         // encodeReceiveDescriptionWithoutC
         transaction_data.extend_from_slice(output_desc.cmu.to_repr().as_ref());
-        output_desc.cv.write(&mut transaction_data).unwrap();
-        output_desc.ephemeral_key.write(&mut transaction_data).unwrap();
+        transaction_data.extend_from_slice(output_desc.cv.to_bytes().as_ref());
+        transaction_data.extend_from_slice(output_desc.ephemeral_key.to_bytes().as_ref());
         transaction_data.extend_from_slice(&output_desc.zkproof[..]);
         // encodeCencCout
         transaction_data.extend_from_slice(&output_desc.enc_ciphertext[..]);
@@ -583,8 +587,8 @@ impl<R: RngCore + CryptoRng> Builder<R> {
         raw_value.to_big_endian(&mut parameter[..32]);
 
         parameter.extend_from_slice(output_desc.cmu.to_repr().as_ref());
-        output_desc.cv.write(&mut parameter).unwrap();
-        output_desc.ephemeral_key.write(&mut parameter).unwrap();
+        parameter.extend_from_slice(output_desc.cv.to_bytes().as_ref());
+        parameter.extend_from_slice(output_desc.ephemeral_key.to_bytes().as_ref());
         parameter.extend_from_slice(&output_desc.zkproof[..]);
 
         binding_sig.write(&mut parameter).unwrap();
@@ -621,7 +625,7 @@ impl<R: RngCore + CryptoRng> Builder<R> {
             // encodeSpendDescriptionWithoutSpendAuthSig
             transaction_data.extend_from_slice(&spend.nullifier[..]);
             transaction_data.extend_from_slice(spend.anchor.to_repr().as_ref());
-            spend.cv.write(&mut transaction_data).unwrap();
+            transaction_data.extend_from_slice(spend.cv.to_bytes().as_ref());
             spend.rk.write(&mut transaction_data).unwrap();
             transaction_data.extend_from_slice(&spend.zkproof[..]);
         }
@@ -629,8 +633,8 @@ impl<R: RngCore + CryptoRng> Builder<R> {
         for output in &output_descs {
             // encodeReceiveDescriptionWithoutC
             transaction_data.extend_from_slice(output.cmu.to_repr().as_ref());
-            output.cv.write(&mut transaction_data).unwrap();
-            output.ephemeral_key.write(&mut transaction_data).unwrap();
+            transaction_data.extend_from_slice(output.cv.to_bytes().as_ref());
+            transaction_data.extend_from_slice(output.ephemeral_key.to_bytes().as_ref());
             transaction_data.extend_from_slice(&output.zkproof[..]);
         }
 
@@ -704,15 +708,15 @@ impl<R: RngCore + CryptoRng> Builder<R> {
         // encodeSpendDescriptionWithoutSpendAuthSig
         transaction_data.extend_from_slice(&spend_desc.nullifier[..]);
         transaction_data.extend_from_slice(spend_desc.anchor.to_repr().as_ref());
-        spend_desc.cv.write(&mut transaction_data).unwrap();
+        transaction_data.extend_from_slice(spend_desc.cv.to_bytes().as_ref());
         spend_desc.rk.write(&mut transaction_data).unwrap();
         transaction_data.extend_from_slice(&spend_desc.zkproof[..]);
 
         if let Some(ref output_desc) = maybe_output_desc {
             // encodeReceiveDescriptionWithoutC
             transaction_data.extend_from_slice(output_desc.cmu.to_repr().as_ref());
-            output_desc.cv.write(&mut transaction_data).unwrap();
-            output_desc.ephemeral_key.write(&mut transaction_data).unwrap();
+            transaction_data.extend_from_slice(output_desc.cv.to_bytes().as_ref());
+            transaction_data.extend_from_slice(output_desc.ephemeral_key.to_bytes().as_ref());
             transaction_data.extend_from_slice(&output_desc.zkproof[..]);
             // encodeCencCout
             transaction_data.extend_from_slice(&output_desc.enc_ciphertext[..]);
