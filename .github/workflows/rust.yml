@@ -47,7 +47,10 @@ jobs:
               run: |
                   cp -r ./ztron-params ./ztron/
 
+            # ldd fix: https://users.rust-lang.org/t/cannot-find-ld-when-using-lld/47420
             - name: Run tests
-              run: cargo test --workspace --lib
+              run: |
+                sudo ln -sf /usr/bin/ld.lld-9 /usr/bin/ld.lld
+                cargo test --workspace --lib
               env:
                   LD_LIBRARY_PATH: /usr/local/lib

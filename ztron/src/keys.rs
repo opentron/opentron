@@ -1,24 +1,22 @@
 use bech32::{FromBase32, ToBase32};
+use ff::Field;
 use ff::PrimeField;
-use pairing::bls12_381::Bls12;
+use group::GroupEncoding;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::mem;
 use std::str::FromStr;
 use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
 use zcash_primitives::primitives::{Diversifier, PaymentAddress};
-use zcash_primitives::JUBJUB;
 
 pub fn generate_rcm() -> Vec<u8> {
-    use zcash_primitives::note_encryption::generate_esk;
-
     let mut rng = rand::rngs::OsRng;
-    let rcm = generate_esk(&mut rng);
+    let rcm = jubjub::Fr::random(&mut rng);
     rcm.to_repr().as_ref().to_vec()
 }
 
 #[derive(Clone, PartialEq)]
-pub struct ZAddress(PaymentAddress<Bls12>);
+pub struct ZAddress(PaymentAddress);
 
 impl ::std::fmt::Debug for ZAddress {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -36,7 +34,7 @@ impl ::std::fmt::Display for ZAddress {
 }
 
 impl ::std::ops::Deref for ZAddress {
-    type Target = PaymentAddress<Bls12>;
+    type Target = PaymentAddress;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -52,7 +50,7 @@ impl FromStr for ZAddress {
             .and_then(|(hrp, data)| if hrp == "ztron" { Some(data) } else { None })
             .and_then(|data| Vec::<u8>::from_base32(&data).ok())
             .and_then(|raw| if raw.len() == 43 { Some(raw) } else { None })
-            .and_then(|raw| PaymentAddress::<Bls12>::from_bytes(unsafe { mem::transmute(&raw[0]) }, &JUBJUB))
+            .and_then(|raw| PaymentAddress::from_bytes(unsafe { mem::transmute(&raw[0]) }))
             .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invalid key format"))
             .map(ZAddress)
     }
@@ -68,9 +66,7 @@ impl Eq for ZAddress {}
 
 impl ZAddress {
     pub fn pk_d(&self) -> Vec<u8> {
-        let mut ret = vec![0u8; 32];
-        self.0.pk_d().write(&mut ret[..]).expect("write pkD");
-        ret
+        self.0.pk_d().to_bytes().to_vec()
     }
 
     pub fn d(&self) -> &[u8] {
@@ -81,8 +77,8 @@ impl ZAddress {
 pub struct ZKey {
     sk: [u8; 32],
     d: Diversifier,
-    esk: ExpandedSpendingKey<Bls12>,
-    fvk: FullViewingKey<Bls12>,
+    esk: ExpandedSpendingKey,
+    fvk: FullViewingKey,
     address: ZAddress,
 }
 
@@ -105,11 +101,11 @@ impl ::std::fmt::Debug for ZKey {
 
 impl ZKey {
     pub fn new(sk: [u8; 32], d: [u8; 11]) -> Option<Self> {
-        let esk = ExpandedSpendingKey::<Bls12>::from_spending_key(&sk);
-        let fvk = FullViewingKey::from_expanded_spending_key(&esk, &JUBJUB);
+        let esk = ExpandedSpendingKey::from_spending_key(&sk);
+        let fvk = FullViewingKey::from_expanded_spending_key(&esk);
         let d = Diversifier(d);
 
-        let address = fvk.vk.to_payment_address(d, &JUBJUB)?;
+        let address = fvk.vk.to_payment_address(d)?;
 
         Some(ZKey {
             sk,
@@ -157,15 +153,11 @@ impl ZKey {
     }
 
     pub fn ak(&self) -> Vec<u8> {
-        let mut ret = vec![0u8; 32];
-        self.fvk.vk.ak.write(&mut ret[..]).expect("write ak");
-        ret
+        self.fvk.vk.ak.to_bytes().to_vec()
     }
 
     pub fn nk(&self) -> Vec<u8> {
-        let mut ret = vec![0u8; 32];
-        self.fvk.vk.nk.write(&mut ret[..]).expect("write nk");
-        ret
+        self.fvk.vk.nk.to_bytes().to_vec()
     }
 
     pub fn ivk(&self) -> Vec<u8> {
@@ -177,16 +169,14 @@ impl ZKey {
     }
 
     pub fn pk_d(&self) -> Vec<u8> {
-        let mut ret = vec![0u8; 32];
-        self.address.0.pk_d().write(&mut ret[..]).expect("write pkD");
-        ret
+        self.address.0.pk_d().to_bytes().to_vec()
     }
 
     pub fn payment_address(&self) -> &ZAddress {
         &self.address
     }
 
-    pub fn expsk(&self) -> &ExpandedSpendingKey<Bls12> {
+    pub fn expsk(&self) -> &ExpandedSpendingKey {
         &self.esk
     }
 
