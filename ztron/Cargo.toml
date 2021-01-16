@@ -9,9 +9,9 @@ rand = "0.7"
 bech32 = "0.7"
 hex = "0.4"
 sha2 = "0.9"
-primitive-types = "0.7"
+primitive-types = "0.8"
 lazy_static = "1.4"
-ethabi = "12"
+ethabi = "13"
 crypto_api_chachapoly = "0.4"
 
 keys = { path = "../keys" }

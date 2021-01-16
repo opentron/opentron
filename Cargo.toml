@@ -58,7 +58,7 @@ async-trait = "0.1"
 warp = { version = "0.2", default-features = false }
 http = "0.2"
 # misc
-primitive-types = "0.7"
+primitive-types = "0.8"
 num_cpus = "1.13.0"
 rand = '0.7'
 chrono = '0.4'

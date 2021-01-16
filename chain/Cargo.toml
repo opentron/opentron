@@ -9,7 +9,7 @@ prost = "0.6"
 byteorder = '1.3'
 sha2 = '0.9'
 rayon = "1.3"
-primitive-types = "0.7"
+primitive-types = "0.8"
 proto2 = { path = '../proto2' }
 crypto = { path = "../crypto" }
 merkle-tree = { path = '../merkle-tree' }
