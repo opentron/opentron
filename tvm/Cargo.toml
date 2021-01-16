@@ -5,7 +5,7 @@ authors = ["OpenTron Developers <info@opentron.org>"]
 edition = "2018"
 
 [dependencies]
-primitive-types = "0.7"
+primitive-types = "0.8"
 log = "0.4"
 libsecp256k1 = "0.3"
 sha3 = "0.9"

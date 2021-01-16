@@ -9,9 +9,9 @@ log = "0.4"
 byteorder = '1.3'
 bytes = '0.5'
 prost = '0.6'
-primitive-types = "0.7"
+primitive-types = "0.8"
 num_cpus = "1.13.0"
-rocks = { version = "0.1.9", features = ["static-link"] }
+rocks = { version = "0.1.10", features = ["static-link"] }
 keys = { path = '../keys' }
 proto2 = { path = '../proto2' }
 config = { path = '../config' }
