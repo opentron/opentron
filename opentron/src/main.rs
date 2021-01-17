@@ -11,6 +11,7 @@ use log::{debug, info};
 use slog::{o, Drain};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio::sync::broadcast;
+use tokio_compat_02::FutureExt as Compat02FutureExt;
 
 use opentron::channel::server::channel_server;
 use opentron::context::AppContext;
@@ -41,9 +42,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_file = matches.value_of("config").expect("has default in cli.yml; qed");
 
     // ! #[tokio::main] runner
-    let mut rt = tokio::runtime::Builder::new()
-        .threaded_scheduler()
-        .core_threads(num_cpus::get_physical())
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(num_cpus::get_physical())
         .thread_name("tokio-pool")
         .enable_all()
         .build()?;
@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rt.block_on(fut)
         }
         _ => {
-            let fut = run(ctx);
+            let fut = run(ctx).compat();
             rt.block_on(fut)
         }
     }
@@ -83,9 +83,7 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
         let done = done.clone();
         move || {
             let _ = done.send(());
-            while let Some(done) = ctx.peers.write().unwrap().pop() {
-                let _ = done.send(());
-            }
+            let _ = ctx.termination_signal.send(());
             ctx.running.store(false, Ordering::SeqCst);
             ctx.chain_db.report_status();
             unsafe {
@@ -97,7 +95,7 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
 
     let f = Mutex::new(Some(termination_handler));
     ctrlc::set_handler(move || {
-        eprintln!("\nCtrl-C pressed...");
+        eprintln!("\nCtrl-C pressed. Now shuting down gracefully... ");
         if let Ok(mut guard) = f.lock() {
             let f = guard.take().expect("f can only be taken once");
             f();
@@ -107,21 +105,21 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
 
     let graphql_service = {
         let ctx = ctx.clone();
-        let done_signal = done.subscribe();
+        let done_signal = ctx.termination_signal.subscribe();
         let logger = slog_scope::logger().new(o!("service" => "graphql"));
         graphql_server(ctx, done_signal).with_logger(logger)
     };
 
     let channel_service = {
         let ctx = ctx.clone();
-        let done_signal = done.subscribe();
+        let done_signal = ctx.termination_signal.subscribe();
         let logger = slog_scope::logger().new(o!("service" => "channel"));
         channel_server(ctx, done_signal).with_logger(logger)
     };
 
     let discovery_service = {
         let ctx = ctx.clone();
-        let done_signal = done.subscribe();
+        let done_signal = ctx.termination_signal.subscribe();
         discovery_server(ctx, done_signal)
     };
     let _ = join!(graphql_service, channel_service, discovery_service);

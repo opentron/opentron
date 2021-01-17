@@ -12,7 +12,7 @@ use std::net::SocketAddr;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::net::UdpSocket;
-use tokio::stream::Stream;
+use tokio_stream::Stream;
 
 pub enum DiscoveryMessage {
     Ping(Ping),
@@ -165,11 +165,11 @@ impl Stream for DiscoveryMessageTransport {
 
         // Note: poll_recv_from is an undocument fn
         let mut buf = [0u8; 1500];
-        let (n, addr) = ready!(Pin::new(&mut pin.socket).poll_recv_from(cx, &mut buf[..]))?;
-        {
-            let buf = &buf[..n];
-            Poll::Ready(Some(DiscoveryMessage::try_from(buf).map(|frame| (frame, addr))))
-        }
+        let mut buf = tokio::io::ReadBuf::new(&mut buf[..]);
+        let addr = ready!(Pin::new(&mut pin.socket).poll_recv_from(cx, &mut buf))?;
+        Poll::Ready(Some(
+            DiscoveryMessage::try_from(buf.filled()).map(|frame| (frame, addr)),
+        ))
     }
 }
 
@@ -204,12 +204,12 @@ impl Sink<(DiscoveryMessage, SocketAddr)> for DiscoveryMessageTransport {
 
         let Self {
             ref mut socket,
-            ref mut out_addr,
+            ref out_addr,
             ref mut wr,
             ..
         } = *self;
 
-        let n = ready!(socket.poll_send_to(cx, &wr, &out_addr))?;
+        let n = ready!(socket.poll_send_to(cx, &wr, *out_addr))?;
 
         let wrote_all = n == self.wr.len();
         self.wr.clear();
