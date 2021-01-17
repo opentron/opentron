@@ -9,7 +9,7 @@ use proto2::channel::{
 };
 use std::convert::TryFrom;
 use std::io::{self, Cursor};
-use tokio::prelude::*;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::{Decoder, Encoder, Framed, FramedRead, FramedWrite};
 
 /// Channel message variations.

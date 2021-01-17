@@ -1,10 +1,8 @@
 use super::protocol::{ChannelMessage, ChannelMessageCodec};
 use chain::IndexedBlock;
 use chrono::Utc;
-use futures::channel::oneshot;
 use futures::future::FutureExt;
 use futures::join;
-use futures::select;
 use futures::sink::{Sink, SinkExt};
 use futures::stream::Stream;
 use keys::b58encode_check;
@@ -23,11 +21,11 @@ use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::stream::StreamExt;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::time::Duration;
-use tokio::time::{delay_for, timeout};
+use tokio::time::{sleep, timeout};
+use tokio_stream::StreamExt;
 
 use crate::context::AppContext;
 use crate::util::block_hash_to_number;
@@ -68,38 +66,33 @@ async fn passive_channel_service(
     }
 
     let listening_addr = &ctx.config.protocol.channel.endpoint;
-
-    let mut listener = TcpListener::bind(listening_addr).await?;
+    let listener = TcpListener::bind(listening_addr).await?;
     let server = {
         let ctx = ctx.clone();
         async move {
             info!("listening on grpc://{}", listener.local_addr().unwrap());
-            let mut incoming = listener.incoming();
-            loop {
-                let mut incoming = incoming.next().fuse();
-                select! {
-                    _ = signal.recv().fuse() => {
-                        warn!("incoming connection service closed");
-                        break;
-                    },
-                    conn = incoming => {
-                        match conn {
-                            Some(Ok(sock)) => {
-                                let ctx = ctx.clone();
-                                ctx.num_passive_connections.fetch_add(1, Ordering::SeqCst);
-                                tokio::spawn(async move {
-                                    let _ = handshake_handler(ctx.clone(), sock).await;
-                                    ctx.num_passive_connections.fetch_sub(1, Ordering::SeqCst);
-                                });
-                            },
-                            Some(Err(e)) => error!("accept failed = {:?}", e),
-                            None => {
-                                info!("listener done");
-                                break;
-                            }
-                        }
-                    },
-                }
+
+            tokio::select! {
+                _ = async {
+                    loop {
+                        let ctx = ctx.clone();
+                        let (sock, peer_addr) = listener.accept().await?;
+                        ctx.num_passive_connections.fetch_add(1, Ordering::SeqCst);
+                        let logger = slog_scope::logger().new(o!(
+                            "peer_addr" => peer_addr,
+                        ));
+                        tokio::spawn(async move {
+                            let _ = handshake_handler(ctx.clone(), sock).with_logger(logger).await;
+                            ctx.num_passive_connections.fetch_sub(1, Ordering::SeqCst);
+                        });
+                    }
+                    // Help the rust type inferencer out
+                    #[allow(unreachable_code)]
+                    Ok::<_, io::Error>(())
+                } => {}
+                _ = signal.recv().fuse() => {
+                    warn!("incoming connection service closed");
+                },
             }
         }
     };
@@ -122,7 +115,7 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
         tokio::spawn(async move {
             for peer_addr in active_nodes.into_iter().cycle() {
                 while ctx.num_active_connections.load(Ordering::SeqCst) >= max_active_connections {
-                    delay_for(Duration::from_secs(2)).await;
+                    sleep(Duration::from_secs(2)).await;
                 }
                 if !ctx.running.load(Ordering::Relaxed) {
                     warn!("active connection service closed");
@@ -134,22 +127,20 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
                     break;
                 }
                 info!("active connection to {}", peer_addr);
-                let ctx = ctx.clone();
-                if let Ok(conn) = timeout(Duration::from_secs(10), TcpStream::connect(&peer_addr)).await {
-                    match conn {
-                        Ok(sock) => {
-                            ctx.num_active_connections.fetch_add(1, Ordering::SeqCst);
-                            tokio::spawn(async move {
-                                let _ = handshake_handler(ctx.clone(), sock).await;
-                                ctx.num_active_connections.fetch_sub(1, Ordering::SeqCst);
-                            });
-                        }
-                        Err(e) => {
-                            warn!("connect {} failed: {}", peer_addr, e);
-                        }
+                match timeout(Duration::from_secs(10), TcpStream::connect(&peer_addr)).await {
+                    Err(_) => warn!("connect timeout"),
+                    Ok(Err(e)) => warn!("connect {} failed: {}", peer_addr, e),
+                    Ok(Ok(sock)) => {
+                        ctx.num_active_connections.fetch_add(1, Ordering::SeqCst);
+                        let logger = slog_scope::logger().new(o!(
+                            "peer_addr" => peer_addr,
+                        ));
+                        let ctx = ctx.clone();
+                        tokio::spawn(async move {
+                            let _ = handshake_handler(ctx.clone(), sock).with_logger(logger).await;
+                            ctx.num_active_connections.fetch_sub(1, Ordering::SeqCst);
+                        });
                     }
-                } else {
-                    warn!("connect timeout");
                 }
             }
         })
@@ -158,15 +149,7 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
     Ok(())
 }
 
-async fn handshake_handler(ctx: Arc<AppContext>, sock: TcpStream) -> Result<(), Box<dyn Error>> {
-    let peer_addr = sock.peer_addr()?;
-    let logger = slog_scope::logger().new(o!(
-        "peer_addr" => peer_addr,
-    ));
-    inner_handshake_handler(ctx, sock).with_logger(logger).await
-}
-
-async fn inner_handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> Result<(), Box<dyn Error>> {
+async fn handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> Result<(), Box<dyn Error>> {
     let (reader, writer) = sock.split();
 
     let mut reader = ChannelMessageCodec::new_read(reader);
@@ -311,13 +294,6 @@ async fn sync_channel_handler(
     let config = &ctx.config.protocol.channel;
     let batch_size = config.sync_batch_size;
 
-    let mut done = {
-        let mut peers = ctx.peers.write().unwrap();
-        let (tx, rx) = oneshot::channel::<()>();
-        peers.push(tx);
-        rx.fuse()
-    };
-
     let highest_block = ctx
         .chain_db
         .get_block_by_number(ctx.chain_db.get_block_height() as u64)
@@ -341,33 +317,43 @@ async fn sync_channel_handler(
 
     let mut syncing_block_ids: Vec<Vec<u8>> = vec![];
     let mut pinged = false;
-    let (mut tx, mut rx) = mpsc::channel::<ChannelMessage>(1000);
+    let (tx, mut rx) = mpsc::channel::<ChannelMessage>(1000);
 
+    let mut done = ctx.termination_signal.subscribe();
+
+    const READING_TIMEOUT: u64 = 18;
     loop {
-        let mut next_packet = reader.next().fuse();
-        let mut sending_packet = rx.next().fuse();
-        let mut timeout = delay_for(Duration::from_secs(18)).fuse();
-        select! {
-            _ = timeout => {
-                if !pinged {
-                    warn!("timeout, try ping remote");
-                    writer.send(ChannelMessage::Ping).await?;
-                    pinged = true;
-                } else {
-                    warn!("timeout without replying to ping");
-                    return Ok(());
+        tokio::select! {
+            sending_message = rx.recv().fuse() => {
+                if let Some(msg) = sending_message {
+                    writer.send(msg).await?;
                 }
             }
-            _ = done => {
-                warn!("close channel connection");
-                break;
+            _ = done.recv() => {
+                warn!("termination, close channel connection");
+                return Ok(());
             }
-            payload = next_packet => {
-                if payload.is_none() {
-                    warn!("connection closed");
-                    return Ok(());
-                }
-                let payload = payload.unwrap();
+            task = timeout(Duration::from_secs(READING_TIMEOUT), reader.next().fuse()) => {
+                let payload = match task {
+                    Err(_) if pinged => {
+                        warn!("timeout");
+                        return Ok(());
+                    },
+                    Err(_) => {
+                        warn!("timeout, try pinging remote");
+                        writer.send(ChannelMessage::Ping).await?;
+                        pinged = true;
+                        continue;
+                    },
+                    Ok(None) => {
+                        warn!("connection closed");
+                        return Ok(());
+                    }
+                    Ok(Some(payload)) => {
+                        payload
+                    }
+                };
+
                 debug!("receive message, payload={}", format!("{:?}", payload));
                 match payload {
                     Err(e) => {
@@ -389,7 +375,7 @@ async fn sync_channel_handler(
                         debug!("pong");
                     },
                     Ok(ChannelMessage::TransactionInventory(inv)) => {
-                        let Inventory { mut ids, r#type } = inv;
+                        let Inventory { ids, r#type: _ } = inv;
                         for id in &ids {
                             debug!("transaction inventory, txn_id={}", hex::encode(id));
                         }
@@ -530,7 +516,7 @@ async fn sync_channel_handler(
                     // handle remote sync
                     Ok(ChannelMessage::SyncBlockchain(blk_inv)) => {
                         const SYNC_FETCH_BATCH_NUM: i64 = 2000;
-                        let BlockInventory { mut ids, .. } = blk_inv;
+                        let BlockInventory { ids, .. } = blk_inv;
                         info!("sync request {:?}", ids.iter().map(|blk_id| blk_id.number).collect::<Vec<_>>());
                         let unfork_id = ids.iter()
                             .rev()
@@ -589,16 +575,6 @@ async fn sync_channel_handler(
                     },
                 }
             }
-            // select!
-            packet = sending_packet => {
-                if let Some(msg) = packet {
-                    writer.send(msg).await?;
-                }
-            }
         }
     }
-
-    warn!("channel connection closed");
-
-    Ok(())
 }

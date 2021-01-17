@@ -1,4 +1,3 @@
-
 use async_graphql::SimpleObject;
 
 /// Running node info.

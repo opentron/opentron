@@ -3,14 +3,14 @@ use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::{EmptySubscription, Schema};
 use async_graphql_warp::BadRequest;
 use http::StatusCode;
-use log::{info, warn, trace};
+use log::{info, trace, warn};
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use warp::{Filter, Rejection};
 
-use super::schema::{QueryRoot, MutationRoot};
+use super::schema::{MutationRoot, QueryRoot};
 use crate::context::AppContext;
 
 pub async fn graphql_server(ctx: Arc<AppContext>, mut shutdown_signal: broadcast::Receiver<()>) {
@@ -21,7 +21,10 @@ pub async fn graphql_server(ctx: Arc<AppContext>, mut shutdown_signal: broadcast
         return;
     }
 
-    let addr: SocketAddr = config.endpoint.parse().expect("malformed endpoint address for graphql server");
+    let addr: SocketAddr = config
+        .endpoint
+        .parse()
+        .expect("malformed endpoint address for graphql server");
 
     let schema = Schema::build(QueryRoot, MutationRoot, EmptySubscription)
         .data(ctx)

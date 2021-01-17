@@ -7,10 +7,10 @@ use std::sync::RwLock;
 use chain_db::ChainDB;
 use config::genesis::GenesisConfig;
 use config::Config;
-use futures::channel::oneshot;
 use log::info;
 use primitive_types::H256;
 use proto2::common::BlockId;
+use tokio::sync::broadcast;
 
 use crate::manager::Manager;
 use crate::util::get_my_ip;
@@ -27,7 +27,8 @@ pub struct AppContext {
     pub num_active_connections: AtomicU32,
     pub num_passive_connections: AtomicU32,
     pub recent_blk_ids: RwLock<HashSet<H256>>,
-    pub peers: RwLock<Vec<oneshot::Sender<()>>>,
+    /// The termination signal is used to close all connections and services.
+    pub termination_signal: broadcast::Sender<()>,
     pub manager: RwLock<Manager>,
 }
 
@@ -80,7 +81,7 @@ impl AppContext {
             num_active_connections: AtomicU32::new(0),
             num_passive_connections: AtomicU32::new(0),
             recent_blk_ids: RwLock::new(HashSet::new()),
-            peers: RwLock::default(),
+            termination_signal: broadcast::channel(1024).0,
             manager: RwLock::new(db_manager),
         })
     }

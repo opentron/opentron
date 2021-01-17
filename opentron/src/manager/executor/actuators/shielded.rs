@@ -10,8 +10,8 @@ use proto2::contract as contract_pb;
 use proto2::state::Account;
 use state::keys;
 
-use super::super::TransactionContext;
 use super::super::Manager;
+use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 
 /// The TRZ token id.
@@ -37,7 +37,9 @@ impl BuiltinContractExecutorExt for contract_pb::ShieldedTransferContract {
             from_acct
                 .adjust_token_balance(SHIELDED_TOKEN_ID, -self.from_amount)
                 .unwrap();
-            manager.add_token_to_blackhole(SHIELDED_TOKEN_ID, ctx.contract_fee).unwrap();
+            manager
+                .add_token_to_blackhole(SHIELDED_TOKEN_ID, ctx.contract_fee)
+                .unwrap();
             ctx.contract_fee = 0; // in TRZ, not TRX
 
             manager.state_db.put_key(keys::Account(from_addr), from_acct).unwrap();

@@ -11,8 +11,8 @@ use proto2::contract as contract_pb;
 use proto2::state::{Account, ActivePermission, OwnerPermission, PermissionKey};
 use state::keys;
 
-use super::super::TransactionContext;
 use super::super::Manager;
+use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 
 // Set account's name.
