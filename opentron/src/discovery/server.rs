@@ -6,7 +6,7 @@ use futures::stream::StreamExt;
 use proto2::common::Endpoint;
 use proto2::discovery::{FindPeers, Peers, Ping, Pong};
 use rand::Rng;
-use slog::{debug, error, info, o, warn};
+use slog::{debug, error, info, warn};
 use std::collections::HashSet;
 use std::error::Error;
 use std::net::SocketAddr;
@@ -34,7 +34,7 @@ fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
 
 pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<()>) -> Result<(), Box<dyn Error>> {
     let config = &ctx.config.protocol.discovery;
-    let logger = slog_scope::logger().new(o!("service" => "discovery"));
+    let logger = slog_scope::logger();
 
     if !config.enable {
         warn!(logger, "discovery service disabled");

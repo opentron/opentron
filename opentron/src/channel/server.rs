@@ -1,4 +1,9 @@
-use super::protocol::{ChannelMessage, ChannelMessageCodec};
+use std::error::Error;
+use std::io;
+use std::net::SocketAddr;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
 use chain::IndexedBlock;
 use chrono::Utc;
 use futures::future::FutureExt;
@@ -13,13 +18,8 @@ use proto2::channel::{
     Transactions,
 };
 use proto2::common::{BlockId, Endpoint};
-use slog::{o, slog_info};
+use slog::{o, slog_info, slog_warn};
 use slog_scope_futures::FutureExt as SlogFutureExt;
-use std::error::Error;
-use std::io;
-use std::net::SocketAddr;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
@@ -27,6 +27,7 @@ use tokio::time::Duration;
 use tokio::time::{sleep, timeout};
 use tokio_stream::StreamExt;
 
+use super::protocol::{ChannelMessage, ChannelMessageCodec};
 use crate::context::AppContext;
 use crate::util::block_hash_to_number;
 
@@ -127,14 +128,14 @@ async fn active_channel_service(ctx: Arc<AppContext>) -> Result<(), Box<dyn Erro
                     break;
                 }
                 info!("active connection to {}", peer_addr);
+                let logger = slog_scope::logger().new(o!(
+                    "peer_addr" => peer_addr.clone(),
+                ));
                 match timeout(Duration::from_secs(10), TcpStream::connect(&peer_addr)).await {
-                    Err(_) => warn!("connect timeout"),
-                    Ok(Err(e)) => warn!("connect {} failed: {}", peer_addr, e),
+                    Err(_) => slog_warn!(logger, "connect timeout"),
+                    Ok(Err(e)) => slog_warn!(logger, "connect failed: {}", e),
                     Ok(Ok(sock)) => {
                         ctx.num_active_connections.fetch_add(1, Ordering::SeqCst);
-                        let logger = slog_scope::logger().new(o!(
-                            "peer_addr" => peer_addr,
-                        ));
                         let ctx = ctx.clone();
                         tokio::spawn(async move {
                             let _ = handshake_handler(ctx.clone(), sock).with_logger(logger).await;
@@ -264,8 +265,8 @@ async fn handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> Result<
             }
             Ok(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect { reason })) => {
                 warn!(
-                    "disconnect before handshake, reason={}",
-                    DisconnectReasonCode::from_i32(reason).unwrap().to_string()
+                    "disconnect in handshake, reason={}",
+                    DisconnectReasonCode::from_i32(reason).unwrap_or(DisconnectReasonCode::Unknown)
                 );
                 return Ok(());
             }
@@ -330,7 +331,7 @@ async fn sync_channel_handler(
                 }
             }
             _ = done.recv() => {
-                warn!("termination, close channel connection");
+                debug!("termination, close channel connection");
                 return Ok(());
             }
             task = timeout(Duration::from_secs(READING_TIMEOUT), reader.next().fuse()) => {
@@ -340,7 +341,7 @@ async fn sync_channel_handler(
                         return Ok(());
                     },
                     Err(_) => {
-                        warn!("timeout, try pinging remote");
+                        debug!("timeout, try pinging remote");
                         writer.send(ChannelMessage::Ping).await?;
                         pinged = true;
                         continue;
@@ -363,7 +364,7 @@ async fn sync_channel_handler(
                     Ok(ChannelMessage::HandshakeDisconnect(HandshakeDisconnect { reason })) => {
                         warn!(
                             "disconnect, reason={}",
-                            DisconnectReasonCode::from_i32(reason).unwrap().to_string()
+                            DisconnectReasonCode::from_i32(reason).unwrap_or(DisconnectReasonCode::Unknown)
                         );
                         return Ok(());
                     },
@@ -426,7 +427,7 @@ async fn sync_channel_handler(
                         let last_block_id = chain_inv.ids.pop().unwrap();
 
                         info!(
-                            "chain inventory, {}..={}, remains = {}",
+                            "👀chain inventory, {}..={}, remain={}",
                             start_block_num,
                             last_block_id.number,
                             chain_inv.remain_num);
@@ -439,7 +440,7 @@ async fn sync_channel_handler(
                             vec![]
                         };
                         if syncing_block_ids.is_empty() {
-                            info!("syncing finished, entering gossip loop");
+                            info!("🎉syncing finished, entering gossip loop");
                             // remore: peer.setNeedSyncFromUs = false
                             syncing = false;
                         } else {
@@ -458,19 +459,18 @@ async fn sync_channel_handler(
                             if syncing {
                                 if block.number() % 100 == 0 {
                                     info!(
-                                        "syncing block, number={}, txns={}, hash={}, witness={}",
+                                        "✨syncing progress: block number={} hash={} txns={}",
                                         block.number(),
-                                        block.transactions.len(),
                                         block.hash(),
-                                        b58encode_check(block.witness()),
+                                        block.transactions.len(),
                                     );
                                 }
                             } else {
                                 info!(
-                                    "receive block, number={}, txns={}, hash={}, witness={}",
+                                    "📦receive block number={} hash={} txns={:<3} witness={}",
                                     block.number(),
-                                    block.transactions.len(),
                                     block.hash(),
+                                    block.transactions.len(),
                                     b58encode_check(block.witness()),
                                 );
                             }
@@ -485,15 +485,17 @@ async fn sync_channel_handler(
                         }
                         if syncing {
                             if block.number() == last_block_number {
-                                ctx.chain_db.report_status();
-                                info!("sync next bulk of blocks from {}", block.number());
+                                if block.number() % 2_000 == 0 {
+                                    ctx.chain_db.report_status();
+                                }
+                                info!("👀sync next bulk of blocks from {}", block.number());
                                 let inv = BlockInventory {
                                     ids: vec![block.block_id()],
                                     ..Default::default()
                                 };
                                 writer.send(ChannelMessage::SyncBlockchain(inv)).await?;
                             } else if block.number() == last_block_number_in_this_batch {
-                                info!("sync next bulk of blocks from {} batch={}", block.number(), batch_size);
+                                info!("👀sync next bulk of blocks from={} batch={}", block.number(), batch_size);
                                 let tail = if syncing_block_ids.len() >= batch_size {
                                     syncing_block_ids.split_off(batch_size)
                                 } else {
