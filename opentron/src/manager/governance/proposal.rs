@@ -227,6 +227,14 @@ impl ProposalUtil<'_> {
                 self.require_proposal(ChainParameter::AllowMarketTransaction)?;
                 self.accept_range_value(value, 0, 10_000_000_000)
             }
+            MaxFeeLimit => {
+                self.require_version(BlockVersion::GreatVoyage4_1_2)?;
+                self.accept_range_value(value, 0, 10_000_000_000)
+            }
+            AllowTransactionFeePool | AllowBlackholeOptimization => {
+                self.require_version(BlockVersion::GreatVoyage4_1_2)?;
+                self.accept_bool(value)
+            }
             // NOTE: In nile's branch, this is wrongly marked as 4.0.
             //
             // See-also: https://github.com/tronprotocol/java-tron/pull/3372
@@ -262,6 +270,7 @@ impl ProposalUtil<'_> {
         self.accept_range_value(value, 0, MAX_LONG_VALUE)
     }
 
+    /// Accept inclusive range.
     fn accept_range_value(&self, value: i64, start: i64, end: i64) -> Result<(), String> {
         if value < start || value > end {
             return Err(format!("invalid chain parameter, valid range is [{}, {}]", start, end));

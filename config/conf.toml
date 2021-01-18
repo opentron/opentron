@@ -98,7 +98,7 @@ active-nodes = []
 enable = true
 enable-passive = true
 enable-active = true
-sync-batch-size = 500
+sync-batch-size = 1000
 # tcp channel
 endpoint = '0.0.0.0:18888'
 advertised-endpoint = ''
@@ -116,7 +116,7 @@ active-nodes = [
 ]
 # accept in any case
 passive-nodes = []
-max-active-connections = 4
+max-active-connections = 1
 
 [witness]
 private-key = ""

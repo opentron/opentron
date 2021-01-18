@@ -1,9 +1,8 @@
-
+// Protobuf for all builtin contracts.
 syntax = "proto3";
 
 package proto.contract;
 
-import "google/protobuf/any.proto";
 import "common.proto";
 
 // # Account
