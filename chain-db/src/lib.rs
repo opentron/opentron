@@ -1,19 +1,20 @@
-use byteorder::{ByteOrder, BE};
-use bytes::BytesMut;
-use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
-use log::{error, info, warn};
-use primitive_types::H256;
-use prost::Message;
-use proto2::chain::ContractType;
-use rand::Rng;
-use rocks::prelude::*;
 use std::collections::{HashMap, HashSet, LinkedList};
 use std::error::Error;
 use std::fs::OpenOptions;
-use std::io;
-use std::io::Write;
+use std::io::{self, Write};
 use std::iter::FromIterator;
 use std::path::Path;
+
+use byteorder::{ByteOrder, BE};
+use bytes::BytesMut;
+use log::{error, info, warn};
+use primitive_types::H256;
+use prost::Message;
+use rand::Rng;
+use rocks::prelude::*;
+
+use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
+use proto2::chain::ContractType;
 
 pub type BoxError = Box<dyn Error>;
 
@@ -850,8 +851,8 @@ impl ChainDB {
 
     pub unsafe fn prepare_close(&self) {
         info!("flush db ... {:?}", self.db.flush(&FlushOptions::default()));
+        info!("cancal background work ...");
         self.db.cancel_background_work(/* wait: */ true);
-        info!("cancel background work");
         info!("syncing WAL ... {:?}", self.db.sync_wal());
         // eprintln!("Close DB ... {:?}", self.db.close());
     }

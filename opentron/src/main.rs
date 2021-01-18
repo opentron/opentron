@@ -2,15 +2,12 @@
 #![recursion_limit = "1024"]
 use std::error::Error;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use futures::channel::oneshot;
 use futures::join;
-use log::{debug, info};
-use slog::{o, Drain};
+use slog::{o, slog_debug, slog_info, Drain};
 use slog_scope_futures::FutureExt as SlogFutureExt;
-use tokio::sync::broadcast;
 use tokio_compat_02::FutureExt as Compat02FutureExt;
 
 use opentron::channel::server::channel_server;
@@ -48,9 +45,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .enable_all()
         .build()?;
 
-    info!("load config from {:?}", config_file);
+    slog_info!(slog_scope::logger(), "use config file"; "path" => config_file);
     let ctx = AppContext::from_config(config_file)?;
-    debug!("load config => \n{:#?}", ctx.config);
+    slog_debug!(slog_scope::logger(), "loaded config"; "config" => format!("{:#?}", ctx.config));
 
     match matches.subcommand() {
         ("check", Some(arg_matches)) => {
@@ -76,16 +73,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
     let ctx = Arc::new(ctx);
 
-    let (done, _) = broadcast::channel::<()>(1);
     let (termination_tx, termination_done) = oneshot::channel::<()>();
     let termination_handler = {
         let ctx = ctx.clone();
-        let done = done.clone();
         move || {
-            let _ = done.send(());
-            let _ = ctx.termination_signal.send(());
             ctx.running.store(false, Ordering::SeqCst);
             ctx.chain_db.report_status();
+            let _ = ctx.termination_signal.send(());
             unsafe {
                 ctx.chain_db.prepare_close();
             }
@@ -97,8 +91,11 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
     ctrlc::set_handler(move || {
         eprintln!("\nCtrl-C pressed. Now shuting down gracefully... ");
         if let Ok(mut guard) = f.lock() {
-            let f = guard.take().expect("f can only be taken once");
-            f();
+            if let Some(f) = guard.take() {
+                f();
+            } else {
+                eprintln!("\nCtrl-C pressed again, be patient!");
+            }
         }
     })
     .expect("Error setting Ctrl-C handler");
@@ -120,7 +117,8 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
     let discovery_service = {
         let ctx = ctx.clone();
         let done_signal = ctx.termination_signal.subscribe();
-        discovery_server(ctx, done_signal)
+        let logger = slog_scope::logger().new(o!("service" => "discovery"));
+        discovery_server(ctx, done_signal).with_logger(logger)
     };
     let _ = join!(graphql_service, channel_service, discovery_service);
 
