@@ -31,8 +31,10 @@ pub struct ChainParameterConfig {
     pub allow_tvm_solidity_059_upgrade: bool,
     #[serde(default = "Default::default")]
     pub allow_tvm_shielded_upgrade: bool,
+    #[serde(default = "Default::default")]
+    pub allow_tvm_istanbul_upgrade: bool,
     // forbid-transfer-to-contract = false
-    /// Default energy price is 100 SUN/unit. While in Mainnet/Testnet, it's 10 SUN/unit.
+    /// Default energy price is 100 SUN/unit. While in Mainnet/Testnet, it's 40 SUN/unit.
     #[serde(default = "default_energy_fee")]
     pub energy_fee: i64,
 }
