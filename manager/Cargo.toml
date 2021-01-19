@@ -1,5 +1,5 @@
 [package]
-authors = ["Andelf <andelf@gmail.com>"]
+authors = ['OpenTron Developers <info@opentron.org>']
 edition = "2018"
 name = "manager"
 version = "0.1.0"

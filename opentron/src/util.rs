@@ -1,5 +1,5 @@
 use byteorder::{ByteOrder, BE};
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::error::Error;
 
 #[derive(Deserialize)]

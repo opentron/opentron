@@ -1,5 +1,5 @@
 [package]
-name = "channel"
+name = "channel-service"
 version = "0.1.0"
 authors = ['OpenTron Developers <info@opentron.org>']
 edition = "2018"

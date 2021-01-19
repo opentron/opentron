@@ -6,15 +6,15 @@ use std::sync::{Arc, Mutex};
 
 use futures::channel::oneshot;
 use futures::join;
-use slog::{o, slog_debug, slog_info, Drain};
 use log::info;
+use slog::{o, slog_debug, slog_info, Drain};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio_compat_02::FutureExt as Compat02FutureExt;
 
-use channel::server::channel_server;
+use channel_service::server::channel_server;
 use context::AppContext;
-use discovery::server::discovery_server;
-use opentron::graphql::server::graphql_server;
+use discovery_service::server::discovery_server;
+use graphql_service::server::graphql_server;
 use opentron::util::get_my_ip;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

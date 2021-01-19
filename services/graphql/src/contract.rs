@@ -4,10 +4,10 @@ use chrono::{DateTime, TimeZone, Utc};
 use primitive_types::H256;
 use proto2::chain::transaction::Contract as ContractPb;
 use proto2::common::Permission as PermissionPb;
+use async_graphql::{Enum, SimpleObject, Union};
 
 use super::scalar::{Address, Bytes, Bytes32, Long};
 
-use async_graphql::{Enum, SimpleObject, Union};
 
 #[derive(Enum, Clone, Copy, PartialEq, Eq)]
 pub enum AccountType {
