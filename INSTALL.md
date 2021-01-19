@@ -19,14 +19,14 @@ brew install rocksdb
 brew install protobuf cmake wget
 
 # Clone opentron
-git clone --recurse-submodules https://github.com/opentron/opentron.git
+git clone https://github.com/opentron/opentron.git
 cd opentron
 
 # Download ztron params
 ./scripts/download-ztron-params.sh
 
 # build all
-cargo build --all
+cargo build
 # run tests
 cargo test
 ```
@@ -47,5 +47,5 @@ cd opentron
 # Download ztron params
 ./scripts/download-ztron-params.sh
 
-cargo build --all
+cargo build
 ```

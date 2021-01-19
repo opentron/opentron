@@ -114,17 +114,14 @@ See [INSTALL.md](./INSTALL.md) for more detailed information.
 > sudo pacman -S protobuf  # ArchLinux
 > sudo apt install protobuf-compiler libprotobuf-dev # Ubuntu / Debian
 
-> # Install RocksDB
-> brew install rocksdb  # macOS
-
 > # Get code
-> git clone --recurse-submodules https://github.com/opentron/opentron.git
+> git clone https://github.com/opentron/opentron.git
 
 > # Compile tools
 > cd ./opentron/
-> cargo build --all
+> cargo build
 
-> cargo run -- --config config/conf.nile.toml
+> cargo run -- --config etc/conf.nile.toml
 ```
 
 ## License
