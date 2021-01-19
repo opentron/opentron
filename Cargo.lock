@@ -645,6 +645,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "channel"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "bytes 1.0.1",
+ "chain",
+ "chrono",
+ "context",
+ "futures 0.3.12",
+ "hex",
+ "keys",
+ "log",
+ "primitive-types",
+ "prost",
+ "prost-types",
+ "proto2",
+ "slog",
+ "slog-scope",
+ "slog-scope-futures",
+ "tokio 1.0.2",
+ "tokio-stream",
+ "tokio-util 0.6.1",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -731,6 +756,20 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 [[package]]
 name = "constants"
 version = "0.1.0"
+
+[[package]]
+name = "context"
+version = "0.1.0"
+dependencies = [
+ "chain-db",
+ "config",
+ "hex",
+ "log",
+ "manager",
+ "primitive-types",
+ "proto2",
+ "tokio 1.0.2",
+]
 
 [[package]]
 name = "cpuid-bool"
@@ -1009,6 +1048,27 @@ dependencies = [
  "libc",
  "redox_users",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "discovery"
+version = "0.1.0"
+dependencies = [
+ "bytes 1.0.1",
+ "chrono",
+ "config",
+ "context",
+ "futures 0.3.12",
+ "hex",
+ "log",
+ "prost",
+ "prost-types",
+ "proto2",
+ "rand 0.8.2",
+ "serde",
+ "serde_json",
+ "tokio 1.0.2",
+ "tokio-stream",
 ]
 
 [[package]]
@@ -1857,6 +1917,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "manager"
+version = "0.1.0"
+dependencies = [
+ "chain",
+ "chain-db",
+ "chrono",
+ "config",
+ "constants",
+ "crypto",
+ "hex",
+ "keys",
+ "lazy_static",
+ "log",
+ "primitive-types",
+ "prost",
+ "prost-types",
+ "proto2",
+ "sha3",
+ "state",
+ "tvm",
+]
+
+[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2111,19 +2194,23 @@ dependencies = [
  "bytes 1.0.1",
  "chain",
  "chain-db",
+ "channel",
  "chrono",
  "clap",
  "config",
  "constants",
+ "context",
  "crypto",
  "ctrlc",
  "dataloader",
+ "discovery",
  "futures 0.3.12",
  "hex",
  "http",
  "keys",
  "lazy_static",
  "log",
+ "manager",
  "num_cpus",
  "primitive-types",
  "prost",
