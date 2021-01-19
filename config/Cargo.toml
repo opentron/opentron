@@ -14,4 +14,4 @@ toml = '0.5'
 
 chain = { path = '../chain' }
 keys = { path = '../keys' }
-proto2 = { path = '../proto2' }
+proto = { path = '../proto' }

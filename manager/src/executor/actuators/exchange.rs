@@ -5,9 +5,9 @@
 use std::convert::TryFrom;
 
 use ::keys::Address;
-use proto2::chain::transaction::Result as TransactionResult;
-use proto2::contract as contract_pb;
-use proto2::state::Exchange;
+use proto::chain::transaction::Result as TransactionResult;
+use proto::contract as contract_pb;
+use proto::state::Exchange;
 use state::keys;
 
 use crate::Manager;

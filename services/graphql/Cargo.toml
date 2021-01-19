@@ -26,7 +26,7 @@ warp = { version = "0.2", default-features = false }
 http = "0.2"
 # workspace
 keys = { path = '../../keys' }
-proto2 = { path = '../../proto2' }
+proto = { path = '../../proto' }
 state = { path = '../../state' }
 chain = { path = '../../chain' }
 chain-db = { path = '../../chain-db' }

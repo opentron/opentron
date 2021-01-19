@@ -2,8 +2,8 @@ use std::convert::TryInto;
 
 use chrono::{DateTime, TimeZone, Utc};
 use primitive_types::H256;
-use proto2::chain::transaction::Contract as ContractPb;
-use proto2::common::Permission as PermissionPb;
+use proto::chain::transaction::Contract as ContractPb;
+use proto::common::Permission as PermissionPb;
 use async_graphql::{Enum, SimpleObject, Union};
 
 use super::scalar::{Address, Bytes, Bytes32, Long};
@@ -407,8 +407,8 @@ impl Contract {
 impl From<&ContractPb> for Contract {
     fn from(pb: &ContractPb) -> Self {
         use prost::Message;
-        use proto2::chain::ContractType;
-        use proto2::contract as contract_pb;
+        use proto::chain::ContractType;
+        use proto::contract as contract_pb;
 
         let raw = &pb.parameter.as_ref().unwrap().value[..];
 

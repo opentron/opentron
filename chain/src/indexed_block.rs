@@ -7,8 +7,8 @@ use crypto::sha256;
 use keys::{Address, Public, Signature};
 use primitive_types::H256;
 use prost::Message;
-use proto2::chain::{Block, BlockHeader, Transaction};
-use proto2::common::BlockId;
+use proto::chain::{Block, BlockHeader, Transaction};
+use proto::common::BlockId;
 use rayon::prelude::*;
 
 use crate::merkle_root::MerkleTree;

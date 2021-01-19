@@ -21,6 +21,6 @@ chain-db = { path = '../chain-db' }
 constants = { path = '../constants' }
 crypto = { path = '../crypto' }
 keys = { path = '../keys' }
-proto2 = { path = '../proto2' }
+proto = { path = '../proto' }
 state = { path = '../state' }
 tvm = { path = '../tvm' }

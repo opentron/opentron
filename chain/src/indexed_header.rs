@@ -2,8 +2,8 @@ use byteorder::{ByteOrder, BE};
 use crypto::sha256;
 use primitive_types::H256;
 use prost::Message;
-use proto2::chain::BlockHeader;
-use proto2::common::BlockId;
+use proto::chain::BlockHeader;
+use proto::common::BlockId;
 use std::cmp;
 
 #[derive(Clone, Debug)]

@@ -16,5 +16,5 @@ hex = '0.4'
 primitive-types = "0.8"
 num_cpus = "1"
 
-proto2 = { path = '../proto2' }
+proto = { path = '../proto' }
 chain = { path = '../chain' }

@@ -1,4 +1,4 @@
-# proto2
+# proto
 
 Refactored version of core protobuf files.
 

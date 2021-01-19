@@ -6,11 +6,11 @@ use chain::IndexedBlock;
 use keys::Address;
 use prost::Message;
 use prost_types::Any;
-use proto2::chain::{
+use proto::chain::{
     block_header::Raw as BlockHeaderRaw, transaction::Contract, transaction::Raw as TransactionRaw, BlockHeader,
     ContractType, Transaction,
 };
-use proto2::contract::TransferContract;
+use proto::contract::TransferContract;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

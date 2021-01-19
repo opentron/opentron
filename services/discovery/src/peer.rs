@@ -1,4 +1,4 @@
-use proto2::common::Endpoint;
+use proto::common::Endpoint;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]

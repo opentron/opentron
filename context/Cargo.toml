@@ -12,5 +12,5 @@ tokio = "1"
 # workspace
 config = { path = '../config' }
 chain-db = { path = '../chain-db' }
-proto2 = { path = '../proto2' }
+proto = { path = '../proto' }
 manager = { path = '../manager' }

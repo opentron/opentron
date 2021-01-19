@@ -14,7 +14,7 @@ use rand::Rng;
 use rocks::prelude::*;
 
 use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
-use proto2::chain::ContractType;
+use proto::chain::ContractType;
 
 pub type BoxError = Box<dyn Error>;
 

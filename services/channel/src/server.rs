@@ -13,11 +13,11 @@ use futures::stream::Stream;
 use keys::b58encode_check;
 use log::{debug, error, info, warn};
 use primitive_types::H256;
-use proto2::channel::{
+use proto::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
     Transactions,
 };
-use proto2::common::{BlockId, Endpoint};
+use proto::common::{BlockId, Endpoint};
 use slog::{o, slog_info, slog_warn};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio::net::{TcpListener, TcpStream};

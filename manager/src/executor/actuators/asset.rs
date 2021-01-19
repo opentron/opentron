@@ -7,10 +7,10 @@ use std::sync::Mutex;
 use ::keys::Address;
 use lazy_static::lazy_static;
 use log::warn;
-use proto2::chain::transaction::Result as TransactionResult;
-use proto2::common::AccountType;
-use proto2::contract as contract_pb;
-use proto2::state::{asset::FrozenSupply, Account, Asset};
+use proto::chain::transaction::Result as TransactionResult;
+use proto::common::AccountType;
+use proto::contract as contract_pb;
+use proto::state::{asset::FrozenSupply, Account, Asset};
 use state::keys;
 
 use crate::Manager;

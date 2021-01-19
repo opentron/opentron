@@ -9,7 +9,7 @@ use config::genesis::GenesisConfig;
 use config::Config;
 use log::info;
 use primitive_types::H256;
-use proto2::common::BlockId;
+use proto::common::BlockId;
 use tokio::sync::broadcast;
 use manager::Manager;
 

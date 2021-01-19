@@ -8,7 +8,7 @@ use crypto::keccak256;
 use lazy_static::lazy_static;
 use log::debug;
 use primitive_types::{H160, H256, U256};
-use proto2::state::{Account, AccountType, SmartContract, TransactionLog};
+use proto::state::{Account, AccountType, SmartContract, TransactionLog};
 use state::db::StateDB;
 use state::keys;
 use tvm::backend::{Apply, ApplyBackend, Backend, Basic, Log};

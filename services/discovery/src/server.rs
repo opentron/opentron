@@ -15,8 +15,8 @@ use tokio::net::UdpSocket;
 use tokio::pin;
 use tokio::sync::broadcast;
 
-use proto2::common::Endpoint;
-use proto2::discovery::{FindPeers, Peers, Ping, Pong};
+use proto::common::Endpoint;
+use proto::discovery::{FindPeers, Peers, Ping, Pong};
 use context::AppContext;
 
 use crate::protocol::{DiscoveryMessage, DiscoveryMessageTransport};

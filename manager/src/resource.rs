@@ -5,9 +5,9 @@ use chain::IndexedTransaction;
 use constants::block_version::BlockVersion;
 use log::debug;
 use prost::Message;
-use proto2::chain::ContractType;
-use proto2::contract::TransferAssetContract;
-use proto2::state::Account;
+use proto::chain::ContractType;
+use proto::contract::TransferAssetContract;
+use proto::state::Account;
 use state::keys;
 
 use super::executor::actuators::asset::find_asset_by_name;

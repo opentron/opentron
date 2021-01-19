@@ -3,10 +3,10 @@
 use std::convert::TryFrom;
 
 use ::keys::Address;
-use proto2::chain::transaction::Result as TransactionResult;
-use proto2::common::{AccountType, ResourceCode};
-use proto2::contract as contract_pb;
-use proto2::state::ResourceDelegation;
+use proto::chain::transaction::Result as TransactionResult;
+use proto::common::{AccountType, ResourceCode};
+use proto::contract as contract_pb;
+use proto::state::ResourceDelegation;
 use state::keys;
 
 use super::super::super::governance::reward::RewardController;

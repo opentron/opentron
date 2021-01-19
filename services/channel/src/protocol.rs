@@ -2,8 +2,8 @@
 
 use bytes::{Buf, BufMut, BytesMut};
 use prost::Message;
-use proto2::chain::Block;
-use proto2::channel::{
+use proto::chain::Block;
+use proto::channel::{
     inventory::Type as InventoryType, BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory,
     ReasonCode as DisconnectReasonCode, Transactions,
 };

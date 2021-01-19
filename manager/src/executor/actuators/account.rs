@@ -4,11 +4,11 @@ use std::convert::TryFrom;
 
 use ::keys::Address;
 use log::{debug, warn};
-use proto2::chain::transaction::Result as TransactionResult;
-use proto2::chain::ContractType;
-use proto2::common::{permission::PermissionType, AccountType, Permission};
-use proto2::contract as contract_pb;
-use proto2::state::{Account, ActivePermission, OwnerPermission, PermissionKey};
+use proto::chain::transaction::Result as TransactionResult;
+use proto::chain::ContractType;
+use proto::common::{permission::PermissionType, AccountType, Permission};
+use proto::contract as contract_pb;
+use proto::state::{Account, ActivePermission, OwnerPermission, PermissionKey};
 use state::keys;
 
 use crate::Manager;

@@ -11,7 +11,7 @@ use primitive_types::H256;
 use ::state::keys;
 use chain::{IndexedBlockHeader, IndexedTransaction};
 use context::AppContext;
-use proto2::state;
+use proto::state;
 
 use super::contract::{AccountType, Contract};
 use super::model::NodeInfo;
@@ -964,7 +964,7 @@ impl QueryRoot {
     /// Call executes a local call operation at the current block's state.
     async fn call(&self, ctx: &Context<'_>, data: CallData) -> Result<CallResult> {
         use manager::executor::TransactionExecutor;
-        use proto2::contract::TriggerSmartContract;
+        use proto::contract::TriggerSmartContract;
 
         let trigger = TriggerSmartContract {
             owner_address: data.from.unwrap_or_else(Default::default).0.as_bytes().to_vec(),
@@ -1043,7 +1043,7 @@ impl MutationRoot {
     async fn dry_run_raw_transaction(&self, ctx: &Context<'_>, data: Bytes) -> Result<CallResult> {
         use chain::IndexedTransaction;
         use prost::Message;
-        use proto2::chain::Transaction;
+        use proto::chain::Transaction;
 
         let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
 

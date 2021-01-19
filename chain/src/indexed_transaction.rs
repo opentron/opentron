@@ -6,7 +6,7 @@ use crypto::sha256;
 use keys::{Address, Public, Signature};
 use primitive_types::H256;
 use prost::Message;
-use proto2::chain::Transaction;
+use proto::chain::Transaction;
 
 #[derive(Default, Clone, Debug)]
 pub struct IndexedTransaction {

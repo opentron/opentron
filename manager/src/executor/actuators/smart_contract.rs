@@ -8,9 +8,9 @@ use ::keys::Address;
 use constants::block_version::BlockVersion;
 use log::{debug, warn};
 use primitive_types::{H160, H256};
-use proto2::chain::transaction::{result::ContractStatus, Result as TransactionResult};
-use proto2::contract as contract_pb;
-use proto2::state::{Account, SmartContract};
+use proto::chain::transaction::{result::ContractStatus, Result as TransactionResult};
+use proto::contract as contract_pb;
+use proto::state::{Account, SmartContract};
 use state::keys;
 use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
 

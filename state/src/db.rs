@@ -9,8 +9,8 @@ use ::keys::Address;
 use config::genesis::GenesisConfig;
 use config::ChainConfig;
 use log::info;
-use proto2::common::AccountType;
-use proto2::state as state_pb;
+use proto::common::AccountType;
+use proto::state as state_pb;
 use rocks::prelude::*;
 
 use super::keys;

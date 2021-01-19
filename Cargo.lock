@@ -527,7 +527,7 @@ dependencies = [
  "merkle-tree",
  "primitive-types",
  "prost",
- "proto2",
+ "proto",
  "rayon",
  "sha2 0.9.2",
 ]
@@ -544,7 +544,7 @@ dependencies = [
  "num_cpus",
  "primitive-types",
  "prost",
- "proto2",
+ "proto",
  "rand 0.8.2",
  "rocks",
 ]
@@ -565,7 +565,7 @@ dependencies = [
  "primitive-types",
  "prost",
  "prost-types",
- "proto2",
+ "proto",
  "slog",
  "slog-scope",
  "slog-scope-futures",
@@ -640,7 +640,7 @@ dependencies = [
  "keys",
  "prost",
  "prost-types",
- "proto2",
+ "proto",
  "serde",
  "serde_json",
  "toml",
@@ -672,7 +672,7 @@ dependencies = [
  "log",
  "manager",
  "primitive-types",
- "proto2",
+ "proto",
  "tokio 1.0.2",
 ]
 
@@ -958,7 +958,7 @@ dependencies = [
  "log",
  "prost",
  "prost-types",
- "proto2",
+ "proto",
  "rand 0.8.2",
  "serde",
  "serde_json",
@@ -1380,7 +1380,7 @@ dependencies = [
  "primitive-types",
  "prost",
  "prost-types",
- "proto2",
+ "proto",
  "serde_json",
  "state",
  "tokio 1.0.2",
@@ -1832,7 +1832,7 @@ dependencies = [
  "primitive-types",
  "prost",
  "prost-types",
- "proto2",
+ "proto",
  "sha3",
  "state",
  "tvm",
@@ -2363,7 +2363,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "proto2"
+name = "proto"
 version = "0.1.0"
 dependencies = [
  "byteorder",
@@ -2925,7 +2925,7 @@ dependencies = [
  "num_cpus",
  "primitive-types",
  "prost",
- "proto2",
+ "proto",
  "rocks",
 ]
 

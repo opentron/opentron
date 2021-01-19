@@ -8,10 +8,10 @@ use chain::{IndexedBlockHeader, IndexedTransaction};
 use log::{debug, error, warn};
 use primitive_types::H256;
 use prost::Message;
-use proto2::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
-use proto2::common::ResourceCode;
-use proto2::contract as contract_pb;
-use proto2::state::{ResourceReceipt, TransactionLog, TransactionReceipt};
+use proto::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
+use proto::common::ResourceCode;
+use proto::contract as contract_pb;
+use proto::state::{ResourceReceipt, TransactionLog, TransactionReceipt};
 use state::keys;
 
 use self::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};

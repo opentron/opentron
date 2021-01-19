@@ -4,7 +4,7 @@ use ::keys::Address;
 use chain::IndexedBlock;
 use chrono::Utc;
 use log::{debug, info};
-use proto2::state::{Witness, WitnessVoterReward};
+use proto::state::{Witness, WitnessVoterReward};
 use state::keys;
 
 use crate::Manager;

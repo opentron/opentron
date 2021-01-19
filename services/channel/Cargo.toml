@@ -21,7 +21,7 @@ tokio-stream = "0.1"
 primitive-types = "0.8"
 hex = '0.4'
 # workspace
-proto2 = { path = '../../proto2' }
+proto = { path = '../../proto' }
 chain = { path = '../../chain' }
 keys = { path = '../../keys' }
 context = { path = '../../context' }

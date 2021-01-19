@@ -13,6 +13,6 @@ primitive-types = "0.8"
 num_cpus = "1"
 rocks = { version = "0.1.10", features = ["static-link"] }
 keys = { path = '../keys' }
-proto2 = { path = '../proto2' }
+proto = { path = '../proto' }
 config = { path = '../config' }
 constants = { path = '../constants' }

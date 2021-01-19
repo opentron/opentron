@@ -3,7 +3,7 @@
 use config::ChainParameterConfig;
 
 #[doc(inline)]
-pub use proto2::state::ChainParameter;
+pub use proto::state::ChainParameter;
 
 pub fn default_parameters() -> impl IntoIterator<Item = (ChainParameter, i64)> {
     use ChainParameter::*;

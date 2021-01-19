@@ -7,7 +7,7 @@ use config::{Config, GenesisConfig};
 use log::{debug, info, trace, warn};
 use primitive_types::H256;
 use prost::Message;
-use proto2::state::TransactionReceipt;
+use proto::state::TransactionReceipt;
 use state::db::StateDB;
 use state::keys;
 use std::convert::{TryFrom, TryInto};

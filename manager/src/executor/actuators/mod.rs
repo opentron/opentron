@@ -5,8 +5,8 @@ use std::convert::TryFrom;
 use ::keys::Address;
 use prost::Message;
 use prost_types::Any;
-use proto2::chain::{transaction::Result as TransactionResult, ContractType};
-use proto2::state::Account;
+use proto::chain::{transaction::Result as TransactionResult, ContractType};
+use proto::state::Account;
 use state::keys;
 
 use super::Manager;
@@ -177,7 +177,7 @@ pub fn validate_multisig(
 /// Impl BuiltinContractExt for builtin contract protobufs.
 macro_rules! impl_contract_ext_for {
     ($contract_ty:ident) => {
-        impl BuiltinContractExt for ::proto2::contract::$contract_ty {
+        impl BuiltinContractExt for ::proto::contract::$contract_ty {
             fn owner_address(&self) -> &[u8] {
                 &self.owner_address
             }
@@ -187,7 +187,7 @@ macro_rules! impl_contract_ext_for {
         }
     };
     ($contract_ty:ident, $type_name:expr) => {
-        impl BuiltinContractExt for ::proto2::contract::$contract_ty {
+        impl BuiltinContractExt for ::proto::contract::$contract_ty {
             fn owner_address(&self) -> &[u8] {
                 &self.owner_address
             }
@@ -240,7 +240,7 @@ impl_contract_ext_for!(ExchangeWithdrawContract);
 impl_contract_ext_for!(ExchangeTransactionContract);
 
 #[cfg(feature = "nile")]
-impl BuiltinContractExt for ::proto2::contract::ShieldedTransferContract {
+impl BuiltinContractExt for ::proto::contract::ShieldedTransferContract {
     fn owner_address(&self) -> &[u8] {
         &[]
     }

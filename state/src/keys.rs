@@ -7,7 +7,7 @@ use bytes::BytesMut;
 use keys::Address;
 use primitive_types::H256;
 use prost::Message;
-use proto2::state as pb;
+use proto::state as pb;
 
 pub use super::parameter::ChainParameter;
 pub use super::property::DynamicProperty;

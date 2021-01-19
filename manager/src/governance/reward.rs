@@ -3,7 +3,7 @@
 use ::keys::Address;
 use chain::IndexedBlock;
 use log::debug;
-use proto2::state::Votes;
+use proto::state::Votes;
 use state::keys;
 
 use crate::Manager;

@@ -3,7 +3,7 @@
 use ::keys::Address;
 use constants::block_version::BlockVersion;
 use log::{debug, info};
-use proto2::state::{proposal::State as ProposalState, Proposal};
+use proto::state::{proposal::State as ProposalState, Proposal};
 use state::keys;
 use state::keys::ChainParameter;
 

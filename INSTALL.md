@@ -35,7 +35,7 @@ cargo test
 
 ```bash
 # (This official repo's protobuf-compiler is out-dated.)
-# (Unrecognized syntax identifier "proto3".  This parser only recognizes "proto2".)
+# (Unrecognized syntax identifier "proto3".  This parser only recognizes "proto".)
 
 wget https://github.com/protocolbuffers/protobuf/releases/download/v3.11.4/protoc-3.11.4-linux-x86_64.zip
 unzip protoc-3.11.4-linux-x86_64.zip
