@@ -1,7 +1,7 @@
 use chrono::Utc;
 use log::info;
 
-use crate::context::AppContext;
+use context::AppContext;
 
 pub async fn main(ctx: AppContext) -> Result<(), Box<dyn std::error::Error>> {
     let mut manager = ctx.manager.write().unwrap();

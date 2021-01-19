@@ -1,3 +1,4 @@
+// Protobuf for state-db.
 syntax = "proto3";
 
 package proto.state;
@@ -324,6 +325,18 @@ enum ChainParameter {
   //
   // Enabled: 4.1
   AllowMarketTransaction = 44;
+  // Allow transaction fee pool.
+  //
+  // Enabled: 4.1.2
+  //
+  // Default: 0
+  AllowTransactionFeePool = 48;
+  // Use BURN_TRX_AMOUNT instead of Blackhole.
+  //
+  // Enabled: 4.1.2
+  //
+  // Default: 0
+  AllowBlackholeOptimization = 49;
 
   // # Fees
   //
@@ -379,6 +392,14 @@ enum ChainParameter {
   // Market fees.
   MarketSellFee = 45;
   MarketCancelFee = 46;
+  // Max fee limit.
+  //
+  // Enabled: 4.1.2
+  //
+  // Default: 1000_000_000
+  //
+  // Range: 0, 10_000_000_000
+  MaxFeeLimit = 47;
 
   // # Energy / bandwidth model
   //

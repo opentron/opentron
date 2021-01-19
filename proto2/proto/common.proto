@@ -1,3 +1,4 @@
+// Protobuf shared by all the other.
 syntax = "proto3";
 
 package proto.common;
@@ -44,6 +45,8 @@ message SmartContract {
       // Fallback functions are executed whenever a particular contract receives
       // plain Ether without any other data associated with the transaction.
       Fallback = 4;
+      // Added in 4.1.2, for Solidity 0.6.0
+      Receive = 5;
     }
     message Param {
       // This will cause the respective arguments to be searched for.

@@ -1,3 +1,5 @@
+//! Block version releated constants.
+
 /// ForkPolicies for different versions.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ForkPolicy {
@@ -83,18 +85,16 @@ pub enum BlockVersion {
     ///   - MarketSellFee
     ///   - MarketCancelFee
     GreatVoyage4_1_0 = 19,
+    /// - MaxFeeLimit
+    /// - AllowTransactionFeePool
+    /// - AllowBlackholeOptimization
+    GreatVoyage4_1_2 = 20,
 }
 
 impl BlockVersion {
     pub fn fork_policy(&self) -> ForkPolicy {
         match *self {
-            BlockVersion::GreatVoyage4_1_0 => ForkPolicy::New {
-                // GMT 2020-08-07 06:00:00
-                timestamp: 1596780000_000,
-                // 27 * 0.8 = 21.6
-                min_upgrade_percent: 80,
-            },
-            BlockVersion::GreatVoyage4_0_1 => ForkPolicy::New {
+            BlockVersion::GreatVoyage4_1_0 | BlockVersion::GreatVoyage4_0_1 | BlockVersion::GreatVoyage4_1_2 => ForkPolicy::New {
                 // GMT 2020-08-07 06:00:00
                 timestamp: 1596780000_000,
                 // 27 * 0.8 = 21.6

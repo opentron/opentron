@@ -6,14 +6,16 @@ use std::sync::{Arc, Mutex};
 
 use futures::channel::oneshot;
 use futures::join;
+use log::info;
 use slog::{o, slog_debug, slog_info, Drain};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio_compat_02::FutureExt as Compat02FutureExt;
 
-use opentron::channel::server::channel_server;
-use opentron::context::AppContext;
-use opentron::discovery::server::discovery_server;
-use opentron::graphql::server::graphql_server;
+use channel_service::server::channel_server;
+use context::AppContext;
+use discovery_service::server::discovery_server;
+use graphql_service::server::graphql_server;
+use opentron::util::get_my_ip;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ! init app command line arguments
@@ -46,7 +48,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     slog_info!(slog_scope::logger(), "use config file"; "path" => config_file);
-    let ctx = AppContext::from_config(config_file)?;
+    let mut ctx = AppContext::from_config(config_file)?;
+    let outbound_ip = get_my_ip().unwrap_or("127.0.0.1".into());
+    info!("outbound ip address: {}", outbound_ip);
+    ctx.outbound_ip = outbound_ip;
+
     slog_debug!(slog_scope::logger(), "loaded config"; "config" => format!("{:#?}", ctx.config));
 
     match matches.subcommand() {
@@ -110,8 +116,7 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
     let channel_service = {
         let ctx = ctx.clone();
         let done_signal = ctx.termination_signal.subscribe();
-        let logger = slog_scope::logger().new(o!("service" => "channel"));
-        channel_server(ctx, done_signal).with_logger(logger)
+        channel_server(ctx, done_signal)
     };
 
     let discovery_service = {

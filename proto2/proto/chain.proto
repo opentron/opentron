@@ -1,4 +1,4 @@
-
+// Protobuf for on-chain data.
 syntax = "proto3";
 
 package proto.chain;

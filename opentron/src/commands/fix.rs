@@ -1,7 +1,7 @@
 use clap::ArgMatches;
 use log::info;
 
-use crate::context::AppContext;
+use context::AppContext;
 
 pub async fn main(ctx: AppContext, matches: &ArgMatches<'_>) -> Result<(), Box<dyn std::error::Error>> {
     let ref db = ctx.chain_db;

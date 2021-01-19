@@ -10,7 +10,7 @@ log = "0.4"
 rocks = { version = "0.1.10", features = ["static-link"] }
 byteorder = '1'
 bytes = '1'
-rand = '0.7'
+rand = '0.8'
 prost = '0.7'
 hex = '0.4'
 primitive-types = "0.8"

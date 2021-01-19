@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn load_genesis_json() {
-        let content = include_str!("../genesis.json");
+        let content = include_str!("../../etc/genesis.json");
         let conf: GenesisConfig = serde_json::from_str(&content).unwrap();
 
         let block = conf.to_indexed_block().unwrap();

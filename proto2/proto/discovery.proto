@@ -1,3 +1,4 @@
+// Protobuf for the node discovery protocol.
 syntax = "proto3";
 
 package proto.discovery;

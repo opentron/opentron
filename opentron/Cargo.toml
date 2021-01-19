@@ -1,0 +1,55 @@
+[package]
+name = 'opentron'
+version = '0.1.0'
+authors = ['OpenTron Developers <info@opentron.org>']
+edition = '2018'
+license = "MIT/Apache-2.0"
+
+[lib]
+name = "opentron"
+path = "src/lib.rs"
+
+[[bin]]
+name = "opentron"
+path = "src/main.rs"
+
+[features]
+default = []
+nile = []
+eip1767 = []
+
+[dependencies]
+# app
+clap = { version = "2", features = ["yaml"] }
+ctrlc = { version = "3", features = ["termination"] }
+num_cpus = "1.13.0"
+# logger
+log = "0.4"
+slog = "2.7"
+slog-term = "2.6"
+slog-async = "2.6"
+slog-stdlog = "4.1"
+slog-scope = "4.4"
+slog-scope-futures = "0.1"
+# runner
+futures = '0.3'
+tokio = { version = '1', default-features = false, features = [
+    'rt',
+    'rt-multi-thread',
+    'macros',
+    'net',
+    'time',
+] }
+tokio-compat-02 = "0.2"
+# misc
+serde = { version = '1.0', features = ['derive'] }
+chrono = '0.4'
+byteorder = '1'
+reqwest = { version = "0.11", default-features = false, features = ["blocking", "json"] }
+# workspace
+chain-db = { path = '../chain-db' }
+config = { path = '../config' }
+context = { path = '../context' }
+discovery-service = { path = "../services/discovery" }
+channel-service = { path = "../services/channel" }
+graphql-service = { path = "../services/graphql" }
