@@ -251,12 +251,7 @@ async fn handshake_handler(ctx: Arc<AppContext>, mut sock: TcpStream) -> Result<
                     peer_head_block_id.as_ref().unwrap().number >= head_block_id.as_ref().unwrap().number;
 
                 info!("handshake finished, need sync = {}", need_syncing);
-                let logger = slog_scope::logger().new(o!(
-                    "protocol" => "channel"
-                ));
-                let ret = sync_channel_handler(ctx, need_syncing, reader, writer)
-                    .with_logger(logger)
-                    .await;
+                let ret = sync_channel_handler(ctx, need_syncing, reader, writer).await;
                 match ret {
                     Ok(_) => info!("channel finished"),
                     Err(e) => warn!("channel finished with error={:?}", e),
@@ -407,10 +402,10 @@ async fn sync_channel_handler(
                             .into_iter()
                             .filter(|blk_id| {
                                 if ctx.recent_blk_ids.read().unwrap().contains(&H256::from_slice(blk_id)) {
-                                    info!("block inventory, number={}, skip for seen", block_hash_to_number(&blk_id));
+                                    debug!("block inventory, number={}, skip for seen", block_hash_to_number(&blk_id));
                                     false
                                 } else {
-                                    info!("block inventory, number={}, fetch", block_hash_to_number(&blk_id));
+                                    debug!("block inventory, number={}, fetch", block_hash_to_number(&blk_id));
                                     true
                                 }
                             })

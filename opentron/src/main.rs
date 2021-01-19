@@ -110,8 +110,7 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
     let channel_service = {
         let ctx = ctx.clone();
         let done_signal = ctx.termination_signal.subscribe();
-        let logger = slog_scope::logger().new(o!("service" => "channel"));
-        channel_server(ctx, done_signal).with_logger(logger)
+        channel_server(ctx, done_signal)
     };
 
     let discovery_service = {

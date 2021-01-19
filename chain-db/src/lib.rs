@@ -830,13 +830,13 @@ impl ChainDB {
                 .db
                 .get_int_property("rocksdb.num-running-flushes")
                 .unwrap_or_default();
+            if n_compactions + n_flushes <= 1 {
+                break;
+            }
             info!(
-                "awaiting background jobs, compactions={}, flushes={}",
+                "⏳awaiting background jobs, compactions={}, flushes={}",
                 n_compactions, n_flushes
             );
-            if n_compactions + n_flushes <= 1 {
-                return;
-            }
             std::thread::sleep(std::time::Duration::from_secs(5));
         }
     }
