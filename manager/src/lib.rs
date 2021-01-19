@@ -1,3 +1,5 @@
+#![feature(asm)]
+
 use ::keys::{b58encode_check, Address};
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use chrono::Utc;
@@ -24,7 +26,6 @@ pub mod vm;
 
 type Error = Box<dyn ::std::error::Error>;
 type Result<T, E = Error> = ::std::result::Result<T, E>;
-// use crate::context::AppContext;
 
 #[inline]
 fn new_error(msg: &str) -> Error {
@@ -80,7 +81,7 @@ impl Manager {
         }
     }
 
-    pub(crate) fn state(&self) -> &StateDB {
+    pub fn state(&self) -> &StateDB {
         &self.state_db
     }
 

@@ -6,7 +6,7 @@ use log::debug;
 use proto2::state::Votes;
 use state::keys;
 
-use super::super::Manager;
+use crate::Manager;
 
 /// Controller to handle rewards. Renamed from DelegationService, which is ambiguous.
 ///

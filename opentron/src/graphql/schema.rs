@@ -1,20 +1,21 @@
 use std::convert::TryFrom;
+use std::mem;
 use std::str;
 use std::sync::{Arc, RwLock};
 
-use ::state::keys;
 use async_graphql::{Context, Enum, Error, InputObject, Object, Result, SimpleObject};
 use byteorder::{ByteOrder, BE};
-use chain::{IndexedBlockHeader, IndexedTransaction};
 use chrono::{DateTime, TimeZone, Utc};
 use primitive_types::H256;
+
+use ::state::keys;
+use chain::{IndexedBlockHeader, IndexedTransaction};
+use context::AppContext;
 use proto2::state;
-use std::mem;
 
 use super::contract::{AccountType, Contract};
 use super::model::NodeInfo;
 use super::scalar::{Address, Bytes, Bytes32, Long};
-use crate::context::AppContext;
 
 const CODE_VERSION: &'static str = "0.1.0";
 const API_VERSION: &'static str = "0.1.0";
@@ -518,10 +519,14 @@ impl Transaction {
     }
 
     // NOTE: for debug
-    async fn receipt(&self, ctx: &Context<'_> ) -> Result<String> {
+    async fn receipt(&self, ctx: &Context<'_>) -> Result<String> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         if let Some(receipt) = manager.state().get(&keys::TransactionReceipt(self.inner.hash))? {
-            Ok(format!("resource_receipt={:?} vm_logs={}", receipt.resource_receipt, receipt.vm_logs.len()))
+            Ok(format!(
+                "resource_receipt={:?} vm_logs={}",
+                receipt.resource_receipt,
+                receipt.vm_logs.len()
+            ))
         } else {
             Ok("not found".to_owned())
         }
@@ -958,7 +963,7 @@ impl QueryRoot {
 
     /// Call executes a local call operation at the current block's state.
     async fn call(&self, ctx: &Context<'_>, data: CallData) -> Result<CallResult> {
-        use crate::manager::executor::TransactionExecutor;
+        use manager::executor::TransactionExecutor;
         use proto2::contract::TriggerSmartContract;
 
         let trigger = TriggerSmartContract {

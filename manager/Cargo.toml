@@ -1,0 +1,26 @@
+[package]
+authors = ["Andelf <andelf@gmail.com>"]
+edition = "2018"
+name = "manager"
+version = "0.1.0"
+
+[dependencies]
+primitive-types = "0.8"
+chrono = '0.4'
+hex = '0.4'
+log = '0.4'
+prost = '0.7'
+prost-types = '0.7'
+lazy_static = "1.4"
+sha3 = "0.9"
+
+# workspace
+chain = { path = '../chain' }
+config = { path = '../config' }
+chain-db = { path = '../chain-db' }
+constants = { path = '../constants' }
+crypto = { path = '../crypto' }
+keys = { path = '../keys' }
+proto2 = { path = '../proto2' }
+state = { path = '../state' }
+tvm = { path = '../tvm' }

@@ -11,7 +11,7 @@ use proto2::state::{Votes, Witness};
 use state::keys;
 
 use super::super::super::governance::reward::{RewardController, RewardUtil};
-use super::super::Manager;
+use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 

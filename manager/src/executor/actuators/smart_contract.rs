@@ -17,7 +17,7 @@ use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
 use super::super::super::resource::{EnergyProcessor, EnergyUtil};
 use super::super::super::version_fork::ForkController;
 use super::super::super::vm::StateBackend;
-use super::super::Manager;
+use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 

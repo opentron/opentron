@@ -8,7 +8,7 @@ use state::keys;
 use state::keys::ChainParameter;
 
 use super::super::version_fork::ForkController;
-use super::super::Manager;
+use crate::Manager;
 
 /// Proposal controller to handle proposals during maintenance.
 pub struct ProposalController<'m> {

@@ -7,7 +7,7 @@ use log::{debug, info};
 use proto2::state::{Witness, WitnessVoterReward};
 use state::keys;
 
-use super::super::Manager;
+use crate::Manager;
 
 /// Massive things done during maintenance.
 pub struct MaintenanceManager<'m> {

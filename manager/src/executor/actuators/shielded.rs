@@ -10,7 +10,7 @@ use proto2::contract as contract_pb;
 use proto2::state::Account;
 use state::keys;
 
-use super::super::Manager;
+use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 

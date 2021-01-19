@@ -10,7 +10,7 @@ use proto2::state::ResourceDelegation;
 use state::keys;
 
 use super::super::super::governance::reward::RewardController;
-use super::super::Manager;
+use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 

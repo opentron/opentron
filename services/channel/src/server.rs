@@ -22,14 +22,14 @@ use slog::{o, slog_info, slog_warn};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
+use byteorder::{ByteOrder, BE};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::time::{sleep, timeout};
 use tokio_stream::StreamExt;
+use context::AppContext;
 
-use super::protocol::{ChannelMessage, ChannelMessageCodec};
-use crate::context::AppContext;
-use crate::util::block_hash_to_number;
+use crate::protocol::{ChannelMessage, ChannelMessageCodec};
 
 pub async fn channel_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<()>) -> Result<(), Box<dyn Error>> {
     let config = &ctx.config.protocol.channel;
@@ -574,4 +574,11 @@ async fn sync_channel_handler(
             }
         }
     }
+}
+
+
+
+#[inline]
+pub fn block_hash_to_number(hash: &[u8]) -> i64 {
+    BE::read_u64(&hash[..8]) as _
 }

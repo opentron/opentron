@@ -1,24 +1,29 @@
+use std::collections::HashSet;
+use std::error::Error;
+use std::net::SocketAddr;
+use std::sync::Arc;
+
 use chrono::Utc;
 use futures::future::FutureExt;
 use futures::select;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
-use proto2::common::Endpoint;
-use proto2::discovery::{FindPeers, Peers, Ping, Pong};
 use rand::Rng;
-use slog::{debug, error, info, warn};
-use std::collections::HashSet;
-use std::error::Error;
-use std::net::SocketAddr;
-use std::sync::Arc;
+use log::{debug, error, info, warn};
 use tokio::net;
 use tokio::net::UdpSocket;
 use tokio::pin;
 use tokio::sync::broadcast;
 
-use super::protocol::{DiscoveryMessage, DiscoveryMessageTransport};
-use crate::context::AppContext;
-use crate::util::Peer;
+use proto2::common::Endpoint;
+use proto2::discovery::{FindPeers, Peers, Ping, Pong};
+use context::AppContext;
+
+use crate::protocol::{DiscoveryMessage, DiscoveryMessageTransport};
+use crate::peer::Peer;
+
+
+const PEERS_FILE: &'static str = "./peers.json";
 
 fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
     let mut acc = 0;
@@ -34,10 +39,9 @@ fn common_prefix_bits(a: &[u8], b: &[u8]) -> u32 {
 
 pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<()>) -> Result<(), Box<dyn Error>> {
     let config = &ctx.config.protocol.discovery;
-    let logger = slog_scope::logger();
 
     if !config.enable {
-        warn!(logger, "discovery service disabled");
+        warn!("discovery service disabled");
         return Ok(());
     }
 
@@ -48,9 +52,9 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
     let endpoint = &config.endpoint;
 
     let socket = UdpSocket::bind(endpoint).await?;
-    info!(logger, "bind to udp socket {}", socket.local_addr()?);
+    info!("bind to udp socket {}", socket.local_addr()?);
 
-    let peers_data = std::fs::read_to_string("./peers.json").unwrap_or("[]".to_string());
+    let peers_data = std::fs::read_to_string(PEERS_FILE).unwrap_or("[]".to_string());
     let mut peers_db: HashSet<Peer> = serde_json::from_str(&peers_data)?;
 
     let my_endpoint = channel_config
@@ -71,7 +75,6 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
             node_id: ctx.node_id.clone(),
         });
     info!(
-        logger,
         "advertised endpoint {}:{}", &my_endpoint.address, my_endpoint.port
     );
     let mut transport = DiscoveryMessageTransport::new(socket);
@@ -89,30 +92,29 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
                 timestamp: Utc::now().timestamp_millis(),
             };
             transport.send((ping.into(), peer_addr)).await?;
-            debug!(logger, "ping {}", peer_addr);
+            debug!("ping {}", peer_addr);
         } else {
-            warn!(logger, "unable to resove address {:?}", peer);
+            warn!("unable to resove address {:?}", peer);
         }
     }
 
     pin!(signal);
     loop {
-        let mut payload_fut = transport.next().fuse();
         select! {
             _ = signal.recv().fuse() => {
-                    warn!(logger, "discovery service closed");
+                    warn!("discovery service closed");
                     break;
             }
-            payload = payload_fut => {
+            payload = transport.next().fuse() => {
                 if payload.is_none() {
-                    warn!(logger, "udp discovery closed");
+                    warn!("udp discovery closed");
                     return Ok(());
                 }
                 let payload = payload.unwrap();
                 match payload {
                     Ok((DiscoveryMessage::Ping(ping), peer_addr)) => {
                         if ping.version != p2p_version {
-                            warn!(logger, "p2p version mismatch: version = {}", ping.version, ; "peer_addr" => peer_addr);
+                            warn!( "p2p version mismatch: version={} peer_addr={}", ping.version, peer_addr);
                             continue;
                         }
                         let pong = Pong {
@@ -121,11 +123,11 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
                             echo_version: p2p_version,
                         };
                         transport.send((pong.into(), peer_addr)).await?;
-                        debug!(logger, "pong"; "peer_addr" => peer_addr);
+                        debug!("pong peer_addr={}", peer_addr);
                         let mut rng = rand::thread_rng();
                         let mut random_id = vec![0u8; 32];
                         rng.fill(&mut random_id[..]);
-                        debug!(logger, "find peers target={}", hex::encode(&random_id); "peer_addr" => peer_addr);
+                        debug!("find peers target={} peer_addr={}", hex::encode(&random_id), peer_addr);
                         if ["127.0.0.1", my_ip, "192.168.1.1"].contains(&&*peer_addr.ip().to_string()) {
                             continue;
                         }
@@ -164,7 +166,7 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
                                 continue;
                             }
                             if let Ok(peer_addr) = format!("{}:{}", peer.address, peer.port).parse() {
-                                debug!(logger, "ping"; "peer_addr" => peer_addr);
+                                debug!("ping peer_addr={}", peer_addr);
                                 let ping = Ping {
                                     from: Some(my_endpoint.clone()),
                                     to: Some(Endpoint {
@@ -177,7 +179,7 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
                                 };
                                 transport.send((ping.into(), peer_addr)).await?;
                             } else {
-                                warn!(logger, "unable to parse peer address {}:{}", peer.address, peer.port);
+                                warn!("unable to parse peer address {}:{}", peer.address, peer.port);
                             }
                         }
                     }
@@ -193,11 +195,11 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
                         };
                         if !peers_db.contains(&peer) {
                             peers_db.insert(peer);
-                            std::fs::write("./peers.json", serde_json::to_string_pretty(&peers_db)?.as_bytes())?;
+                            std::fs::write(PEERS_FILE, serde_json::to_string_pretty(&peers_db)?.as_bytes())?;
                         }
                     }
                     Err(e) => {
-                        error!(logger, "error: {:?}", e);
+                        error!("error: {:?}", e);
                         return Err(e).map_err(From::from);
                     }
                 }

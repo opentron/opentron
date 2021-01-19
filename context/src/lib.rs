@@ -11,9 +11,7 @@ use log::info;
 use primitive_types::H256;
 use proto2::common::BlockId;
 use tokio::sync::broadcast;
-
-use crate::manager::Manager;
-use crate::util::get_my_ip;
+use manager::Manager;
 
 pub struct AppContext {
     pub outbound_ip: String,
@@ -51,9 +49,6 @@ impl AppContext {
         }
         chain_db.report_status();
 
-        let outbound_ip = get_my_ip().unwrap_or("127.0.0.1".into());
-        info!("outbound ip address: {}", outbound_ip);
-
         let genesis_block_id = BlockId {
             number: 0,
             hash: genesis_blk.header.hash.as_ref().to_owned(),
@@ -74,7 +69,7 @@ impl AppContext {
             config,
             genesis_config,
             node_id,
-            outbound_ip,
+            outbound_ip: "127.0.0.1".to_string(),
             genesis_block_id: Some(genesis_block_id),
             running: AtomicBool::new(true),
             syncing: AtomicBool::new(false),

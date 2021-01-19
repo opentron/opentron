@@ -15,8 +15,8 @@ use proto2::state::{ResourceReceipt, TransactionLog, TransactionReceipt};
 use state::keys;
 
 use self::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
-use crate::manager::resource::BandwidthProcessor;
-use crate::manager::Manager;
+use crate::resource::BandwidthProcessor;
+use crate::Manager;
 
 pub mod actuators;
 

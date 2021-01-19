@@ -13,7 +13,7 @@ use proto2::contract as contract_pb;
 use proto2::state::{asset::FrozenSupply, Account, Asset};
 use state::keys;
 
-use super::super::Manager;
+use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
 
