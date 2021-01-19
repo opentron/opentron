@@ -11,7 +11,7 @@ args:
           help: Path to config file
           short: c
           long: config
-          default_value: "./config/conf.toml"
+          default_value: "./etc/conf.toml"
 
     - debug:
           help: Enable debug logs (dev mode)

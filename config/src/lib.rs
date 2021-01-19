@@ -161,6 +161,6 @@ mod tests {
 
     #[test]
     fn test_load_default_mainnet_config() {
-        assert!(Config::load_from_str(include_str!("../conf.toml")).is_ok());
+        assert!(Config::load_from_str(include_str!("../../etc/conf.toml")).is_ok());
     }
 }
