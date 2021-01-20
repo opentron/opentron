@@ -3,9 +3,9 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Install](#install)
-  - [MacOS](#macos)
-  - [CentOS 7](#centos-7)
+- [MacOS](#macos)
+- [CentOS 7](#centos-7)
+- [Windows](#windows)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -45,6 +45,18 @@ git clone --recurse-submodules https://github.com/opentron/opentron.git
 cd opentron
 
 # Download ztron params
+./scripts/download-ztron-params.sh
+
+cargo build
+```
+
+## Windows
+
+You need to have VS 2019 Developer Tools, MSYS2 and vcpkg installed.
+
+```bash
+vcpkg install rocksdb[snappy]:x64-windows-static-md
+
 ./scripts/download-ztron-params.sh
 
 cargo build
