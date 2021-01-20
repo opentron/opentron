@@ -43,8 +43,8 @@ not ready for general use.
 
 - [x] Block data sync, only blocks (raw transactions), without transaction info and any other state data. Handle chain fork and block Merkle tree verification.
 - [ ] Simple transaction broadcast, without much verification, just broadcast transactions to the network as quickly as possible(an airdrop tool can be made from it)
-- [ ] Handle transaction verification. all state data will be available. (difficult, EVM engine, resource consumption mode, witness/vote/proposal, chain parameter are all handled at this stage, to make the state data identical as java-tron )
-- [ ] Build a query API layer upon state data. json-rpc.
+- [x] Handle transaction verification. all state data will be available. (difficult, EVM engine, resource consumption mode, witness/vote/proposal, chain parameter are all handled at this stage, to make the state data identical as java-tron )
+- [x] Build a query API layer upon state data. json-rpc.
 - [ ] Build a event API layer upon state data.
 - [ ] block mining logic (difficult, DPoS mining, need resource to become an SR)
 
@@ -88,11 +88,8 @@ not ready for general use.
     - [x] 4.0 TVM with zksnark: `ztron` crate
       - [x] shielded trc20 transaction - ztron
       - [x] integration
-    - [ ] 4.1 TVM
-      - [ ] ASSETISSUE
-      - [ ] REWARDBALACE
-      - [ ] STAKE/UNSTAKE
-      - [ ] CREATE2
+    - [x] 4.1 TVM
+      - [x] CREATE2
     - [ ] massive tests against resource usage, exit_reason
   - [ ] RPC API replacement
     - will not support gRPC
@@ -114,17 +111,14 @@ See [INSTALL.md](./INSTALL.md) for more detailed information.
 > sudo pacman -S protobuf  # ArchLinux
 > sudo apt install protobuf-compiler libprotobuf-dev # Ubuntu / Debian
 
-> # Install RocksDB
-> brew install rocksdb  # macOS
-
 > # Get code
-> git clone --recurse-submodules https://github.com/opentron/opentron.git
+> git clone https://github.com/opentron/opentron.git
 
-> # Compile tools
+> # Compile opentron
 > cd ./opentron/
-> cargo build --all
+> cargo build
 
-> cargo run -- --config config/conf.nile.toml
+> cargo run -- --config etc/conf.nile.toml
 ```
 
 ## License
