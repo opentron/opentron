@@ -12,7 +12,6 @@ futures = "0.3"
 tokio = { version = '1', default-features = false, features = ["net"] }
 tokio-stream = "0.1"
 prost = '0.7'
-prost-types = '0.7'
 chrono = '0.4'
 rand = '0.8'
 log = "0.4"

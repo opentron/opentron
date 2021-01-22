@@ -8,7 +8,6 @@ edition = "2018"
 bytes = '1'
 byteorder = '1'
 prost = '0.7'
-prost-types = '0.7'
 log = "0.4"
 slog = "2"
 slog-scope = "4.4"

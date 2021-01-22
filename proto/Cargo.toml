@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 bytes = "1"
 prost = "0.7"
-# Any
+# google.Any
 prost-types = "0.7"
 hex = "0.4"
 byteorder = "1.4"
