@@ -44,6 +44,7 @@ pub fn default_parameters() -> impl IntoIterator<Item = (ChainParameter, i64)> {
         (AllowTvmConstantinopleUpgrade, 0),
         (AllowTvmSolidity059Upgrade, 0),
         (AllowTvmShieldedUpgrade, 0),
+        (AllowTvmIstanbulUpgrade, 0),
         (AllowProtoFilterNum, 0),
     ];
 }
@@ -94,6 +95,7 @@ pub fn default_parameters_from_config(
         ),
         (AllowTvmSolidity059Upgrade, config.allow_tvm_solidity_059_upgrade as i64),
         (AllowTvmShieldedUpgrade, config.allow_tvm_shielded_upgrade as i64),
+        (AllowTvmIstanbulUpgrade, config.allow_tvm_istanbul_upgrade as i64),
         (AllowProtoFilterNum, 0),
     ];
 }
