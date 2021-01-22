@@ -40,7 +40,6 @@ tokio = { version = '1', default-features = false, features = [
     'net',
     'time',
 ] }
-tokio-compat-02 = "0.2"
 # misc
 serde = { version = '1.0', features = ['derive'] }
 chrono = '0.4'

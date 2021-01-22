@@ -9,7 +9,6 @@ use futures::join;
 use log::info;
 use slog::{o, slog_debug, slog_info, Drain};
 use slog_scope_futures::FutureExt as SlogFutureExt;
-use tokio_compat_02::FutureExt as Compat02FutureExt;
 
 use channel_service::server::channel_server;
 use context::AppContext;
@@ -69,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             rt.block_on(fut)
         }
         _ => {
-            let fut = run(ctx).compat();
+            let fut = run(ctx);
             rt.block_on(fut)
         }
     }
