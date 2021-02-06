@@ -1,5 +1,22 @@
 # TVM
 
+## Diffs vs EVM
+
+- rename gas to energy
+  - yes, rename
+  - some opcode consumes lower energy point
+- `gasprice` = 0
+- `block.gaslimit` = 0
+- `block.difficulty` = 0
+- buggy `COINBASE` opcode which returns 21 bytes
+- no energy refund
+  - there're variables tracking refunds, but not used in the final calculation
+- storage set/reset energy is buggy
+  - a hidden bug caused by comparing variable to null
+  - java is not null-safe
+- buggy exception handling with `TransactionException`
+- different constract address calculation from `CREATE2`, `CREATE`
+
 ## Stages
 
 ### AllowTvm = 9
