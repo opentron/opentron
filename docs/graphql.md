@@ -1,6 +1,6 @@
 # The GraphQL API
 
-OpenTron natively supports GraphQL, in a [EIP-1767](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1767.md) style.
+OpenTron natively supports GraphQL, in [EIP-1767](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1767.md) style.
 
 Current GraphQL API of OpenTron is an experimental one, which means it might changes often.
 Feel free to make a feature request or bug request.
