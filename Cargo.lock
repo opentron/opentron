@@ -1960,6 +1960,7 @@ dependencies = [
  "discovery-service",
  "futures 0.3.12",
  "graphql-service",
+ "keys",
  "log",
  "num_cpus",
  "reqwest",
