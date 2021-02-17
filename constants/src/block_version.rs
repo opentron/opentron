@@ -94,12 +94,14 @@ pub enum BlockVersion {
 impl BlockVersion {
     pub fn fork_policy(&self) -> ForkPolicy {
         match *self {
-            BlockVersion::GreatVoyage4_1_0 | BlockVersion::GreatVoyage4_0_1 | BlockVersion::GreatVoyage4_1_2 => ForkPolicy::New {
-                // GMT 2020-08-07 06:00:00
-                timestamp: 1596780000_000,
-                // 27 * 0.8 = 21.6
-                min_upgrade_percent: 80,
-            },
+            BlockVersion::GreatVoyage4_1_0 | BlockVersion::GreatVoyage4_0_1 | BlockVersion::GreatVoyage4_1_2 => {
+                ForkPolicy::New {
+                    // GMT 2020-08-07 06:00:00
+                    timestamp: 1596780000_000,
+                    // 27 * 0.8 = 21.6
+                    min_upgrade_percent: 80,
+                }
+            }
             BlockVersion::Odyssey3_2 => ForkPolicy::AtBlock { block_number: 4727890 },
             _ => ForkPolicy::Old,
         }

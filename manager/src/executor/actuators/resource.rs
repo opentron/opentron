@@ -10,9 +10,9 @@ use proto::state::ResourceDelegation;
 use state::keys;
 
 use super::super::super::governance::reward::RewardController;
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 impl BuiltinContractExecutorExt for contract_pb::FreezeBalanceContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {

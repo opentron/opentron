@@ -13,9 +13,9 @@ use proto::contract as contract_pb;
 use proto::state::{asset::FrozenSupply, Account, Asset};
 use state::keys;
 
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 impl BuiltinContractExecutorExt for contract_pb::AssetIssueContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {

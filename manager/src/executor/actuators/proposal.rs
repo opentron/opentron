@@ -8,9 +8,9 @@ use proto::state::{proposal::State as ProposalState, Proposal};
 use state::keys;
 
 use super::super::super::governance::proposal::ProposalUtil;
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 impl BuiltinContractExecutorExt for contract_pb::ProposalCreateContract {
     fn validate(&self, manager: &Manager, _ctx: &mut TransactionContext) -> Result<(), String> {

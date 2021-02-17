@@ -8,10 +8,10 @@ use chain_db::ChainDB;
 use config::genesis::GenesisConfig;
 use config::Config;
 use log::info;
+use manager::Manager;
 use primitive_types::H256;
 use proto::common::BlockId;
 use tokio::sync::broadcast;
-use manager::Manager;
 
 pub struct AppContext {
     pub outbound_ip: String,

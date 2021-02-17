@@ -53,6 +53,7 @@ enable = true
 endpoint = "0.0.0.0:3000"
 
 [protocol]
+# official nodes
 seed-nodes = [
     '54.236.37.243:18888',
     '52.53.189.99:18888',

@@ -1,13 +1,12 @@
 use std::convert::TryInto;
 
+use async_graphql::{Enum, SimpleObject, Union};
 use chrono::{DateTime, TimeZone, Utc};
 use primitive_types::H256;
 use proto::chain::transaction::Contract as ContractPb;
 use proto::common::Permission as PermissionPb;
-use async_graphql::{Enum, SimpleObject, Union};
 
 use super::scalar::{Address, Bytes, Bytes32, Long};
-
 
 #[derive(Enum, Clone, Copy, PartialEq, Eq)]
 pub enum AccountType {

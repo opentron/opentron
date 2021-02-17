@@ -2,6 +2,7 @@
 
 use crypto_api_chachapoly::ChachaPolyIetf;
 use ff::{Field, PrimeField};
+use group::GroupEncoding;
 use keys::Address;
 use lazy_static::lazy_static;
 use primitive_types::U256;
@@ -17,7 +18,6 @@ use zcash_primitives::sapling;
 use zcash_primitives::sapling::Node;
 use zcash_primitives::transaction::components::{Amount, GROTH_PROOF_SIZE};
 use zcash_proofs::prover::LocalTxProver;
-use group::GroupEncoding;
 
 use crate::keys::ZAddress;
 

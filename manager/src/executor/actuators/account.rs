@@ -11,9 +11,9 @@ use proto::contract as contract_pb;
 use proto::state::{Account, ActivePermission, OwnerPermission, PermissionKey};
 use state::keys;
 
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 // Set account's name.
 impl BuiltinContractExecutorExt for contract_pb::AccountUpdateContract {

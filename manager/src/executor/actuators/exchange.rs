@@ -10,10 +10,10 @@ use proto::contract as contract_pb;
 use proto::state::Exchange;
 use state::keys;
 
-use crate::Manager;
 use super::super::TransactionContext;
 use super::asset::find_asset_by_name;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 const EXCHANGE_BALANCE_LIMIT: i64 = 1_000_000_000_000_000;
 

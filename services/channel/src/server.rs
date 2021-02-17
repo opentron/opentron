@@ -4,8 +4,10 @@ use std::net::SocketAddr;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use byteorder::{ByteOrder, BE};
 use chain::IndexedBlock;
 use chrono::Utc;
+use context::AppContext;
 use futures::future::FutureExt;
 use futures::join;
 use futures::sink::{Sink, SinkExt};
@@ -22,12 +24,10 @@ use slog::{o, slog_info, slog_warn};
 use slog_scope_futures::FutureExt as SlogFutureExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
-use byteorder::{ByteOrder, BE};
 use tokio::sync::mpsc;
 use tokio::time::Duration;
 use tokio::time::{sleep, timeout};
 use tokio_stream::StreamExt;
-use context::AppContext;
 
 use crate::protocol::{ChannelMessage, ChannelMessageCodec};
 
@@ -575,8 +575,6 @@ async fn sync_channel_handler(
         }
     }
 }
-
-
 
 #[inline]
 pub fn block_hash_to_number(hash: &[u8]) -> i64 {

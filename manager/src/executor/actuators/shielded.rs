@@ -10,9 +10,9 @@ use proto::contract as contract_pb;
 use proto::state::Account;
 use state::keys;
 
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 /// The TRZ token id.
 const SHIELDED_TOKEN_ID: i64 = 1000016;

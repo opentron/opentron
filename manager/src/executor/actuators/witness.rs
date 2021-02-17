@@ -11,9 +11,9 @@ use proto::state::{Votes, Witness};
 use state::keys;
 
 use super::super::super::governance::reward::{RewardController, RewardUtil};
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 impl BuiltinContractExecutorExt for contract_pb::WitnessCreateContract {
     fn validate(&self, manager: &Manager, ctx: &mut TransactionContext) -> Result<(), String> {

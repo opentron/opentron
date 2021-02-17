@@ -8,9 +8,9 @@ use proto::contract as contract_pb;
 use proto::state::Account;
 use state::keys;
 
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 const TRANSFER_FEE: i64 = 0;
 

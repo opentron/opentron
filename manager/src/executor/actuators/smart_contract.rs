@@ -17,9 +17,9 @@ use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
 use super::super::super::resource::{EnergyProcessor, EnergyUtil};
 use super::super::super::version_fork::ForkController;
 use super::super::super::vm::StateBackend;
-use crate::Manager;
 use super::super::TransactionContext;
 use super::BuiltinContractExecutorExt;
+use crate::Manager;
 
 const MAX_CONTRACT_NAME_LENGTH: usize = 32;
 const MAX_FEE_LIMIT: i64 = 1_000_000_000;

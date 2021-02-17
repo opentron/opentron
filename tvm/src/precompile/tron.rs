@@ -54,7 +54,7 @@ pub fn batchvalidatesign(input: &[u8]) -> Option<Vec<u8>> {
     let sigs = it.next_array_of_bytes()?;
     let addrs = it.next_array_of_byte32()?;
 
-    if sigs.len() != addrs.len() || sigs.is_empty() || sigs.len() > MAX_NUM_OF_SIGNATURES{
+    if sigs.len() != addrs.len() || sigs.is_empty() || sigs.len() > MAX_NUM_OF_SIGNATURES {
         return None;
     }
 

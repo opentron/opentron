@@ -8,20 +8,19 @@ use futures::future::FutureExt;
 use futures::select;
 use futures::sink::SinkExt;
 use futures::stream::StreamExt;
-use rand::Rng;
 use log::{debug, error, info, warn};
+use rand::Rng;
 use tokio::net;
 use tokio::net::UdpSocket;
 use tokio::pin;
 use tokio::sync::broadcast;
 
+use context::AppContext;
 use proto::common::Endpoint;
 use proto::discovery::{FindPeers, Peers, Ping, Pong};
-use context::AppContext;
 
-use crate::protocol::{DiscoveryMessage, DiscoveryMessageTransport};
 use crate::peer::Peer;
-
+use crate::protocol::{DiscoveryMessage, DiscoveryMessageTransport};
 
 const PEERS_FILE: &'static str = "./peers.json";
 
@@ -74,9 +73,7 @@ pub async fn discovery_server(ctx: Arc<AppContext>, signal: broadcast::Receiver<
                 .unwrap_or(18888) as _,
             node_id: ctx.node_id.clone(),
         });
-    info!(
-        "advertised endpoint {}:{}", &my_endpoint.address, my_endpoint.port
-    );
+    info!("advertised endpoint {}:{}", &my_endpoint.address, my_endpoint.port);
     let mut transport = DiscoveryMessageTransport::new(socket);
 
     for peer in &ctx.config.protocol.seed_nodes {
