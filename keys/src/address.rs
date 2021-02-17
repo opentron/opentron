@@ -63,6 +63,19 @@ impl Address {
 
         unsafe { std::mem::transmute(&raw[0]) }
     }
+
+    /// To hex address, i.e. 41-address.
+    pub fn to_hex_address(&self) -> String {
+        hex::encode(self.0)
+    }
+
+    /// ETH Address.
+    /// Ref: EIP-55 Mixed-case checksum address encoding
+    pub fn to_eth_address(&self) -> String {
+        let mut addr = format!("0x{}", hex::encode(self.as_tvm_bytes()));
+        eip55_checksum(unsafe { &mut addr.as_bytes_mut()[2..] });
+        addr
+    }
 }
 
 impl Default for Address {
@@ -196,6 +209,22 @@ pub fn b58decode_check(s: &str) -> Result<Vec<u8>, Error> {
     } else {
         Ok(result)
     }
+}
+
+fn eip55_checksum(hex_address: &mut [u8]) {
+    let mut hasher = Keccak256::new();
+    hasher.update(&hex_address);
+    let hashed_address = hex::encode(hasher.finalize());
+
+    hex_address
+        .iter_mut()
+        .zip(hashed_address.as_bytes().iter())
+        .for_each(|(c, &h)| match *c {
+            b'a'..=b'f' if h > b'7' => {
+                *c = c.to_ascii_uppercase();
+            }
+            _ => (),
+        });
 }
 
 #[cfg(test)]

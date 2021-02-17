@@ -21,6 +21,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let yaml = clap::load_yaml!("cli.yml");
     let matches = clap::App::from_yaml(yaml).get_matches();
 
+    match matches.subcommand() {
+        ("key", Some(arg_matches)) => {
+            opentron::commands::key::main(arg_matches)?;
+            return Ok(());
+        }
+        _ => (),
+    }
+
     // ! init loggers
     let decorator = slog_term::TermDecorator::new().build();
     // let drain = slog_term::CompactFormat::new(decorator).build().fuse();

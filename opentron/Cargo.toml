@@ -46,6 +46,7 @@ chrono = '0.4'
 byteorder = '1'
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "json"] }
 # workspace
+keys = { path = '../keys' }
 chain-db = { path = '../chain-db' }
 config = { path = '../config' }
 context = { path = '../context' }

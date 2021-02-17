@@ -2,7 +2,7 @@
 use std::fmt;
 
 use rand::rngs::OsRng;
-use secp256k1::{SecretKey, PublicKey};
+use secp256k1::{PublicKey, SecretKey};
 
 use crate::address::Address;
 use crate::error::Error;
@@ -52,7 +52,7 @@ impl KeyPair {
     pub fn generate() -> Self {
         let mut rng = OsRng;
         let secret_key = SecretKey::random(&mut rng);
-        let public_key= PublicKey::from_secret_key(&secret_key);
+        let public_key = PublicKey::from_secret_key(&secret_key);
 
         KeyPair::from_keypair(secret_key, public_key)
     }
