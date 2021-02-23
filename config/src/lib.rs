@@ -1,3 +1,5 @@
+//! Config parser.
+
 use std::fs;
 use std::path::Path;
 
@@ -137,11 +139,43 @@ pub struct GraphQLConfig {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub struct ProducerKey {
+    pub address: String,
+    pub private_key: String,
+}
+
+/// Config for block producer.
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub struct ProducerConfig {
+    pub enable: bool,
+    /// Key store file path
+    pub keystore: Option<String>,
+    // Key paris in config file
+    pub keypair: Vec<ProducerKey>,
+}
+
+impl Default for ProducerConfig {
+    fn default() -> Self {
+        ProducerConfig {
+            enable: false,
+            keystore: None,
+            keypair: vec![],
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct Config {
     pub chain: ChainConfig,
     pub storage: StorageConfig,
     pub protocol: ProtocolConfig,
     pub graphql: GraphQLConfig,
+    #[serde(default = "Default::default")]
+    pub producer: ProducerConfig,
 }
 
 impl Config {
