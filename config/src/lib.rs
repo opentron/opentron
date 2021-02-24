@@ -53,7 +53,7 @@ fn default_energy_fee() -> i64 {
 }
 
 fn default_bandwidth_fee() -> i64 {
-    100
+    10
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

@@ -346,8 +346,6 @@ enum ChainParameter {
   // Default: 10
   BandwidthFee = 3;
   // Default: 100
-  //
-  // Mainnet: 10
   EnergyFee = 11;
   // Used in `CreateAccount`, `Transfer`, `TransferAsset`.
   //
