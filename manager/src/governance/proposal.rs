@@ -124,7 +124,7 @@ impl ProposalUtil<'_> {
             MaintenanceInterval => self.accept_range_value(value, 3 * 27 * 1_000, 24 * 3600 * 1_000),
             WitnessCreateFee |
             AccountCreateFee |
-            BandwidthFee |
+            BandwidthPrice |
             AssetIssueFee |
             WitnessPayPerBlock |
             StandbyWitnessAllowance |
@@ -136,7 +136,7 @@ impl ProposalUtil<'_> {
                 }
                 self.accept_true(value)
             }
-            EnergyFee | ExchangeCreateFee => Ok(()),
+            EnergyPrice | ExchangeCreateFee => Ok(()),
             MaxCpuTimeOfOneTxn => self.accept_range_value(value, 10, 100),
             AllowTvm | AllowUpdateAccountName | AllowSameTokenName | AllowDelegateResource => self.accept_true(value),
             TotalEnergyLimit => {
