@@ -518,6 +518,12 @@ impl Transaction {
         })
     }
 
+    /// Value is the value, in sun, sent along with this transaction.
+    async fn value(&self) -> Option<Long> {
+        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
+        Contract::from(cntr).value()
+    }
+
     // NOTE: for debug
     async fn receipt(&self, ctx: &Context<'_>) -> Result<String> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
@@ -531,13 +537,13 @@ impl Transaction {
             Ok("not found".to_owned())
         }
     }
-    // nonce
-    // status
-    // gasUsed
-    // cumulativeGasUsed
-    // value
-    // gasPrice
-    // gas
+
+    // nonce = 0
+    // status = always success
+    // gasUsed = 0
+    // cumulativeGasUsed = 0
+    // gasPrice = 0
+    // gas = 0
     // inputData
 }
 

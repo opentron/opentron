@@ -401,6 +401,14 @@ impl Contract {
             _ => None,
         }
     }
+
+    pub fn value(&self) -> Option<Long> {
+        use self::Contract::*;
+        match *self {
+            TransferContract(ref inner) => Some(inner.amount.into()),
+            _ => None,
+        }
+    }
 }
 
 impl From<&ContractPb> for Contract {
