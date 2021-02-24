@@ -66,7 +66,7 @@ pub fn default_parameters_from_config(
         (AllowChangeDelegation, 0),
         (AllowTvm, config.allow_tvm as i64),
         (ForbidTransferToContract, 0),
-        (BandwidthFee, 10),
+        (BandwidthFee, config.bandwidth_fee),
         (EnergyFee, config.energy_fee),
         (WitnessCreateFee, 9999_000_000),
         (AccountCreateFee, 100_000),
