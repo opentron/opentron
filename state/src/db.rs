@@ -513,7 +513,7 @@ fn col_descs_for_state_db() -> Vec<ColumnFamilyDescriptor> {
 
 impl StateDB {
     pub fn new<P: AsRef<Path>>(db_path: P) -> StateDB {
-        std::fs::create_dir_all(db_path).expect("create db directory");
+        std::fs::create_dir_all(&db_path).expect("create db directory");
 
         let db_options = DBOptions::default()
             .create_if_missing(true)
