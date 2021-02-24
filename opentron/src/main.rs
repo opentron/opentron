@@ -132,6 +132,7 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
         let logger = slog_scope::logger().new(o!("service" => "discovery"));
         discovery_server(ctx, done_signal).with_logger(logger)
     };
+
     let _ = join!(graphql_service, channel_service, discovery_service);
 
     Ok(termination_done.await?)

@@ -65,7 +65,7 @@ steps:
 
 ### consensusService
 
-miners.
+The miners.
 
 ```
 getBlockProducedTimeOut = 50%.
@@ -77,4 +77,13 @@ Consensus.start()
 - DposService.start()
   - dposTask.init()
     - calling produceBlock
+      - manager.generateBlock
 ```
+
+## Block Produce
+
+``Manager.generateBlock(Miner miner, long blockTime, long timeout)``
+
+- Generate block header
+- iterater over pendingTransactions and rePushTransactions
+  - processTransaction
