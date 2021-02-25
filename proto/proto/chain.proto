@@ -44,17 +44,6 @@ message BlockHeader {
   bytes witness_signature = 2;
 }
 
-// (name, address) use name, (null, address) use address, (name, null) use name
-message AccountId {
-  bytes name = 1;
-  bytes address = 2;
-}
-
-message Authority {
-  AccountId account = 1;
-  bytes permission_name = 2;
-}
-
 enum ContractType {
   reserved 21, 22, 23;
   reserved "BuyStorageContract", "BuyStorageBytesContract", "SellStorageContract";
@@ -176,24 +165,26 @@ message Transaction {
 
   message Raw {
     bytes ref_block_bytes = 1;
-    // unused
-    int64 ref_block_num = 3;
     bytes ref_block_hash = 4;
     // max = now + 86400_000
     int64 expiration = 8;
-    // unused
-    repeated Authority auths = 9;
     // used as transaction memo
     // max size = 512000
     bytes data = 10;
     // only support size = 1, repeated list here for extension
     // changed: from repeated to optional(default for proto3)
     Contract contract = 11;
+    // unused, but is filled with creation time.
+    int64 timestamp = 14;
+    // max energy fee limit
+    int64 fee_limit = 18;
+
+    // unused
+    int64 ref_block_num = 3;
+    // unused, changed from Authority type
+    repeated bytes auths = 9;
     // unused
     bytes scripts = 12;
-    // unused
-    int64 timestamp = 14;
-    int64 fee_limit = 18;
 
     // in commit ae0075bd6d433f6bfb2ecbb74e5f380ee819dbc8
     // in txn a5262325574c1cd4f0b7e0ea3d099d8546f47c72f8c165b792971f52d67d436c
