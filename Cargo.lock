@@ -2188,6 +2188,7 @@ dependencies = [
  "bytes 1.0.1",
  "chain",
  "chrono",
+ "config",
  "context",
  "futures 0.3.12",
  "hex",

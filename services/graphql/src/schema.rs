@@ -1041,7 +1041,7 @@ pub struct MutationRoot;
 #[Object]
 impl MutationRoot {
     /// SendRawTransaction sends an protobuf-encoded transaction to the network.
-    async fn send_raw_transaction(&self, _data: Bytes) -> Result<Bytes32> {
+    async fn send_raw_transaction(&self, _raw_data: Bytes, _signature: Vec<Bytes>) -> Result<Bytes32> {
         unimplemented!()
     }
 
