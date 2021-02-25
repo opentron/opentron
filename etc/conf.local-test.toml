@@ -24,6 +24,12 @@ proposal-expiration-duration = 1200_000
 # in ms, 10min
 maintenance-interval = 600_000
 
+# Default: 100, PrivateNet: 10
+energy-price = 140
+# Default: 10
+bandwidth-price = 140
+
+
 # NOTE: All following are enabled by proposals.
 # PrivateNet: true
 allow-multisig = true
@@ -47,11 +53,6 @@ allow-tvm-shielded-upgrade = true
 # PrivateNet: true
 # TODO: unimplimented
 allow-tvm-istanbul-upgrade = false
-
-# Default: 100, PrivateNet: 10
-energy-fee = 140
-# Default: 100
-bandwidth-fee = 140
 
 [producer]
 enable = true

@@ -44,7 +44,7 @@ maintenance-interval = 600_000
 #allow-tvm-shielded-upgrade = false
 
 # Default: 100, PrivateNet: 10
-#energy-fee = 100
+#energy-price = 100
 
 [graphql]
 enable = true
