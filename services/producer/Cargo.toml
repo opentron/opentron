@@ -25,3 +25,4 @@ chain = { path = '../../chain' }
 keys = { path = '../../keys' }
 context = { path = '../../context' }
 config = { path = '../../config' }
+constants = { path = '../../constants' }

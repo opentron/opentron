@@ -493,14 +493,15 @@ impl Manager {
         self.get_absolute_slot(self.state_db.must_get(&keys::DynamicProperty::LatestBlockTimestamp))
     }
 
-    fn get_slot_timestamp(&self, mut slot: i64) -> i64 {
+    // public long getTime(long slot)
+    pub fn get_slot_timestamp(&self, mut slot: i64) -> i64 {
         assert!(slot >= 0, "unreachable");
 
         if slot == 0 {
             return Utc::now().timestamp_millis();
         }
 
-        if self.state_db.get(&keys::DynamicProperty::LatestBlockNumber).unwrap() == Some(0) {
+        if self.state_db.must_get(&keys::DynamicProperty::LatestBlockNumber) == 0 {
             return self.genesis_block_timestamp + slot * constants::BLOCK_PRODUCING_INTERVAL;
         }
 
