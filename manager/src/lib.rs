@@ -1,6 +1,7 @@
 #![feature(asm)]
 
-use ::keys::{b58encode_check, Address};
+use ::keys::{b58encode_check, Address, KeyPair};
+use chain::BlockBuilder;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
@@ -475,12 +476,30 @@ impl Manager {
         }
     }
 
+    // block producers.
+    pub fn generate_empty_block(
+        &mut self,
+        timestamp: i64,
+        witness: &Address,
+        keypair: &KeyPair,
+    ) -> Result<IndexedBlock> {
+        println!("test");
+        let block_number = self.latest_block_number() + 1;
+        let block = BlockBuilder::new(block_number)
+            .version(0)
+            .timestamp(timestamp)
+            .parent_hash(&self.latest_block_hash())
+            .build(witness, keypair);
+
+        Ok(block.unwrap())
+    }
+
     // * DposSlot
     fn get_absolute_slot(&self, timestamp: i64) -> i64 {
         (timestamp - self.genesis_block_timestamp) / constants::BLOCK_PRODUCING_INTERVAL
     }
 
-    fn get_slot(&self, timestamp: i64) -> i64 {
+    pub fn get_slot(&self, timestamp: i64) -> i64 {
         let first_slot_ts = self.get_slot_timestamp(1);
         if timestamp < first_slot_ts {
             0
@@ -536,10 +555,10 @@ impl Manager {
         witnesses.into_iter().map(|wit| wit.0).collect()
     }
 
-    fn get_scheduled_witness(&self, slot: i64) -> Address {
-        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+    pub fn get_scheduled_witness(&self, slot: i64) -> Address {
+        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap_or_default();
         if witnesses.is_empty() {
-            panic!("no witness found");
+            panic!("no witness schedule found");
         }
         if witnesses.len() > constants::MAX_NUM_OF_ACTIVE_WITNESSES {
             let _ = witnesses.split_off(constants::MAX_NUM_OF_ACTIVE_WITNESSES);
