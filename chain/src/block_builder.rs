@@ -47,12 +47,14 @@ impl BlockBuilder {
             .as_mut()
             .map(|h| h.witness_address = witness.as_bytes().into());
 
-        let mut buf = Vec::with_capacity(255);
-        self.header.raw_data.as_ref().unwrap().encode(&mut buf).unwrap();
+        let block = IndexedBlock::from_raw_header_and_txns(self.header, self.txns);
 
-        let signature = keypair.private().sign(&buf).ok()?;
-        self.header.witness_signature = signature.as_bytes().into();
-
-        IndexedBlock::from_raw_header_and_txns(self.header, self.txns)
+        block.and_then(|mut b| {
+            let mut buf = Vec::with_capacity(255);
+            b.header.raw.raw_data.as_ref().unwrap().encode(&mut buf).unwrap();
+            let signature = keypair.private().sign(&buf).ok()?;
+            b.header.raw.witness_signature = signature.as_bytes().into();
+            Some(b)
+        })
     }
 }
