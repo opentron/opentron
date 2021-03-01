@@ -13,6 +13,19 @@ use tokio::select;
 use tokio::sync::broadcast;
 use tokio::time::sleep;
 
+pub enum State {
+    Ok,
+    /// Same block number, different block id, multiple nodes using same producer key.
+    DuplicatedWitness,
+    SystemClockLagged,
+    /// Not my turn
+    NotMySlot,
+    NotTimeYet,
+    /// Participation:{} <  minParticipationRate:{}
+    LowParticipationRate,
+    ProduceFailed,
+}
+
 // DposTask.java
 
 pub async fn producer_task(
@@ -55,7 +68,27 @@ pub async fn producer_task(
             // produceBlock
             select! {
                 _ = sleep(Duration::from_millis(d as u64)) => {
+                    // produceBlock
+
                     info!("produce block ... dummy");
+                    let slot = manager.get_slot(Utc::now().timestamp_millis() + 50);
+                    let block_timestamp = manager.get_slot_timestamp(slot);
+
+                    info!("slot => {} {}", slot, block_timestamp);
+
+                    let block_number =  manager.latest_block_number();
+                    let (witness_address, keypair) = keypairs.iter().next().unwrap();
+                    if block_number == 0 {
+                        info!("👀generating block#0 without sync check");
+                        let new_block = manager.generate_empty_block(block_timestamp, witness_address, keypair).unwrap();
+                        ctx.chain_db.insert_block(&new_block)?;
+                        info!("=> {:?}", new_block.hash());
+                        info!("=> produce {:?}", manager.push_block(&new_block));
+                        info!("block pushed");
+                    } else {
+                        info!("block number => {}", block_number+1);
+                        info!("sched witness => {}", manager.get_scheduled_witness(slot));
+                    }
                 }
                 _ = termination_signal.recv().fuse() => {
                     warn!("block producer closed");
