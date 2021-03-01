@@ -36,7 +36,7 @@ message BlockHeader {
     // int64 witness_id = 8;
     bytes witness_address = 9;
     int32 version = 10;
-    // renamed: accountStateRoot, First appares in block=8222293
+    // renamed: accountStateRoot, First appares in block=8222293, actually not used.
     bytes account_state_root = 11;
   }
 

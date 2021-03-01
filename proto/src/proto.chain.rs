@@ -43,7 +43,7 @@ pub mod block_header {
         pub witness_address: ::prost::alloc::vec::Vec<u8>,
         #[prost(int32, tag="10")]
         pub version: i32,
-        /// renamed: accountStateRoot, First appares in block=8222293
+        /// renamed: accountStateRoot, First appares in block=8222293, actually not used.
         #[prost(bytes="vec", tag="11")]
         pub account_state_root: ::prost::alloc::vec::Vec<u8>,
     }
