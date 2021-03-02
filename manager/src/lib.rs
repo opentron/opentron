@@ -40,7 +40,6 @@ pub struct Manager {
     state_db: StateDB,
     genesis_block_timestamp: i64,
     blackhole: Address,
-    my_witness: Vec<u8>,
 
     block_energy_usage: i64,
     // TaPoS check, size = 65536, 2MB.
@@ -72,7 +71,6 @@ impl Manager {
             state_db,
             genesis_block_timestamp,
             blackhole,
-            my_witness: vec![],
             block_energy_usage: 0,
             ref_block_hashes: Vec::with_capacity(65536),
             config: config.clone(),
@@ -140,21 +138,26 @@ impl Manager {
         self.layers -= n;
     }
 
-    // Entry of db manager.
-    pub fn push_block(&mut self, block: &IndexedBlock) -> Result<bool> {
+    /// Receive incoming block, and verify witness block signature.
+    pub fn push_incoming_block(&mut self, block: &IndexedBlock) -> Result<bool> {
+        // . verify witness signature
+        let recovered = block.recover_witness()?;
+        if self.state_db.must_get(&keys::ChainParameter::AllowMultisig) == 1 {
+            // warn!("TODO: handle multisig witness");
+        }
+        if recovered.as_bytes() != block.witness() {
+            return Err(new_error("verifying block witness signature failed"));
+        }
+        self.push_block(block)
+    }
+
+    pub fn push_generated_block(&mut self, block: &IndexedBlock) -> Result<bool> {
+        self.push_block(block)
+    }
+
+    fn push_block(&mut self, block: &IndexedBlock) -> Result<bool> {
         if block.number() <= 0 {
             panic!("only accepts block number > 1");
-        }
-
-        // . verify witness signature
-        if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
-            let recovered = block.recover_witness()?;
-            if self.state_db.must_get(&keys::ChainParameter::AllowMultisig) == 1 {
-                // warn!("TODO: handle multisig witness");
-            }
-            if recovered.as_bytes() != block.witness() {
-                return Err(new_error("verifying block witness signature failed"));
-            }
         }
 
         // . verify merkle root hash of transaction
@@ -167,7 +170,8 @@ impl Manager {
 
         // TODO: check dup block? (StateManager.receiveBlock)
 
-        // NOTE: mainnet does not support shielded TRC10 transaction. No need to check shielded transaction count.
+        // NOTE: mainnet does not support shielded TRC10 transaction.
+        // So there's no need to check shielded transaction count.
 
         // . reject smaller block number
         if block.number() <= self.latest_block_number() {
@@ -476,22 +480,23 @@ impl Manager {
         }
     }
 
-    // block producers.
+    // * block producers
+
+    /// Generate an empty block. This normally happens when producing the first block (block#1)
+    /// after genesis block, which requires sync-check to be turned off.
     pub fn generate_empty_block(
         &mut self,
         timestamp: i64,
         witness: &Address,
         keypair: &KeyPair,
     ) -> Result<IndexedBlock> {
-        println!("test");
         let block_number = self.latest_block_number() + 1;
-        let block = BlockBuilder::new(block_number)
-            .version(0)
+        BlockBuilder::new(block_number)
+            .version(17) // GreatVoyage4_0_1
             .timestamp(timestamp)
             .parent_hash(&self.latest_block_hash())
-            .build(witness, keypair);
-
-        Ok(block.unwrap())
+            .build(witness, keypair)
+            .ok_or(new_error("cannot produce block"))
     }
 
     // * DposSlot

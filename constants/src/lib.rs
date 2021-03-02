@@ -7,12 +7,17 @@ pub mod block_version;
 /// Current block version for produced block.
 pub const CURRENT_BLOCK_VERSION: BlockVersion = BlockVersion::GreatVoyage4_0_1;
 
+// * Block Produce.
+
 /// Will postpone txns if block size exceeds 2MiB.
 /// So in theory, max txns/block is around 7700, max tps is around 2500.
 pub const MAX_BLOCK_SIZE: usize = 2_000_000;
 
 // 3s, in ms.
 pub const BLOCK_PRODUCING_INTERVAL: i64 = 3_000;
+
+// 50%
+pub const BLOCK_PRODUCE_TIMEOUT_PERCENT: i64 = 50;
 
 /// Max block size in channel protocol handler.
 pub const MAX_ACCEPTABLE_BLOCK_SIZE: usize = MAX_BLOCK_SIZE + 1000;

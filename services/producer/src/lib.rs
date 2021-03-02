@@ -1,10 +1,14 @@
 //! The block producer.
+//!
+//! The java-tron's block producer is not optimized.
+//! It sleeps and wait for next slot, so it can only use 750ms(default) to generate a block,
+//! Making the 3s block producing interval meaningless.
 
 use chrono::Utc;
 use context::AppContext;
 use futures::future::FutureExt;
 use keys::{Address, KeyPair};
-use log::{info, warn};
+use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
@@ -62,32 +66,45 @@ pub async fn producer_task(
             // if first slot timestamp is greater than current, skip sync check
             sync_check_required = manager.get_slot_timestamp(1) < Utc::now().timestamp_millis()
         } else {
+            // duration to next slot
             let d = constants::BLOCK_PRODUCING_INTERVAL -
                 Utc::now().timestamp_millis() % constants::BLOCK_PRODUCING_INTERVAL;
 
-            // produceBlock
             select! {
                 _ = sleep(Duration::from_millis(d as u64)) => {
                     // produceBlock
 
-                    info!("produce block ... dummy");
                     let slot = manager.get_slot(Utc::now().timestamp_millis() + 50);
                     let block_timestamp = manager.get_slot_timestamp(slot);
 
-                    info!("slot => {} {}", slot, block_timestamp);
+                    let block_number = manager.latest_block_number() + 1;
 
-                    let block_number =  manager.latest_block_number();
-                    let (witness_address, keypair) = keypairs.iter().next().unwrap();
-                    if block_number == 0 {
-                        info!("👀generating block#0 without sync check");
-                        let new_block = manager.generate_empty_block(block_timestamp, witness_address, keypair).unwrap();
-                        ctx.chain_db.insert_block(&new_block)?;
-                        info!("=> {:?}", new_block.hash());
-                        info!("=> produce {:?}", manager.push_block(&new_block));
-                        info!("block pushed");
-                    } else {
-                        info!("block number => {}", block_number+1);
-                        info!("sched witness => {}", manager.get_scheduled_witness(slot));
+                    debug!("produce block#{} slot={} timestamp={}", block_number, slot, block_timestamp);
+
+                    match block_number {
+                        1 => {
+                            info!("👀generating block#1 without sync check");
+                            let (witness_address, keypair) = keypairs.iter().next().unwrap();
+                            let new_block = manager.generate_empty_block(block_timestamp, witness_address, keypair).unwrap();
+                            ctx.chain_db.insert_block(&new_block)?;
+                            info!("=> {:?}", new_block.hash());
+                            info!("=> produce {:?}", manager.push_generated_block(&new_block));
+                            info!("block pushed");
+                        }
+                        _ if block_number > 1 => {
+                            let witness_address = manager.get_scheduled_witness(slot);
+                            if let Some(_keypair) = keypairs.get(&witness_address) {
+                                info!("TODO: generate block#{} with {}", block_number, witness_address);
+
+                                let deadline = block_timestamp + constants::BLOCK_PRODUCING_INTERVAL / 2 *
+                                    constants::BLOCK_PRODUCE_TIMEOUT_PERCENT / 100;
+                                // produce
+                                info!("deadline {}", deadline);
+                            } else {
+                                // Not my turn, pass
+                            }
+                        }
+                        _ => unreachable!("block number is always >= 1")
                     }
                 }
                 _ = termination_signal.recv().fuse() => {
