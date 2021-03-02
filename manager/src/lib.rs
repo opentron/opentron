@@ -648,7 +648,7 @@ impl WitnessStatisticManager<'_> {
             let mut wit = self.manager.state_db.must_get(&keys::Witness(wit_addr));
             wit.total_missed += 1;
             warn!(
-                "block #{}, witness={}, total_missed={}",
+                "block miss #{}, witness={}, total_missed={}",
                 block.number(),
                 wit_addr,
                 wit.total_missed
