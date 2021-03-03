@@ -50,7 +50,7 @@ pub async fn producer_task(
     info!(
         "📦block producer enabled, with {} keys: {}",
         keypairs.len(),
-        keypairs.keys().map(|k| k.to_string()).collect::<Vec<_>>().join(",")
+        keypairs.keys().map(|k| k.to_string()).collect::<Vec<_>>().join(", ")
     );
 
     // true except first block and first producer
@@ -87,6 +87,7 @@ pub async fn producer_task(
                             let new_block =
                                 manager.generate_empty_block(block_timestamp, witness_address, keypair).unwrap();
                             ctx.chain_db.insert_block(&new_block).expect("TODO: handle insert_block error");
+                            ctx.chain_db.update_block_height(new_block.number());
                             info!("=> {:?}", new_block.hash());
                             info!("=> produce {:?}", manager.push_generated_block(&new_block));
                             info!("block pushed");
@@ -103,6 +104,7 @@ pub async fn producer_task(
                                 debug!("deadline {}", deadline);
                                 let new_block = manager.generate_empty_block(block_timestamp, &witness_address, keypair).unwrap();
                                 ctx.chain_db.insert_block(&new_block).expect("TODO: handle insert_block error");
+                                ctx.chain_db.update_block_height(new_block.number());
                                 info!("=> {:?}", new_block.hash());
                                 info!("=> produce {:?}", manager.push_generated_block(&new_block));
 
