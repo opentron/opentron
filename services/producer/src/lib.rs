@@ -5,10 +5,7 @@
 //! Making the 3s block producing interval meaningless.
 
 use chrono::Utc;
-use context::AppContext;
 use futures::future::FutureExt;
-use keys::{Address, KeyPair};
-use log::{debug, info, warn};
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
@@ -16,6 +13,12 @@ use std::time::Duration;
 use tokio::select;
 use tokio::sync::broadcast;
 use tokio::time::sleep;
+
+use context::AppContext;
+use keys::{Address, KeyPair};
+use chain::{IndexedBlock};
+use log::{debug, info, warn};
+use manager::Manager;
 
 pub enum State {
     Ok,
@@ -125,6 +128,17 @@ pub async fn producer_task(
     }
 
     Ok(())
+}
+
+/// Packing transactions from mempool and produce a block.
+async fn produce_block(manager: &Manager, deadline: i64, block_timestamp: i64) -> Result<IndexedBlock, String> {
+    // For each transaction in `pendingTransactions` and `rePushTransactions`:
+    // * check deadline
+    // * check blocksize
+    // * no need to check shielded transaction
+    // * no need to check multi sign here
+    // * apply transaction
+    unimplemented!()
 }
 
 fn load_keypairs_from_config(config: &config::ProducerConfig) -> HashMap<Address, KeyPair> {

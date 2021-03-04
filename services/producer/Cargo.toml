@@ -26,3 +26,4 @@ keys = { path = '../../keys' }
 context = { path = '../../context' }
 config = { path = '../../config' }
 constants = { path = '../../constants' }
+manager = { path = '../../manager' }
