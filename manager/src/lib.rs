@@ -320,7 +320,7 @@ impl Manager {
         // 6.cusumeMultiSigFee (NOTE: move to BandwidthProcessor)
 
         // 7. transaction is executed by TransactionTrace.
-        let txn_receipt = TransactionExecutor::new(self).execute(txn, recovered_addrs, &block.header)?;
+        let txn_receipt = TransactionExecutor::new(self).execute_and_verify_result(txn, recovered_addrs, &block.header)?;
         self.state_db.put_key(keys::TransactionReceipt(txn.hash), txn_receipt)?;
         Ok(())
     }
@@ -342,7 +342,7 @@ impl Manager {
         let old_layers = self.layers;
         self.new_layer();
 
-        let maybe_receipt = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
+        let maybe_receipt = TransactionExecutor::new(self).execute_and_verify_result(txn, txn.recover_owner()?, &block_header);
 
         let added_layers = self.layers - old_layers;
         debug!("dry run, rollback layers={}", added_layers);
