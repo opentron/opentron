@@ -1041,8 +1041,32 @@ pub struct MutationRoot;
 #[Object]
 impl MutationRoot {
     /// SendRawTransaction sends an protobuf-encoded transaction to the network.
-    async fn send_raw_transaction(&self, _raw_data: Bytes, _signature: Vec<Bytes>) -> Result<Bytes32> {
-        unimplemented!()
+    async fn send_raw_transaction(
+        &self,
+        ctx: &Context<'_>,
+        raw_data: Bytes,
+        signatures: Vec<Bytes>,
+    ) -> Result<Bytes32> {
+        use chain::IndexedTransaction;
+        use prost::Message;
+        use proto::chain::{transaction::Raw as TransactionRaw, Transaction};
+
+        let raw = TransactionRaw::decode(&*raw_data.0)?;
+        let txn = Transaction {
+            raw_data: Some(raw),
+            signatures: signatures.into_iter().map(|sig| sig.into()).collect(),
+            ..Default::default()
+        };
+        let indexed_txn = IndexedTransaction::from_raw(txn).ok_or("invalid transaction")?;
+
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+        let (_result, _receipt) = manager.dry_run_transaction(&indexed_txn)?;
+
+        let txn_id = indexed_txn.hash;
+        ctx.data_unchecked::<Arc<AppContext>>()
+            .incoming_transaction_tx
+            .send(indexed_txn)?;
+        Ok(txn_id.into())
     }
 
     /// DryRunRawTransaction runs an protobuf-encoded transaction and returns the receipt as json.
@@ -1051,12 +1075,11 @@ impl MutationRoot {
         use prost::Message;
         use proto::chain::Transaction;
 
-        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
-
         let txn = Transaction::decode(&*data.0)?;
         let indexed_txn = IndexedTransaction::from_raw(txn).ok_or("invalid transaction")?;
 
-        let receipt = manager.dry_run_transaction(&indexed_txn)?;
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+        let (_, receipt) = manager.dry_run_transaction(&indexed_txn)?;
 
         Ok(CallResult { receipt })
     }

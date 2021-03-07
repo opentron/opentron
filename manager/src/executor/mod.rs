@@ -229,10 +229,10 @@ impl<'m> TransactionExecutor<'m> {
         txn: &IndexedTransaction,
         recover_addrs: Vec<Address>,
         block_header: &IndexedBlockHeader,
-    ) -> Result<TransactionResult, String> {
+    ) -> Result<(TransactionResult, TransactionReceipt), String> {
         let mut ctx = TransactionContext::new(&block_header, &txn);
         let exec_result = self.execute_inner(txn, recover_addrs, &mut ctx)?;
-        Ok(exec_result)
+        Ok((exec_result, ctx.into()))
     }
 
     // runtime.execute

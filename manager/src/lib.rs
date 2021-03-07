@@ -8,6 +8,7 @@ use config::{Config, GenesisConfig};
 use log::{debug, info, trace, warn};
 use primitive_types::H256;
 use prost::Message;
+use proto::chain::transaction::Result as TransactionResult;
 use proto::state::TransactionReceipt;
 use state::db::StateDB;
 use state::keys;
@@ -335,7 +336,7 @@ impl Manager {
     }
 
     /// Dry run the transaction, return Receipt.
-    pub fn dry_run_transaction(&mut self, txn: &IndexedTransaction) -> Result<TransactionReceipt> {
+    pub fn dry_run_transaction(&mut self, txn: &IndexedTransaction) -> Result<(TransactionResult, TransactionReceipt)> {
         /*if !self.validate_transaction_tapos(txn) {
             return Err(new_error("tapos validation failed"));
         }
@@ -351,13 +352,12 @@ impl Manager {
         let old_layers = self.layers;
         self.new_layer();
 
-        let maybe_receipt =
-            TransactionExecutor::new(self).execute_and_verify_result(txn, txn.recover_owner()?, &block_header);
+        let ret = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
 
         let added_layers = self.layers - old_layers;
         debug!("dry run, rollback layers={}", added_layers);
         self.rollback_layers(added_layers);
-        Ok(maybe_receipt?)
+        Ok(ret?)
     }
 
     fn validate_transaction_tapos(&self, txn: &IndexedTransaction) -> bool {

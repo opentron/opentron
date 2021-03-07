@@ -90,6 +90,12 @@ impl ScalarType for Bytes {
     }
 }
 
+impl From<Bytes> for Vec<u8> {
+    fn from(value: Bytes) -> Vec<u8> {
+        value.0
+    }
+}
+
 // /// BigInt is a large integer. Input is accepted as either a JSON number or as a string.
 // /// Strings may be either decimal or 0x-prefixed hexadecimal. Output values are all
 // /// 0x-prefixed hexadecimal.
