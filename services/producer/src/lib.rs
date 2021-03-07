@@ -6,6 +6,8 @@
 
 use chrono::Utc;
 use futures::future::FutureExt;
+use indexmap::IndexMap;
+use primitive_types::H256;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
@@ -14,9 +16,9 @@ use tokio::select;
 use tokio::sync::broadcast;
 use tokio::time::sleep;
 
+use chain::{IndexedBlock, IndexedTransaction};
 use context::AppContext;
 use keys::{Address, KeyPair};
-use chain::{IndexedBlock};
 use log::{debug, info, warn};
 use manager::Manager;
 
@@ -58,11 +60,13 @@ pub async fn producer_task(
 
     // true except first block and first producer
     let mut sync_check_required = false;
-
-    let mut manager = ctx.manager.write().unwrap();
+    let mut mempool: IndexMap<H256, IndexedTransaction> = IndexMap::new();
+    let mut incoming_transaction_rx = ctx.incoming_transaction_tx.subscribe();
 
     loop {
         if sync_check_required {
+            let manager = ctx.manager.read().unwrap();
+
             tokio::time::sleep(Duration::from_secs(1)).await;
             info!("dposSlot.getTime(1) {}", manager.get_slot_timestamp(1));
             info!("current {}", Utc::now().timestamp_millis());
@@ -74,8 +78,18 @@ pub async fn producer_task(
                 Utc::now().timestamp_millis() % constants::BLOCK_PRODUCING_INTERVAL;
 
             select! {
+                Ok(txn) = incoming_transaction_rx.recv() => {
+                    info!("got transaction => {:?}", txn);
+                    if mempool.contains_key(&txn.hash) {
+                        info!("in mempool");
+                    } else {
+                        info!("new txn");
+                        mempool.insert(txn.hash, txn);
+                    }
+                }
                 _ = sleep(Duration::from_millis(d as u64)) => {
                     // produceBlock
+                    let mut manager = ctx.manager.write().unwrap();
 
                     let slot = manager.get_slot(Utc::now().timestamp_millis() + 50);
                     let block_timestamp = manager.get_slot_timestamp(slot);
