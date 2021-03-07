@@ -8,10 +8,10 @@ use prost::Message;
 use proto::chain::ContractType;
 use proto::contract::TransferAssetContract;
 use proto::state::Account;
+use proto::ContractExt;
 use state::keys;
 
 use super::executor::actuators::asset::find_asset_by_name;
-use super::executor::actuators::BuiltinContractExt;
 use super::executor::TransactionContext;
 use super::version_fork::ForkController;
 use super::Manager;
@@ -34,7 +34,7 @@ impl<C> Drop for BandwidthProcessor<'_, C> {
     }
 }
 
-impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
+impl<C: ContractExt> BandwidthProcessor<'_, C> {
     pub fn new<'a>(
         manager: &'a mut Manager,
         txn: &'a IndexedTransaction,

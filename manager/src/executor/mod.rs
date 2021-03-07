@@ -12,9 +12,10 @@ use proto::chain::{transaction::result::ContractStatus, transaction::Result as T
 use proto::common::ResourceCode;
 use proto::contract as contract_pb;
 use proto::state::{ResourceReceipt, TransactionLog, TransactionReceipt};
+use proto::ContractExt;
 use state::keys;
 
-use self::actuators::{BuiltinContractExecutorExt, BuiltinContractExt};
+use self::actuators::BuiltinContractExecutorExt;
 use crate::resource::BandwidthProcessor;
 use crate::Manager;
 

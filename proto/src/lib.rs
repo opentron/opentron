@@ -86,6 +86,8 @@ pub mod channel {
 #[rustfmt::skip]
 #[path = "proto.contract.rs"]
 pub mod contract;
+mod contract_ext;
+pub use contract_ext::ContractExt;
 
 #[rustfmt::skip]
 #[path = "proto.state.rs"]
