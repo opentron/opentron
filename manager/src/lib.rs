@@ -239,7 +239,17 @@ impl Manager {
         self.block_energy_usage = 0;
 
         // 3. Pre-check transaction signature in parallel.
-        let recovered_owners = block.recover_transaction_owners();
+        let recovered_owners = match block.recover_transaction_owners() {
+            Ok(recovered) => recovered,
+            Err(e) => {
+                for txn in &block.transactions {
+                    if txn.recover_owner().is_err() {
+                        warn!("cannot recover owner address: {:?}", txn.hash);
+                    }
+                }
+                return Err(e.into());
+            }
+        };
 
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
@@ -297,7 +307,7 @@ impl Manager {
     fn process_transaction(
         &mut self,
         txn: &IndexedTransaction,
-        recovered_addrs: Result<Vec<Address>, impl std::error::Error>,
+        recovered_addrs: Vec<Address>,
         block: &IndexedBlock,
     ) -> Result<()> {
         // 1.validateTapos
@@ -313,14 +323,13 @@ impl Manager {
             return Err(new_error("duplicated transaction"));
         }
 
-        // 4.validateSignature (NOTE: move partial logic to executor)
-        let recovered_addrs = recovered_addrs.map_err(|_| new_error("error while recover address from signature"))?;
-
+        // 4.validateSignature (NOTE: move partial logic to upstream executor)
         // 5.cusumeBandwidth (NOTE: move to executor)
         // 6.cusumeMultiSigFee (NOTE: move to BandwidthProcessor)
 
         // 7. transaction is executed by TransactionTrace.
-        let txn_receipt = TransactionExecutor::new(self).execute_and_verify_result(txn, recovered_addrs, &block.header)?;
+        let txn_receipt =
+            TransactionExecutor::new(self).execute_and_verify_result(txn, recovered_addrs, &block.header)?;
         self.state_db.put_key(keys::TransactionReceipt(txn.hash), txn_receipt)?;
         Ok(())
     }
@@ -342,7 +351,8 @@ impl Manager {
         let old_layers = self.layers;
         self.new_layer();
 
-        let maybe_receipt = TransactionExecutor::new(self).execute_and_verify_result(txn, txn.recover_owner()?, &block_header);
+        let maybe_receipt =
+            TransactionExecutor::new(self).execute_and_verify_result(txn, txn.recover_owner()?, &block_header);
 
         let added_layers = self.layers - old_layers;
         debug!("dry run, rollback layers={}", added_layers);

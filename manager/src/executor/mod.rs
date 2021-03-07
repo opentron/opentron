@@ -206,7 +206,7 @@ impl<'m> TransactionExecutor<'m> {
         let maybe_result = txn.raw.result.get(0);
 
         let mut ctx = TransactionContext::new(&block_header, &txn);
-        let mut exec_result = self.execute(txn, recover_addrs, block_header, &mut ctx)?;
+        let mut exec_result = self.execute_inner(txn, recover_addrs, &mut ctx)?;
 
         if block_header.version() == 0 {
             let contract_status = maybe_result
@@ -224,12 +224,22 @@ impl<'m> TransactionExecutor<'m> {
         Ok(ctx.into())
     }
 
-    // runtime.execute
     pub fn execute(
         &mut self,
         txn: &IndexedTransaction,
         recover_addrs: Vec<Address>,
         block_header: &IndexedBlockHeader,
+    ) -> Result<TransactionResult, String> {
+        let mut ctx = TransactionContext::new(&block_header, &txn);
+        let exec_result = self.execute_inner(txn, recover_addrs, &mut ctx)?;
+        Ok(exec_result)
+    }
+
+    // runtime.execute
+    fn execute_inner(
+        &mut self,
+        txn: &IndexedTransaction,
+        recover_addrs: Vec<Address>,
         ctx: &mut TransactionContext,
     ) -> Result<TransactionResult, String> {
         let cntr = txn.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();

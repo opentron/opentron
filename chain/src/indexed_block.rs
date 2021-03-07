@@ -78,7 +78,7 @@ impl IndexedBlock {
     }
 
     /// Recover owner addresses of transactiones.
-    pub fn recover_transaction_owners(&self) -> Vec<Result<Vec<Address>, keys::Error>> {
+    pub fn recover_transaction_owners(&self) -> Result<Vec<Vec<Address>>, keys::Error> {
         if self.transactions.len() > 10 {
             self.transactions.par_iter().map(|txn| txn.recover_owner()).collect()
         } else {
