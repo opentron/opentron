@@ -1,3 +1,18 @@
+//! Extension for handling builtin contract types.
+//!
+//! ```
+//! let transfer_contract = TransferContract {
+//!     owner_address: "..."
+//!     to_address: "..."
+//!     amount: 100000
+//! };
+//! let raw = TransactionRaw {
+//!     contract: Some(transfer_contract.into()),
+//!    ..Default::default()
+//! };
+//! ```
+
+use crate::chain::transaction::Contract;
 use crate::chain::ContractType;
 use prost::Message;
 use prost_types::Any;
@@ -32,6 +47,16 @@ macro_rules! impl_contract_ext_for {
                 ContractType::$contract_ty
             }
         }
+
+        impl From<$crate::contract::$contract_ty> for Contract {
+            fn from(inner_cntr: $crate::contract::$contract_ty) -> Self {
+                Contract {
+                    r#type: ContractType::$contract_ty as i32,
+                    parameter: inner_cntr.to_any(),
+                    ..Default::default()
+                }
+            }
+        }
     };
     ($contract_ty:ident, $type_name:expr) => {
         impl ContractExt for $crate::contract::$contract_ty {
@@ -48,6 +73,16 @@ macro_rules! impl_contract_ext_for {
                     type_url: format!("type.googleapis.com/protocol.{:?}", $type_name),
                     value: buf,
                 })
+            }
+        }
+
+        impl From<$crate::contract::$contract_ty> for Contract {
+            fn from(inner_cntr: $crate::contract::$contract_ty) -> Self {
+                Contract {
+                    r#type: ContractType::$contract_ty as i32,
+                    parameter: inner_cntr.to_any(),
+                    ..Default::default()
+                }
             }
         }
     };
