@@ -343,7 +343,7 @@ impl Manager {
         txn: &IndexedTransaction,
     ) -> Result<TransactionResult> {
         if !self.validate_transaction_tapos(txn) {
-            return Err(new_error("tapos validation failed"));
+            return Err(new_error("tapos validation failed: invalid ref_block"));
         }
         if !self.valide_transaction_common(txn) {
             return Err(new_error("message size or expiration validation failed"));
@@ -363,13 +363,14 @@ impl Manager {
         let ret = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
 
         let added_layers = self.layers - old_layers;
-        debug!("dry run, rollback layers={}", added_layers);
         self.rollback_layers(added_layers);
 
         Ok(ret?.0)
     }
 
     /// Dry run the transaction, return Receipt.
+    ///
+    /// This does not validate some props.
     pub fn dry_run_transaction(&mut self, txn: &IndexedTransaction) -> Result<(TransactionResult, TransactionReceipt)> {
         /*if !self.validate_transaction_tapos(txn) {
             return Err(new_error("tapos validation failed"));
