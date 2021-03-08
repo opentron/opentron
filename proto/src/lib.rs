@@ -53,6 +53,15 @@ pub mod chain {
     }
 
     impl transaction::Result {
+        pub fn is_succeed(&self) -> bool {
+            use self::transaction::result::ContractStatus;
+
+            match ContractStatus::from_i32(self.status).unwrap_or_default() {
+                ContractStatus::Success | ContractStatus::Default => true,
+                _ => false,
+            }
+        }
+
         pub fn success() -> Self {
             use self::transaction::result::ContractStatus;
 
