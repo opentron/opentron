@@ -335,6 +335,40 @@ impl Manager {
         Ok(())
     }
 
+    /// Validate transacton before push to mempool.
+    ///
+    /// Use almost the same logic as `process_transaction`.
+    pub fn pre_push_transaction(
+        &mut self,
+        txn: &IndexedTransaction,
+    ) -> Result<TransactionResult> {
+        if !self.validate_transaction_tapos(txn) {
+            return Err(new_error("tapos validation failed"));
+        }
+        if !self.valide_transaction_common(txn) {
+            return Err(new_error("message size or expiration validation failed"));
+        }
+        if !self.validate_duplicated_transaction(txn) {
+            return Err(new_error("duplicated transaction"));
+        }
+        let fake_block_number = self.latest_block_number() + 1;
+        let block_header = IndexedBlockHeader::dummy(
+            fake_block_number,
+            self.latest_block_timestamp() + constants::BLOCK_PRODUCING_INTERVAL,
+        );
+
+        let old_layers = self.layers;
+        self.new_layer();
+
+        let ret = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
+
+        let added_layers = self.layers - old_layers;
+        debug!("dry run, rollback layers={}", added_layers);
+        self.rollback_layers(added_layers);
+
+        Ok(ret?.0)
+    }
+
     /// Dry run the transaction, return Receipt.
     pub fn dry_run_transaction(&mut self, txn: &IndexedTransaction) -> Result<(TransactionResult, TransactionReceipt)> {
         /*if !self.validate_transaction_tapos(txn) {

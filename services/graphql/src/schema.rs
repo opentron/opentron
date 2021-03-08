@@ -1060,7 +1060,7 @@ impl MutationRoot {
         let indexed_txn = IndexedTransaction::from_raw(txn).ok_or("invalid transaction")?;
 
         let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
-        let (_result, _receipt) = manager.dry_run_transaction(&indexed_txn)?;
+        let _result = manager.pre_push_transaction(&indexed_txn)?;
 
         let txn_id = indexed_txn.hash;
         ctx.data_unchecked::<Arc<AppContext>>()
