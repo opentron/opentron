@@ -1,0 +1,15 @@
+[package]
+name = "cli"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+prost = "0.7"
+hex = "0.4"
+clap = "2"
+chrono = '0.4'
+proto = { path = '../proto' }
+keys = { path = '../keys' }
+crypto = { path = '../crypto' }
