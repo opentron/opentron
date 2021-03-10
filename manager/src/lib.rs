@@ -12,8 +12,8 @@ use proto::chain::transaction::Result as TransactionResult;
 use proto::state::TransactionReceipt;
 use state::db::StateDB;
 use state::keys;
-use std::convert::{TryFrom, TryInto};
 use std::collections::HashMap;
+use std::convert::{TryFrom, TryInto};
 
 use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;
@@ -339,10 +339,7 @@ impl Manager {
     /// Validate transacton before push to mempool.
     ///
     /// Use almost the same logic as `process_transaction`.
-    pub fn pre_push_transaction(
-        &mut self,
-        txn: &IndexedTransaction,
-    ) -> Result<TransactionResult> {
+    pub fn pre_push_transaction(&mut self, txn: &IndexedTransaction) -> Result<TransactionResult> {
         if !self.validate_transaction_tapos(txn) {
             return Err(new_error("tapos validation failed: invalid ref_block"));
         }
@@ -691,23 +688,27 @@ impl WitnessStatisticManager<'_> {
 
         // record missed blocks
         let mut missed_witnesses = HashMap::new();
+        let mut missed_count = HashMap::<Address, i64>::new();
         for i in 1..slot {
             let wit_addr = self.manager.get_scheduled_witness(i);
-            missed_witnesses.insert(wit_addr, self.manager.state_db.must_get(&keys::Witness(wit_addr)));
-            let mut wit = missed_witnesses.get_mut(&wit_addr).unwrap();
+            let mut wit = missed_witnesses
+                .entry(wit_addr)
+                .or_insert_with(|| self.manager.state_db.must_get(&keys::Witness(wit_addr)));
+            *missed_count.entry(wit_addr).or_default() += 1;
 
             wit.total_missed += 1;
-            warn!(
-                "block miss #{}, witness={}, total_missed={}",
-                block.number(),
-                wit_addr,
-                wit.total_missed
-            );
 
             self.filled_slots[self.filled_slots_index as usize] = 0;
             self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
         }
         for (wit_addr, wit) in missed_witnesses.into_iter() {
+            warn!(
+                "block miss #{}, witness={}, total_missed={}, missed+={}",
+                block.number(),
+                wit_addr,
+                wit.total_missed,
+                missed_count[&wit_addr],
+            );
             self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
         }
 
