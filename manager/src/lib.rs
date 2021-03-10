@@ -13,6 +13,7 @@ use proto::state::TransactionReceipt;
 use state::db::StateDB;
 use state::keys;
 use std::convert::{TryFrom, TryInto};
+use std::collections::HashMap;
 
 use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;
@@ -357,10 +358,12 @@ impl Manager {
             self.latest_block_timestamp() + constants::BLOCK_PRODUCING_INTERVAL,
         );
 
+        let owner_addrs = txn.recover_owner()?;
+
         let old_layers = self.layers;
         self.new_layer();
 
-        let ret = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
+        let ret = TransactionExecutor::new(self).execute(txn, owner_addrs, &block_header);
 
         let added_layers = self.layers - old_layers;
         self.rollback_layers(added_layers);
@@ -687,10 +690,12 @@ impl WitnessStatisticManager<'_> {
         };
 
         // record missed blocks
-        // TODO: reduce `put_key` operations.
+        let mut missed_witnesses = HashMap::new();
         for i in 1..slot {
             let wit_addr = self.manager.get_scheduled_witness(i);
-            let mut wit = self.manager.state_db.must_get(&keys::Witness(wit_addr));
+            missed_witnesses.insert(wit_addr, self.manager.state_db.must_get(&keys::Witness(wit_addr)));
+            let mut wit = missed_witnesses.get_mut(&wit_addr).unwrap();
+
             wit.total_missed += 1;
             warn!(
                 "block miss #{}, witness={}, total_missed={}",
@@ -698,11 +703,14 @@ impl WitnessStatisticManager<'_> {
                 wit_addr,
                 wit.total_missed
             );
-            self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
 
             self.filled_slots[self.filled_slots_index as usize] = 0;
             self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
         }
+        for (wit_addr, wit) in missed_witnesses.into_iter() {
+            self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
+        }
+
         // current block is filled
         self.filled_slots[self.filled_slots_index as usize] = 1;
         self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
