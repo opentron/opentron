@@ -616,6 +616,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "crypto",
+ "hex",
+ "keys",
+ "prost",
+ "proto",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -641,7 +654,6 @@ dependencies = [
  "hex",
  "keys",
  "prost",
- "prost-types",
  "proto",
  "serde",
  "serde_json",
@@ -668,6 +680,7 @@ version = "0.1.0"
 name = "context"
 version = "0.1.0"
 dependencies = [
+ "chain",
  "chain-db",
  "config",
  "hex",
@@ -1747,7 +1760,6 @@ dependencies = [
  "log",
  "primitive-types",
  "prost",
- "prost-types",
  "proto",
  "sha3",
  "state",
@@ -2193,8 +2205,10 @@ dependencies = [
  "context",
  "futures 0.3.12",
  "hex",
+ "indexmap",
  "keys",
  "log",
+ "manager",
  "primitive-types",
  "prost",
  "proto",
