@@ -16,11 +16,10 @@ use tokio::select;
 use tokio::sync::broadcast;
 use tokio::time::sleep;
 
-use chain::{IndexedBlock, IndexedTransaction};
+use chain::IndexedTransaction;
 use context::AppContext;
 use keys::{Address, KeyPair};
 use log::{debug, info, warn};
-use manager::Manager;
 
 pub enum State {
     Ok,
@@ -79,7 +78,7 @@ pub async fn producer_task(
 
             select! {
                 Ok(txn) = incoming_transaction_rx.recv() => {
-                    info!("got transaction => {:?}", txn);
+                    info!("got transaction => {:?}", txn.hash);
                     if mempool.contains_key(&txn.hash) {
                         info!("in mempool");
                     } else {
@@ -112,19 +111,22 @@ pub async fn producer_task(
                         _ if block_number > 1 => {
                             let witness_address = manager.get_scheduled_witness(slot);
                             if let Some(keypair) = keypairs.get(&witness_address) {
-                                info!("TODO: generate block #{} with {}", block_number, witness_address);
+                                info!("generate block #{} with {}", block_number, witness_address);
 
                                 let deadline = block_timestamp + constants::BLOCK_PRODUCING_INTERVAL / 2 *
                                     constants::BLOCK_PRODUCE_TIMEOUT_PERCENT / 100;
 
-                                // produce
+                                // produce, fake implementation
                                 debug!("deadline {}", deadline);
-                                let new_block = manager.generate_empty_block(block_timestamp, &witness_address, keypair).unwrap();
+                                let new_block = manager.generate_block(mempool.values(), block_number, block_timestamp, &witness_address, keypair).unwrap();
                                 ctx.chain_db.insert_block(&new_block).expect("TODO: handle insert_block error");
                                 ctx.chain_db.update_block_height(new_block.number());
-                                info!("=> {:?}", new_block.hash());
+                                info!("=> {:?} txns={}", new_block.hash(), new_block.transactions.len());
                                 info!("=> produce {:?}", manager.push_generated_block(&new_block));
 
+                                for txn in new_block.transactions.iter() {
+                                    mempool.remove(&txn.hash);
+                                }
 
                             } else {
                                 // Not my turn, pass
@@ -142,17 +144,6 @@ pub async fn producer_task(
     }
 
     Ok(())
-}
-
-/// Packing transactions from mempool and produce a block.
-async fn produce_block(manager: &Manager, deadline: i64, block_timestamp: i64) -> Result<IndexedBlock, String> {
-    // For each transaction in `pendingTransactions` and `rePushTransactions`:
-    // * check deadline
-    // * check blocksize
-    // * no need to check shielded transaction
-    // * no need to check multi sign here
-    // * apply transaction
-    unimplemented!()
 }
 
 fn load_keypairs_from_config(config: &config::ProducerConfig) -> HashMap<Address, KeyPair> {

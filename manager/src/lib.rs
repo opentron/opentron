@@ -262,7 +262,7 @@ impl Manager {
                 block.number(),
                 block.version()
             );
-            self.process_transaction(&txn, recovered_addrs, block)?;
+            self.process_transaction(&txn, recovered_addrs, &block.header)?;
         }
 
         // 4. Adaptive energy processor:
@@ -310,7 +310,7 @@ impl Manager {
         &mut self,
         txn: &IndexedTransaction,
         recovered_addrs: Vec<Address>,
-        block: &IndexedBlock,
+        block_header: &IndexedBlockHeader,
     ) -> Result<()> {
         // 1.validateTapos
         if !self.validate_transaction_tapos(txn) {
@@ -331,7 +331,7 @@ impl Manager {
 
         // 7. transaction is executed by TransactionTrace.
         let txn_receipt =
-            TransactionExecutor::new(self).execute_and_verify_result(txn, recovered_addrs, &block.header)?;
+            TransactionExecutor::new(self).execute_and_verify_result(txn, recovered_addrs, &block_header)?;
         self.state_db.put_key(keys::TransactionReceipt(txn.hash), txn_receipt)?;
         Ok(())
     }
@@ -364,6 +364,30 @@ impl Manager {
 
         let added_layers = self.layers - old_layers;
         self.rollback_layers(added_layers);
+
+        Ok(ret?.0)
+    }
+
+    /// Validate transacton before push to mempool.
+    ///
+    /// Use almost the same logic as `process_transaction`.
+    pub fn run_transaction(
+        &mut self,
+        txn: &IndexedTransaction,
+        block_header: &IndexedBlockHeader,
+    ) -> Result<TransactionResult> {
+        if !self.validate_transaction_tapos(txn) {
+            return Err(new_error("tapos validation failed: invalid ref_block"));
+        }
+        if !self.valide_transaction_common(txn) {
+            return Err(new_error("message size or expiration validation failed"));
+        }
+        if !self.validate_duplicated_transaction(txn) {
+            return Err(new_error("duplicated transaction"));
+        }
+        let owner_addrs = txn.recover_owner()?;
+
+        let ret = TransactionExecutor::new(self).execute(txn, owner_addrs, &block_header);
 
         Ok(ret?.0)
     }
@@ -427,9 +451,18 @@ impl Manager {
         true
     }
 
-    fn validate_duplicated_transaction(&self, _txn: &IndexedTransaction) -> bool {
+    fn validate_duplicated_transaction(&self, txn: &IndexedTransaction) -> bool {
         // TODO: not used in sync. used in block producing
-        true
+        if self
+            .state_db
+            .get(&keys::TransactionReceipt(txn.hash))
+            .unwrap()
+            .is_none()
+        {
+            true
+        } else {
+            false
+        }
     }
 
     // consensus.validBlock
@@ -540,8 +573,52 @@ impl Manager {
             .version(17) // GreatVoyage4_0_1
             .timestamp(timestamp)
             .parent_hash(&self.latest_block_hash())
-            .build(witness, keypair)
+            .witness(witness)
+            .build(keypair)
             .ok_or(new_error("cannot produce block"))
+    }
+
+    /// Generate block.
+    // For each transaction in `pendingTransactions` and `rePushTransactions`:
+    // * check deadline
+    // * check blocksize
+    // * no need to check shielded transaction
+    // * no need to check multi sign here
+    // * apply transaction
+    pub fn generate_block<'a>(
+        &mut self,
+        transactions: impl Iterator<Item = &'a IndexedTransaction>,
+        number: i64,
+        timestamp: i64,
+        witness: &Address,
+        keypair: &KeyPair,
+    ) -> Result<IndexedBlock> {
+        self.block_energy_usage = 0;
+
+        let mut builder = BlockBuilder::new(number)
+            .version(17) // GreatVoyage4_0_1
+            .timestamp(timestamp)
+            .parent_hash(&self.latest_block_hash())
+            .witness(witness);
+
+        let block_header = builder.to_unsigned_block_header();
+
+        let old_layers = self.layers;
+        self.new_layer();
+
+        for txn in transactions {
+            debug!("transaction => {:?} at block #{}", txn.hash, block_header.number());
+            let result = self.run_transaction(&txn, &block_header)?;
+            let mut txn = txn.raw.clone();
+            txn.result = vec![result];
+
+            builder.push_transaction(txn);
+        }
+
+        let added_layers = self.layers - old_layers;
+        self.rollback_layers(added_layers);
+
+        builder.build(keypair).ok_or(new_error("cannot produce block"))
     }
 
     // * DposSlot
@@ -643,7 +720,7 @@ impl Manager {
     }
 
     #[inline]
-    fn latest_block_hash(&self) -> H256 {
+    pub fn latest_block_hash(&self) -> H256 {
         self.state_db.must_get(&keys::LatestBlockHash)
     }
 }

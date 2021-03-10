@@ -1,4 +1,4 @@
-use crate::{BlockHeader, IndexedBlock, Transaction};
+use crate::{BlockHeader, IndexedBlock, IndexedBlockHeader, Transaction};
 use keys::{Address, KeyPair};
 use primitive_types::H256;
 use prost::Message;
@@ -36,17 +36,23 @@ impl BlockBuilder {
         self
     }
 
-    pub fn push_transaction(mut self, txn: Transaction) -> Self {
-        self.txns.push(txn);
-        self
-    }
-
-    pub fn build(mut self, witness: &Address, keypair: &KeyPair) -> Option<IndexedBlock> {
+    pub fn witness(mut self, witness: &Address) -> Self {
         self.header
             .raw_data
             .as_mut()
             .map(|h| h.witness_address = witness.as_bytes().into());
+        self
+    }
 
+    pub fn push_transaction(&mut self, txn: Transaction) {
+        self.txns.push(txn);
+    }
+
+    pub fn to_unsigned_block_header(&self) -> IndexedBlockHeader {
+        IndexedBlockHeader::from_raw(self.header.clone()).unwrap()
+    }
+
+    pub fn build(self, keypair: &KeyPair) -> Option<IndexedBlock> {
         let block = IndexedBlock::from_raw_header_and_txns(self.header, self.txns);
 
         block.and_then(|mut b| {
