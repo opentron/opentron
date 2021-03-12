@@ -846,14 +846,17 @@ impl QueryRoot {
     /// Block fetches an Tron block by number or by hash. If neither is
     /// supplied, the most recent known block is returned.
     async fn block(&self, ctx: &Context<'_>, number: Option<Long>, hash: Option<Bytes32>) -> Result<Block> {
-        if let Some(num) = number {
-            return Ok(Block::from_number(num));
-        }
         if let Some(hash) = hash {
             return Ok(Block::from_hash(hash));
         }
+        let offset = match number {
+            Some(num) if num.0 >= 0 => return Ok(Block::from_number(num)),
+            Some(num) => num.0,
+            None => 0,
+        };
+
         let ref chain_db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
-        let header = chain_db.get_block_header_by_number(chain_db.get_block_height())?;
+        let header = chain_db.get_block_header_by_number(chain_db.get_block_height() + offset)?;
         Ok(Block {
             identifier: BlockIdentifier::Hash(header.hash.into()),
             header: RwLock::new(Some(header)),
