@@ -626,6 +626,8 @@ dependencies = [
  "keys",
  "prost",
  "proto",
+ "reqwest",
+ "serde_json",
 ]
 
 [[package]]
