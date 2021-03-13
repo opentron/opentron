@@ -1,0 +1,79 @@
+name: wallet-cli
+version: "0.1.0"
+author: OpenTron Developers <info@opentron.org>
+about: Opentron command line util
+settings: &default_settings
+    - DisableHelpSubcommand
+    - VersionlessSubcommands
+    - SubcommandRequiredElseHelp
+
+args:
+    - rpc-addr:
+          help: Raw RPC address to connect
+          long: rpc-addr
+          conflicts_with: network
+          takes_value: true
+          default_value: "http://127.0.0.1:3000"
+          value_name: "http://HOST:PORT"
+    - memo:
+          help: The memo for the transaction
+          long: memo
+          takes_value: true
+          required: false
+    - account:
+          help: The account address used for signing
+          short: k
+          long: account
+          takes_value: true
+    - private-key:
+          help: The private key used for signing
+          short: K
+          long: private-key
+          takes_value: true
+          conflicts_with:
+              - account
+    - skip-sign:
+          help: Skip actual sign process
+          short: s
+          long: skip-sign
+          conflicts_with:
+              - account
+              - private-key
+    - dont-broadcast:
+          help: Don't broadcast transaction to the network (just print to stdout)
+          short: d
+          long: dont-broadcast
+    - expiration:
+          help: Set the time in seconds before a transaction expires
+          short: x
+          long: expiration
+          takes_value: true
+          # default_value: "60"
+    - fee-limit:
+          help: Maximum value of TRX allowed consumed
+          long: fee-limit
+          takes_value: true
+
+# categories of transactions
+# - account
+# - transfer(TRX)
+# - asset(TRC10)
+# - witness / voting
+# - freeze / unfreeze
+# - proposal
+# - smart contract
+# - exchange
+# - market
+subcommands:
+    - transfer:
+          about: Transfer TRX tokens
+          args:
+              - SENDER:
+                    help: The account sending tokens
+                    required: true
+              - RECIPIENT:
+                    help: The account receiving tokens
+                    required: true
+              - AMOUNT:
+                    help: The amount of tokens to send and the token symbol
+                    required: true
