@@ -16,6 +16,7 @@ use super::BuiltinContractExecutorExt;
 use crate::Manager;
 
 const EXCHANGE_BALANCE_LIMIT: i64 = 1_000_000_000_000_000;
+const SUPPLY: i64 = 1_000_000_000_000_000_000;
 
 // Create an exchange pair.
 impl BuiltinContractExecutorExt for contract_pb::ExchangeCreateContract {
@@ -439,11 +440,10 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
             }
         }
 
-        let supply = 1_000_000_000_000_000_000_i64;
         let buy_token_amount = if exch.first_token_id == token_id {
-            exchange(supply, exch.first_token_balance, exch.second_token_balance, self.quant)
+            exchange(exch.first_token_balance, exch.second_token_balance, self.quant)
         } else {
-            exchange(supply, exch.second_token_balance, exch.first_token_balance, self.quant)
+            exchange(exch.second_token_balance, exch.first_token_balance, self.quant)
         };
         if buy_token_amount < self.expected {
             return Err("buy token amount must be greater than expected".into());
@@ -459,18 +459,16 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
         let mut exch = manager.state_db.must_get(&keys::Exchange(self.exchange_id));
         let sell_token_id = get_exchange_token_id(manager, &self.token_id).unwrap();
 
-        let supply = 1_000_000_000_000_000_000_i64;
-
         let buy_token_amount;
         let buy_token_id;
         if exch.first_token_id == sell_token_id {
             buy_token_id = exch.second_token_id;
-            buy_token_amount = exchange(supply, exch.first_token_balance, exch.second_token_balance, self.quant);
+            buy_token_amount = exchange(exch.first_token_balance, exch.second_token_balance, self.quant);
             exch.first_token_balance += self.quant;
             exch.second_token_balance -= buy_token_amount;
         } else {
             buy_token_id = exch.first_token_id;
-            buy_token_amount = exchange(supply, exch.second_token_balance, exch.first_token_balance, self.quant);
+            buy_token_amount = exchange(exch.second_token_balance, exch.first_token_balance, self.quant);
             exch.first_token_balance -= buy_token_amount;
             exch.second_token_balance += self.quant;
         }
@@ -510,19 +508,19 @@ impl BuiltinContractExecutorExt for contract_pb::ExchangeTransactionContract {
 // NOTE: Sell and buy are different tokens.
 // exchange(long sellTokenBalance, long buyTokenBalance, long sellTokenQuant)
 /// Returns: buy token amount(buyTokenQuant).
-fn exchange(mut supply: i64, sell_balance: i64, buy_balance: i64, sell_amount: i64) -> i64 {
+fn exchange(sell_balance: i64, buy_balance: i64, sell_amount: i64) -> i64 {
     // exchangeToSupply(sellTokenBalance, sellTokenQuant)
     let new_balance = sell_balance + sell_amount;
 
-    let issued_supply = -supply as f64 * (1.0 - java8_math_pow(1.0 + sell_amount as f64 / new_balance as f64, 0.0005));
+    let issued_supply = -SUPPLY as f64 * (1.0 - java8_math_pow(1.0 + sell_amount as f64 / new_balance as f64, 0.0005));
 
     let relay = issued_supply as i64;
-    supply += relay;
+    // supply += relay;
 
     // exchangeFromSupply(buyTokenBalance, relay)
-    supply -= relay;
+    // supply -= relay;
     // NOTE: OK to use Rust `f64::powf`, for X > 1.
-    let exchange_balance = buy_balance as f64 * ((1.0 + relay as f64 / supply as f64).powf(2000.0) - 1.0);
+    let exchange_balance = buy_balance as f64 * ((1.0 + relay as f64 / SUPPLY as f64).powf(2000.0) - 1.0);
 
     exchange_balance as i64
 }
