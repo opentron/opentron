@@ -178,6 +178,10 @@ subcommands:
                                   - COUNT
               - withdraw:
                     about: WithdrawBalanceContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
               - freeze:
                     about: FreezeBalanceContract
                     args:
@@ -198,6 +202,19 @@ subcommands:
                               default_value: "energy"
               - unfreeze:
                     about: UnfreezeBalanceContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - RECIPIENT:
+                              help: The account receiving tokens
+                              required: true
+                        - type:
+                              help: Freeze type
+                              long: "type"
+                              takes_value: true
+                              possible_values: ["bandwidth", "energy"]
+                              default_value: "energy"
     - proposal:
           about: Proposal management for active witnesses
           settings: *default_settings

@@ -7,6 +7,7 @@ use proto::contract as contract_pb;
 pub fn main(matches: &ArgMatches) -> Option<Contract> {
     match matches.subcommand() {
         ("freeze", Some(arg_matches)) => freeze(arg_matches),
+        ("unfreeze", Some(arg_matches)) => unfreeze(arg_matches),
         ("vote", Some(arg_matches)) => vote(arg_matches),
         _ => unimplemented!(),
     }
@@ -29,6 +30,27 @@ fn freeze(matches: &ArgMatches) -> Option<Contract> {
         owner_address: from.as_bytes().into(),
         frozen_balance: amount,
         frozen_duration: 3,
+        resource: resource_type as i32,
+        receiver_address: if from == to { vec![] } else { to.as_bytes().into() },
+    };
+
+    Some(inner.into())
+}
+
+fn unfreeze(matches: &ArgMatches) -> Option<Contract> {
+    use proto::common::ResourceCode as ResourceType;
+
+    let from: Address = matches.value_of("SENDER")?.parse().ok()?;
+    let to: Address = matches.value_of("RECIPIENT")?.parse().ok()?;
+
+    let resource_type = match matches.value_of("type") {
+        Some("bandwidth") => ResourceType::Bandwidth,
+        Some("energy") => ResourceType::Energy,
+        _ => unreachable!("checks values in clap; qed"),
+    };
+
+    let inner = contract_pb::UnfreezeBalanceContract {
+        owner_address: from.as_bytes().into(),
         resource: resource_type as i32,
         receiver_address: if from == to { vec![] } else { to.as_bytes().into() },
     };

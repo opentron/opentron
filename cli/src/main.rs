@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => unimplemented!(),
     };
 
-    pack_and_send(cntr.unwrap(), &matches)
+    pack_and_send(cntr.expect("illegal contract"), &matches)
 }
 
 fn pack_and_send(cntr: Contract, matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
