@@ -129,6 +129,25 @@ impl Account {
         let inner = self.inner.read().unwrap();
         Ok(inner.as_ref().unwrap().tron_power().into())
     }
+
+    /// Creation time of the account.
+    async fn creation_time(&self, ctx: &Context<'_>) -> Result<DateTime<Utc>> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        let ts = inner.as_ref().unwrap().creation_time;
+        Ok(Utc.timestamp(ts / 1_000, ts as u32 % 1_000 * 1_000_000))
+    }
+
+    /// FrozenBalance is the frozen balance(delegation) of the account, in sun.
+    async fn frozen_balance(&self, ctx: &Context<'_>) -> Result<Long> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        let amount = inner
+            .as_ref()
+            .map(|acct| acct.frozen_amount_for_bandwidth + acct.frozen_amount_for_energy + acct.delegated_out_amount)
+            .unwrap();
+        Ok(amount.into())
+    }
 }
 
 /// Asset is a TRC10 token.
