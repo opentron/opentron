@@ -80,11 +80,11 @@ subcommands:
                     help: The amount of tokens to send and the token symbol
                     required: true
     - account:
-          about: Account commands
+          about: Account management
           subcommands:
-            - create:
-                  about: Create an account
-                  args:
+              - create:
+                    about: AccountCreateContract
+                    args:
                         - SENDER:
                               help: The sender
                               required: true
@@ -97,3 +97,115 @@ subcommands:
                               takes_value: true
                               possible_values: ["normal", "assetissue", "contract"]
                               default_value: "normal"
+              - set_name:
+                  about: AccountUpdateContract
+                  args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - NAME:
+                              help: Account name
+                              required: true
+              - set_id:
+                  about: SetAccountIdContract (deprecated)
+                  args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - ID:
+                              help: Account id
+                              required: true
+    - witness:
+        about: Witness management
+        subcommands:
+            - create:
+                about: WitnessCreateContract
+                args:
+                    - SENDER:
+                        help: The sender
+                        required: true
+                    - URL:
+                        help: URL of the witness
+                        required: true
+            - update_url:
+                about: WitnessUpdateContract
+                args:
+                    - SENDER:
+                        help: The sender
+                        required: true
+                    - URL:
+                        help: URL of the witness
+                        required: true
+            - update_brokerage:
+                about: UpdateBrokerageContract
+                args:
+                    - SENDER:
+                        help: The sender
+                        required: true
+                    - PERCENT:
+                        help: Brokerage rate of the witness
+                        required: true
+    - asset:
+        about: TRC10 asset management
+        subcommands:
+            - transfer:
+                about: TransferAssetContract
+            - issue:
+                about: AssetIssueContract
+            - participate_issue:
+                about: ParticipateAssetIssueContract
+            - update:
+                about: UpdateAssetContract
+            - unfreeze:
+                about: UnfreezeAssetContract
+    - system:
+        about: Chain governance and resource management
+        subcommands:
+            - vote:
+                about: VoteWitnessContract
+            - withdraw:
+                about: WithdrawBalanceContract
+            - freeze:
+                about: FreezeBalanceContract
+            - unfreeze:
+                about: UnfreezeBalanceContract
+    - proposal:
+        about: Proposal management for active witnesses
+        subcommands:
+            - create:
+                about: ProposalCreateContract
+            - approve:
+                about: ProposalApproveContract
+            - delete:
+                about: ProposalDeleteContract
+    - contract:
+        about: Smart Contract
+        subcommands:
+            - create:
+                about: CreateSmartContract
+            - call:
+                about: TriggerSmartContract
+            - set_energy_share:
+                about: UpdateSettingContract (consume_user_energy_percent)
+            - set_energy_limit:
+                about: UpdateEnergyLimitContract (origin_energy_limit)
+            - clear_abi:
+                about: ClearAbiContract
+    - exchange:
+        about: On-chain DEX
+        subcommands:
+            - create:
+                about: ExchangeCreateContract
+            - inject:
+                about: ExchangeInjectContract
+            - withdraw:
+                about: ExchangeWithdrawContract
+            - trade:
+                about: ExchangeTransactionContract
+    - market:
+        about: New On-chain Echange
+        subcommands:
+            - sell:
+                about: MarketSellAssetContract
+            - cancel:
+                about: MarketCancelOrderContract
