@@ -1,0 +1,261 @@
+name: wallet-cli
+version: "0.1.0"
+author: OpenTron Developers <info@opentron.org>
+about: Opentron command line util
+settings: &default_settings
+    - DisableHelpSubcommand
+    - VersionlessSubcommands
+    - SubcommandRequiredElseHelp
+
+args:
+    - rpc-url:
+          help: Raw RPC address to connect
+          long: rpc-url
+          env: OPENTRON_CLI_RPC_URL
+          conflicts_with: network
+          takes_value: true
+          default_value: "http://127.0.0.1:3000"
+          value_name: "http://[HOST]:[PORT]"
+    - memo:
+          help: The memo for the transaction
+          long: memo
+          takes_value: true
+          required: false
+    - account:
+          help: The account address used for signing
+          short: k
+          long: account
+          takes_value: true
+    - private-key:
+          help: The private key used for signing
+          short: K
+          long: private-key
+          env: OPENTRON_CLI_PRIVATE_KEY
+          takes_value: true
+    - skip-sign:
+          help: Skip actual sign process
+          short: s
+          long: skip-sign
+          conflicts_with:
+              - account
+              - private-key
+    - dont-broadcast:
+          help: Don't broadcast transaction to the network (just print to stdout)
+          short: d
+          long: dont-broadcast
+    - expiration:
+          help: Set the time in seconds before a transaction expires
+          short: x
+          long: expiration
+          takes_value: true
+          # default_value: "60"
+    - fee-limit:
+          help: Maximum value of TRX allowed consumed
+          long: fee-limit
+          takes_value: true
+
+# categories of transactions
+# - account
+# - transfer(TRX)
+# - asset(TRC10)
+# - witness / voting
+# - freeze / unfreeze
+# - proposal
+# - smart contract
+# - exchange
+# - market
+subcommands:
+    - transfer:
+          about: Transfer TRX tokens
+          args:
+              - SENDER:
+                    help: The account sending tokens
+                    required: true
+              - RECIPIENT:
+                    help: The account receiving tokens
+                    required: true
+              - AMOUNT:
+                    help: The amount of tokens to send and the token symbol
+                    required: true
+    - account:
+          about: Account management
+          settings: *default_settings
+          subcommands:
+              - create:
+                    about: AccountCreateContract
+                    args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - RECIPIENT:
+                              help: The created account
+                              required: true
+                        - type:
+                              help: Account type
+                              long: "type"
+                              takes_value: true
+                              possible_values: ["normal", "assetissue", "contract"]
+                              default_value: "normal"
+              - set_name:
+                    about: AccountUpdateContract
+                    args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - NAME:
+                              help: Account name
+                              required: true
+              - set_id:
+                    about: SetAccountIdContract (deprecated)
+                    args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - ID:
+                              help: Account id
+                              required: true
+    - witness:
+          about: Witness management
+          settings: *default_settings
+          subcommands:
+              - create:
+                    about: WitnessCreateContract
+                    args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - URL:
+                              help: URL of the witness
+                              required: true
+              - update_url:
+                    about: WitnessUpdateContract
+                    args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - URL:
+                              help: URL of the witness
+                              required: true
+              - update_brokerage:
+                    about: UpdateBrokerageContract
+                    args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - PERCENT:
+                              help: Brokerage rate of the witness
+                              required: true
+    - asset:
+          about: TRC10 asset management
+          settings: *default_settings
+          subcommands:
+              - transfer:
+                    about: TransferAssetContract
+              - issue:
+                    about: AssetIssueContract
+              - participate_issue:
+                    about: ParticipateAssetIssueContract
+              - update:
+                    about: UpdateAssetContract
+              - unfreeze:
+                    about: UnfreezeAssetContract
+    - system:
+          about: Chain governance and resource management
+          settings: *default_settings
+          subcommands:
+              - vote:
+                    about: VoteWitnessContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - VOTES:
+                              help: A vote for witness, leave empty for no vote, multiple accepted
+                              multiple: true
+                              last: true
+                              value_names:
+                                  - ADDR
+                                  - COUNT
+              - withdraw:
+                    about: WithdrawBalanceContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+              - freeze:
+                    about: FreezeBalanceContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - RECIPIENT:
+                              help: The account receiving tokens
+                              required: true
+                        - AMOUNT:
+                              help: The amount of tokens to send and the token symbol
+                              required: true
+                        - type:
+                              help: Freeze type
+                              long: "type"
+                              takes_value: true
+                              possible_values: ["bandwidth", "energy"]
+                              default_value: "energy"
+              - unfreeze:
+                    about: UnfreezeBalanceContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - RECIPIENT:
+                              help: The account receiving tokens
+                              required: true
+                        - type:
+                              help: Freeze type
+                              long: "type"
+                              takes_value: true
+                              possible_values: ["bandwidth", "energy"]
+                              default_value: "energy"
+    - proposal:
+          about: Proposal management for active witnesses
+          settings: *default_settings
+          subcommands:
+              - create:
+                    about: ProposalCreateContract
+              - approve:
+                    about: ProposalApproveContract
+              - delete:
+                    about: ProposalDeleteContract
+    - contract:
+          about: Smart Contract
+          settings: *default_settings
+          subcommands:
+              - create:
+                    about: CreateSmartContract
+              - call:
+                    about: TriggerSmartContract
+              - set_energy_share:
+                    about: UpdateSettingContract (consume_user_energy_percent)
+              - set_energy_limit:
+                    about: UpdateEnergyLimitContract (origin_energy_limit)
+              - clear_abi:
+                    about: ClearAbiContract
+    - exchange:
+          about: On-chain DEX
+          settings: *default_settings
+          subcommands:
+              - create:
+                    about: ExchangeCreateContract
+              - inject:
+                    about: ExchangeInjectContract
+              - withdraw:
+                    about: ExchangeWithdrawContract
+              - trade:
+                    about: ExchangeTransactionContract
+    - market:
+          about: New On-chain Echange
+          settings: *default_settings
+          subcommands:
+              - sell:
+                    about: MarketSellAssetContract
+              - cancel:
+                    about: MarketCancelOrderContract

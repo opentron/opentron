@@ -15,6 +15,7 @@ use context::AppContext;
 use discovery_service::server::discovery_server;
 use graphql_service::server::graphql_server;
 use opentron::util::get_my_ip;
+use producer_service::producer_task;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ! init app command line arguments
@@ -132,7 +133,14 @@ async fn run(ctx: AppContext) -> Result<(), Box<dyn Error>> {
         let logger = slog_scope::logger().new(o!("service" => "discovery"));
         discovery_server(ctx, done_signal).with_logger(logger)
     };
-    let _ = join!(graphql_service, channel_service, discovery_service);
+
+    let producer_task = {
+        let ctx = ctx.clone();
+        let done_signal = ctx.termination_signal.subscribe();
+        producer_task(ctx, done_signal)
+    };
+
+    let _ = join!(graphql_service, channel_service, discovery_service, producer_task);
 
     Ok(termination_done.await?)
 }

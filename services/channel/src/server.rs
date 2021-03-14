@@ -401,7 +401,7 @@ async fn sync_channel_handler(
                         let ids: Vec<_> = ids
                             .into_iter()
                             .filter(|blk_id| {
-                                if ctx.recent_blk_ids.read().unwrap().contains(&H256::from_slice(blk_id)) {
+                                if ctx.recent_block_ids.read().unwrap().contains(&H256::from_slice(blk_id)) {
                                     debug!("block inventory, number={}, skip for seen", block_hash_to_number(&blk_id));
                                     false
                                 } else {
@@ -450,7 +450,7 @@ async fn sync_channel_handler(
                     }
                     Ok(ChannelMessage::Block(block)) => {
                         let block = IndexedBlock::from_raw(block).unwrap();
-                        if !ctx.recent_blk_ids.read().unwrap().contains(&block.header.hash) {
+                        if !ctx.recent_block_ids.read().unwrap().contains(&block.header.hash) {
                             if syncing {
                                 if block.number() % 100 == 0 {
                                     info!(
@@ -470,7 +470,7 @@ async fn sync_channel_handler(
                                 );
                             }
 
-                            ctx.recent_blk_ids.write().unwrap().insert(block.header.hash);
+                            ctx.recent_block_ids.write().unwrap().insert(block.header.hash);
                             if !ctx.chain_db.has_block(&block)  {
                                 ctx.chain_db.insert_block(&block)?;
                                 ctx.chain_db.update_block_height(block.number());

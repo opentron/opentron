@@ -8,10 +8,10 @@ use prost::Message;
 use proto::chain::ContractType;
 use proto::contract::TransferAssetContract;
 use proto::state::Account;
+use proto::ContractExt;
 use state::keys;
 
 use super::executor::actuators::asset::find_asset_by_name;
-use super::executor::actuators::BuiltinContractExt;
 use super::executor::TransactionContext;
 use super::version_fork::ForkController;
 use super::Manager;
@@ -34,7 +34,7 @@ impl<C> Drop for BandwidthProcessor<'_, C> {
     }
 }
 
-impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
+impl<C: ContractExt> BandwidthProcessor<'_, C> {
     pub fn new<'a>(
         manager: &'a mut Manager,
         txn: &'a IndexedTransaction,
@@ -121,7 +121,7 @@ impl<C: BuiltinContractExt> BandwidthProcessor<'_, C> {
 
     // Renamed: useTransactionFee
     fn consume_burnt_bandwidth(&mut self, nbytes: i64, ctx: &mut TransactionContext) -> bool {
-        let bw_fee = self.manager.state_db.must_get(&keys::ChainParameter::BandwidthFee) * nbytes;
+        let bw_fee = self.manager.state_db.must_get(&keys::ChainParameter::BandwidthPrice) * nbytes;
         if self.acct.adjust_balance(-bw_fee).is_err() {
             return false;
         }
@@ -562,7 +562,7 @@ impl EnergyProcessor<'_> {
             // NOTE: Since this implementation is lightweight, no need to check pass VERSION_3_6_5.
             self.manager.block_energy_usage += energy_used - energy_left;
 
-            let energy_price = self.manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
+            let energy_price = self.manager.state_db.must_get(&keys::ChainParameter::EnergyPrice);
             let energy_fee = (energy_used - energy_left) * energy_price;
 
             if acct.adjust_balance(-energy_fee).is_err() {

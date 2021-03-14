@@ -4,12 +4,7 @@ use std::path::Path;
 
 use chain::IndexedBlock;
 use keys::Address;
-use prost::Message;
-use prost_types::Any;
-use proto::chain::{
-    block_header::Raw as BlockHeaderRaw, transaction::Contract, transaction::Raw as TransactionRaw, BlockHeader,
-    ContractType, Transaction,
-};
+use proto::chain::{block_header::Raw as BlockHeaderRaw, transaction::Raw as TransactionRaw, BlockHeader, Transaction};
 use proto::contract::TransferContract;
 use serde::{Deserialize, Serialize};
 
@@ -34,21 +29,8 @@ impl Alloc {
             to_address: self.address.parse::<Address>()?.as_bytes().to_owned(),
             amount: self.balance,
         };
-        let any = Any {
-            type_url: "type.googleapis.com/protocol.TransferContract".into(),
-            value: {
-                let mut buf: Vec<u8> = Vec::with_capacity(255);
-                transfer_contract.encode(&mut buf)?;
-                buf
-            },
-        };
-        let contract = Contract {
-            r#type: ContractType::TransferContract as i32,
-            parameter: Some(any).into(),
-            ..Default::default()
-        };
         let raw = TransactionRaw {
-            contract: Some(contract),
+            contract: Some(transfer_contract.into()),
             ..Default::default()
         };
         let transaction = Transaction {

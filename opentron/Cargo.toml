@@ -53,3 +53,4 @@ context = { path = '../context' }
 discovery-service = { path = "../services/discovery" }
 channel-service = { path = "../services/channel" }
 graphql-service = { path = "../services/graphql" }
+producer-service = { path = "../services/producer" }

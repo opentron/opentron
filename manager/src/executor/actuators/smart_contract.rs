@@ -833,7 +833,7 @@ fn get_account_energy_limit_with_fixed_ratio(
     fee_limit: i64,
     call_value: i64,
 ) -> i64 {
-    let energy_price = manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
+    let energy_price = manager.state_db.must_get(&keys::ChainParameter::EnergyPrice);
 
     let left_energy = EnergyUtil::new(manager).get_left_frozen_energy(acct);
     let energy_from_balance = (acct.balance - call_value).max(0) / energy_price;
@@ -862,7 +862,7 @@ fn get_account_energy_limit_with_float_ratio(
     fee_limit: i64,
     call_value: i64,
 ) -> i64 {
-    let energy_price = manager.state_db.must_get(&keys::ChainParameter::EnergyFee);
+    let energy_price = manager.state_db.must_get(&keys::ChainParameter::EnergyPrice);
 
     // getAccountLeftEnergyFromFreeze
     let left_energy_from_freeze = EnergyUtil::new(manager).get_left_frozen_energy(acct);

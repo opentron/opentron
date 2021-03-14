@@ -10,7 +10,6 @@ chrono = '0.4'
 hex = '0.4'
 log = '0.4'
 prost = '0.7'
-prost-types = '0.7'
 lazy_static = "1.4"
 sha3 = "0.9"
 

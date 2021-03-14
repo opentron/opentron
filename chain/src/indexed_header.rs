@@ -47,6 +47,10 @@ impl IndexedBlockHeader {
         self.raw.raw_data.as_ref().unwrap().timestamp
     }
 
+    pub fn version(&self) -> i32 {
+        self.raw.raw_data.as_ref().unwrap().version
+    }
+
     pub fn parent_hash(&self) -> &[u8] {
         &self.raw.raw_data.as_ref().unwrap().parent_hash
     }

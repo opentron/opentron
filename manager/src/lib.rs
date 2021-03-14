@@ -1,15 +1,18 @@
 #![feature(asm)]
 
-use ::keys::{b58encode_check, Address};
+use ::keys::{b58encode_check, Address, KeyPair};
+use chain::BlockBuilder;
 use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
 use log::{debug, info, trace, warn};
 use primitive_types::H256;
 use prost::Message;
+use proto::chain::transaction::Result as TransactionResult;
 use proto::state::TransactionReceipt;
 use state::db::StateDB;
 use state::keys;
+use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 
 use self::executor::TransactionExecutor;
@@ -39,7 +42,6 @@ pub struct Manager {
     state_db: StateDB,
     genesis_block_timestamp: i64,
     blackhole: Address,
-    my_witness: Vec<u8>,
 
     block_energy_usage: i64,
     // TaPoS check, size = 65536, 2MB.
@@ -71,7 +73,6 @@ impl Manager {
             state_db,
             genesis_block_timestamp,
             blackhole,
-            my_witness: vec![],
             block_energy_usage: 0,
             ref_block_hashes: Vec::with_capacity(65536),
             config: config.clone(),
@@ -139,21 +140,26 @@ impl Manager {
         self.layers -= n;
     }
 
-    // Entry of db manager.
-    pub fn push_block(&mut self, block: &IndexedBlock) -> Result<bool> {
+    /// Receive incoming block, and verify witness block signature.
+    pub fn push_incoming_block(&mut self, block: &IndexedBlock) -> Result<bool> {
+        // . verify witness signature
+        let recovered = block.recover_witness()?;
+        if self.state_db.must_get(&keys::ChainParameter::AllowMultisig) == 1 {
+            // warn!("TODO: handle multisig witness");
+        }
+        if recovered.as_bytes() != block.witness() {
+            return Err(new_error("verifying block witness signature failed"));
+        }
+        self.push_block(block)
+    }
+
+    pub fn push_generated_block(&mut self, block: &IndexedBlock) -> Result<bool> {
+        self.push_block(block)
+    }
+
+    fn push_block(&mut self, block: &IndexedBlock) -> Result<bool> {
         if block.number() <= 0 {
             panic!("only accepts block number > 1");
-        }
-
-        // . verify witness signature
-        if self.my_witness.is_empty() || block.witness() != &*self.my_witness {
-            let recovered = block.recover_witness()?;
-            if self.state_db.must_get(&keys::ChainParameter::AllowMultisig) == 1 {
-                // warn!("TODO: handle multisig witness");
-            }
-            if recovered.as_bytes() != block.witness() {
-                return Err(new_error("verifying block witness signature failed"));
-            }
         }
 
         // . verify merkle root hash of transaction
@@ -166,7 +172,8 @@ impl Manager {
 
         // TODO: check dup block? (StateManager.receiveBlock)
 
-        // NOTE: mainnet does not support shielded TRC10 transaction. No need to check shielded transaction count.
+        // NOTE: mainnet does not support shielded TRC10 transaction.
+        // So there's no need to check shielded transaction count.
 
         // . reject smaller block number
         if block.number() <= self.latest_block_number() {
@@ -234,7 +241,17 @@ impl Manager {
         self.block_energy_usage = 0;
 
         // 3. Pre-check transaction signature in parallel.
-        let recovered_owners = block.recover_transaction_owners();
+        let recovered_owners = match block.recover_transaction_owners() {
+            Ok(recovered) => recovered,
+            Err(e) => {
+                for txn in &block.transactions {
+                    if txn.recover_owner().is_err() {
+                        warn!("cannot recover owner address: {:?}", txn.hash);
+                    }
+                }
+                return Err(e.into());
+            }
+        };
 
         // 3. Execute Transaction, TransactionRet / TransactionReceipt
         // TODO: handle accountState - AccountStateCallBack
@@ -245,7 +262,7 @@ impl Manager {
                 block.number(),
                 block.version()
             );
-            self.process_transaction(&txn, recovered_addrs, block)?;
+            self.process_transaction(&txn, recovered_addrs, &block.header)?;
         }
 
         // 4. Adaptive energy processor:
@@ -292,8 +309,8 @@ impl Manager {
     fn process_transaction(
         &mut self,
         txn: &IndexedTransaction,
-        recovered_addrs: Result<Vec<Address>, impl std::error::Error>,
-        block: &IndexedBlock,
+        recovered_addrs: Vec<Address>,
+        block_header: &IndexedBlockHeader,
     ) -> Result<()> {
         // 1.validateTapos
         if !self.validate_transaction_tapos(txn) {
@@ -308,20 +325,77 @@ impl Manager {
             return Err(new_error("duplicated transaction"));
         }
 
-        // 4.validateSignature (NOTE: move partial logic to executor)
-        let recovered_addrs = recovered_addrs.map_err(|_| new_error("error while recover address from signature"))?;
-
+        // 4.validateSignature (NOTE: move partial logic to upstream executor)
         // 5.cusumeBandwidth (NOTE: move to executor)
         // 6.cusumeMultiSigFee (NOTE: move to BandwidthProcessor)
 
         // 7. transaction is executed by TransactionTrace.
-        let txn_receipt = TransactionExecutor::new(self).execute(txn, recovered_addrs, &block.header)?;
+        let txn_receipt =
+            TransactionExecutor::new(self).execute_and_verify_result(txn, recovered_addrs, &block_header)?;
         self.state_db.put_key(keys::TransactionReceipt(txn.hash), txn_receipt)?;
         Ok(())
     }
 
+    /// Validate transacton before push to mempool.
+    ///
+    /// Use almost the same logic as `process_transaction`.
+    pub fn pre_push_transaction(&mut self, txn: &IndexedTransaction) -> Result<TransactionResult> {
+        if !self.validate_transaction_tapos(txn) {
+            return Err(new_error("tapos validation failed: invalid ref_block"));
+        }
+        if !self.valide_transaction_common(txn) {
+            return Err(new_error("message size or expiration validation failed"));
+        }
+        if !self.validate_duplicated_transaction(txn) {
+            return Err(new_error("duplicated transaction"));
+        }
+        let fake_block_number = self.latest_block_number() + 1;
+        let block_header = IndexedBlockHeader::dummy(
+            fake_block_number,
+            self.latest_block_timestamp() + constants::BLOCK_PRODUCING_INTERVAL,
+        );
+
+        let owner_addrs = txn.recover_owner()?;
+
+        let old_layers = self.layers;
+        self.new_layer();
+
+        let ret = TransactionExecutor::new(self).execute(txn, owner_addrs, &block_header);
+
+        let added_layers = self.layers - old_layers;
+        self.rollback_layers(added_layers);
+
+        Ok(ret?.0)
+    }
+
+    /// Validate transacton before push to mempool.
+    ///
+    /// Use almost the same logic as `process_transaction`.
+    pub fn run_transaction(
+        &mut self,
+        txn: &IndexedTransaction,
+        block_header: &IndexedBlockHeader,
+    ) -> Result<TransactionResult> {
+        if !self.validate_transaction_tapos(txn) {
+            return Err(new_error("tapos validation failed: invalid ref_block"));
+        }
+        if !self.valide_transaction_common(txn) {
+            return Err(new_error("message size or expiration validation failed"));
+        }
+        if !self.validate_duplicated_transaction(txn) {
+            return Err(new_error("duplicated transaction"));
+        }
+        let owner_addrs = txn.recover_owner()?;
+
+        let ret = TransactionExecutor::new(self).execute(txn, owner_addrs, &block_header);
+
+        Ok(ret?.0)
+    }
+
     /// Dry run the transaction, return Receipt.
-    pub fn dry_run_transaction(&mut self, txn: &IndexedTransaction) -> Result<TransactionReceipt> {
+    ///
+    /// This does not validate some props.
+    pub fn dry_run_transaction(&mut self, txn: &IndexedTransaction) -> Result<(TransactionResult, TransactionReceipt)> {
         /*if !self.validate_transaction_tapos(txn) {
             return Err(new_error("tapos validation failed"));
         }
@@ -337,12 +411,12 @@ impl Manager {
         let old_layers = self.layers;
         self.new_layer();
 
-        let maybe_receipt = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
+        let ret = TransactionExecutor::new(self).execute(txn, txn.recover_owner()?, &block_header);
 
         let added_layers = self.layers - old_layers;
         debug!("dry run, rollback layers={}", added_layers);
         self.rollback_layers(added_layers);
-        Ok(maybe_receipt?)
+        Ok(ret?)
     }
 
     fn validate_transaction_tapos(&self, txn: &IndexedTransaction) -> bool {
@@ -377,9 +451,18 @@ impl Manager {
         true
     }
 
-    fn validate_duplicated_transaction(&self, _txn: &IndexedTransaction) -> bool {
+    fn validate_duplicated_transaction(&self, txn: &IndexedTransaction) -> bool {
         // TODO: not used in sync. used in block producing
-        true
+        if self
+            .state_db
+            .get(&keys::TransactionReceipt(txn.hash))
+            .unwrap()
+            .is_none()
+        {
+            true
+        } else {
+            false
+        }
     }
 
     // consensus.validBlock
@@ -475,12 +558,75 @@ impl Manager {
         }
     }
 
+    // * block producers
+
+    /// Generate an empty block. This normally happens when producing the first block (block#1)
+    /// after genesis block, which requires sync-check to be turned off.
+    pub fn generate_empty_block(
+        &mut self,
+        timestamp: i64,
+        witness: &Address,
+        keypair: &KeyPair,
+    ) -> Result<IndexedBlock> {
+        let block_number = self.latest_block_number() + 1;
+        BlockBuilder::new(block_number)
+            .version(17) // GreatVoyage4_0_1
+            .timestamp(timestamp)
+            .parent_hash(&self.latest_block_hash())
+            .witness(witness)
+            .build(keypair)
+            .ok_or(new_error("cannot produce block"))
+    }
+
+    /// Generate block.
+    // For each transaction in `pendingTransactions` and `rePushTransactions`:
+    // * check deadline
+    // * check blocksize
+    // * no need to check shielded transaction
+    // * no need to check multi sign here
+    // * apply transaction
+    pub fn generate_block<'a>(
+        &mut self,
+        transactions: impl Iterator<Item = &'a IndexedTransaction>,
+        number: i64,
+        timestamp: i64,
+        witness: &Address,
+        keypair: &KeyPair,
+    ) -> Result<IndexedBlock> {
+        self.block_energy_usage = 0;
+
+        let mut builder = BlockBuilder::new(number)
+            .version(17) // GreatVoyage4_0_1
+            .timestamp(timestamp)
+            .parent_hash(&self.latest_block_hash())
+            .witness(witness);
+
+        let block_header = builder.to_unsigned_block_header();
+
+        let old_layers = self.layers;
+        self.new_layer();
+
+        for txn in transactions {
+            debug!("transaction => {:?} at block #{}", txn.hash, block_header.number());
+            let result = self.run_transaction(&txn, &block_header)?;
+            let mut txn = txn.raw.clone();
+            txn.result = vec![result];
+
+            builder.push_transaction(txn);
+        }
+
+        let added_layers = self.layers - old_layers;
+        self.rollback_layers(added_layers);
+
+        builder.build(keypair).ok_or(new_error("cannot produce block"))
+    }
+
     // * DposSlot
     fn get_absolute_slot(&self, timestamp: i64) -> i64 {
         (timestamp - self.genesis_block_timestamp) / constants::BLOCK_PRODUCING_INTERVAL
     }
 
-    fn get_slot(&self, timestamp: i64) -> i64 {
+    pub fn get_slot(&self, timestamp: i64) -> i64 {
         let first_slot_ts = self.get_slot_timestamp(1);
         if timestamp < first_slot_ts {
             0
@@ -493,14 +639,15 @@ impl Manager {
         self.get_absolute_slot(self.state_db.must_get(&keys::DynamicProperty::LatestBlockTimestamp))
     }
 
-    fn get_slot_timestamp(&self, mut slot: i64) -> i64 {
+    // public long getTime(long slot)
+    pub fn get_slot_timestamp(&self, mut slot: i64) -> i64 {
         assert!(slot >= 0, "unreachable");
 
         if slot == 0 {
             return Utc::now().timestamp_millis();
         }
 
-        if self.state_db.get(&keys::DynamicProperty::LatestBlockNumber).unwrap() == Some(0) {
+        if self.state_db.must_get(&keys::DynamicProperty::LatestBlockNumber) == 0 {
             return self.genesis_block_timestamp + slot * constants::BLOCK_PRODUCING_INTERVAL;
         }
 
@@ -535,10 +682,10 @@ impl Manager {
         witnesses.into_iter().map(|wit| wit.0).collect()
     }
 
-    fn get_scheduled_witness(&self, slot: i64) -> Address {
-        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap();
+    pub fn get_scheduled_witness(&self, slot: i64) -> Address {
+        let mut witnesses = self.state_db.get(&keys::WitnessSchedule).unwrap().unwrap_or_default();
         if witnesses.is_empty() {
-            panic!("no witness found");
+            panic!("no witness schedule found");
         }
         if witnesses.len() > constants::MAX_NUM_OF_ACTIVE_WITNESSES {
             let _ = witnesses.split_off(constants::MAX_NUM_OF_ACTIVE_WITNESSES);
@@ -573,7 +720,7 @@ impl Manager {
     }
 
     #[inline]
-    fn latest_block_hash(&self) -> H256 {
+    pub fn latest_block_hash(&self) -> H256 {
         self.state_db.must_get(&keys::LatestBlockHash)
     }
 }
@@ -617,22 +764,31 @@ impl WitnessStatisticManager<'_> {
         };
 
         // record missed blocks
-        // TODO: reduce `put_key` operations.
+        let mut missed_witnesses = HashMap::new();
+        let mut missed_count = HashMap::<Address, i64>::new();
         for i in 1..slot {
             let wit_addr = self.manager.get_scheduled_witness(i);
-            let mut wit = self.manager.state_db.must_get(&keys::Witness(wit_addr));
+            let mut wit = missed_witnesses
+                .entry(wit_addr)
+                .or_insert_with(|| self.manager.state_db.must_get(&keys::Witness(wit_addr)));
+            *missed_count.entry(wit_addr).or_default() += 1;
+
             wit.total_missed += 1;
-            warn!(
-                "block #{}, witness={}, total_missed={}",
-                block.number(),
-                wit_addr,
-                wit.total_missed
-            );
-            self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
 
             self.filled_slots[self.filled_slots_index as usize] = 0;
             self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;
         }
+        for (wit_addr, wit) in missed_witnesses.into_iter() {
+            warn!(
+                "block miss #{}, witness={}, total_missed={}, missed+={}",
+                block.number(),
+                wit_addr,
+                wit.total_missed,
+                missed_count[&wit_addr],
+            );
+            self.manager.state_db.put_key(keys::Witness(wit_addr), wit).unwrap();
+        }
+
         // current block is filled
         self.filled_slots[self.filled_slots_index as usize] = 1;
         self.filled_slots_index = (self.filled_slots_index + 1) % constants::NUM_OF_BLOCK_FILLED_SLOTS as i64;

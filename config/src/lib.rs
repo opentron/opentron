@@ -36,9 +36,11 @@ pub struct ChainParameterConfig {
     #[serde(default = "Default::default")]
     pub allow_tvm_istanbul_upgrade: bool,
     // forbid-transfer-to-contract = false
-    /// Default energy price is 100 SUN/unit. While in Mainnet/Testnet, it's 40 SUN/unit.
-    #[serde(default = "default_energy_fee")]
-    pub energy_fee: i64,
+    /// Default energy price is 100 SUN/unit. While in Mainnet/Testnet, it's 140 SUN/unit.
+    #[serde(default = "default_energy_price")]
+    pub energy_price: i64,
+    #[serde(default = "default_bandwidth_price")]
+    pub bandwidth_price: i64,
 }
 
 fn default_maintenance_interval() -> i64 {
@@ -46,8 +48,12 @@ fn default_maintenance_interval() -> i64 {
     21600_000
 }
 
-fn default_energy_fee() -> i64 {
+fn default_energy_price() -> i64 {
     100
+}
+
+fn default_bandwidth_price() -> i64 {
+    10
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

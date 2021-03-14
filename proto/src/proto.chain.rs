@@ -43,25 +43,10 @@ pub mod block_header {
         pub witness_address: ::prost::alloc::vec::Vec<u8>,
         #[prost(int32, tag="10")]
         pub version: i32,
-        /// renamed: accountStateRoot, First appares in block=8222293
+        /// renamed: accountStateRoot, First appares in block=8222293, actually not used.
         #[prost(bytes="vec", tag="11")]
         pub account_state_root: ::prost::alloc::vec::Vec<u8>,
     }
-}
-/// (name, address) use name, (null, address) use address, (name, null) use name
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct AccountId {
-    #[prost(bytes="vec", tag="1")]
-    pub name: ::prost::alloc::vec::Vec<u8>,
-    #[prost(bytes="vec", tag="2")]
-    pub address: ::prost::alloc::vec::Vec<u8>,
-}
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Authority {
-    #[prost(message, optional, tag="1")]
-    pub account: ::core::option::Option<AccountId>,
-    #[prost(bytes="vec", tag="2")]
-    pub permission_name: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Transaction {
@@ -189,17 +174,11 @@ pub mod transaction {
     pub struct Raw {
         #[prost(bytes="vec", tag="1")]
         pub ref_block_bytes: ::prost::alloc::vec::Vec<u8>,
-        /// unused
-        #[prost(int64, tag="3")]
-        pub ref_block_num: i64,
         #[prost(bytes="vec", tag="4")]
         pub ref_block_hash: ::prost::alloc::vec::Vec<u8>,
         /// max = now + 86400_000
         #[prost(int64, tag="8")]
         pub expiration: i64,
-        /// unused
-        #[prost(message, repeated, tag="9")]
-        pub auths: ::prost::alloc::vec::Vec<super::Authority>,
         /// used as transaction memo
         /// max size = 512000
         #[prost(bytes="vec", tag="10")]
@@ -208,14 +187,21 @@ pub mod transaction {
         /// changed: from repeated to optional(default for proto3)
         #[prost(message, optional, tag="11")]
         pub contract: ::core::option::Option<Contract>,
+        /// unused, but is filled with creation time.
+        #[prost(int64, tag="14")]
+        pub timestamp: i64,
+        /// max energy fee limit
+        #[prost(int64, tag="18")]
+        pub fee_limit: i64,
+        /// unused
+        #[prost(int64, tag="3")]
+        pub ref_block_num: i64,
+        /// unused, changed from Authority type
+        #[prost(bytes="vec", repeated, tag="9")]
+        pub auths: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
         /// unused
         #[prost(bytes="vec", tag="12")]
         pub scripts: ::prost::alloc::vec::Vec<u8>,
-        /// unused
-        #[prost(int64, tag="14")]
-        pub timestamp: i64,
-        #[prost(int64, tag="18")]
-        pub fee_limit: i64,
         /// in commit ae0075bd6d433f6bfb2ecbb74e5f380ee819dbc8
         /// in txn a5262325574c1cd4f0b7e0ea3d099d8546f47c72f8c165b792971f52d67d436c
         /// there might be an encoded default`0`:

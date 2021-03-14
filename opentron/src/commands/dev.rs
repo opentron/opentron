@@ -14,7 +14,7 @@ pub async fn main(ctx: AppContext) -> Result<(), Box<dyn std::error::Error>> {
     for i in start_block.. {
         let blk = ctx.chain_db.get_block_by_number(i)?;
 
-        manager.push_block(&blk)?;
+        manager.push_incoming_block(&blk)?;
 
         n_blocks += 1;
 

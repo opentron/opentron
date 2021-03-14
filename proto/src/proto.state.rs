@@ -466,11 +466,9 @@ pub enum ChainParameter {
     /// Renamed: `TransactionFee`
     ///
     /// Default: 10
-    BandwidthFee = 3,
+    BandwidthPrice = 3,
     /// Default: 100
-    ///
-    /// Mainnet: 10
-    EnergyFee = 11,
+    EnergyPrice = 11,
     /// Used in `CreateAccount`, `Transfer`, `TransferAsset`.
     ///
     /// Default: 0

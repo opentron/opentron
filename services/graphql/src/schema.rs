@@ -129,6 +129,25 @@ impl Account {
         let inner = self.inner.read().unwrap();
         Ok(inner.as_ref().unwrap().tron_power().into())
     }
+
+    /// Creation time of the account.
+    async fn creation_time(&self, ctx: &Context<'_>) -> Result<DateTime<Utc>> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        let ts = inner.as_ref().unwrap().creation_time;
+        Ok(Utc.timestamp(ts / 1_000, ts as u32 % 1_000 * 1_000_000))
+    }
+
+    /// FrozenBalance is the frozen balance(delegation) of the account, in sun.
+    async fn frozen_balance(&self, ctx: &Context<'_>) -> Result<Long> {
+        self.require_inner(ctx)?;
+        let inner = self.inner.read().unwrap();
+        let amount = inner
+            .as_ref()
+            .map(|acct| acct.frozen_amount_for_bandwidth + acct.frozen_amount_for_energy + acct.delegated_out_amount)
+            .unwrap();
+        Ok(amount.into())
+    }
 }
 
 /// Asset is a TRC10 token.
@@ -518,26 +537,28 @@ impl Transaction {
         })
     }
 
+    /// Value is the value, in sun, sent along with this transaction.
+    async fn value(&self) -> Option<Long> {
+        let cntr = self.inner.raw.raw_data.as_ref().unwrap().contract.as_ref().unwrap();
+        Contract::from(cntr).value()
+    }
+
     // NOTE: for debug
     async fn receipt(&self, ctx: &Context<'_>) -> Result<String> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         if let Some(receipt) = manager.state().get(&keys::TransactionReceipt(self.inner.hash))? {
-            Ok(format!(
-                "resource_receipt={:?} vm_logs={}",
-                receipt.resource_receipt,
-                receipt.vm_logs.len()
-            ))
+            Ok(format!("{:?}", receipt))
         } else {
             Ok("not found".to_owned())
         }
     }
-    // nonce
-    // status
-    // gasUsed
-    // cumulativeGasUsed
-    // value
-    // gasPrice
-    // gas
+
+    // nonce = 0
+    // status = always success
+    // gasUsed = 0
+    // cumulativeGasUsed = 0
+    // gasPrice = 0
+    // gas = 0
     // inputData
 }
 
@@ -763,6 +784,49 @@ impl Block {
     // account, call, estimateGas: block state not supported
 }
 
+// #- Tron extensions
+
+pub struct Witness {
+    inner: state::Witness,
+}
+
+#[Object]
+impl Witness {
+    /// URL of the witness.
+    async fn url(&self) -> &str {
+        &self.inner.url
+    }
+
+    /// Total blocks produced by the witness.
+    async fn total_produced(&self) -> Long {
+        self.inner.total_produced.into()
+    }
+
+    /// Total blocks missed by the witness.
+    async fn total_missed(&self) -> Long {
+        self.inner.total_missed.into()
+    }
+
+    /// Brokerage rate of the witness.
+    async fn brokerage(&self) -> i32 {
+        self.inner.brokerage
+    }
+
+    /// Vote received by the witness.
+    async fn vote_count(&self) -> Long {
+        self.inner.vote_count.into()
+    }
+
+    /// Account info of the witness.
+    async fn account(&self) -> Option<Account> {
+        let address = ::keys::Address::try_from(&self.inner.address).ok()?;
+        Some(Account {
+            address: address.into(),
+            inner: RwLock::default(),
+        })
+    }
+}
+
 #[derive(SimpleObject)]
 pub struct ChainParameter {
     id: i32,
@@ -840,14 +904,17 @@ impl QueryRoot {
     /// Block fetches an Tron block by number or by hash. If neither is
     /// supplied, the most recent known block is returned.
     async fn block(&self, ctx: &Context<'_>, number: Option<Long>, hash: Option<Bytes32>) -> Result<Block> {
-        if let Some(num) = number {
-            return Ok(Block::from_number(num));
-        }
         if let Some(hash) = hash {
             return Ok(Block::from_hash(hash));
         }
+        let offset = match number {
+            Some(num) if num.0 >= 0 => return Ok(Block::from_number(num)),
+            Some(num) => num.0,
+            None => 0,
+        };
+
         let ref chain_db = ctx.data_unchecked::<Arc<AppContext>>().chain_db;
-        let header = chain_db.get_block_header_by_number(chain_db.get_block_height())?;
+        let header = chain_db.get_block_header_by_number(chain_db.get_block_height() + offset)?;
         Ok(Block {
             identifier: BlockIdentifier::Hash(header.hash.into()),
             header: RwLock::new(Some(header)),
@@ -1003,6 +1070,16 @@ impl QueryRoot {
 
     // Tron extensions.
 
+    /// Witness queries witnesses.
+    async fn witness(&self, ctx: &Context<'_>, address: Address) -> Result<Witness> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let wit = manager
+            .state()
+            .get(&keys::Witness(address.0))?
+            .ok_or_else(|| "witness not found")?;
+        Ok(Witness { inner: wit })
+    }
+
     /// Asset fetches an Tron asset(TRC10 token).
     async fn asset(&self, ctx: &Context<'_>, issuer: Option<Address>, id: Option<i64>) -> Result<Asset> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
@@ -1035,8 +1112,32 @@ pub struct MutationRoot;
 #[Object]
 impl MutationRoot {
     /// SendRawTransaction sends an protobuf-encoded transaction to the network.
-    async fn send_raw_transaction(&self, _data: Bytes) -> Result<Bytes32> {
-        unimplemented!()
+    async fn send_raw_transaction(
+        &self,
+        ctx: &Context<'_>,
+        raw_data: Bytes,
+        signatures: Vec<Bytes>,
+    ) -> Result<Bytes32> {
+        use chain::IndexedTransaction;
+        use prost::Message;
+        use proto::chain::{transaction::Raw as TransactionRaw, Transaction};
+
+        let raw = TransactionRaw::decode(&*raw_data.0)?;
+        let txn = Transaction {
+            raw_data: Some(raw),
+            signatures: signatures.into_iter().map(|sig| sig.into()).collect(),
+            ..Default::default()
+        };
+        let indexed_txn = IndexedTransaction::from_raw(txn).ok_or("invalid transaction")?;
+
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+        let _result = manager.pre_push_transaction(&indexed_txn)?;
+
+        let txn_id = indexed_txn.hash;
+        ctx.data_unchecked::<Arc<AppContext>>()
+            .incoming_transaction_tx
+            .send(indexed_txn)?;
+        Ok(txn_id.into())
     }
 
     /// DryRunRawTransaction runs an protobuf-encoded transaction and returns the receipt as json.
@@ -1045,12 +1146,11 @@ impl MutationRoot {
         use prost::Message;
         use proto::chain::Transaction;
 
-        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
-
         let txn = Transaction::decode(&*data.0)?;
         let indexed_txn = IndexedTransaction::from_raw(txn).ok_or("invalid transaction")?;
 
-        let receipt = manager.dry_run_transaction(&indexed_txn)?;
+        let ref mut manager = ctx.data_unchecked::<Arc<AppContext>>().manager.write().unwrap();
+        let (_, receipt) = manager.dry_run_transaction(&indexed_txn)?;
 
         Ok(CallResult { receipt })
     }

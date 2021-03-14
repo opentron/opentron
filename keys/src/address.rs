@@ -100,6 +100,9 @@ impl TryFrom<&[u8]> for Address {
     type Error = Error;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        // NOTE: In genesis block,
+        // java-tron uses `0x000000000000000000000` as a mistake, the finnal address becomes
+        // `3078303030303030303030303030303030303030303030`
         if value.len() != 21 {
             Err(Error::InvalidAddress)
         } else {

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet, LinkedList};
 use std::error::Error;
-use std::fs::OpenOptions;
+use std::fs::{create_dir_all, OpenOptions};
 use std::io::{self, Write};
 use std::iter::FromIterator;
 use std::path::Path;
@@ -41,6 +41,8 @@ impl Drop for ChainDB {
 
 impl ChainDB {
     pub fn new<P: AsRef<Path>>(db_path: P) -> ChainDB {
+        create_dir_all(&db_path).expect("create db directory");
+
         let db_options = DBOptions::default()
             .create_if_missing(true)
             .create_missing_column_families(true)

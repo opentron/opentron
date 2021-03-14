@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32};
 use std::sync::RwLock;
 
+use chain::{IndexedBlock, IndexedTransaction};
 use chain_db::ChainDB;
 use config::genesis::GenesisConfig;
 use config::Config;
@@ -19,15 +20,25 @@ pub struct AppContext {
     pub genesis_block_id: Option<BlockId>,
     pub config: Config,
     pub genesis_config: GenesisConfig,
-    pub chain_db: ChainDB,
-    pub running: AtomicBool,
-    pub syncing: AtomicBool,
     pub num_active_connections: AtomicU32,
     pub num_passive_connections: AtomicU32,
-    pub recent_blk_ids: RwLock<HashSet<H256>>,
+    pub running: AtomicBool,
+    pub syncing: AtomicBool,
+    pub chain_db: ChainDB,
+    /// state-db manager
+    pub manager: RwLock<Manager>,
+    pub recent_block_ids: RwLock<HashSet<H256>>,
     /// The termination signal is used to close all connections and services.
     pub termination_signal: broadcast::Sender<()>,
-    pub manager: RwLock<Manager>,
+    // broadcasting channels across node
+    /// outgoing transactions
+    pub advertising_transaction_tx: broadcast::Sender<IndexedTransaction>,
+    /// generated blocks
+    pub advertising_block_tx: broadcast::Sender<IndexedBlock>,
+    /// transactions from api and channel protocol
+    pub incoming_transaction_tx: broadcast::Sender<IndexedTransaction>,
+    /// blocks from channel protocol
+    pub incoming_block_tx: broadcast::Sender<IndexedBlock>,
 }
 
 impl AppContext {
@@ -75,9 +86,13 @@ impl AppContext {
             syncing: AtomicBool::new(false),
             num_active_connections: AtomicU32::new(0),
             num_passive_connections: AtomicU32::new(0),
-            recent_blk_ids: RwLock::new(HashSet::new()),
-            termination_signal: broadcast::channel(1024).0,
+            recent_block_ids: RwLock::new(HashSet::new()),
             manager: RwLock::new(db_manager),
+            termination_signal: broadcast::channel(1024).0,
+            advertising_transaction_tx: broadcast::channel(1000).0,
+            advertising_block_tx: broadcast::channel(10).0,
+            incoming_transaction_tx: broadcast::channel(1000).0,
+            incoming_block_tx: broadcast::channel(10).0,
         })
     }
 }

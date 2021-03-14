@@ -1,0 +1,30 @@
+{
+  "timestamp": 0,
+  "parentHash": "0xe58f33f9baf9305dc6f82b9f1934ea8f0ade2defb951258d50167028c780351f",
+  "witnesses": [
+    {
+      "address": "TPBMeAqZd5JfbomoMX8BPMttSyHx4Notrx",
+      "url": "http://GR1.com",
+      "votes": 100000000
+    }
+  ],
+  "allocs": [
+    {
+      "name": "InitialAccount1",
+      "address": "TJrsCAaTePcnB2UWkqA53nF2dnyVovotrx",
+      "balance": 99000000000000000
+    },
+    {
+      "name": "Sun",
+      "address": "TKXt7gXRSQ88FZBs6eXSzTCbPdFuoFg18L",
+      "balance": 0
+    },
+    {
+      "name": "Blackhole",
+      "address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+      "balance": -9223372036854775808
+    }
+  ],
+  "mantra": "A new system must allow existing systems to be linked together without requiring any central control or coordination",
+  "creator": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb"
+}

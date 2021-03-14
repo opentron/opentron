@@ -11,6 +11,7 @@ hex = "0.4"
 tokio = "1"
 # workspace
 config = { path = '../config' }
+chain = { path = '../chain' }
 chain-db = { path = '../chain-db' }
 proto = { path = '../proto' }
 manager = { path = '../manager' }
