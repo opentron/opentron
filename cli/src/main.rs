@@ -8,6 +8,8 @@ use proto::contract as contract_pb;
 use std::error::Error;
 
 mod account;
+mod system;
+mod witness;
 
 fn transfer(matches: &ArgMatches) -> Option<Contract> {
     let from: Address = matches.value_of("SENDER")?.parse().ok()?;
@@ -29,7 +31,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cntr = match matches.subcommand() {
         ("transfer", Some(arg_matches)) => transfer(arg_matches),
-        ("account", Some(arg_matches)) => account::account(arg_matches),
+        ("account", Some(arg_matches)) => account::main(arg_matches),
+        ("witness", Some(arg_matches)) => witness::main(arg_matches),
+        ("system", Some(arg_matches)) => system::main(arg_matches),
         // commands::transfer::main(arg_matches),
         // ("list", Some(arg_matches)) => commands::list::main(arg_matches),
         _ => unimplemented!(),

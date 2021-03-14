@@ -165,10 +165,37 @@ subcommands:
           subcommands:
               - vote:
                     about: VoteWitnessContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - VOTES:
+                              help: A vote for witness, leave empty for no vote, multiple accepted
+                              multiple: true
+                              last: true
+                              value_names:
+                                  - ADDR
+                                  - COUNT
               - withdraw:
                     about: WithdrawBalanceContract
               - freeze:
                     about: FreezeBalanceContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - RECIPIENT:
+                              help: The account receiving tokens
+                              required: true
+                        - AMOUNT:
+                              help: The amount of tokens to send and the token symbol
+                              required: true
+                        - type:
+                              help: Freeze type
+                              long: "type"
+                              takes_value: true
+                              possible_values: ["bandwidth", "energy"]
+                              default_value: "energy"
               - unfreeze:
                     about: UnfreezeBalanceContract
     - proposal:

@@ -3,7 +3,7 @@ use keys::Address;
 use proto::chain::transaction::Contract;
 use proto::contract as contract_pb;
 
-pub fn account(matches: &ArgMatches) -> Option<Contract> {
+pub fn main(matches: &ArgMatches) -> Option<Contract> {
     match matches.subcommand() {
         ("create", Some(arg_matches)) => create(arg_matches),
         ("set_name", Some(arg_matches)) => set_name(arg_matches),
