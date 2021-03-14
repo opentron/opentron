@@ -7,6 +7,8 @@ use proto::chain::transaction::{Contract, Raw as TransactionRaw};
 use proto::contract as contract_pb;
 use std::error::Error;
 
+mod account;
+
 fn transfer(matches: &ArgMatches) -> Option<Contract> {
     let from: Address = matches.value_of("SENDER")?.parse().ok()?;
     let to: Address = matches.value_of("RECIPIENT")?.parse().ok()?;
@@ -27,6 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cntr = match matches.subcommand() {
         ("transfer", Some(arg_matches)) => transfer(arg_matches),
+        ("account", Some(arg_matches)) => account::account(arg_matches),
         // commands::transfer::main(arg_matches),
         // ("list", Some(arg_matches)) => commands::list::main(arg_matches),
         _ => unimplemented!(),

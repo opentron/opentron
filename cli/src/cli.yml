@@ -79,3 +79,21 @@ subcommands:
               - AMOUNT:
                     help: The amount of tokens to send and the token symbol
                     required: true
+    - account:
+          about: Account commands
+          subcommands:
+            - create:
+                  about: Create an account
+                  args:
+                        - SENDER:
+                              help: The sender
+                              required: true
+                        - RECIPIENT:
+                              help: The created account
+                              required: true
+                        - type:
+                              help: Account type
+                              long: "type"
+                              takes_value: true
+                              possible_values: ["normal", "assetissue", "contract"]
+                              default_value: "normal"
