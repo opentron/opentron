@@ -547,11 +547,7 @@ impl Transaction {
     async fn receipt(&self, ctx: &Context<'_>) -> Result<String> {
         let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
         if let Some(receipt) = manager.state().get(&keys::TransactionReceipt(self.inner.hash))? {
-            Ok(format!(
-                "resource_receipt={:?} vm_logs={}",
-                receipt.resource_receipt,
-                receipt.vm_logs.len()
-            ))
+            Ok(format!("{:?}", receipt))
         } else {
             Ok("not found".to_owned())
         }
