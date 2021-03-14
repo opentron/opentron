@@ -769,6 +769,30 @@ impl Block {
     // account, call, estimateGas: block state not supported
 }
 
+// #- Tron extensions
+
+pub struct Witness {
+    inner: state::Witness,
+}
+
+#[Object]
+impl Witness {
+    /// URL of the witness.
+    async fn url(&self) -> &str {
+        &self.inner.url
+    }
+
+    /// Total blocks produced by the witness.
+    async fn total_produced(&self) -> Long {
+        self.inner.total_produced.into()
+    }
+
+    /// Total blocks missed by the witness.
+    async fn total_missed(&self) -> Long {
+        self.inner.total_missed.into()
+    }
+}
+
 #[derive(SimpleObject)]
 pub struct ChainParameter {
     id: i32,
@@ -1011,6 +1035,16 @@ impl QueryRoot {
     }
 
     // Tron extensions.
+
+    /// Witness queries witnesses.
+    async fn witness(&self, ctx: &Context<'_>, address: Address) -> Result<Witness> {
+        let ref manager = ctx.data_unchecked::<Arc<AppContext>>().manager.read().unwrap();
+        let wit = manager
+            .state()
+            .get(&keys::Witness(address.0))?
+            .ok_or_else(|| "witness not found")?;
+        Ok(Witness { inner: wit })
+    }
 
     /// Asset fetches an Tron asset(TRC10 token).
     async fn asset(&self, ctx: &Context<'_>, issuer: Option<Address>, id: Option<i64>) -> Result<Asset> {
