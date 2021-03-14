@@ -9,12 +9,13 @@ use std::error::Error;
 
 mod account;
 mod system;
+mod util;
 mod witness;
 
 fn transfer(matches: &ArgMatches) -> Option<Contract> {
     let from: Address = matches.value_of("SENDER")?.parse().ok()?;
     let to: Address = matches.value_of("RECIPIENT")?.parse().ok()?;
-    let amount = matches.value_of("AMOUNT")?.parse().ok()?;
+    let amount = util::parse_amount_with_currency(matches.value_of("AMOUNT")?, "TRX", 6)?;
 
     let transfer = contract_pb::TransferContract {
         owner_address: from.as_bytes().to_vec(),

@@ -17,7 +17,7 @@ fn freeze(matches: &ArgMatches) -> Option<Contract> {
 
     let from: Address = matches.value_of("SENDER")?.parse().ok()?;
     let to: Address = matches.value_of("RECIPIENT")?.parse().ok()?;
-    let amount = matches.value_of("AMOUNT")?.parse().ok()?;
+    let amount = crate::util::parse_amount_with_currency(matches.value_of("AMOUNT")?, "TRX", 6)?;
 
     let resource_type = match matches.value_of("type") {
         Some("bandwidth") => ResourceType::Bandwidth,
@@ -48,7 +48,7 @@ fn vote(matches: &ArgMatches) -> Option<Contract> {
                 if let &[addr, count] = &chunk.collect::<Vec<_>>()[..] {
                     Ok(Vote {
                         vote_address: addr.parse::<Address>()?.as_bytes().to_owned(),
-                        vote_count: count.parse()?,
+                        vote_count: crate::util::parse_amount(count).expect("parse amount failed"),
                     })
                 } else {
                     unreachable!("restricted by cli.yml; qed")
