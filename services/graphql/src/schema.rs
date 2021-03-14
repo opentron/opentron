@@ -791,6 +791,25 @@ impl Witness {
     async fn total_missed(&self) -> Long {
         self.inner.total_missed.into()
     }
+
+    /// Brokerage rate of the witness.
+    async fn brokerage(&self) -> i32 {
+        self.inner.brokerage
+    }
+
+    /// Vote received by the witness.
+    async fn vote_count(&self) -> Long {
+        self.inner.vote_count.into()
+    }
+
+    /// Account info of the witness.
+    async fn account(&self) -> Option<Account> {
+        let address = ::keys::Address::try_from(&self.inner.address).ok()?;
+        Some(Account {
+            address: address.into(),
+            inner: RwLock::default(),
+        })
+    }
 }
 
 #[derive(SimpleObject)]
