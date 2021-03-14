@@ -121,8 +121,8 @@ pub async fn producer_task(
                                 let new_block = manager.generate_block(mempool.values(), block_number, block_timestamp, &witness_address, keypair).unwrap();
                                 ctx.chain_db.insert_block(&new_block).expect("TODO: handle insert_block error");
                                 ctx.chain_db.update_block_height(new_block.number());
-                                info!("=> {:?} txns={}", new_block.hash(), new_block.transactions.len());
-                                info!("=> produce {:?}", manager.push_generated_block(&new_block));
+                                let ret = manager.push_generated_block(&new_block);
+                                info!("=> {:?} txns={} {:?}", new_block.hash(), new_block.transactions.len(), ret);
 
                                 for txn in new_block.transactions.iter() {
                                     mempool.remove(&txn.hash);
