@@ -9,7 +9,8 @@ pub fn main(matches: &ArgMatches) -> Option<Contract> {
         ("freeze", Some(arg_matches)) => freeze(arg_matches),
         ("unfreeze", Some(arg_matches)) => unfreeze(arg_matches),
         ("vote", Some(arg_matches)) => vote(arg_matches),
-        _ => unimplemented!(),
+        ("withdraw", Some(arg_matches)) => withdraw(arg_matches),
+        _ => unreachable!("in cli.yml; qed"),
     }
 }
 
@@ -85,6 +86,16 @@ fn vote(matches: &ArgMatches) -> Option<Contract> {
         owner_address: from.as_bytes().into(),
         votes: votes,
         ..Default::default()
+    };
+
+    Some(inner.into())
+}
+
+fn withdraw(matches: &ArgMatches) -> Option<Contract> {
+    let from: Address = matches.value_of("SENDER")?.parse().ok()?;
+
+    let inner = contract_pb::WithdrawBalanceContract {
+        owner_address: from.as_bytes().into(),
     };
 
     Some(inner.into())
