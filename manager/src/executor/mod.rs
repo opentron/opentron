@@ -131,6 +131,10 @@ impl From<TransactionContext<'_>> for TransactionReceipt {
             receipt.vm_status = ctx.contract_status as i32;
             receipt.vm_logs = ctx.logs;
         }
+        // misc
+        receipt.withdrawal_amount = ctx.withdrawal_amount;
+        receipt.unfrozen_amount = ctx.unfrozen_amount;
+
         receipt
     }
 }
