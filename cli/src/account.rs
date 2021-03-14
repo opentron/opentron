@@ -6,6 +6,7 @@ use proto::contract as contract_pb;
 pub fn account(matches: &ArgMatches) -> Option<Contract> {
     match matches.subcommand() {
         ("create", Some(arg_matches)) => create(arg_matches),
+        ("set_name", Some(arg_matches)) => set_name(arg_matches),
         _ => unimplemented!(),
     }
 }
@@ -27,6 +28,17 @@ fn create(matches: &ArgMatches) -> Option<Contract> {
         owner_address: from.as_bytes().into(),
         account_address: to.as_bytes().into(),
         r#type: account_type as i32,
+    };
+    Some(inner.into())
+}
+
+fn set_name(matches: &ArgMatches) -> Option<Contract> {
+    let from: Address = matches.value_of("SENDER")?.parse().ok()?;
+    let name = matches.value_of("NAME").expect("required; qed");
+
+    let inner = contract_pb::AccountUpdateContract {
+        owner_address: from.as_bytes().into(),
+        account_name: name.into(),
     };
     Some(inner.into())
 }
