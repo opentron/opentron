@@ -8,13 +8,14 @@ settings: &default_settings
     - SubcommandRequiredElseHelp
 
 args:
-    - rpc-addr:
+    - rpc-url:
           help: Raw RPC address to connect
-          long: rpc-addr
+          long: rpc-url
+          env: OPENTRON_CLI_RPC_URL
           conflicts_with: network
           takes_value: true
           default_value: "http://127.0.0.1:3000"
-          value_name: "http://HOST:PORT"
+          value_name: "http://[HOST]:[PORT]"
     - memo:
           help: The memo for the transaction
           long: memo
@@ -29,6 +30,7 @@ args:
           help: The private key used for signing
           short: K
           long: private-key
+          env: OPENTRON_CLI_PRIVATE_KEY
           takes_value: true
           conflicts_with:
               - account

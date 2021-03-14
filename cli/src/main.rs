@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn pack_and_send(cntr: Contract, matches: &ArgMatches) -> Result<(), Box<dyn std::error::Error>> {
-    let ref_block_hash = get_ref_block_hash()?;
+    let ref_block_hash = get_ref_block_hash(matches)?;
 
     let raw = TransactionRaw {
         contract: Some(cntr),
@@ -59,18 +59,22 @@ fn pack_and_send(cntr: Contract, matches: &ArgMatches) -> Result<(), Box<dyn std
     println!("TXN Hash => {:?}", sha256(&buf));
     println!("SIG => {}", hex::encode(sig.as_bytes()));
 
-    send_raw_transaction(&hex::encode(&buf), &hex::encode(sig.as_bytes()))?;
+    if !matches.is_present("dont-broadcast") {
+        send_raw_transaction(&hex::encode(&buf), &hex::encode(sig.as_bytes()), matches)?;
+    }
 
     Ok(())
 }
 
-fn send_raw_transaction(raw: &str, signature: &str) -> Result<(), Box<dyn Error>> {
+fn send_raw_transaction(raw: &str, signature: &str, matches: &ArgMatches) -> Result<(), Box<dyn Error>> {
+    let rpc_url = matches.value_of("rpc-url").expect("has default; qed");
+
     let client = reqwest::blocking::Client::new();
     let mutation = r#"{ "query": "mutation { txn: sendRawTransaction(rawData: \"RAW\", signatures: [\"SIG\"]) }" }"#;
 
     let mutation = mutation.replace("RAW", raw).replace("SIG", signature);
     let resp = client
-        .post("http://localhost:3000/")
+        .post(rpc_url)
         .header("User-Agent", "Opentron Cli/0.1.0")
         .header("Accept", "application/json")
         .header("Content-Type", "application/json")
@@ -85,7 +89,9 @@ fn send_raw_transaction(raw: &str, signature: &str) -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-fn get_ref_block_hash() -> Result<Vec<u8>, Box<dyn Error>> {
+fn get_ref_block_hash(matches: &ArgMatches) -> Result<Vec<u8>, Box<dyn Error>> {
+    let rpc_url = matches.value_of("rpc-url").expect("has default; qed");
+
     let client = reqwest::blocking::Client::new();
     // "operationName":null,
     // "variables":{},
@@ -93,7 +99,7 @@ fn get_ref_block_hash() -> Result<Vec<u8>, Box<dyn Error>> {
         "query":"{ refBlock: block { hash } }"
     }"#;
     let resp = client
-        .post("http://localhost:3000/")
+        .post(rpc_url)
         .header("User-Agent", "Opentron Cli/0.1.0")
         .header("Accept", "application/json")
         .header("Content-Type", "application/json")
