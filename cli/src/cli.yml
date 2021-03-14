@@ -221,10 +221,40 @@ subcommands:
           subcommands:
               - create:
                     about: ProposalCreateContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - PARAMS:
+                              help: Modified chain parameter of the proposal
+                              multiple: true
+                              last: true
+                              required: true
+                              value_name: "ID=VALUE"
               - approve:
                     about: ProposalApproveContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - ID:
+                              help: Proposal id
+                              required: true
+                        - approve:
+                              help: Is this a approval
+                              long: "approve"
+                              takes_value: true
+                              possible_values: ["yes", "no"]
+                              default_value: "yes"
               - delete:
                     about: ProposalDeleteContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - ID:
+                              help: Proposal id
+                              required: true
     - contract:
           about: Smart Contract
           settings: *default_settings
