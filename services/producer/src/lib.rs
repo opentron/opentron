@@ -91,12 +91,20 @@ pub async fn producer_task(
                     let mut manager = ctx.manager.write().unwrap();
 
                     let slot = manager.get_slot(Utc::now().timestamp_millis() + 50);
+                    if slot == 0 {
+                        // NOT_TIME_YET
+                        debug!("not time yet, skip slots in maintenance");
+                        continue;
+                    }
                     let block_timestamp = manager.get_slot_timestamp(slot);
                     let block_number = manager.latest_block_number() + 1;
+
+                    info!("slot {} slot_ts {} ts {} diff={}", slot, block_timestamp, Utc::now().timestamp_millis(), Utc::now().timestamp_millis()- block_timestamp);
 
                     match block_number {
                         1 => {
                             info!("👀generating block #1 without sync check");
+                            // FIXME: should choose one from genesis config
                             let (witness_address, keypair) = keypairs.iter().next().unwrap();
                             let new_block =
                                 manager.generate_empty_block(block_timestamp, witness_address, keypair).unwrap();
