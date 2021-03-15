@@ -229,6 +229,314 @@ impl<'m> TransactionExecutor<'m> {
         Ok(ctx.into())
     }
 
+    // Verifies the transaction, do not run.
+    // Requires rollback.
+    pub fn verify(
+        &mut self,
+        txn: &IndexedTransaction,
+        recover_addrs: Vec<Address>,
+        block_header: &IndexedBlockHeader,
+    ) -> Result<(), String> {
+        let cntr = txn
+            .raw
+            .raw_data
+            .as_ref()
+            .ok_or_else(|| "empty raw_data".to_owned())?
+            .contract
+            .as_ref()
+            .ok_or_else(|| "empty inner contract".to_owned())?;
+        let cntr_type = ContractType::from_i32(cntr.r#type)
+            .ok_or_else(|| format!("unhandled system contract type code: {}", cntr.r#type))?;
+
+        let permission_id = cntr.permission_id;
+
+        let mut ctx = TransactionContext::new(&block_header, &txn);
+        let ctx = &mut ctx;
+
+        match cntr_type {
+            ContractType::TransferContract => {
+                let cntr = contract_pb::TransferContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::ProposalCreateContract => {
+                let cntr = contract_pb::ProposalCreateContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::ProposalApproveContract => {
+                let cntr = contract_pb::ProposalApproveContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::ProposalDeleteContract => {
+                let cntr = contract_pb::ProposalDeleteContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::WitnessCreateContract => {
+                let cntr = contract_pb::WitnessCreateContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::WitnessUpdateContract => {
+                let cntr = contract_pb::WitnessUpdateContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::UpdateBrokerageContract => {
+                let cntr = contract_pb::UpdateBrokerageContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::FreezeBalanceContract => {
+                let cntr = contract_pb::FreezeBalanceContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::UnfreezeBalanceContract => {
+                let cntr = contract_pb::UnfreezeBalanceContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::VoteWitnessContract => {
+                let cntr = contract_pb::VoteWitnessContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::AssetIssueContract => {
+                let cntr = contract_pb::AssetIssueContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::UpdateAssetContract => {
+                let cntr = contract_pb::UpdateAssetContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::UnfreezeAssetContract => {
+                let cntr = contract_pb::UnfreezeAssetContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::TransferAssetContract => {
+                let cntr = contract_pb::TransferAssetContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::ParticipateAssetIssueContract => {
+                let cntr = contract_pb::ParticipateAssetIssueContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::AccountUpdateContract => {
+                let cntr = contract_pb::AccountUpdateContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::SetAccountIdContract => {
+                let cntr = contract_pb::SetAccountIdContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::AccountCreateContract => {
+                let cntr = contract_pb::AccountCreateContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::AccountPermissionUpdateContract => {
+                let cntr = contract_pb::AccountPermissionUpdateContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::WithdrawBalanceContract => {
+                let cntr = contract_pb::WithdrawBalanceContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::UpdateSettingContract => {
+                let cntr = contract_pb::UpdateSettingContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::UpdateEnergyLimitContract => {
+                let cntr = contract_pb::UpdateEnergyLimitContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::ClearAbiContract => {
+                let cntr = contract_pb::ClearAbiContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            // TVM: Should handle BW first, then remaining can be used for E.
+            ContractType::CreateSmartContract => {
+                let raw_cntr = &cntr.parameter.as_ref().unwrap().value[..];
+                let cntr = contract_pb::CreateSmartContract::decode(raw_cntr).unwrap();
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+                cntr.validate(self.manager, ctx)?;
+            }
+            ContractType::TriggerSmartContract => {
+                let cntr = contract_pb::TriggerSmartContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+                cntr.validate(self.manager, ctx)?;
+            }
+            ContractType::ExchangeCreateContract => {
+                let cntr = contract_pb::ExchangeCreateContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::ExchangeWithdrawContract => {
+                let cntr = contract_pb::ExchangeWithdrawContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+            }
+            ContractType::ExchangeInjectContract => {
+                let cntr = contract_pb::ExchangeInjectContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+                cntr.validate(self.manager, ctx)?;
+            }
+            ContractType::ExchangeTransactionContract => {
+                let cntr = contract_pb::ExchangeTransactionContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+                cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
+                BandwidthProcessor::new(self.manager, txn, &cntr)?.consume(ctx)?;
+                cntr.validate(self.manager, ctx)?;
+            }
+            #[cfg(feature = "nile")]
+            ContractType::ShieldedTransferContract => {
+                let cntr = contract_pb::ShieldedTransferContract::from_any(
+                    cntr.parameter.as_ref().ok_or_else(|| "empty inner Any pb".to_owned())?,
+                )
+                .ok_or_else(|| "invalid inner Any pb".to_owned())?;
+
+                log::warn!("=> Shielded Transaction, use dummy implementation");
+                // NOTE: dummy implementation
+                // NOTE: no need to verify signature
+                // cntr.validate_signature(permission_id, recover_addrs, self.manager,ctx)?;
+                cntr.validate(self.manager, ctx)?;
+                // NOTE: Shielded transaction won't consume bandwidth.
+            }
+            ContractType::ObsoleteVoteAssetContract |
+            ContractType::ObsoleteCustomContract |
+            ContractType::ObsoleteGetContract => unreachable!("OBSOLETE: {:?}", cntr_type),
+            #[allow(unreachable_patterns)]
+            _ => unimplemented!("TODO: handle contract type {:?}", cntr_type),
+        }
+        Ok(())
+    }
+
     pub fn execute(
         &mut self,
         txn: &IndexedTransaction,
