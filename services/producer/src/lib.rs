@@ -115,7 +115,7 @@ pub async fn producer_task(
                         _ if block_number > 1 => {
                             let witness_address = manager.get_scheduled_witness(slot);
                             if let Some(keypair) = keypairs.get(&witness_address) {
-                                info!("👀produce block #{} slot={} timestamp={} with {}", block_number, slot, block_timestamp, witness_address);
+                                info!("👀producing block #{} slot={} timestamp={} with {}", block_number, slot, block_timestamp, witness_address);
 
                                 let deadline = block_timestamp + constants::BLOCK_PRODUCING_INTERVAL / 2 *
                                     constants::BLOCK_PRODUCE_TIMEOUT_PERCENT / 100;
@@ -131,7 +131,7 @@ pub async fn producer_task(
                                 }
 
                             } else {
-                                // Not my turn, pass
+                                info!("💤not my turn, pass");
                             }
                         }
                         _ => unreachable!("block number is always >= 1")

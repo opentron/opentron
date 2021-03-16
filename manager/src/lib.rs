@@ -643,7 +643,7 @@ impl Manager {
         match ret {
             Ok(block) => {
                 info!(
-                    "🔖generate block #{} {:?} txns={} elapsed={}ms",
+                    "✨generated block #{} {:?} txns={} elapsed={}ms",
                     block.number(),
                     block.hash(),
                     block.transactions.len(),
