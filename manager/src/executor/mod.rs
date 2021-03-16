@@ -214,9 +214,11 @@ impl<'m> TransactionExecutor<'m> {
         let mut exec_result = self.execute_inner(txn, recover_addrs, &mut ctx)?;
 
         if block_header.version() == 0 {
+            /*
             let contract_status = maybe_result
                 .and_then(|ret| ContractStatus::from_i32(ret.contract_status))
                 .unwrap_or_default();
+            */
             //ctx.contract_status = contract_status;
             exec_result.contract_status = ContractStatus::Default as i32;
         }
@@ -229,8 +231,8 @@ impl<'m> TransactionExecutor<'m> {
         Ok(ctx.into())
     }
 
-    // Verifies the transaction, do not run.
-    // Requires rollback.
+    /// Verifies the transaction, do not run.
+    /// Requires rollback.
     pub fn verify(
         &mut self,
         txn: &IndexedTransaction,

@@ -93,13 +93,11 @@ pub async fn producer_task(
                     let slot = manager.get_slot(Utc::now().timestamp_millis() + 50);
                     if slot == 0 {
                         // NOT_TIME_YET
-                        debug!("not time yet, skip slots in maintenance");
+                        debug!("💤not time yet, skip slots in maintenance");
                         continue;
                     }
                     let block_timestamp = manager.get_slot_timestamp(slot);
                     let block_number = manager.latest_block_number() + 1;
-
-                    info!("slot {} slot_ts {} ts {} diff={}", slot, block_timestamp, Utc::now().timestamp_millis(), Utc::now().timestamp_millis()- block_timestamp);
 
                     match block_number {
                         1 => {
@@ -122,13 +120,11 @@ pub async fn producer_task(
                                 let deadline = block_timestamp + constants::BLOCK_PRODUCING_INTERVAL / 2 *
                                     constants::BLOCK_PRODUCE_TIMEOUT_PERCENT / 100;
 
-                                // produce, fake implementation
                                 trace!("deadline {}", deadline);
-                                let new_block = manager.generate_block(mempool.values(), block_number, block_timestamp, &witness_address, keypair).unwrap();
+                                let new_block = manager.generate_and_push_block(mempool.values(), block_number, block_timestamp, deadline, &witness_address, keypair).unwrap();
                                 ctx.chain_db.insert_block(&new_block).expect("TODO: handle insert_block error");
                                 ctx.chain_db.update_block_height(new_block.number());
-                                let ret = manager.push_generated_block(&new_block);
-                                info!("=> {:?} txns={} {:?}", new_block.hash(), new_block.transactions.len(), ret);
+                                // info!("block #{} => {:?} txns={}", new_block.number(), new_block.hash(), new_block.transactions.len());
 
                                 for txn in new_block.transactions.iter() {
                                     mempool.remove(&txn.hash);

@@ -230,6 +230,7 @@ impl Manager {
         Ok(true)
     }
 
+    /// Process, then post-process.
     fn process_block(&mut self, block: &IndexedBlock) -> Result<()> {
         // 1. checkWitness - check block producing schedule
         // Block producer is strictly scheduled except block #1(where needSyncCheck=false).
@@ -265,6 +266,11 @@ impl Manager {
             self.process_transaction(&txn, recovered_addrs, &block.header)?;
         }
 
+        self.post_process_block(block)
+    }
+
+    // process after transactions are packed
+    fn post_process_block(&mut self, block: &IndexedBlock) -> Result<()> {
         // 4. Adaptive energy processor:
         if self.block_energy_usage > 0 {
             if self.state_db.must_get(&keys::ChainParameter::AllowAdaptiveEnergy) != 0 {
@@ -585,14 +591,17 @@ impl Manager {
     // * no need to check shielded transaction
     // * no need to check multi sign here
     // * apply transaction
-    pub fn generate_block<'a>(
+    pub fn generate_and_push_block<'a>(
         &mut self,
         transactions: impl Iterator<Item = &'a IndexedTransaction>,
         number: i64,
         timestamp: i64,
+        deadline: i64,
         witness: &Address,
         keypair: &KeyPair,
     ) -> Result<IndexedBlock> {
+        let started_at = Utc::now().timestamp_nanos();
+
         self.block_energy_usage = 0;
 
         let mut builder = BlockBuilder::new(number)
@@ -607,6 +616,10 @@ impl Manager {
         self.new_layer();
 
         for txn in transactions {
+            if Utc::now().timestamp_millis() >= deadline {
+                info!("deadline, stop pushing transactions");
+                break;
+            }
             debug!("transaction => {:?} at block #{}", txn.hash, block_header.number());
             let result = self.run_transaction(&txn, &block_header)?;
             let mut txn = txn.raw.clone();
@@ -615,10 +628,36 @@ impl Manager {
             builder.push_transaction(txn);
         }
 
-        let added_layers = self.layers - old_layers;
-        self.rollback_layers(added_layers);
+        // sign and post-process
+        let ret = builder
+            .build(keypair)
+            .ok_or(new_error("cannot produce block"))
+            .and_then(|block| {
+                self.post_process_block(&block)?;
+                self.commit_current_layers();
+                Ok(block)
+            });
 
-        builder.build(keypair).ok_or(new_error("cannot produce block"))
+        let elapsed = (Utc::now().timestamp_nanos() - started_at) as f64 / 1_000_000.0;
+
+        match ret {
+            Ok(block) => {
+                info!(
+                    "🔖generate block #{} {:?} txns={} elapsed={}ms",
+                    block.number(),
+                    block.hash(),
+                    block.transactions.len(),
+                    elapsed
+                );
+                Ok(block)
+            }
+            Err(e) => {
+                warn!("generate block failed: {:?}", e);
+                let added_layers = self.layers - old_layers;
+                self.rollback_layers(added_layers);
+                Err(e)
+            }
+        }
     }
 
     // * DposSlot
