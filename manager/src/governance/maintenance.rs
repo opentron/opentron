@@ -66,7 +66,7 @@ impl MaintenanceManager<'_> {
 
             let elapsed = (Utc::now().timestamp_nanos() - self.manager.maintenance_started_at) as f64 / 1_000_000.0;
             info!(
-                "maintenance finished for block #{} total_time={:.3}ms",
+                "⚙️maintenance finished at block #{} total_time={:.3}ms",
                 block.number(),
                 elapsed
             );

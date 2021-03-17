@@ -285,8 +285,8 @@ impl Manager {
 
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
+            info!("⚙️beigin maintenance at block #{}", block.number());
             self.maintenance_started_at = Utc::now().timestamp_nanos();
-            info!("beigin maintenance at block #{}", block.number());
             ProposalController::new(self).process_proposals()?;
         }
 
