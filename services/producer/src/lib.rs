@@ -78,11 +78,10 @@ pub async fn producer_task(
 
             select! {
                 Ok(txn) = incoming_transaction_rx.recv() => {
-                    info!("got transaction => {:?}", txn.hash);
                     if mempool.contains_key(&txn.hash) {
-                        info!("in mempool");
+                        warn!("got duplicated transaction => {:?}", txn.hash);
                     } else {
-                        info!("new txn");
+                        info!("new txn => {:?}", txn.hash);
                         mempool.insert(txn.hash, txn);
                     }
                 }
