@@ -128,7 +128,7 @@ impl Manager {
 
     fn commit_current_layers(&mut self) {
         for _ in 0..self.layers {
-            self.state_db.solidify_layer();
+            self.state_db.finalize_layer();
         }
         self.layers = 0;
     }

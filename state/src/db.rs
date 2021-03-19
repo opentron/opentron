@@ -19,30 +19,6 @@ use super::DynamicProperty;
 
 pub type BoxError = Box<dyn ::std::error::Error>;
 
-pub trait KeyValueDB {
-    type Column;
-
-    /// Get a value by key.
-    fn get(&self, col: &Self::Column, key: &[u8]) -> io::Result<Option<Vec<u8>>>;
-
-    /// Get the first value matching the given prefix.
-    fn get_by_prefix(&self, col: &Self::Column, prefix: &[u8]) -> Option<Box<[u8]>>;
-
-    /// Write a batch of changes to the backing store.
-    fn write(&self, batch: &WriteBatch) -> io::Result<()>;
-
-    /// Iterate over the data for a given column.
-    fn iter<'a>(&'a self, col: &Self::Column) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a>;
-
-    /// Iterate over the data for a given column, returning all key/value pairs
-    /// where the key starts with the given prefix.
-    fn iter_with_prefix<'a>(
-        &'a self,
-        col: &Self::Column,
-        prefix: &'a [u8],
-    ) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a>;
-}
-
 pub struct OverlayWriteBatch {
     wb: WriteBatch,
     // CF => (Key => Value)
@@ -169,7 +145,7 @@ impl OverlayDB {
         self.layers.push_back(wb);
     }
 
-    pub fn solidify_layers(&mut self) -> Result<(), BoxError> {
+    pub fn finalize_layers(&mut self) -> Result<(), BoxError> {
         for layer in self.layers.drain(..) {
             self.inner.write(WriteOptions::default_instance(), &layer.wb)?;
         }
@@ -539,7 +515,7 @@ impl StateDB {
         self.db.layers.back_mut().unwrap()
     }
 
-    pub fn solidify_layer(&mut self) {
+    pub fn finalize_layer(&mut self) {
         self.db
             .layers
             .pop_front()
@@ -660,7 +636,7 @@ impl StateDB {
 
         // WitnessSchedule is inited in first maintenance cycle.
 
-        self.db.solidify_layers()?;
+        self.db.finalize_layers()?;
         info!("state-db is inited from genesis");
         Ok(())
     }
