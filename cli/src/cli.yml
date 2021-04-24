@@ -151,14 +151,100 @@ subcommands:
           subcommands:
               - transfer:
                     about: TransferAssetContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - RECIPIENT:
+                              help: The account receiving tokens
+                              required: true
+                        - AMOUNT:
+                              help: The amount of tokens
+                              required: true
+                        - token-id:
+                              help: The token id
+                              long: "token-id"
+                              takes_value: true
+                              required: true
               - issue:
                     about: AssetIssueContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
+                        - NAME:
+                              help: Name of the issued TRC10 token
+                              required: true
+                        - SUPPLY:
+                              help: Total supply of TRC10 token
+                              required: true
+                        - abbr:
+                              help: Abbreviation of TRC10 token
+                              long: abbr
+                              takes_value: true
+                              value_name: ABBR
+                        - precision:
+                              help: Precision of TRC10 token
+                              long: precision
+                              default_value: "0"
+                        - freeze:
+                              help: Amount and time of token freeze
+                              long: freeze
+                              multiple: true
+                              takes_value: true
+                              value_name: "AMOUNT=DAYS"
+                        - exchange-rate:
+                              help: Exchange rate from TRX to current token
+                              long: exchange-rate
+                              takes_value: true
+                              default_value: "1_000_000:1"
+                              value_name: "TRX:ICO"
+                        - issuing-period:
+                              help: Period of token issuing, datetime in RFC3339 format, must > HeadBlockTime
+                              long: issuing-period
+                              required: true
+                              takes_value: true
+                              value_names:
+                                  - START
+                                  - END
+                        - description:
+                              help: Description of TRC10 token
+                              long: description
+                              takes_value: true
+                        - url:
+                              help: URL of TRC10 token
+                              long: url
+                              takes_value: true
+                              required: true
+                              value_name: URL
+                        - bandwidth-limit-per-account:
+                              help: Maximum amount of public bandwidth an account is allowed to use while transfering
+                              long: free-bandwidth-per-account
+                              takes_value: true
+                              value_name: LIMIT
+                        - bandwidth-limit-for-issuer:
+                              help: Maximum amount of public bandwidth issuer account is allowed to use while transfering
+                              long: bandwidth-limit-for-issuer
+                              takes_value: true
+                              value_name: LIMIT
               - participate_issue:
                     about: ParticipateAssetIssueContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
               - update:
                     about: UpdateAssetContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
               - unfreeze:
                     about: UnfreezeAssetContract
+                    args:
+                        - SENDER:
+                              help: The account sending tokens
+                              required: true
     - system:
           about: Chain governance and resource management
           settings: *default_settings
