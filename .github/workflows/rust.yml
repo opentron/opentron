@@ -20,7 +20,7 @@ jobs:
                   components: rustfmt, clippy
 
             - name: Install dependencies
-              run: sudo apt-get install protobuf-compiler libprotobuf-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev librocksdb-dev
+              run: sudo apt-get install protobuf-compiler libprotobuf-dev libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
 
             - name: Cache Rust build
               uses: actions/cache@v2
@@ -51,6 +51,6 @@ jobs:
             - name: Run tests
               run: |
                 sudo ln -sf /usr/bin/ld.lld-9 /usr/bin/ld.lld
-                cargo test --workspace --lib
+                cargo test -p opentron --features static-rocksdb
               env:
                   LD_LIBRARY_PATH: /usr/local/lib
