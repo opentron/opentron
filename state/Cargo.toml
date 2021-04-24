@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ['OpenTron Developers <info@opentron.org>']
 edition = "2018"
 
+[features]
+default = []
+static-rocksdb = ["rocks/static-link"]
+
 [dependencies]
 log = "0.4"
 byteorder = '1.4'
@@ -11,7 +15,8 @@ bytes = '1'
 prost = '0.7'
 primitive-types = "0.8"
 num_cpus = "1"
-rocks = { version = "0.1.10", features = ["static-link"] }
+rocks = "0.1.10"
+
 keys = { path = '../keys' }
 proto = { path = '../proto' }
 config = { path = '../config' }

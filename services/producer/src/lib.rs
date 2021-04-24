@@ -7,6 +7,7 @@
 use chrono::Utc;
 use futures::future::FutureExt;
 use indexmap::IndexMap;
+use log::{debug, info, trace, warn};
 use primitive_types::H256;
 use std::collections::HashMap;
 use std::error::Error;
@@ -19,7 +20,6 @@ use tokio::time::sleep;
 use chain::IndexedTransaction;
 use context::AppContext;
 use keys::{Address, KeyPair};
-use log::{debug, info, warn};
 
 pub enum State {
     Ok,
@@ -78,11 +78,10 @@ pub async fn producer_task(
 
             select! {
                 Ok(txn) = incoming_transaction_rx.recv() => {
-                    info!("got transaction => {:?}", txn.hash);
                     if mempool.contains_key(&txn.hash) {
-                        info!("in mempool");
+                        warn!("got duplicated transaction => {:?}", txn.hash);
                     } else {
-                        info!("new txn");
+                        info!("new txn => {:?}", txn.hash);
                         mempool.insert(txn.hash, txn);
                     }
                 }
@@ -91,14 +90,18 @@ pub async fn producer_task(
                     let mut manager = ctx.manager.write().unwrap();
 
                     let slot = manager.get_slot(Utc::now().timestamp_millis() + 50);
+                    if slot == 0 {
+                        // NOT_TIME_YET
+                        debug!("💤not time yet, skip slots in maintenance");
+                        continue;
+                    }
                     let block_timestamp = manager.get_slot_timestamp(slot);
                     let block_number = manager.latest_block_number() + 1;
-
-                    debug!("produce block #{} slot={} timestamp={}", block_number, slot, block_timestamp);
 
                     match block_number {
                         1 => {
                             info!("👀generating block #1 without sync check");
+                            // FIXME: should choose one from genesis config
                             let (witness_address, keypair) = keypairs.iter().next().unwrap();
                             let new_block =
                                 manager.generate_empty_block(block_timestamp, witness_address, keypair).unwrap();
@@ -111,25 +114,23 @@ pub async fn producer_task(
                         _ if block_number > 1 => {
                             let witness_address = manager.get_scheduled_witness(slot);
                             if let Some(keypair) = keypairs.get(&witness_address) {
-                                info!("generate block #{} with {}", block_number, witness_address);
+                                info!("👀producing block #{} slot={} timestamp={} with {}", block_number, slot, block_timestamp, witness_address);
 
                                 let deadline = block_timestamp + constants::BLOCK_PRODUCING_INTERVAL / 2 *
                                     constants::BLOCK_PRODUCE_TIMEOUT_PERCENT / 100;
 
-                                // produce, fake implementation
-                                debug!("deadline {}", deadline);
-                                let new_block = manager.generate_block(mempool.values(), block_number, block_timestamp, &witness_address, keypair).unwrap();
+                                trace!("deadline {}", deadline);
+                                let new_block = manager.generate_and_push_block(mempool.values(), block_number, block_timestamp, deadline, &witness_address, keypair).unwrap();
                                 ctx.chain_db.insert_block(&new_block).expect("TODO: handle insert_block error");
                                 ctx.chain_db.update_block_height(new_block.number());
-                                let ret = manager.push_generated_block(&new_block);
-                                info!("=> {:?} txns={} {:?}", new_block.hash(), new_block.transactions.len(), ret);
+                                // info!("block #{} => {:?} txns={}", new_block.number(), new_block.hash(), new_block.transactions.len());
 
                                 for txn in new_block.transactions.iter() {
                                     mempool.remove(&txn.hash);
                                 }
 
                             } else {
-                                // Not my turn, pass
+                                info!("💤not my turn, pass");
                             }
                         }
                         _ => unreachable!("block number is always >= 1")

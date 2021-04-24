@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["OpenTron Developers <info@opentron.org>"]
 edition = "2018"
 
+[features]
+default = []
+javatron = ["manager/javatron"]
+static-rocksdb = ["manager/static-rocksdb", "chain-db/static-rocksdb"]
+
 [dependencies]
 primitive-types = "0.8"
 log = "0.4"

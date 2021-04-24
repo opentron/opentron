@@ -14,9 +14,16 @@ name = "opentron"
 path = "src/main.rs"
 
 [features]
-default = []
-nile = []
-eip1767 = []
+default = ["javatron"]
+nile = ["javatron"]
+
+opentron = ["context/default"]
+
+# javatron compatible
+javatron = ["context/javatron"]
+
+# link against builtin static rocksdb
+static-rocksdb = ["context/static-rocksdb"]
 
 [dependencies]
 # app

@@ -128,7 +128,7 @@ impl Manager {
 
     fn commit_current_layers(&mut self) {
         for _ in 0..self.layers {
-            self.state_db.solidify_layer();
+            self.state_db.finalize_layer();
         }
         self.layers = 0;
     }
@@ -230,6 +230,7 @@ impl Manager {
         Ok(true)
     }
 
+    /// Process, then post-process.
     fn process_block(&mut self, block: &IndexedBlock) -> Result<()> {
         // 1. checkWitness - check block producing schedule
         // Block producer is strictly scheduled except block #1(where needSyncCheck=false).
@@ -265,6 +266,11 @@ impl Manager {
             self.process_transaction(&txn, recovered_addrs, &block.header)?;
         }
 
+        self.post_process_block(block)
+    }
+
+    // process after transactions are packed
+    fn post_process_block(&mut self, block: &IndexedBlock) -> Result<()> {
         // 4. Adaptive energy processor:
         if self.block_energy_usage > 0 {
             if self.state_db.must_get(&keys::ChainParameter::AllowAdaptiveEnergy) != 0 {
@@ -279,8 +285,8 @@ impl Manager {
 
         // 6. Handle proposal if maintenance
         if self.state_db.must_get(&keys::DynamicProperty::NextMaintenanceTime) <= block.timestamp() {
+            info!("⚙️beigin maintenance at block #{}", block.number());
             self.maintenance_started_at = Utc::now().timestamp_nanos();
-            info!("beigin maintenance at block #{}", block.number());
             ProposalController::new(self).process_proposals()?;
         }
 
@@ -339,7 +345,7 @@ impl Manager {
     /// Validate transacton before push to mempool.
     ///
     /// Use almost the same logic as `process_transaction`.
-    pub fn pre_push_transaction(&mut self, txn: &IndexedTransaction) -> Result<TransactionResult> {
+    pub fn pre_push_transaction(&mut self, txn: &IndexedTransaction) -> Result<()> {
         if !self.validate_transaction_tapos(txn) {
             return Err(new_error("tapos validation failed: invalid ref_block"));
         }
@@ -360,12 +366,12 @@ impl Manager {
         let old_layers = self.layers;
         self.new_layer();
 
-        let ret = TransactionExecutor::new(self).execute(txn, owner_addrs, &block_header);
+        let ret = TransactionExecutor::new(self).verify(txn, owner_addrs, &block_header);
 
         let added_layers = self.layers - old_layers;
         self.rollback_layers(added_layers);
 
-        Ok(ret?.0)
+        Ok(ret?)
     }
 
     /// Validate transacton before push to mempool.
@@ -585,14 +591,17 @@ impl Manager {
     // * no need to check shielded transaction
     // * no need to check multi sign here
     // * apply transaction
-    pub fn generate_block<'a>(
+    pub fn generate_and_push_block<'a>(
         &mut self,
         transactions: impl Iterator<Item = &'a IndexedTransaction>,
         number: i64,
         timestamp: i64,
+        deadline: i64,
         witness: &Address,
         keypair: &KeyPair,
     ) -> Result<IndexedBlock> {
+        let started_at = Utc::now().timestamp_nanos();
+
         self.block_energy_usage = 0;
 
         let mut builder = BlockBuilder::new(number)
@@ -607,6 +616,10 @@ impl Manager {
         self.new_layer();
 
         for txn in transactions {
+            if Utc::now().timestamp_millis() >= deadline {
+                info!("deadline, stop pushing transactions");
+                break;
+            }
             debug!("transaction => {:?} at block #{}", txn.hash, block_header.number());
             let result = self.run_transaction(&txn, &block_header)?;
             let mut txn = txn.raw.clone();
@@ -615,17 +628,45 @@ impl Manager {
             builder.push_transaction(txn);
         }
 
-        let added_layers = self.layers - old_layers;
-        self.rollback_layers(added_layers);
+        // sign and post-process
+        let ret = builder
+            .build(keypair)
+            .ok_or(new_error("cannot produce block"))
+            .and_then(|block| {
+                self.post_process_block(&block)?;
+                self.commit_current_layers();
+                Ok(block)
+            });
 
-        builder.build(keypair).ok_or(new_error("cannot produce block"))
+        let elapsed = (Utc::now().timestamp_nanos() - started_at) as f64 / 1_000_000.0;
+
+        match ret {
+            Ok(block) => {
+                info!(
+                    "✨generated block #{} {:?} txns={} elapsed={}ms",
+                    block.number(),
+                    block.hash(),
+                    block.transactions.len(),
+                    elapsed
+                );
+                Ok(block)
+            }
+            Err(e) => {
+                warn!("generate block failed: {:?}", e);
+                let added_layers = self.layers - old_layers;
+                self.rollback_layers(added_layers);
+                Err(e)
+            }
+        }
     }
 
     // * DposSlot
+    // getAbSlot
     fn get_absolute_slot(&self, timestamp: i64) -> i64 {
         (timestamp - self.genesis_block_timestamp) / constants::BLOCK_PRODUCING_INTERVAL
     }
 
+    // getSlot
     pub fn get_slot(&self, timestamp: i64) -> i64 {
         let first_slot_ts = self.get_slot_timestamp(1);
         if timestamp < first_slot_ts {
@@ -639,8 +680,8 @@ impl Manager {
         self.get_absolute_slot(self.state_db.must_get(&keys::DynamicProperty::LatestBlockTimestamp))
     }
 
-    // public long getTime(long slot)
-    pub fn get_slot_timestamp(&self, mut slot: i64) -> i64 {
+    // getTime
+    pub fn get_slot_timestamp(&self, slot: i64) -> i64 {
         assert!(slot >= 0, "unreachable");
 
         if slot == 0 {
@@ -651,12 +692,13 @@ impl Manager {
             return self.genesis_block_timestamp + slot * constants::BLOCK_PRODUCING_INTERVAL;
         }
 
+        let mut slot = slot;
         if self.is_latest_block_maintenance() {
             slot += constants::NUM_OF_SKIPPED_SLOTS_IN_MAINTENANCE as i64;
         }
 
         let mut ts = self.latest_block_timestamp();
-        ts -= (ts - self.genesis_block_timestamp) % constants::BLOCK_PRODUCING_INTERVAL;
+        ts = ts - (ts - self.genesis_block_timestamp) % constants::BLOCK_PRODUCING_INTERVAL;
         ts + constants::BLOCK_PRODUCING_INTERVAL * slot
     }
 

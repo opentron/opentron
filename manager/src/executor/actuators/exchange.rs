@@ -512,7 +512,7 @@ fn exchange(sell_balance: i64, buy_balance: i64, sell_amount: i64) -> i64 {
     // exchangeToSupply(sellTokenBalance, sellTokenQuant)
     let new_balance = sell_balance + sell_amount;
 
-    let issued_supply = -SUPPLY as f64 * (1.0 - java8_math_pow(1.0 + sell_amount as f64 / new_balance as f64, 0.0005));
+    let issued_supply = -SUPPLY as f64 * (1.0 - math_pow(1.0 + sell_amount as f64 / new_balance as f64, 0.0005));
 
     let relay = issued_supply as i64;
     // supply += relay;
@@ -544,8 +544,9 @@ fn get_exchange_token_id(manager: &Manager, token_id: &str) -> Result<i64, Strin
 /// See-also: https://github.com/opentron/opentron/issues/36
 ///
 /// NOTE: This is a partial implementation, only operates on -1<=X<=1.
+#[cfg(feature = "opentron")]
 #[inline]
-fn java8_math_pow(x: f64, y: f64) -> f64 {
+fn math_pow(x: f64, y: f64) -> f64 {
     let mut ret = 0_f64;
     unsafe {
         asm!(
@@ -565,13 +566,20 @@ fn java8_math_pow(x: f64, y: f64) -> f64 {
     ret
 }
 
+#[cfg(not(feature = "opentron"))]
+#[inline]
+fn math_pow(x: f64, y: f64) -> f64 {
+    x.powf(y)
+}
+
+#[cfg(feature = "opentron")]
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn java8_math_pow_of_block_4137160() {
-        let val = java8_math_pow(1.0061363892207218_f64, 0.0005_f64);
+        let val = math_pow(1.0061363892207218_f64, 0.0005_f64);
         let expected = 1.0000030588238054;
         let errored = 1.0000030588238051;
 
