@@ -51,6 +51,6 @@ jobs:
             - name: Run tests
               run: |
                 sudo ln -sf /usr/bin/ld.lld-9 /usr/bin/ld.lld
-                cargo test --workspace --lib
+                cargo test --workspace --lib --features javatron,static-rocksdb
               env:
                   LD_LIBRARY_PATH: /usr/local/lib
