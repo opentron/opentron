@@ -6,6 +6,7 @@
 - [MacOS](#macos)
 - [CentOS 7](#centos-7)
 - [Windows](#windows)
+- [Other Platforms](#other-platforms)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -47,7 +48,7 @@ cd opentron
 # Download ztron params
 ./scripts/download-ztron-params.sh
 
-cargo build
+cargo build --features static-rocksdb
 ```
 
 ## Windows
@@ -61,3 +62,16 @@ vcpkg install rocksdb[snappy]:x64-windows-static-md
 
 cargo build
 ```
+
+## Other Platforms
+
+Java-tron requires `x64(x86_64)` architecture. It is because it uses `java.math` wrongly
+and relies on `8087` extended precision float point arithmetic.
+
+For non-x64 architectures, you can still build and run OpenTron, but it won't be compatible with
+original java-tron.
+
+This project can be run on following platforms:
+
+- Apple Silicon
+- Raspberry Pi 4(or 3+)
