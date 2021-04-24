@@ -48,7 +48,7 @@ cd opentron
 # Download ztron params
 ./scripts/download-ztron-params.sh
 
-cargo build --features static-rocksdb
+cargo build -p opentron --features static-rocksdb
 ```
 
 ## Windows
