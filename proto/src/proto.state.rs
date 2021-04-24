@@ -1,27 +1,21 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AccountResource {
+    /// Normally free bandwidth limit is a const defined in code, 5000.
     #[prost(int64, tag="1")]
     pub free_bandwidth_used: i64,
-    /// Normally free bandwidth limit is a const defined in code, 5000.
-    /// int64 free_bandwidth_limit = 2;
     #[prost(int64, tag="3")]
     pub free_bandwidth_latest_slot: i64,
     #[prost(int64, tag="4")]
     pub frozen_bandwidth_used: i64,
-    #[prost(int64, tag="5")]
-    pub frozen_bandwidth_limit: i64,
-    /// saved as slot
     #[prost(int64, tag="6")]
     pub frozen_bandwidth_latest_slot: i64,
     #[prost(int64, tag="7")]
     pub energy_used: i64,
-    /// int64 energy_limit = 8;
     #[prost(int64, tag="9")]
     pub energy_latest_slot: i64,
     #[prost(map="int64, int64", tag="10")]
     pub asset_bandwidth_used: ::std::collections::HashMap<i64, i64>,
-    /// limit is saved in Asset
-    /// map<int64, int64> asset_bandwidth_limit = 11;
+    /// asset limit is saved in Asset
     #[prost(map="int64, int64", tag="12")]
     pub asset_bandwidth_latest_slot: ::std::collections::HashMap<i64, i64>,
 }
