@@ -121,6 +121,14 @@ See [INSTALL.md](./INSTALL.md) for more detailed information.
 > cargo run -- --config etc/conf.nile.toml
 ```
 
+### Local Testnet
+
+```sh
+./target/release/opentron --config ./etc/conf.local-test.toml
+```
+
+Then open <http://localhost:3000> and play with the GraphQL APIs.
+
 ## License
 
 Licensed under either of
