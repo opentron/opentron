@@ -28,6 +28,10 @@ fn main() -> Result<()> {
         ("witness", Some(arg_matches)) => witness::main(arg_matches),
         ("system", Some(arg_matches)) => system::main(arg_matches),
         ("proposal", Some(arg_matches)) => proposal::main(arg_matches).ok(),
+        // TODO:
+        // ("exchange", Some(arg_matches)) => exchange::main(arg_matches).ok(),
+        // ("market", Some(arg_matches)) => market::main(arg_matches).ok(),
+
         // commands::transfer::main(arg_matches),
         // ("list", Some(arg_matches)) => commands::list::main(arg_matches),
         _ => unimplemented!(),
@@ -97,8 +101,12 @@ fn send_raw_transaction(raw: &str, signature: &str, matches: &ArgMatches) -> Res
     let payload: serde_json::Value = resp.json()?;
 
     println!("{}", serde_json::to_string_pretty(&payload)?);
-    let hash = &payload["data"]["txn"];
-    println!("=> {}", hash);
+    if !payload["data"].is_null() {
+        let hash = &payload["data"]["txn"];
+        println!("Broadcast => {}", hash);
+    } else {
+        println!("! Broadcast ERROR");
+    }
     Ok(())
 }
 
@@ -121,7 +129,8 @@ fn get_ref_block_hash(matches: &ArgMatches) -> Result<Vec<u8>> {
 
     let payload: serde_json::Value = resp.json()?;
 
-    println!("{}", serde_json::to_string_pretty(&payload)?);
+    // println!("{}", serde_json::to_string_pretty(&payload)?);
     let hash = &payload["data"]["refBlock"]["hash"];
+    println!("Ref Block Hash => {}", hash.as_str().unwrap());
     hex::decode(hash.as_str().unwrap()).map_err(From::from)
 }
