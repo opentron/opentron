@@ -1,5 +1,5 @@
 /target
-/ztron-params
+**/ztron-params
 backup/
 data/
 data.*/
@@ -10,3 +10,8 @@ peers.json
 trash/
 trash.*
 *._rc
+
+# misc
+.DS_Store
+.vscode/
+*.log

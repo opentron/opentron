@@ -184,7 +184,7 @@ pub struct WitnessUpdateContract {
     #[prost(bytes="vec", tag="1")]
     pub owner_address: ::prost::alloc::vec::Vec<u8>,
     #[prost(bytes="vec", tag="12")]
-    pub update_url: ::prost::alloc::vec::Vec<u8>,
+    pub new_url: ::prost::alloc::vec::Vec<u8>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateBrokerageContract {

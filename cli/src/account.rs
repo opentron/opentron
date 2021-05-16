@@ -19,9 +19,9 @@ fn create(matches: &ArgMatches) -> Option<Contract> {
     let to: Address = matches.value_of("RECIPIENT")?.parse().ok()?;
 
     let account_type = match matches.value_of("type") {
-        Some("normal") => AccountType::Normal,
-        Some("assetissue") => AccountType::AssetIssue,
-        Some("contract") => AccountType::Contract,
+        Some("Normal") => AccountType::Normal,
+        Some("AssetIssue") => AccountType::AssetIssue,
+        Some("Contract") => AccountType::Contract,
         _ => unreachable!("values restricted; qed"),
     };
 

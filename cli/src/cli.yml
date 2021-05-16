@@ -94,8 +94,8 @@ subcommands:
                               help: Account type
                               long: "type"
                               takes_value: true
-                              possible_values: ["normal", "assetissue", "contract"]
-                              default_value: "normal"
+                              possible_values: ["Normal", "AssetIssue", "Contract"]
+                              default_value: "Normal"
               - set_name:
                     about: AccountUpdateContract
                     args:

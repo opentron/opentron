@@ -331,7 +331,7 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessUpdateContract {
         }
 
         // validUrl
-        if self.update_url.is_empty() || self.update_url.len() > 256 {
+        if self.new_url.is_empty() || self.new_url.len() > 256 {
             return Err("invalid witness url".into());
         }
 
@@ -342,7 +342,7 @@ impl BuiltinContractExecutorExt for contract_pb::WitnessUpdateContract {
         let owner_addr = Address::try_from(&self.owner_address).unwrap();
         let mut wit = manager.state_db.must_get(&keys::Witness(owner_addr));
 
-        wit.url = unsafe { String::from_utf8_unchecked(self.update_url.clone()) };
+        wit.url = unsafe { String::from_utf8_unchecked(self.new_url.clone()) };
 
         manager
             .state_db

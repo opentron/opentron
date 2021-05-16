@@ -659,7 +659,7 @@ impl<'m> TransactionExecutor<'m> {
                 debug!(
                     "=> Witness Update {} new_url={:?}",
                     b58encode_check(cntr.owner_address()),
-                    String::from_utf8(cntr.update_url.clone()),
+                    String::from_utf8(cntr.new_url.clone()),
                 );
 
                 cntr.validate_signature(permission_id, recover_addrs, self.manager, ctx)?;
