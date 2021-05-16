@@ -98,7 +98,7 @@ pub struct AssetIssueContract {
 #[derive(SimpleObject)]
 pub struct WitnessUpdateContract {
     owner_address: Address,
-    update_url: String,
+    new_url: String,
 }
 
 #[derive(SimpleObject)]

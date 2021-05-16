@@ -133,7 +133,7 @@ message WitnessCreateContract {
 
 message WitnessUpdateContract {
   bytes owner_address = 1;
-  bytes update_url = 12;
+  bytes new_url = 12;
 }
 
 message UpdateBrokerageContract {
