@@ -886,9 +886,24 @@ impl QueryRoot {
 
     /// Current Node info.
     async fn node_info(&self, ctx: &Context<'_>) -> NodeInfo {
+        use sysinfo::SystemExt;
+
+        let mut system = sysinfo::System::new_all();
+        // First we update all information of our system struct.
+        system.refresh_all();
+
         let app = ctx.data_unchecked::<Arc<AppContext>>();
         let ref db = app.chain_db;
+
         NodeInfo {
+            name: format!(
+                "OpenTron/v{}/{}/{}({}-{})",
+                CODE_VERSION,
+                system.get_host_name().unwrap_or("localhost".into()),
+                system.get_long_os_version().unwrap_or("unknown-os-ver".into()),
+                system.get_name().unwrap_or("unknown-os".into()),
+                system.get_kernel_version().unwrap_or("unknown-ver".into()),
+            ),
             code_version: CODE_VERSION,
             syncing: app.syncing.load(std::sync::atomic::Ordering::Relaxed),
             num_active_connections: app.num_active_connections.load(std::sync::atomic::Ordering::Relaxed),

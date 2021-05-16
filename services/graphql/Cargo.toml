@@ -23,6 +23,7 @@ async-graphql-warp = "2.5.1"
 # async-trait = "0.1"
 warp = { version = "0.3", default-features = false }
 http = "0.2"
+sysinfo = "0.17"
 # workspace
 keys = { path = '../../keys' }
 proto = { path = '../../proto' }
