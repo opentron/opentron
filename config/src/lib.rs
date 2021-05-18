@@ -160,6 +160,7 @@ pub struct ProducerConfig {
     /// Key store file path
     pub keystore: Option<String>,
     // Key paris in config file
+    #[serde(default = "Default::default")]
     pub keypair: Vec<ProducerKey>,
 }
 
