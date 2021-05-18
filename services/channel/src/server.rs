@@ -548,11 +548,15 @@ async fn sync_channel_handler(
                         }
                     }
                     Ok(ChannelMessage::FetchBlockInventory(Inventory { ids, .. })) => {
-                        info!(
-                            "fetch block request, start={}, end={}, len={}",
-                            block_hash_to_number(ids.first().unwrap()),
-                            block_hash_to_number(ids.last().unwrap()),
-                            ids.len());
+                        if ids.is_empty() {
+                            info!("fetch block request with 0 ids??");
+                        } else {
+                            info!(
+                                "fetch block request, start={}, end={}, len={}",
+                                block_hash_to_number(ids.first().unwrap()),
+                                block_hash_to_number(ids.last().unwrap()),
+                                ids.len());
+                        }
                         if ids.len() > 100 {
                             warn!("reject malformed node");
                             writer.send(
