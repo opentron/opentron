@@ -14,9 +14,10 @@ name = "opentron"
 path = "src/main.rs"
 
 [features]
-default = ["javatron"]
+default = []
 nile = ["javatron"]
 
+# the default behaviour
 opentron = ["context/default"]
 
 # javatron compatible
