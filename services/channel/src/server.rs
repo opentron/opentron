@@ -557,7 +557,8 @@ async fn sync_channel_handler(
                                 block_hash_to_number(ids.last().unwrap()),
                                 ids.len());
                         }
-                        if ids.len() > 100 {
+                        // NOTE: hard-coded 500, in javatron, this defaults to 100, maximum is 2000
+                        if ids.len() > 500 {
                             warn!("reject malformed node");
                             writer.send(
                                 ChannelMessage::disconnect_with_reason(DisconnectReasonCode::BadProtocol))
