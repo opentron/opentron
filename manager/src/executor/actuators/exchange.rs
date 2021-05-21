@@ -1,6 +1,11 @@
 //! Exchange, the DEX on chain.
 //!
 //! NOTE: These builtin contracts are seldom used now.
+//!
+//! - ExchangeCreateContract
+//! - ExchangeWithdrawContract
+//! - ExchangeInjectContract
+//! - ExchangeTransactionContract
 
 use std::convert::TryFrom;
 
@@ -544,7 +549,7 @@ fn get_exchange_token_id(manager: &Manager, token_id: &str) -> Result<i64, Strin
 /// See-also: https://github.com/opentron/opentron/issues/36
 ///
 /// NOTE: This is a partial implementation, only operates on -1<=X<=1.
-#[cfg(feature = "opentron")]
+#[cfg(feature = "javatron")]
 #[inline]
 fn math_pow(x: f64, y: f64) -> f64 {
     let mut ret = 0_f64;
@@ -566,13 +571,13 @@ fn math_pow(x: f64, y: f64) -> f64 {
     ret
 }
 
-#[cfg(not(feature = "opentron"))]
+#[cfg(not(feature = "javatron"))]
 #[inline]
 fn math_pow(x: f64, y: f64) -> f64 {
     x.powf(y)
 }
 
-#[cfg(feature = "opentron")]
+#[cfg(feature = "javatron")]
 #[cfg(test)]
 mod tests {
     use super::*;
