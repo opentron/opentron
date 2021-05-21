@@ -6,7 +6,7 @@ use crate::{ExitError, ExitSucceed};
 use digest::Digest;
 use num_bigint::BigUint;
 use num_traits::Zero;
-use primitive_types::{H160, H256, U256};
+use types::{H160, H256, U256};
 use sha2::Sha256;
 use std::convert::TryFrom;
 use ztron::precompiles::{pedersen_hash, verify_burn_proof, verify_mint_proof, verify_transfer_proof};

@@ -1,0 +1,9 @@
+[package]
+name = "types"
+description = "OpenTron primitive types"
+version = "0.1.0"
+authors = ["OpenTron Developers <info@opentron.org>"]
+edition = "2018"
+
+[dependencies]
+primitive-types = { version = "0.8", features = [], default-features = false }

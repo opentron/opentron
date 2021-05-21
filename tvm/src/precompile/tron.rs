@@ -1,4 +1,4 @@
-use primitive_types::{H160, H256, U256};
+use types::{H160, H256, U256};
 use secp256k1::{Message, RecoveryId, Signature};
 use sha3::{Digest, Keccak256};
 use std::convert::TryInto;

@@ -1,6 +1,6 @@
 mod merkle_tree;
 mod tree;
-use primitive_types::H256;
+use types::H256;
 
 pub use crate::merkle_tree::MerkleTree;
 

@@ -1,4 +1,4 @@
-pub use primitive_types::H256;
+pub use types::H256;
 pub use proto::chain::{Block, BlockHeader, Transaction};
 
 pub use block_builder::BlockBuilder;

@@ -13,10 +13,10 @@ log = "0.4"
 byteorder = '1.4'
 bytes = '1'
 prost = '0.7'
-primitive-types = "0.8"
 num_cpus = "1"
 rocks = "0.1.10"
 
+types = { path = "../types" }
 keys = { path = '../keys' }
 proto = { path = '../proto' }
 config = { path = '../config' }

@@ -8,7 +8,7 @@ use chrono::Utc;
 use futures::future::FutureExt;
 use indexmap::IndexMap;
 use log::{debug, info, trace, warn};
-use primitive_types::H256;
+use types::H256;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;

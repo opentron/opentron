@@ -1,4 +1,4 @@
-use primitive_types::H256;
+use types::H256;
 
 /// Binary Tree where leaves hold a stand-alone value.
 #[derive(Clone, Debug, PartialEq)]

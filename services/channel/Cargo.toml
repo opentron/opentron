@@ -17,9 +17,9 @@ chrono = '0.4'
 tokio = { version = '1', default-features = false, features = ['macros', 'net', 'time'] }
 tokio-util = { version = '0.6', features = ['codec'] }
 tokio-stream = "0.1"
-primitive-types = "0.8"
 hex = '0.4'
 # workspace
+types = { path = "../../types" }
 proto = { path = '../../proto' }
 chain = { path = '../../chain' }
 keys = { path = '../../keys' }

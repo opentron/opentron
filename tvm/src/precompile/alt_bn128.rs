@@ -58,7 +58,7 @@ pub fn ecmul(input: &[u8]) -> Option<Vec<u8>> {
 
 pub fn ecpairing(input: &[u8]) -> Option<Vec<u8>> {
     use bn::{pairing, AffineG1, AffineG2, Fq, Fq2, Group, Gt, G1, G2};
-    use primitive_types::U256;
+    use types::U256;
 
     const PAIR_SIZE: usize = 192;
 

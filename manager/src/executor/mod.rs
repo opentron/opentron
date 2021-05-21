@@ -6,7 +6,7 @@ use std::str;
 use ::keys::{b58encode_check, Address};
 use chain::{IndexedBlockHeader, IndexedTransaction};
 use log::{debug, error, warn};
-use primitive_types::H256;
+use types::H256;
 use prost::Message;
 use proto::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto::common::ResourceCode;

@@ -16,8 +16,8 @@ bytes = '1'
 rand = '0.8'
 prost = '0.7'
 hex = '0.4'
-primitive-types = "0.8"
 num_cpus = "1"
 
+types = { path = "../types" }
 proto = { path = '../proto' }
 chain = { path = '../chain' }

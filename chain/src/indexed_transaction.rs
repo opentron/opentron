@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 
 use crypto::sha256;
 use keys::{Address, Public, Signature};
-use primitive_types::H256;
+use types::H256;
 use prost::Message;
 use proto::chain::Transaction;
 

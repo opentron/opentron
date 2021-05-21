@@ -1,4 +1,4 @@
-use primitive_types::{H160, H256, U256};
+use types::{H160, H256, U256};
 use std::convert::TryInto;
 
 const WORD_SIZE: usize = 32;

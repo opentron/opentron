@@ -1,4 +1,4 @@
-use primitive_types::H256;
+use types::H256;
 use sha2::{Digest, Sha256};
 use std::mem;
 

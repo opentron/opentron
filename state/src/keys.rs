@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use keys::Address;
-use primitive_types::H256;
+use types::H256;
 use prost::Message;
 use proto::state as pb;
 

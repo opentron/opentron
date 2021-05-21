@@ -5,7 +5,7 @@ use std::convert::TryFrom;
 use byteorder::{ByteOrder, BE};
 use crypto::sha256;
 use keys::{Address, Public, Signature};
-use primitive_types::H256;
+use types::H256;
 use prost::Message;
 use proto::chain::{Block, BlockHeader, Transaction};
 use proto::common::BlockId;

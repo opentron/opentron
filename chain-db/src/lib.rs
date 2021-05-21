@@ -8,7 +8,7 @@ use std::path::Path;
 use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use log::{error, info, warn};
-use primitive_types::H256;
+use types::H256;
 use prost::Message;
 use rand::Rng;
 use rocks::prelude::*;

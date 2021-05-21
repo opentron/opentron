@@ -1,6 +1,6 @@
 use crate::{BlockHeader, IndexedBlock, IndexedBlockHeader, Transaction};
 use keys::{Address, KeyPair};
-use primitive_types::H256;
+use types::H256;
 use prost::Message;
 
 pub struct BlockBuilder {

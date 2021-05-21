@@ -6,7 +6,7 @@ use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
 use log::{debug, info, trace, warn};
-use primitive_types::H256;
+use types::H256;
 use prost::Message;
 use proto::chain::transaction::Result as TransactionResult;
 use proto::state::TransactionReceipt;

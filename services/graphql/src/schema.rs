@@ -6,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use async_graphql::{Context, Enum, Error, InputObject, Object, Result, SimpleObject};
 use byteorder::{ByteOrder, BE};
 use chrono::{DateTime, TimeZone, Utc};
-use primitive_types::H256;
+use types::H256;
 
 use ::state::keys;
 use chain::{IndexedBlockHeader, IndexedTransaction};

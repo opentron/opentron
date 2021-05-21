@@ -7,7 +7,7 @@ use std::rc::Rc;
 use ::keys::Address;
 use constants::block_version::BlockVersion;
 use log::{debug, warn};
-use primitive_types::{H160, H256};
+use types::{H160, H256};
 use proto::chain::transaction::{result::ContractStatus, Result as TransactionResult};
 use proto::contract as contract_pb;
 use proto::state::{Account, SmartContract};

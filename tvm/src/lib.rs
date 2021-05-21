@@ -1,4 +1,4 @@
-use primitive_types::H160;
+use types::H160;
 
 pub use evm::executor::StackExecutor;
 pub use evm::{Config, Context, ExitError, ExitFatal, ExitReason, ExitSucceed, Runtime};

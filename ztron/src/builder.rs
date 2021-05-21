@@ -5,7 +5,7 @@ use ff::{Field, PrimeField};
 use group::GroupEncoding;
 use keys::Address;
 use lazy_static::lazy_static;
-use primitive_types::U256;
+use types::U256;
 use rand::{rngs::OsRng, CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
 use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};

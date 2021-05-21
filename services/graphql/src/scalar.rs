@@ -1,5 +1,5 @@
 use async_graphql::{InputValueError, InputValueResult, Scalar, ScalarType, Value};
-use primitive_types::H256;
+use types::H256;
 
 /// Bytes32 is a 32 byte binary string, represented as 0x-prefixed hexadecimal.
 #[derive(Clone, Copy, Debug, PartialEq)]

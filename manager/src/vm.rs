@@ -7,7 +7,7 @@ use ::keys::Address;
 use crypto::keccak256;
 use lazy_static::lazy_static;
 use log::debug;
-use primitive_types::{H160, H256, U256};
+use types::{H160, H256, U256};
 use proto::state::{Account, AccountType, SmartContract, TransactionLog};
 use state::db::StateDB;
 use state::keys;

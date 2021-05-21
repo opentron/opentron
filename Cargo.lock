@@ -445,11 +445,11 @@ dependencies = [
  "crypto",
  "keys",
  "merkle-tree",
- "primitive-types",
  "prost",
  "proto",
  "rayon",
  "sha2 0.9.5",
+ "types",
 ]
 
 [[package]]
@@ -462,11 +462,11 @@ dependencies = [
  "hex",
  "log",
  "num_cpus",
- "primitive-types",
  "prost",
  "proto",
  "rand 0.8.3",
  "rocks",
+ "types",
 ]
 
 [[package]]
@@ -482,7 +482,6 @@ dependencies = [
  "hex",
  "keys",
  "log",
- "primitive-types",
  "prost",
  "proto",
  "slog",
@@ -491,6 +490,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "types",
 ]
 
 [[package]]
@@ -591,9 +591,9 @@ dependencies = [
  "hex",
  "log",
  "manager",
- "primitive-types",
  "proto",
  "tokio",
+ "types",
 ]
 
 [[package]]
@@ -745,9 +745,9 @@ name = "crypto"
 version = "0.1.0"
 dependencies = [
  "digest 0.9.0",
- "primitive-types",
  "sha2 0.9.5",
  "sha3",
+ "types",
 ]
 
 [[package]]
@@ -1269,13 +1269,13 @@ dependencies = [
  "keys",
  "log",
  "manager",
- "primitive-types",
  "prost",
  "proto",
  "serde_json",
  "state",
  "sysinfo",
  "tokio",
+ "types",
  "warp",
 ]
 
@@ -1630,12 +1630,12 @@ dependencies = [
  "keys",
  "lazy_static",
  "log",
- "primitive-types",
  "prost",
  "proto",
  "sha3",
  "state",
  "tvm",
+ "types",
 ]
 
 [[package]]
@@ -1684,8 +1684,8 @@ dependencies = [
 name = "merkle-tree"
 version = "0.1.0"
 dependencies = [
- "primitive-types",
  "sha2 0.9.5",
+ "types",
 ]
 
 [[package]]
@@ -2055,7 +2055,6 @@ dependencies = [
  "keys",
  "log",
  "manager",
- "primitive-types",
  "prost",
  "proto",
  "slog",
@@ -2064,6 +2063,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "types",
 ]
 
 [[package]]
@@ -2638,10 +2638,10 @@ dependencies = [
  "keys",
  "log",
  "num_cpus",
- "primitive-types",
  "prost",
  "proto",
  "rocks",
+ "types",
 ]
 
 [[package]]
@@ -2943,9 +2943,9 @@ dependencies = [
  "log",
  "num-bigint",
  "num-traits",
- "primitive-types",
  "sha2 0.9.5",
  "sha3",
+ "types",
  "ztron",
 ]
 
@@ -2964,6 +2964,13 @@ name = "typenum"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "879f6906492a7cd215bfa4cf595b600146ccfac0c79bcbd1f3000162af5e8b06"
+
+[[package]]
+name = "types"
+version = "0.1.0"
+dependencies = [
+ "primitive-types",
+]
 
 [[package]]
 name = "ucd-trie"
@@ -3310,9 +3317,9 @@ dependencies = [
  "jubjub",
  "keys",
  "lazy_static",
- "primitive-types",
  "rand 0.7.3",
  "sha2 0.9.5",
+ "types",
  "zcash_primitives",
  "zcash_proofs",
 ]

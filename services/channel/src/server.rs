@@ -14,7 +14,7 @@ use futures::sink::{Sink, SinkExt};
 use futures::stream::Stream;
 use keys::b58encode_check;
 use log::{debug, error, info, warn};
-use primitive_types::H256;
+use types::H256;
 use proto::channel::{
     BlockInventory, ChainInventory, HandshakeDisconnect, HandshakeHello, Inventory, ReasonCode as DisconnectReasonCode,
     Transactions,

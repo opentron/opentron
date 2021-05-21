@@ -10,11 +10,11 @@ javatron = ["manager/javatron"]
 static-rocksdb = ["manager/static-rocksdb", "chain-db/static-rocksdb"]
 
 [dependencies]
-primitive-types = "0.8"
 log = "0.4"
 hex = "0.4"
 tokio = "1"
 # workspace
+types = { path = "../types" }
 config = { path = '../config' }
 chain = { path = '../chain' }
 chain-db = { path = '../chain-db' }

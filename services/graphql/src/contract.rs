@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use async_graphql::{Enum, SimpleObject, Union};
 use chrono::{DateTime, TimeZone, Utc};
-use primitive_types::H256;
+use types::H256;
 use proto::chain::transaction::Contract as ContractPb;
 use proto::common::Permission as PermissionPb;
 
