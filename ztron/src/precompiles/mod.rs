@@ -11,7 +11,7 @@ use group::GroupEncoding;
 use lazy_static::lazy_static;
 use types::U256;
 use zcash_primitives::merkle_tree::Hashable;
-use zcash_primitives::redjubjub::{PublicKey, Signature};
+use zcash_primitives::sapling::redjubjub::{PublicKey, Signature};
 use zcash_primitives::sapling::{merkle_hash, Node};
 use zcash_primitives::transaction::components::Amount;
 use zcash_proofs::load_parameters;
@@ -38,8 +38,11 @@ lazy_static! {
         let spend_path = "./ztron-params/sapling-spend.params";
         let output_path = "./ztron-params/sapling-output.params";
 
-        let (spend_params, spend_vk, output_params, output_vk, _) =
-            load_parameters(Path::new(spend_path), Path::new(output_path), None);
+        let params = load_parameters(Path::new(spend_path), Path::new(output_path), None);
+        let spend_params = params.spend_params;
+        let spend_vk = params.spend_vk;
+        let output_params = params.output_params;
+        let output_vk = params.output_vk;
 
         SaplingParameters {
             spend_vk,
@@ -230,7 +233,7 @@ pub fn verify_mint_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
     let epk = jubjub::ExtendedPoint::from_bytes(&epk).unwrap();
     let zkproof = Proof::<Bls12>::read(zkproof)?;
 
-    let mut ctx = SaplingVerificationContext::new();
+    let mut ctx = SaplingVerificationContext::new(false);
 
     if !ctx.check_output(cv, cm, epk, zkproof, &SAPLING_PARAMETERS.output_vk) {
         return Err(Error::ChecknOutput);
@@ -278,7 +281,7 @@ pub fn verify_transfer_proof(data: &[u8]) -> Result<Vec<u8>, Error> {
     let frontier = it.next_fixed_words(33)?;
     let leaf_count = it.next_u256()?;
 
-    let mut ctx = SaplingVerificationContext::new();
+    let mut ctx = SaplingVerificationContext::new(false);
 
     // check spend - librustzcashSaplingCheckSpendNew
     // input: nf, anchor, cv, rk, proof
@@ -382,7 +385,7 @@ pub fn verify_burn_proof(data: &[u8]) -> Result<(), Error> {
     let spend_auth_sig = Signature::read(spend_auth_sig)?;
     let zkproof = Proof::<Bls12>::read(zkproof)?;
 
-    let mut ctx = SaplingVerificationContext::new();
+    let mut ctx = SaplingVerificationContext::new(false);
 
     // librustzcashSaplingCheckSpend
     if !ctx.check_spend(

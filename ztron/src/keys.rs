@@ -6,8 +6,8 @@ use std::hash::{Hash, Hasher};
 use std::io;
 use std::mem;
 use std::str::FromStr;
-use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
-use zcash_primitives::primitives::{Diversifier, PaymentAddress};
+use zcash_primitives::sapling::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
+use zcash_primitives::sapling::{Diversifier, PaymentAddress};
 
 pub fn generate_rcm() -> Vec<u8> {
     let mut rng = rand::rngs::OsRng;
@@ -20,7 +20,7 @@ pub struct ZAddress(PaymentAddress);
 
 impl ::std::fmt::Debug for ZAddress {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        f.debug_struct("ZAddress")
+        f.debug_struct("zAddress")
             .field("pk_d", &hex::encode(self.pk_d()))
             .field("d", &hex::encode(self.d()))
             .finish()
@@ -29,7 +29,13 @@ impl ::std::fmt::Debug for ZAddress {
 
 impl ::std::fmt::Display for ZAddress {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        bech32::encode_to_fmt(f, "ztron", (&self.0.to_bytes()[..]).to_base32()).unwrap()
+        bech32::encode_to_fmt(
+            f,
+            "ztron",
+            (&self.0.to_bytes()[..]).to_base32(),
+            bech32::Variant::Bech32,
+        )
+        .unwrap()
     }
 }
 
@@ -47,7 +53,7 @@ impl FromStr for ZAddress {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         bech32::decode(s)
             .ok()
-            .and_then(|(hrp, data)| if hrp == "ztron" { Some(data) } else { None })
+            .and_then(|(hrp, data, _)| if hrp == "ztron" { Some(data) } else { None })
             .and_then(|data| Vec::<u8>::from_base32(&data).ok())
             .and_then(|raw| if raw.len() == 43 { Some(raw) } else { None })
             .and_then(|raw| PaymentAddress::from_bytes(unsafe { mem::transmute(&raw[0]) }))

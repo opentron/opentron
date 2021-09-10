@@ -1,5 +1,5 @@
-use types::{H160, H256, U256};
 use std::convert::TryInto;
+use types::{H160, H256, U256};
 
 use super::Error;
 

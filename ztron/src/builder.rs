@@ -5,17 +5,18 @@ use ff::{Field, PrimeField};
 use group::GroupEncoding;
 use keys::Address;
 use lazy_static::lazy_static;
-use types::U256;
 use rand::{rngs::OsRng, CryptoRng, RngCore};
 use sha2::{Digest, Sha256};
-use zcash_primitives::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
+use types::U256;
+use zcash_primitives::memo::MemoBytes;
 use zcash_primitives::merkle_tree::MerklePath;
-use zcash_primitives::note_encryption::{Memo, SaplingNoteEncryption};
-use zcash_primitives::primitives::{Diversifier, Note, PaymentAddress, Rseed};
-use zcash_primitives::prover::TxProver;
-use zcash_primitives::redjubjub::{PrivateKey, PublicKey, Signature};
 use zcash_primitives::sapling;
+use zcash_primitives::sapling::keys::{ExpandedSpendingKey, FullViewingKey, OutgoingViewingKey};
+use zcash_primitives::sapling::note_encryption::sapling_note_encryption;
+use zcash_primitives::sapling::prover::TxProver;
+use zcash_primitives::sapling::redjubjub::{PrivateKey, PublicKey, Signature};
 use zcash_primitives::sapling::Node;
+use zcash_primitives::sapling::{Diversifier, Note, PaymentAddress, Rseed};
 use zcash_primitives::transaction::components::{Amount, GROTH_PROOF_SIZE};
 use zcash_proofs::prover::LocalTxProver;
 
@@ -122,11 +123,9 @@ impl SpendDescription {
 impl SaplingSpend {
     fn generate_spend_proof<P: TxProver>(&self, ctx: &mut P::SaplingProvingContext, prover: &P) -> SpendDescription {
         let fvk = FullViewingKey::from_expanded_spending_key(&self.expsk);
-        let nf = {
-            let mut raw = [0u8; 32];
-            raw.copy_from_slice(&self.note.nf(&fvk.vk, self.merkle_path.position));
-            raw
-        };
+        // Nullifier
+        let nf = self.note.nf(&fvk.vk, self.merkle_path.position).0;
+
         let proof_generation_key = self.expsk.proof_generation_key();
         let anchor = self.merkle_path.root(Node::new(self.note.cmu().into())).into();
 
@@ -154,11 +153,42 @@ impl SaplingSpend {
     }
 }
 
+use zcash_primitives::consensus::BlockHeight;
+use zcash_primitives::consensus::NetworkUpgrade;
+use zcash_primitives::consensus::Parameters;
+
+#[derive(Clone)]
+pub struct ThisNetwork;
+
+impl Parameters for ThisNetwork {
+    fn activation_height(&self, _nu: NetworkUpgrade) -> Option<BlockHeight> {
+        unreachable!()
+    }
+    fn coin_type(&self) -> u32 {
+        unreachable!()
+    }
+    fn hrp_sapling_extended_spending_key(&self) -> &str {
+        unreachable!()
+    }
+    fn hrp_sapling_extended_full_viewing_key(&self) -> &str {
+        unreachable!()
+    }
+    fn hrp_sapling_payment_address(&self) -> &str {
+        unreachable!()
+    }
+    fn b58_pubkey_address_prefix(&self) -> [u8; 2] {
+        unreachable!()
+    }
+    fn b58_script_address_prefix(&self) -> [u8; 2] {
+        unreachable!()
+    }
+}
+
 pub struct SaplingOutput {
     ovk: OutgoingViewingKey,
     to: PaymentAddress,
     note: Note,
-    memo: Memo,
+    memo: MemoBytes,
 }
 
 pub struct OutputDescription {
@@ -176,7 +206,7 @@ impl SaplingOutput {
         ovk: OutgoingViewingKey,
         to: PaymentAddress,
         value: Amount,
-        memo: Option<Memo>,
+        memo: Option<MemoBytes>,
     ) -> Result<Self, Error> {
         let g_d = match to.g_d() {
             Some(g_d) => g_d,
@@ -199,7 +229,7 @@ impl SaplingOutput {
             ovk,
             to,
             note,
-            memo: memo.unwrap_or_default(),
+            memo: memo.unwrap_or_else(MemoBytes::empty),
         })
     }
 
@@ -208,7 +238,7 @@ impl SaplingOutput {
 
         let cmu = self.note.cmu(); // note commitment
 
-        let mut enc = SaplingNoteEncryption::new(
+        let enc = sapling_note_encryption::<_, ThisNetwork>(
             Some(self.ovk),
             self.note.clone(),
             self.to.clone(),
@@ -227,7 +257,7 @@ impl SaplingOutput {
         };
         let (zkproof, cv) = prover.output_proof(ctx, *enc.esk(), self.to.clone(), rcm, self.note.value);
 
-        let c_out = enc.encrypt_outgoing_plaintext(&cv, &self.note.cmu());
+        let c_out = enc.encrypt_outgoing_plaintext(&cv, &self.note.cmu(), &mut rng);
 
         OutputDescription {
             cv,
@@ -481,7 +511,7 @@ impl<R: RngCore + CryptoRng> Builder<R> {
         ovk: OutgoingViewingKey,
         to: ZAddress,
         value: Amount,
-        memo: Option<Memo>,
+        memo: Option<MemoBytes>,
     ) -> Result<(), Error> {
         if self.outputs.len() >= 2 {
             return Err(Error::InvalidTransaction("too many sapling output"));
