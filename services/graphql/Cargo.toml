@@ -1,17 +1,17 @@
 [package]
 name = "graphql-service"
 version = "0.1.0"
-authors = ['OpenTron Developers <info@opentron.org>']
+authors = ["OpenTron Developers <info@opentron.org>"]
 edition = "2018"
 
 [dependencies]
 log = "0.4"
-byteorder = '1'
-hex = '0.4'
-chrono = '0.4'
-prost = '0.7'
-serde_json = '1.0'
-tokio = { version = '1', default-features = false }
+byteorder = "1"
+hex = "0.4"
+chrono = "0.4"
+prost = "0.8"
+serde_json = "1.0"
+tokio = { version = "1", default-features = false }
 async-graphql = { version = "2.5.1", default-features = false, features = [
     "chrono",
     "chrono-tz",
@@ -25,10 +25,10 @@ http = "0.2"
 sysinfo = "0.17"
 # workspace
 types = { path = "../../types" }
-keys = { path = '../../keys' }
-proto = { path = '../../proto' }
-state = { path = '../../state' }
-chain = { path = '../../chain' }
-chain-db = { path = '../../chain-db' }
-context = { path = '../../context' }
-manager = { path = '../../manager' }
+keys = { path = "../../keys" }
+proto = { path = "../../proto" }
+state = { path = "../../state" }
+chain = { path = "../../chain" }
+chain-db = { path = "../../chain-db" }
+context = { path = "../../context" }
+manager = { path = "../../manager" }

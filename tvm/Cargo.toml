@@ -17,6 +17,6 @@ num-traits = "0.2"
 lazy_static = "1"
 
 types = { path = "../types" }
-# evm = { path = '../../evm' }
+# evm = { path = "../../evm" }
 evm = { git = "https://github.com/opentron/evm", branch = "tron" }
-ztron = { path = '../ztron' }
+ztron = { path = "../ztron" }

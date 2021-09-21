@@ -1,8 +1,8 @@
 [package]
-name = 'opentron'
-version = '0.1.0'
-authors = ['OpenTron Developers <info@opentron.org>']
-edition = '2018'
+name = "opentron"
+version = "0.1.0"
+authors = ["OpenTron Developers <info@opentron.org>"]
+edition = "2018"
 license = "MIT/Apache-2.0"
 
 [lib]
@@ -40,24 +40,24 @@ slog-stdlog = "4.1"
 slog-scope = "4.4"
 slog-scope-futures = "0.1"
 # runner
-futures = '0.3'
-tokio = { version = '1', default-features = false, features = [
-    'rt',
-    'rt-multi-thread',
-    'macros',
-    'net',
-    'time',
+futures = "0.3"
+tokio = { version = "1", default-features = false, features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "time",
 ] }
 # misc
-serde = { version = '1.0', features = ['derive'] }
-chrono = '0.4'
-byteorder = '1'
+serde = { version = "1.0", features = ["derive"] }
+chrono = "0.4"
+byteorder = "1"
 reqwest = { version = "0.11", default-features = false, features = ["blocking", "json"] }
 # workspace
-keys = { path = '../keys' }
-chain-db = { path = '../chain-db' }
-config = { path = '../config' }
-context = { path = '../context' }
+keys = { path = "../keys" }
+chain-db = { path = "../chain-db" }
+config = { path = "../config" }
+context = { path = "../context" }
 discovery-service = { path = "../services/discovery" }
 channel-service = { path = "../services/channel" }
 graphql-service = { path = "../services/graphql" }

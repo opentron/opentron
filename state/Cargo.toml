@@ -1,7 +1,7 @@
 [package]
 name = "state"
 version = "0.1.0"
-authors = ['OpenTron Developers <info@opentron.org>']
+authors = ["OpenTron Developers <info@opentron.org>"]
 edition = "2018"
 
 [features]
@@ -10,14 +10,14 @@ static-rocksdb = ["rocks/static-link"]
 
 [dependencies]
 log = "0.4"
-byteorder = '1.4'
-bytes = '1'
-prost = '0.7'
+byteorder = "1.4"
+bytes = "1"
+prost = "0.8"
 num_cpus = "1"
 rocks = "0.1.10"
 
 types = { path = "../types" }
-keys = { path = '../keys' }
-proto = { path = '../proto' }
-config = { path = '../config' }
-constants = { path = '../constants' }
+keys = { path = "../keys" }
+proto = { path = "../proto" }
+config = { path = "../config" }
+constants = { path = "../constants" }

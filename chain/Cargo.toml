@@ -5,13 +5,13 @@ authors = ["OpenTron Developers <info@opentron.org>"]
 edition = "2018"
 
 [dependencies]
-prost = "0.7"
-byteorder = '1.3'
-sha2 = '0.9'
+prost = "0.8"
+byteorder = "1.3"
+sha2 = "0.9"
 rayon = "1.5"
 
 types = { path = "../types" }
-proto = { path = '../proto' }
+proto = { path = "../proto" }
 crypto = { path = "../crypto" }
-merkle-tree = { path = '../merkle-tree' }
+merkle-tree = { path = "../merkle-tree" }
 keys = { path = "../keys" }

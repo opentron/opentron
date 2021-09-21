@@ -1,23 +1,23 @@
 [package]
+authors = ["OpenTron Developers <info@opentron.org>"]
+edition = "2018"
 name = "chain-db"
 version = "0.1.0"
-authors = ['OpenTron Developers <info@opentron.org>']
-edition = "2018"
 
 [features]
 default = []
 static-rocksdb = ["rocks/static-link"]
 
 [dependencies]
+byteorder = "1"
+bytes = "1"
+hex = "0.4"
 log = "0.4"
-rocks = "0.1.10"
-byteorder = '1'
-bytes = '1'
-rand = '0.8'
-prost = '0.7'
-hex = '0.4'
 num_cpus = "1"
+prost = "0.8"
+rand = "0.8"
+rocks = "0.1.10"
 
-types = { path = "../types" }
-proto = { path = '../proto' }
-chain = { path = '../chain' }
+chain = {path = "../chain"}
+proto = {path = "../proto"}
+types = {path = "../types"}

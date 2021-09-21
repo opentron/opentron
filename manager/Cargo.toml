@@ -1,6 +1,6 @@
 [package]
 name = "manager"
-authors = ['OpenTron Developers <info@opentron.org>']
+authors = ["OpenTron Developers <info@opentron.org>"]
 edition = "2018"
 version = "0.1.0"
 
@@ -11,21 +11,21 @@ javatron = []
 static-rocksdb = ["state/static-rocksdb"]
 
 [dependencies]
-chrono = '0.4'
-hex = '0.4'
-log = '0.4'
-prost = '0.7'
+chrono = "0.4"
+hex = "0.4"
+log = "0.4"
+prost = "0.8"
 lazy_static = "1.4"
 sha3 = "0.9"
 
 # workspace
 types = { path = "../types" }
-chain = { path = '../chain' }
-config = { path = '../config' }
-chain-db = { path = '../chain-db' }
-constants = { path = '../constants' }
-crypto = { path = '../crypto' }
-keys = { path = '../keys' }
-proto = { path = '../proto' }
-state = { path = '../state' }
-tvm = { path = '../tvm' }
+chain = { path = "../chain" }
+config = { path = "../config" }
+chain-db = { path = "../chain-db" }
+constants = { path = "../constants" }
+crypto = { path = "../crypto" }
+keys = { path = "../keys" }
+proto = { path = "../proto" }
+state = { path = "../state" }
+tvm = { path = "../tvm" }
