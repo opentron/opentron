@@ -7,12 +7,12 @@ use std::rc::Rc;
 use ::keys::Address;
 use constants::block_version::BlockVersion;
 use log::{debug, warn};
-use types::{H160, H256};
 use proto::chain::transaction::{result::ContractStatus, Result as TransactionResult};
 use proto::contract as contract_pb;
 use proto::state::{Account, SmartContract};
 use state::keys;
 use tvm::{backend::ApplyBackend, ExitError, ExitFatal, ExitReason, TvmUpgrade};
+use types::{H160, H256};
 
 use super::super::super::resource::{EnergyProcessor, EnergyUtil};
 use super::super::super::version_fork::ForkController;

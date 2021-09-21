@@ -1,7 +1,7 @@
 use crate::{BlockHeader, IndexedBlock, IndexedBlockHeader, Transaction};
 use keys::{Address, KeyPair};
-use types::H256;
 use prost::Message;
+use types::H256;
 
 pub struct BlockBuilder {
     header: BlockHeader,

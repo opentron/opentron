@@ -1,10 +1,10 @@
 use byteorder::{ByteOrder, BE};
 use crypto::sha256;
-use types::H256;
 use prost::Message;
 use proto::chain::BlockHeader;
 use proto::common::BlockId;
 use std::cmp;
+use types::H256;
 
 #[derive(Clone, Debug)]
 pub struct IndexedBlockHeader {

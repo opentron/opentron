@@ -1,5 +1,5 @@
-pub use types::H256;
 pub use proto::chain::{Block, BlockHeader, Transaction};
+pub use types::H256;
 
 pub use block_builder::BlockBuilder;
 pub use indexed_block::IndexedBlock;

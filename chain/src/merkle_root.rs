@@ -1,6 +1,6 @@
-use types::H256;
 use sha2::{Digest, Sha256};
 use std::mem;
+use types::H256;
 
 pub enum HashedSha256Hasher {}
 

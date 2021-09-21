@@ -10,9 +10,9 @@ use config::genesis::GenesisConfig;
 use config::Config;
 use log::info;
 use manager::Manager;
-use types::H256;
 use proto::common::BlockId;
 use tokio::sync::broadcast;
+use types::H256;
 
 pub struct AppContext {
     pub outbound_ip: String,

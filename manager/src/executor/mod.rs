@@ -6,7 +6,6 @@ use std::str;
 use ::keys::{b58encode_check, Address};
 use chain::{IndexedBlockHeader, IndexedTransaction};
 use log::{debug, error, warn};
-use types::H256;
 use prost::Message;
 use proto::chain::{transaction::result::ContractStatus, transaction::Result as TransactionResult, ContractType};
 use proto::common::ResourceCode;
@@ -14,6 +13,7 @@ use proto::contract as contract_pb;
 use proto::state::{ResourceReceipt, TransactionLog, TransactionReceipt};
 use proto::ContractExt;
 use state::keys;
+use types::H256;
 
 use self::actuators::BuiltinContractExecutorExt;
 use crate::resource::BandwidthProcessor;

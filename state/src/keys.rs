@@ -5,9 +5,9 @@ use std::convert::TryFrom;
 use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use keys::Address;
-use types::H256;
 use prost::Message;
 use proto::state as pb;
+use types::H256;
 
 pub use super::parameter::ChainParameter;
 pub use super::property::DynamicProperty;

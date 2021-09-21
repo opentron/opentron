@@ -8,7 +8,6 @@ use chrono::Utc;
 use futures::future::FutureExt;
 use indexmap::IndexMap;
 use log::{debug, info, trace, warn};
-use types::H256;
 use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
@@ -16,6 +15,7 @@ use std::time::Duration;
 use tokio::select;
 use tokio::sync::broadcast;
 use tokio::time::sleep;
+use types::H256;
 
 use chain::IndexedTransaction;
 use context::AppContext;

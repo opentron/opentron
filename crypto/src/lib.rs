@@ -1,7 +1,7 @@
 use digest::Digest;
-use types::H256;
 use sha2::Sha256;
 use sha3::Keccak256;
+use types::H256;
 
 #[inline]
 pub fn sha256(input: &[u8]) -> H256 {

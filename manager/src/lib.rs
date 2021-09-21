@@ -6,7 +6,6 @@ use chain::{IndexedBlock, IndexedBlockHeader, IndexedTransaction};
 use chrono::Utc;
 use config::{Config, GenesisConfig};
 use log::{debug, info, trace, warn};
-use types::H256;
 use prost::Message;
 use proto::chain::transaction::Result as TransactionResult;
 use proto::state::TransactionReceipt;
@@ -14,6 +13,7 @@ use state::db::StateDB;
 use state::keys;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
+use types::H256;
 
 use self::executor::TransactionExecutor;
 use self::governance::maintenance::MaintenanceManager;

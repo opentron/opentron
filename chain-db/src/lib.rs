@@ -8,10 +8,10 @@ use std::path::Path;
 use byteorder::{ByteOrder, BE};
 use bytes::BytesMut;
 use log::{error, info, warn};
-use types::H256;
 use prost::Message;
 use rand::Rng;
 use rocks::prelude::*;
+use types::H256;
 
 use chain::{BlockHeader, IndexedBlock, IndexedBlockHeader, IndexedTransaction, Transaction};
 use proto::chain::ContractType;
