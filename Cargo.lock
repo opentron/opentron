@@ -114,9 +114,9 @@ checksum = "be4dc07131ffa69b8072d35f5007352af944213cde02545e2103680baed38fcd"
 
 [[package]]
 name = "async-graphql"
-version = "2.9.15"
+version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8640d9d3f3d2ee7df7d64f1ce752877bfbcccfd146a4291a7eca69bcc89ffc17"
+checksum = "95b2e3ae5916a72f724593dfef3a35cd7b46845730be06f6444acdb9aa693730"
 dependencies = [
  "async-graphql-derive",
  "async-graphql-parser",
@@ -145,9 +145,9 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-derive"
-version = "2.9.15"
+version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b146a2869ab23a711721ae7e1d6f08013298f2f7814f5a21431134feed18f31"
+checksum = "8c25a9c8271c44fab115a6aab82646f3c6748e08a7a5acdcece3fcb93a858467"
 dependencies = [
  "Inflector",
  "async-graphql-parser",
@@ -161,9 +161,9 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-parser"
-version = "2.9.15"
+version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50c9faa27abf0cc9969874a48ff6e439d46cbc6e19d36a73b1b88702ce06b7af"
+checksum = "718f05c9b8ad72003014e0b419aeb08ed782b701ac621733a40c526ebf8b9b76"
 dependencies = [
  "async-graphql-value",
  "pest",
@@ -174,9 +174,9 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-value"
-version = "2.9.15"
+version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7d59b43a2116d78557d224d86da65b7b05f9bcbb8b2744bd6c50d18b3b69e29"
+checksum = "f48b298918bb0b642778d3432307d15237e4f1386cecdb2aa5719d84030007c8"
 dependencies = [
  "bytes",
  "serde",
@@ -185,9 +185,9 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-warp"
-version = "2.9.15"
+version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4ec5d588e1141d021ec63c700655fd928ff2dc1b3bc2adafa308850043148b5"
+checksum = "dd4c716db291a3736f61e203475f872743b5558fe94121253481edf1242efdc1"
 dependencies = [
  "async-graphql",
  "futures-util",
@@ -1007,12 +1007,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
 ]
-
-[[package]]
-name = "doc-comment"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "either"
@@ -2954,13 +2948,12 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.17.5"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9d811a7fd68bad355ff84f7d8ad58b33415bccdfce499f98a9ce30471888e05"
+checksum = "92d77883450d697c0010e60db3d940ed130b0ed81d27485edee981621b434e52"
 dependencies = [
  "cfg-if 1.0.0",
  "core-foundation-sys",
- "doc-comment",
  "libc",
  "ntapi",
  "once_cell",
