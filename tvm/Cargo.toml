@@ -6,13 +6,13 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
-libsecp256k1 = "0.3"
+libsecp256k1 = "0.7"
 sha3 = "0.9"
 sha2 = "0.9"
 digest = "0.9"
 bn-plus = "0.4"
 hex = "0.4"
-num-bigint = "0.3"
+num-bigint = "0.4"
 num-traits = "0.2"
 lazy_static = "1"
 

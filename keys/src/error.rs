@@ -1,7 +1,7 @@
 //! Key Errors.
 use std::fmt;
 
-use secp256k1::Error as Secp256k1Error;
+use libsecp256k1::Error as Secp256k1Error;
 
 /// Key Errors.
 #[derive(Debug, PartialEq)]

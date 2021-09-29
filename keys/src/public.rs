@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 use hex::{FromHex, ToHex};
-use secp256k1::{Message, PublicKey, PublicKeyFormat, RecoveryId, SecretKey};
+use libsecp256k1::{Message, PublicKey, PublicKeyFormat, RecoveryId, SecretKey};
 use sha2::{Digest, Sha256};
 
 use crate::error::Error;
@@ -21,9 +21,9 @@ impl Public {
     /// Verifies a signature of a digest.
     pub fn verify_digest(&self, digest: &[u8], signature: &Signature) -> Result<(), Error> {
         let pub_key = PublicKey::parse_slice(&self.0, Some(PublicKeyFormat::Raw))?;
-        let sig = secp256k1::Signature::parse_slice(&signature[0..64])?;
+        let sig = libsecp256k1::Signature::parse_overflowing_slice(&signature[0..64])?;
 
-        if secp256k1::verify(&Message::parse_slice(digest)?, &sig, &pub_key) {
+        if libsecp256k1::verify(&Message::parse_slice(digest)?, &sig, &pub_key) {
             Ok(())
         } else {
             Err(Error::InvalidSignature)
@@ -41,10 +41,10 @@ impl Public {
 
     /// Recovers a public key from signature and digest.
     pub fn recover_digest(digest: &[u8], signature: &Signature) -> Result<Public, Error> {
-        let sig = secp256k1::Signature::parse_slice(&signature[0..64])?;
+        let sig = libsecp256k1::Signature::parse_overflowing_slice(&signature[0..64])?;
         let rec_id = RecoveryId::parse(signature[64])?;
 
-        let raw_pub_key = secp256k1::recover(&Message::parse_slice(digest)?, &sig, &rec_id)?;
+        let raw_pub_key = libsecp256k1::recover(&Message::parse_slice(digest)?, &sig, &rec_id)?;
 
         Ok(Public::try_from(&raw_pub_key.serialize()[1..]).unwrap())
     }

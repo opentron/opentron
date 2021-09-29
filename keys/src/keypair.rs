@@ -2,7 +2,7 @@
 use std::fmt;
 
 use rand::rngs::OsRng;
-use secp256k1::{PublicKey, SecretKey};
+use libsecp256k1::{PublicKey, SecretKey};
 
 use crate::address::Address;
 use crate::error::Error;

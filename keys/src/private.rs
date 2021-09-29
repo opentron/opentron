@@ -5,7 +5,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use hex::{FromHex, ToHex};
-use secp256k1::{Message, SecretKey};
+use libsecp256k1::{Message, SecretKey};
 use sha2::{Digest, Sha256};
 
 use crate::error::Error;
@@ -20,7 +20,7 @@ impl Private {
     pub fn sign_digest(&self, digest: &[u8]) -> Result<Signature, Error> {
         let secret_key = SecretKey::parse_slice(&self.0).expect("32 bytes, within curve order");
         let message = Message::parse_slice(digest).map_err(|_| Error::InvalidMessage)?;
-        let (sig, rec_id) = secp256k1::sign(&message, &secret_key);
+        let (sig, rec_id) = libsecp256k1::sign(&message, &secret_key);
 
         let mut raw = [0u8; 65];
         raw[0..64].copy_from_slice(&sig.serialize()[..]);

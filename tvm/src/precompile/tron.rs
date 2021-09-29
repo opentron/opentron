@@ -1,4 +1,4 @@
-use secp256k1::{Message, RecoveryId, Signature};
+use libsecp256k1::{Message, RecoveryId, Signature};
 use sha3::{Digest, Keccak256};
 use std::convert::TryInto;
 use types::{H160, H256, U256};
@@ -10,11 +10,11 @@ pub fn ecrecover(input: &[u8]) -> Option<H256> {
     let v: u8 = U256::from_big_endian(&input[32..64]).try_into().ok()?;
 
     let msg = Message::parse_slice(&input[0..32]).ok()?;
-    let sig = Signature::parse_slice(&input[64..128]).ok()?;
+    let sig = Signature::parse_overflowing_slice(&input[64..128]).ok()?;
     // TRON: rec_id fix is same as EVM
     let rec_id = RecoveryId::parse(v.wrapping_sub(27)).ok()?;
 
-    let pub_key = secp256k1::recover(&msg, &sig, &rec_id).ok()?;
+    let pub_key = libsecp256k1::recover(&msg, &sig, &rec_id).ok()?;
     let raw_pub_key = pub_key.serialize();
 
     let mut hasher = Keccak256::new();
@@ -29,11 +29,11 @@ pub fn ecrecover(input: &[u8]) -> Option<H256> {
 // [u8; 32], [u8; 65] => [u8; 20]
 fn recover_addr(message: &[u8], signature: &[u8]) -> Option<H160> {
     let msg = Message::parse_slice(message).ok()?;
-    let sig = Signature::parse_slice(&signature[..64]).ok()?;
+    let sig = Signature::parse_overflowing_slice(&signature[..64]).ok()?;
     // NOTE: no wrapping_sub
     let rec_id = RecoveryId::parse(signature[64]).ok()?;
 
-    let pub_key = secp256k1::recover(&msg, &sig, &rec_id).ok()?;
+    let pub_key = libsecp256k1::recover(&msg, &sig, &rec_id).ok()?;
     let raw_pub_key = pub_key.serialize();
 
     let mut hasher = Keccak256::new();
