@@ -1,12 +1,12 @@
 # Release Versions of Java-Tron
 
-ref: `block_version.rs`.
+ref: `block_version.rs`. The following versions are related to the block version in block header.
 
 ```rust
 /// Block versions. These versions match version names on github release page(or PR numbers).
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
 pub enum BlockVersion {
-    /// Also applies to all blocks before around #2300000.
+    /// Also applies to all blocks before around mainnet#2300000.
     Genesis = 0,
     /// First introduce block_version, PR #1290.
     Unknown1290 = 1,
@@ -84,5 +84,12 @@ pub enum BlockVersion {
     /// - AllowTransactionFeePool
     /// - AllowBlackholeOptimization
     GreatVoyage4_1_2 = 20,
+    /// Freezing for energy, bandwidth, and TP(TRON Vote Power).
+    /// Freeze instruction for TVM
+    GreatVoyage4_2_0 = 21,
+    /// Solidity_0.8.4 suppot.
+    /// Vote in TVM.
+    /// Bandwidth handling, more proposals.
+    GreatVoyage4_3_0 = 22,
 }
 ```
