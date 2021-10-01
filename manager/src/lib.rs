@@ -1,4 +1,4 @@
-// #![feature(asm)]
+#![feature(asm)]
 
 use ::keys::{b58encode_check, Address, KeyPair};
 use chain::BlockBuilder;
